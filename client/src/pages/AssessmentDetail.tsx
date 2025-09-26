@@ -268,6 +268,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardContent>
               <AssessmentForm 
                 assessmentId={assessmentId}
+                phase="risk-assessment"
                 onSave={handleSave}
                 onSubmit={handleRiskAssessmentComplete}
               />
