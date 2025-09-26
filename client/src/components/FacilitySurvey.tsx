@@ -291,30 +291,54 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     switch (question.type) {
       case "measurement":
         return (
-          <div className="space-y-2">
-            <Label htmlFor={`${question.id}-value`}>Measurement Value</Label>
-            <Input
-              id={`${question.id}-value`}
-              type="number"
-              step="0.1"
-              value={question.response?.value || ""}
-              onChange={(e) => updateQuestion(question.id, "response", { 
-                ...question.response, 
-                value: e.target.value,
-                unit: question.response?.unit || "fc" 
-              })}
-              placeholder="Enter measurement"
-              data-testid={`input-${question.id}-value`}
-            />
-            <Input
-              placeholder="Unit (fc, Px/ft, feet, etc.)"
-              value={question.response?.unit || ""}
-              onChange={(e) => updateQuestion(question.id, "response", { 
-                ...question.response, 
-                unit: e.target.value 
-              })}
-              data-testid={`input-${question.id}-unit`}
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor={`${question.id}-value`}>Measurement Value</Label>
+              <Input
+                id={`${question.id}-value`}
+                type="number"
+                step="0.1"
+                value={question.response?.value || ""}
+                onChange={(e) => updateQuestion(question.id, "response", { 
+                  ...question.response, 
+                  value: e.target.value,
+                  unit: question.response?.unit || "fc" 
+                })}
+                placeholder="Enter measurement"
+                data-testid={`input-${question.id}-value`}
+              />
+              <Input
+                placeholder="Unit (fc, Px/ft, feet, etc.)"
+                value={question.response?.unit || ""}
+                onChange={(e) => updateQuestion(question.id, "response", { 
+                  ...question.response, 
+                  unit: e.target.value 
+                })}
+                data-testid={`input-${question.id}-unit`}
+              />
+            </div>
+            
+            {/* Add Assessment Response for measurement questions, especially lighting */}
+            <div className="space-y-2">
+              <Label htmlFor={`${question.id}-assessment`}>Assessment Response</Label>
+              <Select 
+                value={question.response?.assessment || ""} 
+                onValueChange={(value) => updateQuestion(question.id, "response", { 
+                  ...question.response, 
+                  assessment: value 
+                })}
+              >
+                <SelectTrigger data-testid={`select-${question.id}-assessment`}>
+                  <SelectValue placeholder="Select assessment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="adequate">Adequate - Meets standards</SelectItem>
+                  <SelectItem value="marginal">Marginal - Below optimal</SelectItem>
+                  <SelectItem value="inadequate">Inadequate - Does not meet standards</SelectItem>
+                  <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         );
 
