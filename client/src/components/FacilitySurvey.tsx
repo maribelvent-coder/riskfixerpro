@@ -172,6 +172,39 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Load existing facility survey data
+  const { data: savedQuestions } = useQuery({
+    queryKey: ["/api/assessments", assessmentId, "facility-survey"],
+    queryFn: async () => {
+      const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`);
+      if (!response.ok) throw new Error('Failed to fetch facility survey');
+      return response.json();
+    }
+  });
+
+  // Merge saved responses with static questions structure
+  useEffect(() => {
+    if (savedQuestions && savedQuestions.length > 0) {
+      const mergedQuestions = facilityQuestions.map(staticQ => {
+        const savedQ = savedQuestions.find(sq => 
+          sq.category === staticQ.category && sq.subcategory === staticQ.subcategory
+        );
+        
+        if (savedQ) {
+          return {
+            ...staticQ,
+            response: savedQ.response,
+            notes: savedQ.notes,
+            evidence: savedQ.evidence,
+            recommendations: savedQ.recommendations
+          };
+        }
+        return staticQ;
+      });
+      setQuestions(mergedQuestions);
+    }
+  }, [savedQuestions]);
+
   const categories = Array.from(new Set(questions.map(q => q.category)));
   const currentCategoryQuestions = questions.filter(q => q.category === categories[currentCategory]);
   
