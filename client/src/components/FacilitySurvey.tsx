@@ -218,7 +218,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   useEffect(() => {
     if (savedQuestions && savedQuestions.length > 0) {
       const mergedQuestions = facilityQuestions.map(staticQ => {
-        const savedQ = savedQuestions.find(sq => 
+        const savedQ = savedQuestions.find((sq: any) => 
           sq.category === staticQ.category && sq.subcategory === staticQ.subcategory
         );
         
@@ -364,9 +364,10 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                   <SelectValue placeholder="Select assessment" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="adequate">Adequate - Meets standards</SelectItem>
-                  <SelectItem value="marginal">Marginal - Below optimal</SelectItem>
-                  <SelectItem value="inadequate">Inadequate - Does not meet standards</SelectItem>
+                  <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>
+                  <SelectItem value="good">Good - Meets standards well</SelectItem>
+                  <SelectItem value="adequate">Adequate - Meets minimum standards</SelectItem>
+                  <SelectItem value="poor">Poor - Below standards</SelectItem>
                   <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
                 </SelectContent>
               </Select>
@@ -389,10 +390,10 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                 question.category === "intrusion-detection") && (
                 <SelectItem value="n/a">N/A - No system in place or not applicable</SelectItem>
               )}
-              <SelectItem value="excellent">Excellent - Meets all standards</SelectItem>
-              <SelectItem value="good">Good - Minor improvements needed</SelectItem>
-              <SelectItem value="fair">Fair - Moderate deficiencies</SelectItem>
-              <SelectItem value="poor">Poor - Major deficiencies</SelectItem>
+              <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>
+              <SelectItem value="good">Good - Meets standards well</SelectItem>
+              <SelectItem value="adequate">Adequate - Meets minimum standards</SelectItem>
+              <SelectItem value="poor">Poor - Below standards</SelectItem>
               <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
             </SelectContent>
           </Select>
