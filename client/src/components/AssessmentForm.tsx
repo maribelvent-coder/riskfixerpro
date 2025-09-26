@@ -11,6 +11,7 @@ import { AlertTriangle, CheckCircle, Camera, Save, Send } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { assessmentApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { EnhancedRiskAssessment } from "./EnhancedRiskAssessment";
 import type { AssessmentQuestion } from "@shared/schema";
 
 interface Question {
@@ -102,18 +103,36 @@ interface AssessmentFormProps {
   title?: string;
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
+  phase?: "facility-survey" | "risk-assessment";
 }
 
 export function AssessmentForm({ 
   assessmentId,
   title = "Physical Security Assessment",
   onSave,
-  onSubmit 
+  onSubmit,
+  phase = "facility-survey"
 }: AssessmentFormProps) {
   const [questions, setQuestions] = useState<Question[]>(mockQuestions);
   const [currentSection, setCurrentSection] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Use enhanced risk assessment for Phase 2
+  if (phase === "risk-assessment") {
+    return (
+      <EnhancedRiskAssessment 
+        assessmentId={assessmentId}
+        onComplete={() => {
+          toast({
+            title: "Assessment Complete",
+            description: "Enhanced risk assessment has been completed successfully.",
+          });
+          onSubmit?.({});
+        }}
+      />
+    );
+  }
 
   // Load existing questions if assessment exists
   const { data: assessment } = useQuery({
