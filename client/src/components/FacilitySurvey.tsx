@@ -68,6 +68,14 @@ const facilityQuestions: SurveyQuestion[] = [
     standard: "Physical protection system structural integrity requirements",
     type: "condition",
   },
+  {
+    id: "barriers-004",
+    category: "barriers", 
+    subcategory: "perimeter-fencing",
+    question: "Describe the current fencing and barriers around the facility",
+    standard: "Perimeter protection and barrier effectiveness assessment",
+    type: "condition",
+  },
 
   // LIGHTING SYSTEMS
   {
@@ -92,6 +100,14 @@ const facilityQuestions: SurveyQuestion[] = [
     subcategory: "emergency",
     question: "Are emergency lighting systems operational and properly maintained?",
     standard: "Life safety codes and backup power requirements",
+    type: "condition",
+  },
+  {
+    id: "lighting-004",
+    category: "lighting",
+    subcategory: "perimeter",
+    question: "Are perimeter lighting systems adequate for night-time security?",
+    standard: "Perimeter lighting coverage and illumination standards",
     type: "condition",
   },
 
@@ -145,6 +161,22 @@ const facilityQuestions: SurveyQuestion[] = [
     question: "What visitor screening and management processes are in place?",
     standard: "Identity verification and background screening capabilities",
     type: "condition",
+  },
+  {
+    id: "access-004",
+    category: "access-control",
+    subcategory: "entry-points", 
+    question: "Are all entry points secured with appropriate locking mechanisms?",
+    standard: "Entry point security and redundant locking systems",
+    type: "condition",
+  },
+  {
+    id: "access-005",
+    category: "access-control",
+    subcategory: "visitor-management", 
+    question: "Rate the effectiveness of visitor management systems",
+    standard: "Visitor tracking, identification, and escort procedures",
+    type: "rating",
   },
 
   // INTRUSION DETECTION

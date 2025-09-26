@@ -25,34 +25,76 @@ interface Question {
 }
 
 const mockQuestions: Question[] = [
+  // Human Threats
   {
-    id: "ac-001",
-    category: "Access Control",
-    question: "Are all entry points secured with appropriate locking mechanisms?",
+    id: "threat-human-001",
+    category: "Human Threats",
+    question: "Are there known instances of theft, vandalism, or unauthorized access in the area?",
+    type: "yes-no",
+    weight: 4
+  },
+  {
+    id: "threat-human-002",
+    category: "Human Threats", 
+    question: "Rate the likelihood of workplace violence or insider threats (1-10)",
+    type: "score",
+    weight: 5
+  },
+  {
+    id: "threat-human-003",
+    category: "Human Threats",
+    question: "Describe any specific security concerns related to personnel or visitors",
+    type: "text",
+    weight: 3
+  },
+
+  // Environmental Threats
+  {
+    id: "threat-env-001",
+    category: "Environmental Threats",
+    question: "Is the facility located in an area prone to natural disasters?",
+    type: "yes-no",
+    weight: 4
+  },
+  {
+    id: "threat-env-002",
+    category: "Environmental Threats",
+    question: "Rate the risk of weather-related disruptions to security systems (1-10)",
+    type: "score",
+    weight: 3
+  },
+
+  // Technical Threats
+  {
+    id: "threat-tech-001",
+    category: "Technical Threats",
+    question: "Are there vulnerabilities in electronic security systems or IT infrastructure?",
     type: "yes-no",
     weight: 5
   },
   {
-    id: "ac-002", 
-    category: "Access Control",
-    question: "Rate the effectiveness of visitor management systems (1-10)",
+    id: "threat-tech-002",
+    category: "Technical Threats",
+    question: "Rate the likelihood of cyber attacks affecting physical security systems (1-10)",
     type: "score",
     weight: 4
   },
+
+  // Operational Threats
   {
-    id: "ps-001",
-    category: "Perimeter Security",
-    question: "Describe the current fencing and barriers around the facility",
-    type: "text",
-    weight: 3
-  },
-  {
-    id: "ps-002",
-    category: "Perimeter Security", 
-    question: "Are perimeter lighting systems adequate for night-time security?",
+    id: "threat-ops-001",
+    category: "Operational Threats",
+    question: "Are there gaps in security procedures or staff training?",
     type: "yes-no",
     weight: 4
   },
+  {
+    id: "threat-ops-002",
+    category: "Operational Threats",
+    question: "Describe any operational vulnerabilities identified during the facility survey",
+    type: "text",
+    weight: 5
+  }
 ];
 
 interface AssessmentFormProps {
