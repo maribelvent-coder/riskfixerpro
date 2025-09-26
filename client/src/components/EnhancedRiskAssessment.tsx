@@ -220,6 +220,14 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     },
   });
 
+  const updateTreatmentMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<TreatmentPlan> }) => 
+      treatmentPlanApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "treatment-plans"] });
+    },
+  });
+
   const steps = [
     { title: "Asset Identification", icon: Target },
     { title: "Risk Scenarios", icon: AlertTriangle },
@@ -278,6 +286,16 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     }
 
     updateScenarioMutation.mutate({ id, data: updatedData });
+  };
+
+  const handleUpdateTreatment = (id: string, field: string, value: any) => {
+    // Optimistic update - update local state immediately
+    setTreatmentPlans(prev => prev.map(plan => 
+      plan.id === id ? { ...plan, [field]: value } : plan
+    ));
+    
+    // Persist to database
+    updateTreatmentMutation.mutate({ id, data: { [field]: value } });
   };
 
   const completedSteps = currentStep;
@@ -664,16 +682,18 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             <div>
                               <Label>Treatment Strategy</Label>
                               <Select 
-                                value={existingPlan?.treatmentType || ""} 
+                                value={existingPlan?.strategy || ""} 
                                 onValueChange={(value) => {
                                   if (existingPlan) {
                                     // Update existing plan
+                                    handleUpdateTreatment(existingPlan.id, "strategy", value);
                                   } else {
                                     // Create new plan
                                     const newPlan: InsertTreatmentPlan = {
                                       assessmentId,
                                       riskScenarioId: scenario.id,
-                                      treatmentType: value,
+                                      risk: scenario.threatDescription || "Unknown Risk",
+                                      strategy: value,
                                       description: "",
                                       responsible: "",
                                       deadline: "",
@@ -702,16 +722,18 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                   <Label>Action Description</Label>
                                   <Textarea
                                     value={existingPlan.description}
+                                    onChange={(e) => handleUpdateTreatment(existingPlan.id, "description", e.target.value)}
                                     placeholder="Describe the specific actions to be taken..."
                                     data-testid={`textarea-action-${scenario.id}`}
                                     rows={2}
                                   />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                   <div>
                                     <Label>Responsible Party</Label>
                                     <Input
                                       value={existingPlan.responsible}
+                                      onChange={(e) => handleUpdateTreatment(existingPlan.id, "responsible", e.target.value)}
                                       placeholder="Who is responsible?"
                                       data-testid={`input-responsible-${scenario.id}`}
                                     />
@@ -721,8 +743,26 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                     <Input
                                       type="date"
                                       value={existingPlan.deadline}
+                                      onChange={(e) => handleUpdateTreatment(existingPlan.id, "deadline", e.target.value)}
                                       data-testid={`input-deadline-${scenario.id}`}
                                     />
+                                  </div>
+                                  <div>
+                                    <Label>Status</Label>
+                                    <Select 
+                                      value={existingPlan.status || "planned"} 
+                                      onValueChange={(value) => handleUpdateTreatment(existingPlan.id, "status", value)}
+                                    >
+                                      <SelectTrigger data-testid={`select-status-${scenario.id}`}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="planned">Planned</SelectItem>
+                                        <SelectItem value="in-progress">In Progress</SelectItem>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="on-hold">On Hold</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                 </div>
                               </div>
