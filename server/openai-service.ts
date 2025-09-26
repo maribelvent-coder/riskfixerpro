@@ -15,7 +15,46 @@ export class OpenAIService {
     try {
       const assessmentData = this.prepareAssessmentData(assessment);
       
-      const prompt = `You are a senior physical security consultant. Analyze the following security assessment data and provide comprehensive risk insights.
+      const prompt = `You are a Certified Protection Professional (CPP) with expertise in ASIS International standards and physical security design principles. Analyze the security assessment data following professional standards.
+
+PROFESSIONAL STANDARDS TO APPLY:
+=================================
+
+LIGHTING STANDARDS:
+- Detection: 0.5 fc minimum intensity
+- Recognition: 1.0 fc minimum intensity  
+- Identification: 2.0 fc minimum intensity
+- Parking structures: 5 fc with 4:1 uniformity ratio
+- Key parameters: Intensity and evenness of illumination
+
+CAMERA SYSTEM STANDARDS:
+- General (5 Px/ft): Basic human activity detection
+- Monitor (7 Px/ft): General human/vehicle monitoring
+- Detect (11 Px/ft): Human detection but not identification
+- Observe (18 Px/ft): Clothing and colors distinguishable
+- Recognize (35 Px/ft): Known individual identification
+- Identify (46 Px/ft): Beyond shadow of doubt identification
+- License plates: 70 Px/ft minimum
+- Facial recognition: 88 Px/ft minimum
+
+ACCESS CONTROL & BARRIER PRINCIPLES:
+- Balanced design: Each barrier element should provide equal delay
+- Detection, Deterrence, Delay, Response integration
+- Redundant systems for critical areas
+- Entry control performance standards
+
+THREAT CATEGORIES (Reference FM 3-19.30):
+- Human Threats: Theft, fraud, vandalism, sabotage, unauthorized access
+- Environmental Threats: Natural disasters, power outages, extreme weather  
+- Technical Threats: System failures, cyber attacks on physical systems
+- Operational Threats: Supply chain disruption, human error, non-compliance
+
+RISK ANALYSIS FRAMEWORK:
+- Risk = Threat + Consequence + Vulnerability
+- Consider adversary capability, equipment, motivation, intent
+- Evaluate likelihood based on frequency/probability
+- Assess consequences as undesirable outcomes
+- Identify PPS (Physical Protection System) weaknesses
 
 Assessment Details:
 - Facility: ${assessment.title}
@@ -25,26 +64,26 @@ Assessment Details:
 Assessment Questions and Responses:
 ${assessmentData}
 
-Please analyze this data and respond with a JSON object containing:
-1. overallRiskScore: A number from 1-100 representing the overall security risk level
-2. insights: An array of risk insights, each containing:
-   - category: The security category (e.g., "Access Control", "Perimeter Security", "Physical Barriers")
-   - severity: "low", "medium", "high", or "critical"
-   - title: Brief title of the risk finding
-   - description: Detailed explanation of the security concern
-   - recommendation: Specific actionable recommendation to address the risk
-   - impact: Number 1-10 representing potential impact if exploited
-   - probability: Number 1-10 representing likelihood of exploitation
-3. executiveSummary: A brief 2-3 sentence executive summary of the key findings
+Analyze using professional standards and respond with JSON containing:
+1. overallRiskScore: 1-100 based on threat/vulnerability/consequence analysis
+2. insights: Array of professional risk findings with:
+   - category: Specific security domain (Access Control, Lighting Systems, Surveillance, Barriers, etc.)
+   - severity: "low", "medium", "high", or "critical" 
+   - title: Professional risk finding title
+   - description: Technical assessment of security gap
+   - recommendation: Specific technical recommendation with standards
+   - impact: 1-10 consequence if exploited
+   - probability: 1-10 likelihood based on threat analysis
+3. executiveSummary: Professional executive summary
 
-Focus on identifying genuine security vulnerabilities, gaps in protection, and actionable recommendations based on industry best practices.`;
+Apply technical standards, reference specific metrics where applicable, and provide actionable professional recommendations.`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-5",
         messages: [
           {
             role: "system",
-            content: "You are an expert physical security consultant with 20+ years of experience. Provide thorough, professional security risk analysis based on assessment data."
+            content: "You are a Certified Protection Professional (CPP) with expertise in ASIS International standards, physical security systems design, and risk assessment methodologies. Reference specific technical standards, measurements, and professional best practices in your analysis. Apply the principles from FM 3-19.30 and professional security frameworks."
           },
           {
             role: "user",

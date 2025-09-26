@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { openaiService } from "./openai-service";
 import { 
   insertAssessmentSchema,
+  insertFacilitySurveyQuestionSchema,
   insertAssessmentQuestionSchema,
   insertReportSchema 
 } from "@shared/schema";
@@ -85,6 +86,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Facility Survey routes
+  app.get("/api/assessments/:id/facility-survey", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const questions = await storage.getFacilitySurveyQuestions(id);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching facility survey:", error);
+      res.status(500).json({ error: "Failed to fetch facility survey" });
+    }
+  });
+
+  app.post("/api/assessments/:id/facility-survey", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { questions } = req.body;
+      
+      if (!Array.isArray(questions)) {
+        return res.status(400).json({ error: "Questions must be an array" });
+      }
+
+      // Validate each question
+      const validatedQuestions = questions.map(q => 
+        insertFacilitySurveyQuestionSchema.parse({ ...q, assessmentId: id })
+      );
+      
+      const result = await storage.bulkUpsertFacilityQuestions(id, validatedQuestions);
+      
+      // Update assessment status to facility-survey when facility survey is saved
+      const completedQuestions = result.filter(q => q.response !== null && q.response !== undefined).length;
+      const progress = (completedQuestions / result.length) * 100;
+      
+      if (progress >= 80) {
+        await storage.updateAssessment(id, { 
+          status: "facility-survey",
+          facilitySurveyCompleted: true,
+          facilitySurveyCompletedAt: new Date()
+        });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid facility survey data", details: error.errors });
+      }
+      console.error("Error saving facility survey:", error);
+      res.status(500).json({ error: "Failed to save facility survey" });
+    }
+  });
+
   // Assessment Questions routes
   app.get("/api/assessments/:id/questions", async (req, res) => {
     try {
@@ -113,8 +164,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const result = await storage.bulkUpsertQuestions(id, validatedQuestions);
       
-      // Update assessment status to in-progress when questions are saved
-      await storage.updateAssessment(id, { status: "in-progress" });
+      // Update assessment status to risk-assessment when ASIS questions are saved
+      await storage.updateAssessment(id, { 
+        status: "risk-assessment",
+        riskAssessmentCompleted: true,
+        riskAssessmentCompletedAt: new Date()
+      });
       
       res.json(result);
     } catch (error) {

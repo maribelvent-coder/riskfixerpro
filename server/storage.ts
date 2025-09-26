@@ -3,8 +3,12 @@ import {
   type InsertUser,
   type Assessment,
   type InsertAssessment,
+  type FacilitySurveyQuestion,
+  type InsertFacilitySurveyQuestion,
   type AssessmentQuestion,
   type InsertAssessmentQuestion,
+  type IdentifiedThreat,
+  type InsertIdentifiedThreat,
   type RiskInsight,
   type InsertRiskInsight,
   type Report,
@@ -27,11 +31,21 @@ export interface IStorage {
   updateAssessment(id: string, assessment: Partial<Assessment>): Promise<Assessment | undefined>;
   deleteAssessment(id: string): Promise<boolean>;
 
+  // Facility Survey methods
+  getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]>;
+  createFacilitySurveyQuestion(question: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion>;
+  bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
+
   // Assessment Questions methods
   getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]>;
   createAssessmentQuestion(question: InsertAssessmentQuestion): Promise<AssessmentQuestion>;
   updateAssessmentQuestion(id: string, question: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined>;
   bulkUpsertQuestions(assessmentId: string, questions: InsertAssessmentQuestion[]): Promise<AssessmentQuestion[]>;
+
+  // Threat Identification methods
+  getIdentifiedThreats(assessmentId: string): Promise<IdentifiedThreat[]>;
+  createIdentifiedThreat(threat: InsertIdentifiedThreat): Promise<IdentifiedThreat>;
+  bulkCreateIdentifiedThreats(threats: InsertIdentifiedThreat[]): Promise<IdentifiedThreat[]>;
 
   // Risk Insights methods
   getRiskInsights(assessmentId: string): Promise<RiskInsight[]>;
@@ -48,14 +62,18 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private assessments: Map<string, Assessment>;
+  private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
   private assessmentQuestions: Map<string, AssessmentQuestion>;
+  private identifiedThreats: Map<string, IdentifiedThreat>;
   private riskInsights: Map<string, RiskInsight>;
   private reports: Map<string, Report>;
 
   constructor() {
     this.users = new Map();
     this.assessments = new Map();
+    this.facilitySurveyQuestions = new Map();
     this.assessmentQuestions = new Map();
+    this.identifiedThreats = new Map();
     this.riskInsights = new Map();
     this.reports = new Map();
   }
@@ -87,8 +105,12 @@ export class MemStorage implements IStorage {
     const assessment = this.assessments.get(id);
     if (!assessment) return undefined;
 
+    const facilityQuestions = Array.from(this.facilitySurveyQuestions.values())
+      .filter(q => q.assessmentId === id);
     const questions = Array.from(this.assessmentQuestions.values())
       .filter(q => q.assessmentId === id);
+    const threats = Array.from(this.identifiedThreats.values())
+      .filter(t => t.assessmentId === id);
     const riskInsights = Array.from(this.riskInsights.values())
       .filter(r => r.assessmentId === id);
     const reports = Array.from(this.reports.values())
@@ -96,7 +118,9 @@ export class MemStorage implements IStorage {
 
     return {
       ...assessment,
+      facilityQuestions,
       questions,
+      threats,
       riskInsights,
       reports
     };
@@ -116,7 +140,15 @@ export class MemStorage implements IStorage {
       status: insertAssessment.status || "draft",
       createdAt: now,
       updatedAt: now,
-      completedAt: null
+      completedAt: null,
+      riskLevel: null,
+      businessObjectives: null,
+      assetTypes: null,
+      riskCriteria: null,
+      facilitySurveyCompleted: false,
+      facilitySurveyCompletedAt: null,
+      riskAssessmentCompleted: false,
+      riskAssessmentCompletedAt: null
     };
     this.assessments.set(id, assessment);
     return assessment;
@@ -137,6 +169,85 @@ export class MemStorage implements IStorage {
 
   async deleteAssessment(id: string): Promise<boolean> {
     return this.assessments.delete(id);
+  }
+
+  // Facility Survey methods
+  async getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]> {
+    return Array.from(this.facilitySurveyQuestions.values())
+      .filter(q => q.assessmentId === assessmentId);
+  }
+
+  async createFacilitySurveyQuestion(insertQuestion: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion> {
+    const id = randomUUID();
+    const question: FacilitySurveyQuestion = {
+      ...insertQuestion,
+      id,
+      subcategory: insertQuestion.subcategory || null,
+      standard: insertQuestion.standard || null,
+      notes: insertQuestion.notes || null,
+      evidence: insertQuestion.evidence || null,
+      recommendations: insertQuestion.recommendations || null,
+      createdAt: new Date()
+    };
+    this.facilitySurveyQuestions.set(id, question);
+    return question;
+  }
+
+  async bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]> {
+    const results: FacilitySurveyQuestion[] = [];
+    
+    for (const questionData of questions) {
+      // Find existing question by assessmentId, category, and subcategory
+      const existing = Array.from(this.facilitySurveyQuestions.values())
+        .find(q => q.assessmentId === assessmentId && 
+                   q.category === questionData.category && 
+                   q.subcategory === questionData.subcategory);
+      
+      if (existing) {
+        // Update existing question
+        const updated: FacilitySurveyQuestion = {
+          ...existing,
+          ...questionData
+        };
+        this.facilitySurveyQuestions.set(existing.id, updated);
+        results.push(updated);
+      } else {
+        const created = await this.createFacilitySurveyQuestion(questionData);
+        results.push(created);
+      }
+    }
+    
+    return results;
+  }
+
+  // Threat Identification methods
+  async getIdentifiedThreats(assessmentId: string): Promise<IdentifiedThreat[]> {
+    return Array.from(this.identifiedThreats.values())
+      .filter(t => t.assessmentId === assessmentId);
+  }
+
+  async createIdentifiedThreat(insertThreat: InsertIdentifiedThreat): Promise<IdentifiedThreat> {
+    const id = randomUUID();
+    const threat: IdentifiedThreat = {
+      ...insertThreat,
+      id,
+      affectedAssets: insertThreat.affectedAssets || null,
+      vulnerabilities: insertThreat.vulnerabilities || null,
+      createdAt: new Date()
+    };
+    this.identifiedThreats.set(id, threat);
+    return threat;
+  }
+
+  async bulkCreateIdentifiedThreats(threats: InsertIdentifiedThreat[]): Promise<IdentifiedThreat[]> {
+    const results: IdentifiedThreat[] = [];
+    
+    for (const insertThreat of threats) {
+      const created = await this.createIdentifiedThreat(insertThreat);
+      results.push(created);
+    }
+    
+    return results;
   }
 
   // Assessment Questions methods
@@ -201,10 +312,24 @@ export class MemStorage implements IStorage {
     const insight: RiskInsight = {
       ...insertInsight,
       id,
+      threatId: insertInsight.threatId || null,
+      riskScore: insertInsight.impact * insertInsight.probability,
+      riskMatrix: this.calculateRiskMatrix(insertInsight.impact, insertInsight.probability),
+      treatmentStrategy: insertInsight.treatmentStrategy || null,
+      treatmentPlan: insertInsight.treatmentPlan || null,
+      priority: insertInsight.priority || null,
       createdAt: new Date()
     };
     this.riskInsights.set(id, insight);
     return insight;
+  }
+
+  private calculateRiskMatrix(impact: number, probability: number): string {
+    const score = impact * probability;
+    if (score >= 70) return "extreme";
+    if (score >= 50) return "high";
+    if (score >= 30) return "medium";
+    return "low";
   }
 
   async bulkCreateRiskInsights(insights: InsertRiskInsight[]): Promise<RiskInsight[]> {

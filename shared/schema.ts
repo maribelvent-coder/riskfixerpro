@@ -14,13 +14,43 @@ export const assessments = pgTable("assessments", {
   title: text("title").notNull(),
   location: text("location").notNull(),
   assessor: text("assessor").notNull(),
-  status: text("status").notNull().default("draft"), // draft, in-progress, completed, reviewed
+  status: text("status").notNull().default("draft"), // draft, facility-survey, risk-assessment, completed, reviewed
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
   completedAt: timestamp("completed_at"),
   riskLevel: text("risk_level"), // low, medium, high, critical
+  
+  // ASIS Step 1: Establish Context
+  businessObjectives: jsonb("business_objectives"), // Array of business objectives
+  assetTypes: text("asset_types").array(), // Types of assets being protected
+  riskCriteria: jsonb("risk_criteria"), // Risk measurement criteria
+  
+  // Facility Survey completion status
+  facilitySurveyCompleted: boolean("facility_survey_completed").default(false),
+  facilitySurveyCompletedAt: timestamp("facility_survey_completed_at"),
+  
+  // Risk Assessment completion status
+  riskAssessmentCompleted: boolean("risk_assessment_completed").default(false),
+  riskAssessmentCompletedAt: timestamp("risk_assessment_completed_at"),
 });
 
+// Facility Survey Questions - Physical assessment of existing controls
+export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  category: text("category").notNull(), // barriers, lighting, access-control, surveillance, etc.
+  subcategory: text("subcategory"), // doors, windows, cameras, etc.
+  question: text("question").notNull(),
+  standard: text("standard"), // Reference to CPP/Army FM standard
+  type: text("type").notNull(), // condition, measurement, yes-no, rating
+  response: jsonb("response"), // Condition, measurements, ratings
+  notes: text("notes"),
+  evidence: text("evidence").array(), // Photo evidence
+  recommendations: text("recommendations").array(), // Immediate fixes needed
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Risk Assessment Questions - ASIS framework questions  
 export const assessmentQuestions = pgTable("assessment_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
@@ -34,9 +64,23 @@ export const assessmentQuestions = pgTable("assessment_questions", {
   evidence: text("evidence").array(), // file paths/urls
 });
 
+// Threats identified in ASIS Step 2: Identify Risks
+export const identifiedThreats = pgTable("identified_threats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  threatType: text("threat_type").notNull(), // human, environmental, technical, operational
+  threatName: text("threat_name").notNull(),
+  description: text("description").notNull(),
+  affectedAssets: text("affected_assets").array(),
+  vulnerabilities: text("vulnerabilities").array(), // From facility survey findings
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// ASIS Step 3 & 4: Analyzed and Evaluated Risks
 export const riskInsights = pgTable("risk_insights", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  threatId: varchar("threat_id").references(() => identifiedThreats.id),
   category: text("category").notNull(),
   severity: text("severity").notNull(), // low, medium, high, critical
   title: text("title").notNull(),
@@ -44,6 +88,14 @@ export const riskInsights = pgTable("risk_insights", {
   recommendation: text("recommendation").notNull(),
   impact: integer("impact").notNull(), // 1-10
   probability: integer("probability").notNull(), // 1-10
+  riskScore: integer("risk_score").notNull(), // impact * probability
+  riskMatrix: text("risk_matrix").notNull(), // Position on risk matrix
+  
+  // ASIS Step 5: Risk Treatment
+  treatmentStrategy: text("treatment_strategy"), // avoid, transfer, mitigate, accept
+  treatmentPlan: text("treatment_plan"),
+  priority: text("priority"), // immediate, short-term, long-term
+  
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -73,8 +125,19 @@ export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   completedAt: true,
 });
 
+// Insert schemas
+export const insertFacilitySurveyQuestionSchema = createInsertSchema(facilitySurveyQuestions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertAssessmentQuestionSchema = createInsertSchema(assessmentQuestions).omit({
   id: true,
+});
+
+export const insertIdentifiedThreatSchema = createInsertSchema(identifiedThreats).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertRiskInsightSchema = createInsertSchema(riskInsights).omit({
@@ -95,8 +158,14 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
 
+export type FacilitySurveyQuestion = typeof facilitySurveyQuestions.$inferSelect;
+export type InsertFacilitySurveyQuestion = z.infer<typeof insertFacilitySurveyQuestionSchema>;
+
 export type AssessmentQuestion = typeof assessmentQuestions.$inferSelect;
 export type InsertAssessmentQuestion = z.infer<typeof insertAssessmentQuestionSchema>;
+
+export type IdentifiedThreat = typeof identifiedThreats.$inferSelect;
+export type InsertIdentifiedThreat = z.infer<typeof insertIdentifiedThreatSchema>;
 
 export type RiskInsight = typeof riskInsights.$inferSelect;
 export type InsertRiskInsight = z.infer<typeof insertRiskInsightSchema>;
@@ -107,6 +176,8 @@ export type InsertReport = z.infer<typeof insertReportSchema>;
 // Assessment with related data
 export type AssessmentWithQuestions = Assessment & {
   questions: AssessmentQuestion[];
-  riskInsights?: RiskInsight[];
-  reports?: Report[];
+  facilityQuestions: FacilitySurveyQuestion[];
+  threats: IdentifiedThreat[];
+  riskInsights: RiskInsight[];
+  reports: Report[];
 };
