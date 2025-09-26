@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import logoPath from "@assets/logo TSB cutout_1758890068148.png";
 
 const navigationItems = [
   {
@@ -56,9 +57,20 @@ export function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2">
-          <Shield className="h-6 w-6 text-primary" />
-          <span className="font-semibold text-lg">SecureAssess</span>
+        <div className="flex items-center gap-3">
+          <img 
+            src={logoPath} 
+            alt="The Security Buzz" 
+            className="h-8 w-8 object-contain"
+            data-testid="logo-sidebar"
+          />
+          <div className="flex flex-col">
+            <span className="font-bold text-sm leading-tight">THE SECURITY</span>
+            <span className="font-bold text-sm text-primary leading-tight">BUZZ</span>
+          </div>
+        </div>
+        <div className="text-xs text-muted-foreground mt-1 px-1">
+          Physical Security Risk Assessment
         </div>
       </SidebarHeader>
       

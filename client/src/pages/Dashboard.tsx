@@ -83,9 +83,9 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="heading-dashboard">Security Assessment Dashboard</h1>
+          <h1 className="text-2xl font-bold" data-testid="heading-dashboard">Physical Security Risk Assessment</h1>
           <p className="text-muted-foreground">
-            Manage physical security assessments and risk analysis
+            Comprehensive facility surveys and professional risk analysis following ASIS International standards
           </p>
         </div>
         <Button 
