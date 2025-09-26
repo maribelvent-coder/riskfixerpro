@@ -134,6 +134,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="analysis" className="space-y-4">
           <RiskAnalysis
+            assessmentId={assessmentId}
             isAnalyzing={isAnalyzing}
             onGenerateAnalysis={handleGenerateAnalysis}
           />

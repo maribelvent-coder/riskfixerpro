@@ -17,6 +17,7 @@ export default function RiskAnalysisExample() {
 
   return (
     <RiskAnalysis
+      assessmentId="example-assessment-id"
       isAnalyzing={isAnalyzing}
       onGenerateAnalysis={handleGenerateAnalysis}
     />

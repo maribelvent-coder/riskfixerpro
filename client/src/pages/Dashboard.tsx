@@ -5,62 +5,78 @@ import { Input } from "@/components/ui/input";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { AssessmentCard } from "@/components/AssessmentCard";
 import { Plus, Search, Filter, TrendingUp, Users, Building2, Clock } from "lucide-react";
-
-//todo: remove mock functionality - replace with real data from API
-const mockStats = {
-  totalAssessments: 24,
-  activeAssessments: 8,
-  completedThisMonth: 12,
-  averageRiskScore: 6.8
-};
-
-const mockAssessments = [
-  {
-    id: "assess-001",
-    title: "Corporate Headquarters Security Review",
-    location: "123 Business Plaza, Downtown",
-    status: "in-progress" as const,
-    assessor: "Sarah Johnson",
-    createdDate: "Dec 18, 2024",
-    lastModified: "Dec 22, 2024",
-    riskLevel: "medium" as const
-  },
-  {
-    id: "assess-002", 
-    title: "Data Center Physical Security Audit",
-    location: "789 Tech Park Drive",
-    status: "completed" as const,
-    assessor: "Mike Chen",
-    createdDate: "Dec 15, 2024",
-    lastModified: "Dec 21, 2024",
-    riskLevel: "high" as const
-  },
-  {
-    id: "assess-003",
-    title: "Warehouse Facility Assessment",
-    location: "456 Industrial Way",
-    status: "draft" as const,
-    assessor: "Alex Rivera",
-    createdDate: "Dec 20, 2024",
-    lastModified: "Dec 20, 2024"
-  }
-];
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { dashboardApi, assessmentApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import type { Assessment } from "@shared/schema";
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch dashboard statistics
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+    queryFn: () => dashboardApi.getStats(),
+  });
+
+  // Fetch all assessments
+  const { data: assessments = [], isLoading: assessmentsLoading } = useQuery({
+    queryKey: ["/api/assessments"],
+    queryFn: () => assessmentApi.getAll(),
+  });
+
+  // Create new assessment mutation
+  const createAssessmentMutation = useMutation({
+    mutationFn: assessmentApi.create,
+    onSuccess: (newAssessment) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Assessment Created",
+        description: `New assessment "${newAssessment.title}" has been created.`,
+      });
+      // Navigate to the new assessment (in a real app, you'd use router)
+      console.log("Navigate to assessment:", newAssessment.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create assessment: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleCreateNew = () => {
-    console.log("Creating new assessment");
+    const newAssessment = {
+      title: "New Security Assessment",
+      location: "Enter facility location",
+      assessor: "Current User", // In real app, get from auth context
+      status: "draft" as const,
+    };
+    
+    createAssessmentMutation.mutate(newAssessment);
   };
 
   const handleSearch = (query: string) => {
-    console.log("Searching assessments:", query);
+    setSearchQuery(query);
   };
 
-  const filteredAssessments = mockAssessments.filter(assessment =>
+  const filteredAssessments = assessments.filter(assessment =>
     assessment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     assessment.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const formatDate = (dateString: Date | string | null) => {
+    if (!dateString) return "Unknown";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -72,9 +88,13 @@ export default function Dashboard() {
             Manage physical security assessments and risk analysis
           </p>
         </div>
-        <Button onClick={handleCreateNew} data-testid="button-create-assessment">
+        <Button 
+          onClick={handleCreateNew} 
+          disabled={createAssessmentMutation.isPending}
+          data-testid="button-create-assessment"
+        >
           <Plus className="h-4 w-4 mr-2" />
-          New Assessment
+          {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
         </Button>
       </div>
 
@@ -87,10 +107,10 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono" data-testid="stat-total-assessments">
-              {mockStats.totalAssessments}
+              {statsLoading ? "..." : stats?.totalAssessments || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              +3 from last month
+              Total assessments created
             </p>
           </CardContent>
         </Card>
@@ -102,10 +122,10 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono" data-testid="stat-active-assessments">
-              {mockStats.activeAssessments}
+              {statsLoading ? "..." : stats?.activeAssessments || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Across 5 facilities
+              Currently in progress
             </p>
           </CardContent>
         </Card>
@@ -117,10 +137,10 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono" data-testid="stat-completed-month">
-              {mockStats.completedThisMonth}
+              {statsLoading ? "..." : stats?.completedThisMonth || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              +20% vs last month
+              Completed this month
             </p>
           </CardContent>
         </Card>
@@ -132,49 +152,51 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono" data-testid="stat-avg-risk">
-              {mockStats.averageRiskScore}/10
+              {statsLoading ? "..." : (stats?.averageRiskScore || 0).toFixed(1)}/10
             </div>
             <p className="text-xs text-muted-foreground">
-              -0.2 improvement
+              Average risk level
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Risk Overview */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Risk Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <RiskScoreCard
-            title="Access Control Systems"
-            score={15}
-            maxScore={20}
-            category="low"
-            lastAssessed="2 days ago"
-          />
-          <RiskScoreCard
-            title="Perimeter Security"
-            score={12}
-            maxScore={20}
-            category="medium" 
-            lastAssessed="1 week ago"
-          />
-          <RiskScoreCard
-            title="Emergency Preparedness"
-            score={8}
-            maxScore={20}
-            category="high"
-            lastAssessed="3 days ago"
-          />
-          <RiskScoreCard
-            title="Physical Barriers"
-            score={4}
-            maxScore={20}
-            category="critical"
-            lastAssessed="2 weeks ago"
-          />
+      {stats?.riskDistribution && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Risk Distribution</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <RiskScoreCard
+              title="Low Risk Assessments"
+              score={stats.riskDistribution.low}
+              maxScore={stats.totalAssessments || 1}
+              category="low"
+              lastAssessed="Current"
+            />
+            <RiskScoreCard
+              title="Medium Risk Assessments"
+              score={stats.riskDistribution.medium}
+              maxScore={stats.totalAssessments || 1}
+              category="medium" 
+              lastAssessed="Current"
+            />
+            <RiskScoreCard
+              title="High Risk Assessments"
+              score={stats.riskDistribution.high}
+              maxScore={stats.totalAssessments || 1}
+              category="high"
+              lastAssessed="Current"
+            />
+            <RiskScoreCard
+              title="Critical Risk Assessments"
+              score={stats.riskDistribution.critical}
+              maxScore={stats.totalAssessments || 1}
+              category="critical"
+              lastAssessed="Current"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Recent Assessments */}
       <div className="space-y-4">
@@ -200,17 +222,60 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredAssessments.map((assessment) => (
-            <AssessmentCard
-              key={assessment.id}
-              {...assessment}
-              onStart={(id) => console.log(`Start assessment ${id}`)}
-              onView={(id) => console.log(`View assessment ${id}`)}
-              onGenerate={(id) => console.log(`Generate report for ${id}`)}
-            />
-          ))}
-        </div>
+        {assessmentsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                    <div className="h-3 bg-muted rounded w-2/3"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredAssessments.length === 0 ? (
+          <Card>
+            <CardContent className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Assessments Found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery ? "No assessments match your search." : "Get started by creating your first security assessment."}
+                </p>
+                {!searchQuery && (
+                  <Button onClick={handleCreateNew}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Assessment
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredAssessments.map((assessment) => (
+              <AssessmentCard
+                key={assessment.id}
+                id={assessment.id}
+                title={assessment.title}
+                location={assessment.location}
+                status={assessment.status as any}
+                assessor={assessment.assessor}
+                createdDate={formatDate(assessment.createdAt)}
+                lastModified={formatDate(assessment.updatedAt)}
+                riskLevel={assessment.riskLevel as any}
+                onStart={(id) => console.log(`Start assessment ${id}`)}
+                onView={(id) => console.log(`View assessment ${id}`)}
+                onGenerate={(id) => console.log(`Generate report for ${id}`)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

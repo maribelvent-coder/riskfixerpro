@@ -3,6 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Brain, TrendingUp, AlertTriangle, CheckCircle, Lightbulb } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { assessmentApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import type { RiskInsight } from "@shared/schema";
 
 interface RiskInsight {
   id: string;
@@ -16,43 +20,11 @@ interface RiskInsight {
 }
 
 interface RiskAnalysisProps {
+  assessmentId: string;
   isAnalyzing?: boolean;
   insights?: RiskInsight[];
   onGenerateAnalysis?: () => void;
 }
-
-const mockInsights: RiskInsight[] = [
-  {
-    id: "ra-001",
-    category: "Access Control",
-    severity: "high",
-    title: "Insufficient Visitor Screening",
-    description: "Current visitor management system lacks proper identity verification and background screening capabilities.",
-    recommendation: "Implement automated ID verification with background check integration for all visitors.",
-    impact: 8,
-    probability: 7
-  },
-  {
-    id: "ra-002", 
-    category: "Perimeter Security",
-    severity: "medium",
-    title: "Blind Spots in CCTV Coverage",
-    description: "Analysis shows 15% of perimeter areas lack adequate camera coverage, particularly near loading docks.",
-    recommendation: "Install additional cameras and upgrade to thermal imaging for 24/7 monitoring.",
-    impact: 6,
-    probability: 5
-  },
-  {
-    id: "ra-003",
-    category: "Physical Barriers",
-    severity: "critical", 
-    title: "Emergency Exit Compliance Issues",
-    description: "Several emergency exits are obstructed or improperly secured, violating safety regulations.",
-    recommendation: "Immediate remediation required - clear all obstructions and install proper emergency hardware.",
-    impact: 9,
-    probability: 9
-  }
-];
 
 const severityConfig = {
   low: { color: "bg-chart-2 text-chart-2-foreground", icon: CheckCircle },
@@ -62,16 +34,56 @@ const severityConfig = {
 };
 
 export function RiskAnalysis({ 
+  assessmentId,
   isAnalyzing = false,
-  insights = mockInsights,
   onGenerateAnalysis 
 }: RiskAnalysisProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch existing insights for this assessment
+  const { data: insights = [], isLoading: insightsLoading } = useQuery({
+    queryKey: ["/api/assessments", assessmentId, "insights"],
+    queryFn: () => assessmentApi.getInsights(assessmentId),
+    enabled: !!assessmentId,
+  });
+
+  // Generate analysis mutation
+  const generateAnalysisMutation = useMutation({
+    mutationFn: () => assessmentApi.analyze(assessmentId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "insights"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      
+      toast({
+        title: "Analysis Complete",
+        description: `AI analysis generated ${data.insights.length} risk insights with ${data.riskLevel} overall risk level.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Analysis Failed",
+        description: `Failed to generate analysis: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleGenerateAnalysis = () => {
+    generateAnalysisMutation.mutate();
+    onGenerateAnalysis?.();
+  };
+  
   const riskScore = insights.reduce((acc, insight) => {
     return acc + (insight.impact * insight.probability);
   }, 0);
   
   const maxRiskScore = insights.length * 100; // 10 * 10 per insight
   const riskPercentage = maxRiskScore > 0 ? (riskScore / maxRiskScore) * 100 : 0;
+
+  const currentlyAnalyzing = isAnalyzing || generateAnalysisMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -84,11 +96,11 @@ export function RiskAnalysis({
               AI Risk Analysis
             </CardTitle>
             <Button 
-              onClick={onGenerateAnalysis}
-              disabled={isAnalyzing}
+              onClick={handleGenerateAnalysis}
+              disabled={currentlyAnalyzing}
               data-testid="button-generate-analysis"
             >
-              {isAnalyzing ? "Analyzing..." : "Generate Analysis"}
+              {currentlyAnalyzing ? "Analyzing..." : "Generate Analysis"}
             </Button>
           </div>
         </CardHeader>
@@ -133,13 +145,23 @@ export function RiskAnalysis({
         )}
       </Card>
 
-      {isAnalyzing && (
+      {currentlyAnalyzing && (
         <Card>
           <CardContent className="flex items-center justify-center py-8">
             <div className="text-center space-y-2">
               <Brain className="h-8 w-8 animate-pulse mx-auto text-primary" />
               <p className="text-muted-foreground">AI is analyzing assessment data...</p>
               <Progress value={65} className="w-48" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {insightsLoading && !currentlyAnalyzing && (
+        <Card>
+          <CardContent className="flex items-center justify-center py-4">
+            <div className="text-center">
+              <p className="text-muted-foreground">Loading analysis results...</p>
             </div>
           </CardContent>
         </Card>

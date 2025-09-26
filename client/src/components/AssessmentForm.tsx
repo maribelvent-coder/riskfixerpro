@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, CheckCircle, Camera, Save, Send } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { assessmentApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import type { AssessmentQuestion } from "@shared/schema";
 
 interface Question {
   id: string;
@@ -52,20 +56,73 @@ const mockQuestions: Question[] = [
 ];
 
 interface AssessmentFormProps {
-  assessmentId?: string;
+  assessmentId: string;
   title?: string;
   onSave?: (data: any) => void;
   onSubmit?: (data: any) => void;
 }
 
 export function AssessmentForm({ 
-  assessmentId = "new",
+  assessmentId,
   title = "Physical Security Assessment",
   onSave,
   onSubmit 
 }: AssessmentFormProps) {
   const [questions, setQuestions] = useState<Question[]>(mockQuestions);
   const [currentSection, setCurrentSection] = useState(0);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Load existing questions if assessment exists
+  const { data: assessment } = useQuery({
+    queryKey: ["/api/assessments", assessmentId],
+    queryFn: () => assessmentApi.getById(assessmentId),
+    enabled: !!assessmentId && assessmentId !== "new",
+  });
+
+  // Save questions mutation
+  const saveQuestionsMutation = useMutation({
+    mutationFn: (questionsData: any[]) => 
+      assessmentApi.saveQuestions(assessmentId, questionsData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId] });
+      toast({
+        title: "Progress Saved",
+        description: "Your assessment answers have been saved.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Save Failed",
+        description: `Failed to save progress: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Load existing questions data when assessment is loaded
+  useEffect(() => {
+    if (assessment?.questions && assessment.questions.length > 0) {
+      const loadedQuestions = questions.map(defaultQuestion => {
+        const existingQuestion = assessment.questions.find(
+          q => q.questionId === defaultQuestion.id
+        );
+        
+        if (existingQuestion) {
+          return {
+            ...defaultQuestion,
+            response: existingQuestion.response,
+            notes: existingQuestion.notes || "",
+            evidence: existingQuestion.evidence || []
+          };
+        }
+        
+        return defaultQuestion;
+      });
+      
+      setQuestions(loadedQuestions);
+    }
+  }, [assessment]);
   
   const categories = Array.from(new Set(questions.map(q => q.category)));
   const currentCategory = categories[currentSection];
@@ -84,12 +141,36 @@ export function AssessmentForm({
   };
 
   const handleSave = () => {
-    console.log("Saving assessment draft", { assessmentId, questions });
+    const questionsData = questions.map(q => ({
+      questionId: q.id,
+      assessmentId,
+      category: q.category,
+      question: q.question,
+      type: q.type,
+      weight: q.weight,
+      response: q.response,
+      notes: q.notes,
+      evidence: q.evidence
+    }));
+
+    saveQuestionsMutation.mutate(questionsData);
     onSave?.(questions);
   };
 
   const handleSubmit = () => {
-    console.log("Submitting assessment for review", { assessmentId, questions });
+    const questionsData = questions.map(q => ({
+      questionId: q.id,
+      assessmentId,
+      category: q.category,
+      question: q.question,
+      type: q.type,
+      weight: q.weight,
+      response: q.response,
+      notes: q.notes,
+      evidence: q.evidence
+    }));
+
+    saveQuestionsMutation.mutate(questionsData);
     onSubmit?.(questions);
   };
 
@@ -237,10 +318,11 @@ export function AssessmentForm({
           <Button 
             variant="outline"
             onClick={handleSave}
+            disabled={saveQuestionsMutation.isPending}
             data-testid="button-save-draft"
           >
             <Save className="h-4 w-4 mr-2" />
-            Save Draft
+            {saveQuestionsMutation.isPending ? "Saving..." : "Save Draft"}
           </Button>
         </div>
         
