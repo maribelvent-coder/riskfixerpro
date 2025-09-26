@@ -113,6 +113,7 @@ export class MemStorage implements IStorage {
     const assessment: Assessment = {
       ...insertAssessment,
       id,
+      status: insertAssessment.status || "draft",
       createdAt: now,
       updatedAt: now,
       completedAt: null
@@ -148,7 +149,10 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const question: AssessmentQuestion = {
       ...insertQuestion,
-      id
+      id,
+      response: insertQuestion.response || null,
+      notes: insertQuestion.notes || null,
+      evidence: insertQuestion.evidence || null
     };
     this.assessmentQuestions.set(id, question);
     return question;
@@ -229,6 +233,9 @@ export class MemStorage implements IStorage {
     const report: Report = {
       ...insertReport,
       id,
+      status: insertReport.status || "pending",
+      filePath: insertReport.filePath || null,
+      fileSize: insertReport.fileSize || null,
       createdAt: new Date(),
       generatedAt: null
     };
