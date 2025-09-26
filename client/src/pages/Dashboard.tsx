@@ -6,6 +6,7 @@ import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { AssessmentCard } from "@/components/AssessmentCard";
 import { Plus, Search, Filter, TrendingUp, Users, Building2, Clock } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { dashboardApi, assessmentApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import type { Assessment } from "@shared/schema";
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Fetch dashboard statistics
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -37,8 +39,8 @@ export default function Dashboard() {
         title: "Assessment Created",
         description: `New assessment "${newAssessment.title}" has been created.`,
       });
-      // Navigate to the new assessment (in a real app, you'd use router)
-      console.log("Navigate to assessment:", newAssessment.id);
+      // Navigate to the new assessment
+      setLocation(`/assessments/${newAssessment.id}`);
     },
     onError: (error) => {
       toast({
@@ -269,9 +271,9 @@ export default function Dashboard() {
                 createdDate={formatDate(assessment.createdAt)}
                 lastModified={formatDate(assessment.updatedAt)}
                 riskLevel={assessment.riskLevel as any}
-                onStart={(id) => console.log(`Start assessment ${id}`)}
-                onView={(id) => console.log(`View assessment ${id}`)}
-                onGenerate={(id) => console.log(`Generate report for ${id}`)}
+                onStart={(id) => setLocation(`/assessments/${id}`)}
+                onView={(id) => setLocation(`/assessments/${id}`)}
+                onGenerate={(id) => console.log(`Generate report for ${id}`)} // TODO: Implement report generation
               />
             ))}
           </div>
