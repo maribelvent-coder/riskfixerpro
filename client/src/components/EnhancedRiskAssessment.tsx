@@ -289,13 +289,25 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   };
 
   const handleUpdateTreatment = (id: string, field: string, value: any) => {
+    const originalPlans = treatmentPlans;
+    
     // Optimistic update - update local state immediately
     setTreatmentPlans(prev => prev.map(plan => 
       plan.id === id ? { ...plan, [field]: value } : plan
     ));
     
-    // Persist to database
-    updateTreatmentMutation.mutate({ id, data: { [field]: value } });
+    // Persist to database with error handling
+    updateTreatmentMutation.mutate({ id, data: { [field]: value } }, {
+      onError: (error) => {
+        // Rollback optimistic update on error
+        setTreatmentPlans(originalPlans);
+        toast({
+          title: "Update Failed",
+          description: `Failed to update treatment plan: ${error.message}`,
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const completedSteps = currentStep;
@@ -591,12 +603,12 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {scenarios.length === 0 ? (
+                {existingScenarios.length === 0 ? (
                   <p className="text-muted-foreground">Complete risk scenario development first.</p>
                 ) : (
                   <div className="space-y-4">
                     <div className="grid gap-4">
-                      {scenarios.map((scenario) => {
+                      {existingScenarios.map((scenario) => {
                         const risk = calculateRiskLevel(scenario.likelihood, scenario.impact);
                         const asset = extractedAssets.find(a => a.id === scenario.assetId);
                         
@@ -625,7 +637,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                       <h4 className="font-medium mb-3">Risk Summary</h4>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-sm">
                         {["Very Low", "Low", "Medium", "High", "Critical"].map((level) => {
-                          const count = scenarios.filter(s => {
+                          const count = existingScenarios.filter(s => {
                             const risk = calculateRiskLevel(s.likelihood, s.impact);
                             return risk.level === level;
                           }).length;
