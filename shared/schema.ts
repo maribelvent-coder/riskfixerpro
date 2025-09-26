@@ -76,7 +76,49 @@ export const identifiedThreats = pgTable("identified_threats", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-// ASIS Step 3 & 4: Analyzed and Evaluated Risks
+// Step 1: Custom Assets identified by user
+export const riskAssets = pgTable("risk_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  name: text("name").notNull(),
+  type: text("type"), // From facility survey or custom
+  description: text("description"),
+  source: text("source").notNull(), // 'facility_survey' or 'custom'
+  sourceId: varchar("source_id"), // Reference to facility question if applicable
+  criticality: text("criticality"), // high, medium, low
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Step 2-3: Risk Scenarios with quantitative analysis
+export const riskScenarios = pgTable("risk_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  assetId: varchar("asset_id").references(() => riskAssets.id),
+  scenario: text("scenario").notNull(), // "Theft of cash register"
+  asset: text("asset").notNull(), // "Cash register" 
+  likelihood: text("likelihood").notNull(), // "Almost Certain", "Likely", "Possible", "Unlikely", "Rare"
+  impact: text("impact").notNull(), // "Insignificant", "Minor", "Moderate", "Major", "Catastrophic"
+  riskLevel: text("risk_level").notNull(), // "Low", "Medium", "High", "Extreme" (auto-calculated)
+  riskRating: text("risk_rating"), // User's assessment
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Step 5: Treatment Plans  
+export const treatmentPlans = pgTable("treatment_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  riskScenarioId: varchar("risk_scenario_id").references(() => riskScenarios.id),
+  risk: text("risk").notNull(), // Which risk this treats
+  strategy: text("strategy").notNull(), // "Accept", "Avoid", "Control", "Transfer"
+  description: text("description").notNull(),
+  responsible: text("responsible"), // Who is responsible
+  deadline: text("deadline"), // When to implement
+  cost: text("cost"), // Estimated cost
+  status: text("status").default("planned"), // planned, in_progress, completed
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// ASIS Step 3 & 4: Analyzed and Evaluated Risks (AI Generated)
 export const riskInsights = pgTable("risk_insights", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
@@ -140,6 +182,21 @@ export const insertIdentifiedThreatSchema = createInsertSchema(identifiedThreats
   createdAt: true,
 });
 
+export const insertRiskAssetSchema = createInsertSchema(riskAssets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRiskScenarioSchema = createInsertSchema(riskScenarios).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTreatmentPlanSchema = createInsertSchema(treatmentPlans).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertRiskInsightSchema = createInsertSchema(riskInsights).omit({
   id: true,
   createdAt: true,
@@ -167,6 +224,15 @@ export type InsertAssessmentQuestion = z.infer<typeof insertAssessmentQuestionSc
 export type IdentifiedThreat = typeof identifiedThreats.$inferSelect;
 export type InsertIdentifiedThreat = z.infer<typeof insertIdentifiedThreatSchema>;
 
+export type RiskAsset = typeof riskAssets.$inferSelect;
+export type InsertRiskAsset = z.infer<typeof insertRiskAssetSchema>;
+
+export type RiskScenario = typeof riskScenarios.$inferSelect;
+export type InsertRiskScenario = z.infer<typeof insertRiskScenarioSchema>;
+
+export type TreatmentPlan = typeof treatmentPlans.$inferSelect;
+export type InsertTreatmentPlan = z.infer<typeof insertTreatmentPlanSchema>;
+
 export type RiskInsight = typeof riskInsights.$inferSelect;
 export type InsertRiskInsight = z.infer<typeof insertRiskInsightSchema>;
 
@@ -178,6 +244,9 @@ export type AssessmentWithQuestions = Assessment & {
   questions: AssessmentQuestion[];
   facilityQuestions: FacilitySurveyQuestion[];
   threats: IdentifiedThreat[];
+  riskAssets: RiskAsset[];
+  riskScenarios: RiskScenario[];
+  treatmentPlans: TreatmentPlan[];
   riskInsights: RiskInsight[];
   reports: Report[];
 };
