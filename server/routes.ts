@@ -6,6 +6,9 @@ import {
   insertAssessmentSchema,
   insertFacilitySurveyQuestionSchema,
   insertAssessmentQuestionSchema,
+  insertRiskAssetSchema,
+  insertRiskScenarioSchema,
+  insertTreatmentPlanSchema,
   insertReportSchema 
 } from "@shared/schema";
 import { z } from "zod";
@@ -133,6 +136,323 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error saving facility survey:", error);
       res.status(500).json({ error: "Failed to save facility survey" });
+    }
+  });
+
+  // Asset Bridge route - Extract assets from facility survey for Phase 2
+  app.post("/api/assessments/:id/extract-assets", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get the facility survey questions for this assessment
+      const facilityQuestions = await storage.getFacilitySurveyQuestions(id);
+      
+      if (facilityQuestions.length === 0) {
+        return res.status(400).json({ error: "No facility survey data found" });
+      }
+
+      // Extract assets from facility survey responses
+      const extractedAssets: any[] = [];
+
+      // Map facility survey categories to risk assets
+      const assetMappings: Record<string, {name: string, type: string, description: string}> = {
+        'lighting': {
+          name: 'Lighting Systems',
+          type: 'Infrastructure',
+          description: 'Facility lighting infrastructure including perimeter, parking, and emergency lighting'
+        },
+        'surveillance': {
+          name: 'Surveillance Systems', 
+          type: 'Technology',
+          description: 'CCTV cameras, monitoring equipment, and video surveillance infrastructure'
+        },
+        'access-control': {
+          name: 'Access Control Systems',
+          type: 'Technology', 
+          description: 'Door locks, card readers, visitor management, and entry point security'
+        },
+        'barriers': {
+          name: 'Physical Barriers',
+          type: 'Infrastructure',
+          description: 'Perimeter fencing, walls, gates, and structural security barriers'
+        },
+        'intrusion-detection': {
+          name: 'Intrusion Detection Systems',
+          type: 'Technology',
+          description: 'Alarm systems, motion sensors, and perimeter detection equipment'
+        }
+      };
+
+      // Analyze facility survey responses and extract assets
+      for (const question of facilityQuestions) {
+        if (question.response && question.category) {
+          const mapping = assetMappings[question.category];
+          if (mapping) {
+            // Check if this asset type is already extracted
+            const existingAsset = extractedAssets.find(a => a.name === mapping.name);
+            
+            if (!existingAsset) {
+              extractedAssets.push({
+                assessmentId: id,
+                name: mapping.name,
+                type: mapping.type,
+                description: mapping.description,
+                source: 'facility_survey',
+                sourceId: question.id,
+                criticality: 'medium' // Default, can be customized later
+              });
+            }
+          }
+        }
+      }
+
+      // Add custom asset placeholder for user-defined assets
+      extractedAssets.push({
+        assessmentId: id,
+        name: 'Custom Assets',
+        type: 'Custom',
+        description: 'User-defined assets specific to this facility',
+        source: 'custom',
+        sourceId: null,
+        criticality: 'medium'
+      });
+
+      // Validate and save the extracted assets using the robust upsert method
+      const validatedAssets = extractedAssets.map(asset => 
+        insertRiskAssetSchema.parse(asset)
+      );
+      
+      const savedAssets = await storage.bulkUpsertRiskAssets(id, validatedAssets);
+      
+      res.json({
+        message: "Assets extracted successfully from facility survey",
+        extractedCount: savedAssets.length,
+        assets: savedAssets
+      });
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid asset data", details: error.errors });
+      }
+      console.error("Error extracting assets:", error);
+      res.status(500).json({ error: "Failed to extract assets from facility survey" });
+    }
+  });
+
+  // Risk Assets routes
+  app.get("/api/assessments/:id/risk-assets", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const assets = await storage.getRiskAssets(id);
+      res.json(assets);
+    } catch (error) {
+      console.error("Error fetching risk assets:", error);
+      res.status(500).json({ error: "Failed to fetch risk assets" });
+    }
+  });
+
+  app.post("/api/assessments/:id/risk-assets", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const assetData = insertRiskAssetSchema.parse({ ...req.body, assessmentId: id });
+      const result = await storage.createRiskAsset(assetData);
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid asset data", details: error.errors });
+      }
+      console.error("Error creating risk asset:", error);
+      res.status(500).json({ error: "Failed to create risk asset" });
+    }
+  });
+
+  app.post("/api/assessments/:id/risk-assets/bulk", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { assets } = req.body;
+      
+      if (!Array.isArray(assets)) {
+        return res.status(400).json({ error: "Assets must be an array" });
+      }
+
+      const validatedAssets = assets.map(asset => 
+        insertRiskAssetSchema.parse({ ...asset, assessmentId: id })
+      );
+      
+      const result = await storage.bulkUpsertRiskAssets(id, validatedAssets);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid assets data", details: error.errors });
+      }
+      console.error("Error bulk upserting assets:", error);
+      res.status(500).json({ error: "Failed to bulk upsert assets" });
+    }
+  });
+
+  // Risk Scenarios routes
+  app.get("/api/assessments/:id/risk-scenarios", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const scenarios = await storage.getRiskScenarios(id);
+      res.json(scenarios);
+    } catch (error) {
+      console.error("Error fetching risk scenarios:", error);
+      res.status(500).json({ error: "Failed to fetch risk scenarios" });
+    }
+  });
+
+  app.post("/api/assessments/:id/risk-scenarios", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const scenarioData = insertRiskScenarioSchema.parse({ ...req.body, assessmentId: id });
+      const result = await storage.createRiskScenario(scenarioData);
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid scenario data", details: error.errors });
+      }
+      console.error("Error creating risk scenario:", error);
+      res.status(500).json({ error: "Failed to create risk scenario" });
+    }
+  });
+
+  app.put("/api/risk-scenarios/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.updateRiskScenario(id, req.body);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Risk scenario not found" });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating risk scenario:", error);
+      res.status(500).json({ error: "Failed to update risk scenario" });
+    }
+  });
+
+  app.delete("/api/risk-scenarios/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRiskScenario(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Risk scenario not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting risk scenario:", error);
+      res.status(500).json({ error: "Failed to delete risk scenario" });
+    }
+  });
+
+  app.post("/api/assessments/:id/risk-scenarios/bulk", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { scenarios } = req.body;
+      
+      if (!Array.isArray(scenarios)) {
+        return res.status(400).json({ error: "Scenarios must be an array" });
+      }
+
+      const validatedScenarios = scenarios.map(scenario => 
+        insertRiskScenarioSchema.parse({ ...scenario, assessmentId: id })
+      );
+      
+      const result = await storage.bulkUpsertRiskScenarios(id, validatedScenarios);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid scenarios data", details: error.errors });
+      }
+      console.error("Error bulk upserting scenarios:", error);
+      res.status(500).json({ error: "Failed to bulk upsert scenarios" });
+    }
+  });
+
+  // Treatment Plans routes
+  app.get("/api/assessments/:id/treatment-plans", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const plans = await storage.getTreatmentPlans(id);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching treatment plans:", error);
+      res.status(500).json({ error: "Failed to fetch treatment plans" });
+    }
+  });
+
+  app.post("/api/assessments/:id/treatment-plans", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const planData = insertTreatmentPlanSchema.parse({ ...req.body, assessmentId: id });
+      const result = await storage.createTreatmentPlan(planData);
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid treatment plan data", details: error.errors });
+      }
+      console.error("Error creating treatment plan:", error);
+      res.status(500).json({ error: "Failed to create treatment plan" });
+    }
+  });
+
+  app.put("/api/treatment-plans/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.updateTreatmentPlan(id, req.body);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Treatment plan not found" });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating treatment plan:", error);
+      res.status(500).json({ error: "Failed to update treatment plan" });
+    }
+  });
+
+  app.delete("/api/treatment-plans/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteTreatmentPlan(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Treatment plan not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting treatment plan:", error);
+      res.status(500).json({ error: "Failed to delete treatment plan" });
+    }
+  });
+
+  app.post("/api/assessments/:id/treatment-plans/bulk", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { plans } = req.body;
+      
+      if (!Array.isArray(plans)) {
+        return res.status(400).json({ error: "Plans must be an array" });
+      }
+
+      const validatedPlans = plans.map(plan => 
+        insertTreatmentPlanSchema.parse({ ...plan, assessmentId: id })
+      );
+      
+      const result = await storage.bulkUpsertTreatmentPlans(id, validatedPlans);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid treatment plans data", details: error.errors });
+      }
+      console.error("Error bulk upserting treatment plans:", error);
+      res.status(500).json({ error: "Failed to bulk upsert treatment plans" });
     }
   });
 

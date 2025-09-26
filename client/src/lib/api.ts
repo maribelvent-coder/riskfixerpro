@@ -3,6 +3,12 @@ import type {
   InsertAssessment, 
   AssessmentWithQuestions,
   AssessmentQuestion,
+  RiskAsset,
+  InsertRiskAsset,
+  RiskScenario,
+  InsertRiskScenario,
+  TreatmentPlan,
+  InsertTreatmentPlan,
   RiskInsight,
   Report,
   InsertReport
@@ -80,6 +86,92 @@ export const assessmentApi = {
     apiRequest(`/assessments/${id}/reports`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  // Asset Bridge - Extract assets from facility survey for Phase 2
+  extractAssets: (id: string): Promise<{
+    message: string;
+    extractedCount: number;
+    assets: RiskAsset[];
+  }> => 
+    apiRequest(`/assessments/${id}/extract-assets`, {
+      method: 'POST',
+    }),
+};
+
+// Risk Assets API functions
+export const riskAssetApi = {
+  getAll: (assessmentId: string): Promise<RiskAsset[]> => 
+    apiRequest(`/assessments/${assessmentId}/risk-assets`),
+
+  create: (data: InsertRiskAsset): Promise<RiskAsset> => 
+    apiRequest(`/assessments/${data.assessmentId}/risk-assets`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  bulkUpsert: (assessmentId: string, assets: InsertRiskAsset[]): Promise<RiskAsset[]> => 
+    apiRequest(`/assessments/${assessmentId}/risk-assets/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ assets }),
+    }),
+};
+
+// Risk Scenarios API functions  
+export const riskScenarioApi = {
+  getAll: (assessmentId: string): Promise<RiskScenario[]> => 
+    apiRequest(`/assessments/${assessmentId}/risk-scenarios`),
+
+  create: (data: InsertRiskScenario): Promise<RiskScenario> => 
+    apiRequest(`/assessments/${data.assessmentId}/risk-scenarios`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<RiskScenario>): Promise<RiskScenario> => 
+    apiRequest(`/risk-scenarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string): Promise<void> => 
+    apiRequest(`/risk-scenarios/${id}`, {
+      method: 'DELETE',
+    }),
+
+  bulkUpsert: (assessmentId: string, scenarios: InsertRiskScenario[]): Promise<RiskScenario[]> => 
+    apiRequest(`/assessments/${assessmentId}/risk-scenarios/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ scenarios }),
+    }),
+};
+
+// Treatment Plans API functions
+export const treatmentPlanApi = {
+  getAll: (assessmentId: string): Promise<TreatmentPlan[]> => 
+    apiRequest(`/assessments/${assessmentId}/treatment-plans`),
+
+  create: (data: InsertTreatmentPlan): Promise<TreatmentPlan> => 
+    apiRequest(`/assessments/${data.assessmentId}/treatment-plans`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<TreatmentPlan>): Promise<TreatmentPlan> => 
+    apiRequest(`/treatment-plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string): Promise<void> => 
+    apiRequest(`/treatment-plans/${id}`, {
+      method: 'DELETE',
+    }),
+
+  bulkUpsert: (assessmentId: string, plans: InsertTreatmentPlan[]): Promise<TreatmentPlan[]> => 
+    apiRequest(`/assessments/${assessmentId}/treatment-plans/bulk`, {
+      method: 'POST',  
+      body: JSON.stringify({ plans }),
     }),
 };
 
