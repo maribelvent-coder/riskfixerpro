@@ -209,7 +209,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             className="flex items-center gap-2"
           >
             <Shield className="h-4 w-4" />
-            ASIS Risk Assessment
+            Security Risk Assessment
             {assessmentData.riskAssessmentCompleted && <CheckCircle className="h-3 w-3 text-green-500" />}
           </TabsTrigger>
           <TabsTrigger 
@@ -259,7 +259,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Phase 2: ASIS International Risk Assessment
+                Phase 2: Security Risk Assessment
               </CardTitle>
               <p className="text-muted-foreground">
                 Systematic identification and analysis of security risks using ASIS International methodology.
