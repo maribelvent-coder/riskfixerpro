@@ -385,9 +385,13 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
             <SelectContent>
-              {/* Add N/A option for visitor management and intrusion detection questions */}
-              {(question.subcategory === "visitor-management" || 
-                question.category === "intrusion-detection") && (
+              {/* Add N/A option for all system-related questions */}
+              {(question.category === "surveillance" || 
+                question.category === "access-control" ||
+                question.category === "lighting" ||
+                question.category === "barriers" ||
+                question.category === "intrusion-detection" ||
+                question.subcategory === "visitor-management") && (
                 <SelectItem value="n/a">N/A - No system in place or not applicable</SelectItem>
               )}
               <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>

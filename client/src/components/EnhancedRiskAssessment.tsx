@@ -12,6 +12,7 @@ import {
   CheckCircle, 
   Plus, 
   Trash2, 
+  Edit,
   Shield, 
   Target,
   Activity,
@@ -347,18 +348,47 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                     <h4 className="font-medium">Identified Assets</h4>
                     <div className="grid gap-2">
                       {extractedAssets.map((asset) => (
-                        <div key={asset.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <p className="font-medium">{asset.name}</p>
-                            <p className="text-sm text-muted-foreground">{asset.type}</p>
-                            {asset.description && (
-                              <p className="text-sm text-muted-foreground mt-1">{asset.description}</p>
-                            )}
-                          </div>
-                          <Badge variant={asset.source === "extracted" ? "secondary" : "default"}>
-                            {asset.source}
-                          </Badge>
-                        </div>
+                        <Card key={asset.id} className="hover-elevate">
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="font-medium">{asset.name}</p>
+                                <p className="text-sm text-muted-foreground">{asset.type}</p>
+                                {asset.description && (
+                                  <p className="text-sm text-muted-foreground mt-1">{asset.description}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={asset.source === "extracted" ? "secondary" : "default"}>
+                                  {asset.source}
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setNewAsset({
+                                      name: asset.name,
+                                      type: asset.type,
+                                      description: asset.description || ""
+                                    });
+                                  }}
+                                  data-testid={`button-edit-asset-${asset.id}`}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => deleteAssetMutation.mutate(asset.id)}
+                                  disabled={deleteAssetMutation.isPending}
+                                  data-testid={`button-delete-asset-${asset.id}`}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                   </div>
