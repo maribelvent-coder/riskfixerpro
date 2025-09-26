@@ -352,6 +352,10 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
             <SelectContent>
+              {/* Add N/A option for visitor management questions */}
+              {question.subcategory === "visitor-management" && (
+                <SelectItem value="n/a">N/A - No system in place or not applicable</SelectItem>
+              )}
               <SelectItem value="excellent">Excellent - Meets all standards</SelectItem>
               <SelectItem value="good">Good - Minor improvements needed</SelectItem>
               <SelectItem value="fair">Fair - Moderate deficiencies</SelectItem>
