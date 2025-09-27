@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -295,6 +295,34 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
 
     updateScenarioMutation.mutate({ id, data: updatedData });
   };
+
+  // Debounced version for text inputs to prevent API spam
+  const [debouncedUpdates, setDebouncedUpdates] = useState<{[key: string]: NodeJS.Timeout}>({});
+  
+  const handleUpdateScenarioDebounced = useCallback((id: string, field: string, value: any) => {
+    // Clear existing timeout for this field
+    const key = `${id}-${field}`;
+    if (debouncedUpdates[key]) {
+      clearTimeout(debouncedUpdates[key]);
+    }
+    
+    // Update local state immediately for responsive UI
+    setScenarios(prev => prev.map(s => 
+      s.id === id ? { ...s, [field]: value } : s
+    ));
+    
+    // Debounce the API call
+    const timeoutId = setTimeout(() => {
+      handleUpdateScenario(id, field, value);
+      setDebouncedUpdates(prev => {
+        const newUpdates = { ...prev };
+        delete newUpdates[key];
+        return newUpdates;
+      });
+    }, 500); // 500ms delay
+    
+    setDebouncedUpdates(prev => ({ ...prev, [key]: timeoutId }));
+  }, [debouncedUpdates, scenarios]);
 
   const handleUpdateTreatment = (id: string, field: string, value: any) => {
     const originalPlans = treatmentPlans;
@@ -621,8 +649,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             <div>
                               <Label>Vulnerability Description</Label>
                               <Textarea
-                                value={scenario.vulnerabilityDescription}
-                                onChange={(e) => handleUpdateScenario(scenario.id, "vulnerabilityDescription", e.target.value)}
+                                value={scenario.vulnerabilityDescription || ""}
+                                onChange={(e) => handleUpdateScenarioDebounced(scenario.id, "vulnerabilityDescription", e.target.value)}
                                 placeholder="Describe the specific vulnerability that enables this threat..."
                                 data-testid={`textarea-vulnerability-${scenario.id}`}
                                 rows={2}
