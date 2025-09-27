@@ -364,6 +364,15 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                   <SelectValue placeholder="Select assessment" />
                 </SelectTrigger>
                 <SelectContent>
+                  {/* Add N/A option for system-related measurement questions */}
+                  {(question.category === "surveillance" || 
+                    question.category === "access-control" ||
+                    question.category === "lighting" ||
+                    question.category === "barriers" ||
+                    question.category === "intrusion-detection" ||
+                    question.subcategory === "visitor-management") && (
+                    <SelectItem value="n/a">N/A - No system in place or not applicable</SelectItem>
+                  )}
                   <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>
                   <SelectItem value="good">Good - Meets standards well</SelectItem>
                   <SelectItem value="adequate">Adequate - Meets minimum standards</SelectItem>
