@@ -177,6 +177,18 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     },
   });
 
+  // Asset deletion mutation
+  const deleteAssetMutation = useMutation({
+    mutationFn: (id: string) => riskAssetApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-assets"] });
+      toast({
+        title: "Asset Deleted",
+        description: "Asset has been removed successfully.",
+      });
+    },
+  });
+
   // Scenario mutations
   const createScenarioMutation = useMutation({
     mutationFn: (scenarioData: InsertRiskScenario) => riskScenarioApi.create(scenarioData),
