@@ -303,10 +303,10 @@ export class MemStorage implements IStorage {
     const asset: RiskAsset = {
       ...insertAsset,
       id,
-      type: insertAsset.type || null,
-      description: insertAsset.description || null,
-      sourceId: insertAsset.sourceId || null,
-      criticality: insertAsset.criticality || null,
+      owner: insertAsset.owner || null,
+      scope: insertAsset.scope || null,
+      notes: insertAsset.notes || null,
+      protectionSystems: insertAsset.protectionSystems || null,
       createdAt: new Date()
     };
     this.riskAssets.set(id, asset);
@@ -317,12 +317,9 @@ export class MemStorage implements IStorage {
     const results: RiskAsset[] = [];
     
     for (const assetData of assets) {
-      // Find existing asset by source/sourceId for facility-derived assets
-      // or by name for custom assets to prevent duplicates
+      // Find existing asset by name to prevent duplicates
       const existing = Array.from(this.riskAssets.values())
-        .find(a => a.assessmentId === assessmentId && 
-                   ((a.source === assetData.source && a.sourceId === assetData.sourceId && assetData.sourceId) ||
-                    (a.source === 'custom' && assetData.source === 'custom' && a.name === assetData.name)));
+        .find(a => a.assessmentId === assessmentId && a.name === assetData.name);
       
       if (existing) {
         // Update existing asset while preserving ID

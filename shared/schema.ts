@@ -76,16 +76,17 @@ export const identifiedThreats = pgTable("identified_threats", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-// Step 1: Custom Assets identified by user
+// Step 1: Assets to protect - valuable things the organization wants to safeguard
 export const riskAssets = pgTable("risk_assets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
-  name: text("name").notNull(),
-  type: text("type"), // From facility survey or custom
-  description: text("description"),
-  source: text("source").notNull(), // 'facility_survey' or 'custom'
-  sourceId: varchar("source_id"), // Reference to facility question if applicable
-  criticality: text("criticality"), // high, medium, low
+  name: text("name").notNull(), // e.g., "Customer Database", "Executive Team", "Main Server Room"
+  type: text("type").notNull(), // "People", "Property", "Information", "Reputation", "Other"
+  owner: text("owner"), // Who owns/manages this asset
+  criticality: integer("criticality").notNull(), // 1-5 rating (1=lowest, 5=highest)
+  scope: text("scope"), // Physical or logical scope (e.g., "HQ Building", "IT Department") 
+  notes: text("notes"), // Additional description
+  protectionSystems: text("protection_systems").array(), // ["access-control", "surveillance", "barriers", "lighting", "intrusion-detection", "alarms"]
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -109,6 +110,7 @@ export const treatmentPlans = pgTable("treatment_plans", {
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
   riskScenarioId: varchar("risk_scenario_id").references(() => riskScenarios.id),
   risk: text("risk").notNull(), // Which risk this treats
+  threatDescription: text("threat_description"), // Description of the threat being treated
   strategy: text("strategy").notNull(), // "Accept", "Avoid", "Control", "Transfer"
   description: text("description").notNull(),
   responsible: text("responsible"), // Who is responsible
