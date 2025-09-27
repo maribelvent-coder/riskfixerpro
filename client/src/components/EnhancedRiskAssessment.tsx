@@ -101,7 +101,15 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   const [extractedAssets, setExtractedAssets] = useState<RiskAsset[]>([]);
   const [scenarios, setScenarios] = useState<RiskScenario[]>([]);
   const [treatmentPlans, setTreatmentPlans] = useState<TreatmentPlan[]>([]);
-  const [newAsset, setNewAsset] = useState({ name: "", type: "", description: "" });
+  const [newAsset, setNewAsset] = useState({ 
+    name: "", 
+    type: "", 
+    owner: "", 
+    criticality: 3, 
+    scope: "", 
+    notes: "", 
+    protectionSystems: [] as string[] 
+  });
   const [isExtracting, setIsExtracting] = useState(false);
   
   const { toast } = useToast();
@@ -138,26 +146,6 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     setTreatmentPlans(existingPlans);
   }, [existingPlans]);
 
-  // Asset extraction mutation
-  const extractAssetsMutation = useMutation({
-    mutationFn: () => assessmentApi.extractAssets(assessmentId),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-assets"] });
-      toast({
-        title: "Assets Extracted",
-        description: `Successfully extracted ${data.extractedCount} assets from facility survey.`,
-      });
-      setIsExtracting(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Extraction Failed",
-        description: `Failed to extract assets: ${error.message}`,
-        variant: "destructive",
-      });
-      setIsExtracting(false);
-    },
-  });
 
   // Asset creation mutation
   const createAssetMutation = useMutation({
@@ -165,15 +153,26 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
       assessmentId,
       name: assetData.name,
       type: assetData.type,
-      description: assetData.description,
-      source: "custom"
+      owner: assetData.owner,
+      criticality: assetData.criticality,
+      scope: assetData.scope,
+      notes: assetData.notes,
+      protectionSystems: assetData.protectionSystems
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-assets"] });
-      setNewAsset({ name: "", type: "", description: "" });
+      setNewAsset({ 
+        name: "", 
+        type: "", 
+        owner: "", 
+        criticality: 3, 
+        scope: "", 
+        notes: "", 
+        protectionSystems: [] 
+      });
       toast({
         title: "Asset Added",
-        description: "Custom asset has been added successfully.",
+        description: "Asset has been added successfully.",
       });
     },
   });
@@ -237,10 +236,6 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     { title: "Review & Submit", icon: CheckCircle }
   ];
 
-  const handleExtractAssets = () => {
-    setIsExtracting(true);
-    extractAssetsMutation.mutate();
-  };
 
   const handleAddCustomAsset = () => {
     if (!newAsset.name.trim() || !newAsset.type.trim()) {
@@ -327,41 +322,51 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Extract security assets identified during the facility survey
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={handleExtractAssets}
-                    disabled={isExtracting || extractAssetsMutation.isPending}
-                    data-testid="button-extract-assets"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    {isExtracting ? "Extracting..." : "Extract From Survey"}
-                  </Button>
+                <div className="mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Identify the valuable assets your organization wants to protect. These can be people, property, 
+                    information, reputation, or other things of value that could be compromised by threats.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Examples:</strong> Customer database (Information), Executive team (People), 
+                    Server room (Property), Company reputation (Reputation)
+                  </p>
                 </div>
 
                 {extractedAssets.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Identified Assets</h4>
+                  <div className="space-y-2 mb-4">
+                    <h4 className="font-medium">Assets to Protect</h4>
                     <div className="grid gap-2">
                       {extractedAssets.map((asset) => (
                         <Card key={asset.id} className="hover-elevate">
                           <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
-                                <p className="font-medium">{asset.name}</p>
-                                <p className="text-sm text-muted-foreground">{asset.type}</p>
-                                {asset.description && (
-                                  <p className="text-sm text-muted-foreground mt-1">{asset.description}</p>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium">{asset.name}</p>
+                                  <Badge variant="outline">{asset.type}</Badge>
+                                  <Badge variant="secondary">Criticality: {asset.criticality}</Badge>
+                                </div>
+                                {asset.owner && (
+                                  <p className="text-sm text-muted-foreground">Owner: {asset.owner}</p>
+                                )}
+                                {asset.scope && (
+                                  <p className="text-sm text-muted-foreground">Scope: {asset.scope}</p>
+                                )}
+                                {asset.notes && (
+                                  <p className="text-sm text-muted-foreground mt-1">{asset.notes}</p>
+                                )}
+                                {asset.protectionSystems && asset.protectionSystems.length > 0 && (
+                                  <div className="flex gap-1 mt-2">
+                                    {asset.protectionSystems.map(system => (
+                                      <Badge key={system} variant="outline" className="text-xs">
+                                        {system.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant={asset.source === "extracted" ? "secondary" : "default"}>
-                                  {asset.source}
-                                </Badge>
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -369,7 +374,11 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                     setNewAsset({
                                       name: asset.name,
                                       type: asset.type,
-                                      description: asset.description || ""
+                                      owner: asset.owner || "",
+                                      criticality: asset.criticality,
+                                      scope: asset.scope || "",
+                                      notes: asset.notes || "",
+                                      protectionSystems: asset.protectionSystems || []
                                     });
                                   }}
                                   data-testid={`button-edit-asset-${asset.id}`}
@@ -395,7 +404,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                 )}
 
                 <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">Add Custom Asset</h4>
+                  <h4 className="font-medium mb-3">Add Asset to Protect</h4>
                   <div className="grid gap-3">
                     <div>
                       <Label htmlFor="asset-name">Asset Name</Label>
@@ -403,7 +412,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                         id="asset-name"
                         value={newAsset.name}
                         onChange={(e) => setNewAsset(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Emergency Exit Door"
+                        placeholder="e.g., Customer Database, Executive Team, Server Room"
                         data-testid="input-asset-name"
                       />
                     </div>
@@ -417,25 +426,60 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                           <SelectValue placeholder="Select asset type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="physical-barrier">Physical Barrier</SelectItem>
-                          <SelectItem value="access-control">Access Control</SelectItem>
-                          <SelectItem value="surveillance">Surveillance System</SelectItem>
-                          <SelectItem value="lighting">Lighting System</SelectItem>
-                          <SelectItem value="intrusion-detection">Intrusion Detection</SelectItem>
-                          <SelectItem value="communication">Communication System</SelectItem>
-                          <SelectItem value="facility">Facility Component</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
+                          <SelectItem value="People">People - Employees, visitors, contractors</SelectItem>
+                          <SelectItem value="Property">Property - Buildings, equipment, inventory</SelectItem>
+                          <SelectItem value="Information">Information - Data, documents, intellectual property</SelectItem>
+                          <SelectItem value="Reputation">Reputation - Brand, customer trust, public image</SelectItem>
+                          <SelectItem value="Other">Other - Specify in notes</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="asset-description">Description</Label>
+                      <Label htmlFor="asset-owner">Owner</Label>
+                      <Input
+                        id="asset-owner"
+                        value={newAsset.owner}
+                        onChange={(e) => setNewAsset(prev => ({ ...prev, owner: e.target.value }))}
+                        placeholder="e.g., IT Department, HR Manager"
+                        data-testid="input-asset-owner"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="asset-criticality">Criticality (1-5)</Label>
+                      <Select 
+                        value={newAsset.criticality.toString()} 
+                        onValueChange={(value) => setNewAsset(prev => ({ ...prev, criticality: parseInt(value) }))}
+                      >
+                        <SelectTrigger data-testid="select-asset-criticality">
+                          <SelectValue placeholder="Select criticality level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - Very Low Impact</SelectItem>
+                          <SelectItem value="2">2 - Low Impact</SelectItem>
+                          <SelectItem value="3">3 - Medium Impact</SelectItem>
+                          <SelectItem value="4">4 - High Impact</SelectItem>
+                          <SelectItem value="5">5 - Critical Impact</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="asset-scope">Scope</Label>
+                      <Input
+                        id="asset-scope"
+                        value={newAsset.scope}
+                        onChange={(e) => setNewAsset(prev => ({ ...prev, scope: e.target.value }))}
+                        placeholder="e.g., HQ Building, IT Department, Company-wide"
+                        data-testid="input-asset-scope"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="asset-notes">Notes</Label>
                       <Textarea
-                        id="asset-description"
-                        value={newAsset.description}
-                        onChange={(e) => setNewAsset(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Brief description of the asset..."
-                        data-testid="textarea-asset-description"
+                        id="asset-notes"
+                        value={newAsset.notes}
+                        onChange={(e) => setNewAsset(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Additional description or context..."
+                        data-testid="textarea-asset-notes"
                         rows={2}
                       />
                     </div>
