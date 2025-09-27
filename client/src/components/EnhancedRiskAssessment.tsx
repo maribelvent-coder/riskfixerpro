@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -297,13 +297,13 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   };
 
   // Debounced version for text inputs to prevent API spam
-  const [debouncedUpdates, setDebouncedUpdates] = useState<{[key: string]: NodeJS.Timeout}>({});
+  const debouncedTimeouts = useRef<{[key: string]: NodeJS.Timeout}>({});
   
   const handleUpdateScenarioDebounced = useCallback((id: string, field: string, value: any) => {
     // Clear existing timeout for this field
     const key = `${id}-${field}`;
-    if (debouncedUpdates[key]) {
-      clearTimeout(debouncedUpdates[key]);
+    if (debouncedTimeouts.current[key]) {
+      clearTimeout(debouncedTimeouts.current[key]);
     }
     
     // Update local state immediately for responsive UI
@@ -314,15 +314,11 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     // Debounce the API call
     const timeoutId = setTimeout(() => {
       handleUpdateScenario(id, field, value);
-      setDebouncedUpdates(prev => {
-        const newUpdates = { ...prev };
-        delete newUpdates[key];
-        return newUpdates;
-      });
-    }, 500); // 500ms delay
+      delete debouncedTimeouts.current[key];
+    }, 800); // Increased delay for better stability
     
-    setDebouncedUpdates(prev => ({ ...prev, [key]: timeoutId }));
-  }, [debouncedUpdates, scenarios]);
+    debouncedTimeouts.current[key] = timeoutId;
+  }, []);
 
   const handleUpdateTreatment = (id: string, field: string, value: any) => {
     const originalPlans = treatmentPlans;
@@ -654,6 +650,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                 placeholder="Describe the specific vulnerability that enables this threat..."
                                 data-testid={`textarea-vulnerability-${scenario.id}`}
                                 rows={2}
+                                spellCheck={false}
                               />
                             </div>
 
