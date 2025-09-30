@@ -114,6 +114,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const scenariosEndRef = useRef<HTMLDivElement>(null);
+  const previousScenariosCount = useRef(0);
 
   // Load existing data
   const { data: assets = [], isLoading: assetsLoading } = useQuery({
@@ -145,6 +148,24 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   useEffect(() => {
     setTreatmentPlans(existingPlans);
   }, [existingPlans]);
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    if (contentRef.current) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentStep]);
+
+  // Auto-scroll to newly created scenario (only on additions, not deletions)
+  useEffect(() => {
+    if (scenarios.length > previousScenariosCount.current && scenariosEndRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        scenariosEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
+    }
+    previousScenariosCount.current = scenarios.length;
+  }, [scenarios.length]);
 
 
   // Asset creation mutation
@@ -264,9 +285,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   const handleAddScenario = () => {
     const newScenario: InsertRiskScenario = {
       assessmentId,
-      assetId: extractedAssets[0]?.id || "",
+      assetId: assets[0]?.id || "",
       scenario: "New Risk Scenario",
-      asset: extractedAssets[0]?.name || "Unknown Asset",
+      asset: assets[0]?.name || "Unknown Asset",
       likelihood: "medium",
       impact: "moderate",
       riskLevel: "Medium",
@@ -540,13 +561,18 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Step 2: Risk Scenario Development
-                  </CardTitle>
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Step 2: Risk Scenario Development
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Create at least one risk scenario for each of your identified assets
+                    </p>
+                  </div>
                   <Button 
                     onClick={handleAddScenario}
-                    disabled={extractedAssets.length === 0}
+                    disabled={assets.length === 0}
                     data-testid="button-add-scenario"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -555,7 +581,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                 </div>
               </CardHeader>
               <CardContent>
-                {extractedAssets.length === 0 ? (
+                {assets.length === 0 ? (
                   <p className="text-muted-foreground">Complete asset identification first.</p>
                 ) : scenarios.length === 0 ? (
                   <p className="text-muted-foreground">No risk scenarios created yet. Click "Add Scenario" to begin.</p>
@@ -584,7 +610,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                     <SelectValue placeholder="Select affected asset" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {extractedAssets.map((asset) => (
+                                    {assets.map((asset) => (
                                       <SelectItem key={asset.id} value={asset.id}>
                                         {asset.name} ({asset.type})
                                       </SelectItem>
@@ -696,6 +722,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                         </Card>
                       );
                     })}
+                    <div ref={scenariosEndRef} />
                   </div>
                 )}
               </CardContent>
@@ -996,7 +1023,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
       </div>
 
       {/* Step Content */}
-      {renderStepContent()}
+      <div ref={contentRef}>
+        {renderStepContent()}
+      </div>
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-4">
