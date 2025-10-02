@@ -182,29 +182,6 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
       notes: assetData.notes,
       protectionSystems: assetData.protectionSystems
     }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-assets"] });
-      setNewAsset({ 
-        name: "", 
-        type: "", 
-        owner: "", 
-        criticality: 3, 
-        scope: "", 
-        notes: "", 
-        protectionSystems: [] 
-      });
-      toast({
-        title: "Asset Added",
-        description: "Asset has been added successfully.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error Adding Asset",
-        description: error.message || "Failed to add asset. Please try again.",
-        variant: "destructive",
-      });
-    },
   });
 
   // Asset deletion mutation
@@ -279,7 +256,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   ];
 
 
-  const handleAddCustomAsset = () => {
+  const handleSaveAndAddAnother = () => {
     if (!newAsset.name.trim() || !newAsset.type.trim()) {
       toast({
         title: "Invalid Asset",
@@ -288,7 +265,69 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
       });
       return;
     }
-    createAssetMutation.mutate(newAsset);
+    createAssetMutation.mutate(newAsset, {
+      onSuccess: () => {
+        // Clear form for next asset
+        setNewAsset({ 
+          name: "", 
+          type: "", 
+          owner: "", 
+          criticality: 3, 
+          scope: "", 
+          notes: "", 
+          protectionSystems: [] 
+        });
+        toast({
+          title: "Asset Saved",
+          description: "Asset added. Add another or click 'Finish' to complete.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-assets"] });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error Adding Asset",
+          description: error.message || "Failed to add asset. Please try again.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleSaveAndFinish = () => {
+    if (!newAsset.name.trim() || !newAsset.type.trim()) {
+      toast({
+        title: "Invalid Asset",
+        description: "Please provide asset name and type.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createAssetMutation.mutate(newAsset, {
+      onSuccess: () => {
+        // Clear form and show completion message
+        setNewAsset({ 
+          name: "", 
+          type: "", 
+          owner: "", 
+          criticality: 3, 
+          scope: "", 
+          notes: "", 
+          protectionSystems: [] 
+        });
+        toast({
+          title: "Asset Saved",
+          description: "Asset added successfully. Ready to proceed to next step.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-assets"] });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error Adding Asset",
+          description: error.message || "Failed to add asset. Please try again.",
+          variant: "destructive",
+        });
+      },
+    });
   };
 
   const handleAddScenario = () => {
@@ -549,14 +588,27 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                         rows={2}
                       />
                     </div>
-                    <Button 
-                      onClick={handleAddCustomAsset}
-                      disabled={createAssetMutation.isPending}
-                      data-testid="button-add-asset"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Asset
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={handleSaveAndAddAnother}
+                        disabled={createAssetMutation.isPending}
+                        variant="outline"
+                        className="flex-1"
+                        data-testid="button-save-and-add-another"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Save & Add Another
+                      </Button>
+                      <Button 
+                        onClick={handleSaveAndFinish}
+                        disabled={createAssetMutation.isPending}
+                        className="flex-1"
+                        data-testid="button-save-and-finish"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Save & Finish
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
