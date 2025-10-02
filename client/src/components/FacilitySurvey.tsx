@@ -155,19 +155,19 @@ const facilityQuestions: SurveyQuestion[] = [
     type: "condition",
   },
   {
-    id: "access-003",
-    category: "access-control",
-    subcategory: "visitor-management", 
-    question: "What visitor screening and management processes are in place?",
-    standard: "Identity verification and background screening capabilities",
-    type: "condition",
-  },
-  {
     id: "access-004",
     category: "access-control",
     subcategory: "entry-points", 
     question: "Are all entry points secured with appropriate locking mechanisms?",
     standard: "Entry point security and redundant locking systems",
+    type: "condition",
+  },
+  {
+    id: "access-003",
+    category: "access-control",
+    subcategory: "visitor-management", 
+    question: "What visitor screening and management processes are in place?",
+    standard: "Identity verification and background screening capabilities",
     type: "condition",
   },
   {
