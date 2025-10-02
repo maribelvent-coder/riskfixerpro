@@ -611,21 +611,26 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                     {risk.level} ({risk.score})
                                   </Badge>
                                 </div>
-                                <Dialog 
-                                  open={assetDialogOpen === scenario.id} 
-                                  onOpenChange={(open) => setAssetDialogOpen(open ? scenario.id : null)}
-                                >
-                                  <DialogTrigger asChild>
-                                    <Button 
-                                      variant="outline" 
-                                      className="w-full justify-start"
-                                      data-testid={`select-asset-${scenario.id}`}
-                                    >
-                                      {scenario.assetId 
-                                        ? `${assets.find(a => a.id === scenario.assetId)?.name || 'Unknown'} (${assets.find(a => a.id === scenario.assetId)?.type || ''})` 
-                                        : "Select affected asset"}
-                                    </Button>
-                                  </DialogTrigger>
+                                <div className="space-y-1">
+                                  <Label className="text-sm font-medium">Affected Asset</Label>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    Click to select which asset is at risk in this scenario
+                                  </p>
+                                  <Dialog 
+                                    open={assetDialogOpen === scenario.id} 
+                                    onOpenChange={(open) => setAssetDialogOpen(open ? scenario.id : null)}
+                                  >
+                                    <DialogTrigger asChild>
+                                      <Button 
+                                        variant="outline" 
+                                        className="w-full justify-start"
+                                        data-testid={`select-asset-${scenario.id}`}
+                                      >
+                                        {scenario.assetId 
+                                          ? `${assets.find(a => a.id === scenario.assetId)?.name || 'Unknown'} (${assets.find(a => a.id === scenario.assetId)?.type || ''})` 
+                                          : "Select affected asset"}
+                                      </Button>
+                                    </DialogTrigger>
                                   <DialogContent className="max-w-2xl max-h-[600px]">
                                     <DialogHeader>
                                       <DialogTitle>Select Affected Asset ({assets.length} available)</DialogTitle>
@@ -680,6 +685,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                     </div>
                                   </DialogContent>
                                 </Dialog>
+                                </div>
                               </div>
                               <Button
                                 variant="ghost"
