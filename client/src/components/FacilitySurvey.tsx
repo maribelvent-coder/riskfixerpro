@@ -45,6 +45,14 @@ interface SurveyQuestion {
 const facilityQuestions: SurveyQuestion[] = [
   // BARRIERS & PERIMETER
   {
+    id: "barriers-004",
+    category: "barriers", 
+    subcategory: "perimeter-fencing",
+    question: "Describe the current fencing and barriers around the facility",
+    standard: "Perimeter protection and barrier effectiveness assessment",
+    type: "condition",
+  },
+  {
     id: "barriers-001",
     category: "barriers",
     subcategory: "perimeter-fencing",
@@ -66,14 +74,6 @@ const facilityQuestions: SurveyQuestion[] = [
     subcategory: "walls-structure",
     question: "What is the condition of building walls, windows, and structural barriers?",
     standard: "Physical protection system structural integrity requirements",
-    type: "condition",
-  },
-  {
-    id: "barriers-004",
-    category: "barriers", 
-    subcategory: "perimeter-fencing",
-    question: "Describe the current fencing and barriers around the facility",
-    standard: "Perimeter protection and barrier effectiveness assessment",
     type: "condition",
   },
 
