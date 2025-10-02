@@ -198,6 +198,13 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
         description: "Asset has been added successfully.",
       });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error Adding Asset",
+        description: error.message || "Failed to add asset. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Asset deletion mutation
