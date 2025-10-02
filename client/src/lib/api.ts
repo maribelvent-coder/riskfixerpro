@@ -110,6 +110,11 @@ export const riskAssetApi = {
       body: JSON.stringify(data),
     }),
 
+  delete: (id: string): Promise<void> => 
+    apiRequest(`/risk-assets/${id}`, {
+      method: 'DELETE',
+    }),
+
   bulkUpsert: (assessmentId: string, assets: InsertRiskAsset[]): Promise<RiskAsset[]> => 
     apiRequest(`/assessments/${assessmentId}/risk-assets/bulk`, {
       method: 'POST',

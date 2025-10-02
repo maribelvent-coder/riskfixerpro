@@ -56,6 +56,7 @@ export interface IStorage {
   // Risk Assets methods
   getRiskAssets(assessmentId: string): Promise<RiskAsset[]>;
   createRiskAsset(asset: InsertRiskAsset): Promise<RiskAsset>;
+  deleteRiskAsset(id: string): Promise<boolean>;
   bulkCreateRiskAssets(assets: InsertRiskAsset[]): Promise<RiskAsset[]>;
   bulkUpsertRiskAssets(assessmentId: string, assets: InsertRiskAsset[]): Promise<RiskAsset[]>;
 
@@ -311,6 +312,10 @@ export class MemStorage implements IStorage {
     };
     this.riskAssets.set(id, asset);
     return asset;
+  }
+
+  async deleteRiskAsset(id: string): Promise<boolean> {
+    return this.riskAssets.delete(id);
   }
 
   async bulkUpsertRiskAssets(assessmentId: string, assets: InsertRiskAsset[]): Promise<RiskAsset[]> {

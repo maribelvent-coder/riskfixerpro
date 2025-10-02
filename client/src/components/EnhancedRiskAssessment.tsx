@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -111,6 +112,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     protectionSystems: [] as string[] 
   });
   const [isExtracting, setIsExtracting] = useState(false);
+  const [assetDialogOpen, setAssetDialogOpen] = useState<string | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -602,21 +604,75 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                     {risk.level} ({risk.score})
                                   </Badge>
                                 </div>
-                                <Select 
-                                  value={scenario.assetId} 
-                                  onValueChange={(value) => handleUpdateScenario(scenario.id, "assetId", value)}
+                                <Dialog 
+                                  open={assetDialogOpen === scenario.id} 
+                                  onOpenChange={(open) => setAssetDialogOpen(open ? scenario.id : null)}
                                 >
-                                  <SelectTrigger data-testid={`select-asset-${scenario.id}`}>
-                                    <SelectValue placeholder="Select affected asset" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {assets.map((asset) => (
-                                      <SelectItem key={asset.id} value={asset.id}>
-                                        {asset.name} ({asset.type})
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  <DialogTrigger asChild>
+                                    <Button 
+                                      variant="outline" 
+                                      className="w-full justify-start"
+                                      data-testid={`select-asset-${scenario.id}`}
+                                    >
+                                      {scenario.assetId 
+                                        ? `${assets.find(a => a.id === scenario.assetId)?.name || 'Unknown'} (${assets.find(a => a.id === scenario.assetId)?.type || ''})` 
+                                        : "Select affected asset"}
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-2xl max-h-[600px]">
+                                    <DialogHeader>
+                                      <DialogTitle>Select Affected Asset</DialogTitle>
+                                      <DialogDescription>
+                                        Choose the asset that is affected by this risk scenario
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
+                                      {assets.map((asset) => (
+                                        <Card 
+                                          key={asset.id}
+                                          className={`cursor-pointer hover-elevate transition-all ${
+                                            scenario.assetId === asset.id ? 'ring-2 ring-primary' : ''
+                                          }`}
+                                          onClick={() => {
+                                            handleUpdateScenario(scenario.id, "assetId", asset.id);
+                                            setAssetDialogOpen(null);
+                                          }}
+                                        >
+                                          <CardHeader className="p-4">
+                                            <div className="flex items-start justify-between gap-2">
+                                              <div className="flex-1">
+                                                <h4 className="font-semibold text-sm mb-1">{asset.name}</h4>
+                                                <div className="flex flex-wrap gap-1">
+                                                  <Badge variant="outline" className="text-xs">
+                                                    {asset.type}
+                                                  </Badge>
+                                                  <Badge 
+                                                    variant="outline" 
+                                                    className={`text-xs ${
+                                                      asset.criticality >= 4 ? 'bg-red-500 text-white' :
+                                                      asset.criticality === 3 ? 'bg-yellow-500 text-white' :
+                                                      'bg-green-500 text-white'
+                                                    }`}
+                                                  >
+                                                    Criticality: {asset.criticality}
+                                                  </Badge>
+                                                </div>
+                                                {asset.scope && (
+                                                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                                                    {asset.scope}
+                                                  </p>
+                                                )}
+                                              </div>
+                                              {scenario.assetId === asset.id && (
+                                                <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                                              )}
+                                            </div>
+                                          </CardHeader>
+                                        </Card>
+                                      ))}
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
                               </div>
                               <Button
                                 variant="ghost"

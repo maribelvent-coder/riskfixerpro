@@ -266,6 +266,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/risk-assets/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRiskAsset(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Risk asset not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting risk asset:", error);
+      res.status(500).json({ error: "Failed to delete risk asset" });
+    }
+  });
+
   app.post("/api/assessments/:id/risk-assets/bulk", async (req, res) => {
     try {
       const { id } = req.params;
