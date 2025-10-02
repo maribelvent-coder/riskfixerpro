@@ -525,8 +525,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Assessment not found" });
       }
 
-      if (!assessment.questions || assessment.questions.length === 0) {
-        return res.status(400).json({ error: "Assessment has no questions to analyze" });
+      // Check for enhanced risk assessment data (assets and scenarios)
+      const hasEnhancedData = assessment.riskAssets && assessment.riskAssets.length > 0 && 
+                              assessment.riskScenarios && assessment.riskScenarios.length > 0;
+      
+      // Check for legacy facility survey questions
+      const hasLegacyData = assessment.questions && assessment.questions.length > 0;
+
+      if (!hasEnhancedData && !hasLegacyData) {
+        return res.status(400).json({ 
+          error: "Assessment has no data to analyze. Please complete either the facility survey or the enhanced risk assessment." 
+        });
       }
 
       // Generate AI analysis

@@ -849,7 +849,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                 )}
                 
                 {scenarios.length > 0 && (
-                  <div className="flex gap-3 mt-6 pt-6 border-t">
+                  <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t">
                     <Button 
                       onClick={handleAddScenario}
                       disabled={assets.length === 0}

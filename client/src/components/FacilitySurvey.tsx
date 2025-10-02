@@ -57,7 +57,7 @@ const facilityQuestions: SurveyQuestion[] = [
     category: "barriers",
     subcategory: "perimeter-fencing",
     question: "What is the height and condition of perimeter fencing?",
-    standard: "FM 3-19.30: Minimum 7-foot chain link with 3-strand barbed wire topping",
+    standard: "ASIS Standard: Minimum 7-foot chain link with 3-strand barbed wire topping",
     type: "measurement",
   },
   {

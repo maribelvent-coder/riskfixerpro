@@ -43,7 +43,7 @@ ACCESS CONTROL & BARRIER PRINCIPLES:
 - Redundant systems for critical areas
 - Entry control performance standards
 
-THREAT CATEGORIES (Reference FM 3-19.30):
+THREAT CATEGORIES (ASIS/ANSI Standards):
 - Human Threats: Theft, fraud, vandalism, sabotage, unauthorized access
 - Environmental Threats: Natural disasters, power outages, extreme weather  
 - Technical Threats: System failures, cyber attacks on physical systems
@@ -83,7 +83,7 @@ Apply technical standards, reference specific metrics where applicable, and prov
         messages: [
           {
             role: "system",
-            content: "You are a Certified Protection Professional (CPP) with expertise in ASIS International standards, physical security systems design, and risk assessment methodologies. Reference specific technical standards, measurements, and professional best practices in your analysis. Apply the principles from FM 3-19.30 and professional security frameworks."
+            content: "You are a Certified Protection Professional (CPP) with expertise in ASIS International and ANSI standards, physical security systems design, and risk assessment methodologies. Reference specific technical standards, measurements, and professional best practices in your analysis."
           },
           {
             role: "user",
@@ -196,26 +196,60 @@ Please provide a professional, well-structured report in markdown format.`;
   }
 
   private prepareAssessmentData(assessment: AssessmentWithQuestions): string {
-    return assessment.questions.map(q => {
-      let responseText = "";
-      if (q.response !== null && q.response !== undefined) {
-        if (typeof q.response === "boolean") {
-          responseText = q.response ? "Yes" : "No";
+    let dataText = "";
+    
+    // Check for enhanced risk assessment data first
+    if (assessment.riskAssets && assessment.riskAssets.length > 0) {
+      dataText += "IDENTIFIED ASSETS:\n";
+      dataText += assessment.riskAssets.map(asset => 
+        `- ${asset.name} (${asset.type})
+   Criticality: ${asset.criticality}/5
+   Owner: ${asset.owner || 'N/A'}
+   ${asset.scope ? `Scope: ${asset.scope}` : ''}
+   ${asset.notes ? `Notes: ${asset.notes}` : ''}`
+      ).join("\n\n");
+      dataText += "\n\n";
+    }
+    
+    if (assessment.riskScenarios && assessment.riskScenarios.length > 0) {
+      dataText += "RISK SCENARIOS:\n";
+      dataText += assessment.riskScenarios.map(scenario => {
+        const asset = assessment.riskAssets?.find(a => a.id === scenario.assetId);
+        return `- Asset: ${asset?.name || scenario.asset}
+   Scenario: ${scenario.scenario}
+   Likelihood: ${scenario.likelihood}
+   Impact: ${scenario.impact}
+   Risk Level: ${scenario.riskLevel}`;
+      }).join("\n\n");
+      dataText += "\n\n";
+    }
+    
+    // Include legacy facility survey questions if available
+    if (assessment.questions && assessment.questions.length > 0) {
+      dataText += "FACILITY SURVEY QUESTIONS:\n";
+      dataText += assessment.questions.map(q => {
+        let responseText = "";
+        if (q.response !== null && q.response !== undefined) {
+          if (typeof q.response === "boolean") {
+            responseText = q.response ? "Yes" : "No";
+          } else {
+            responseText = q.response.toString();
+          }
         } else {
-          responseText = q.response.toString();
+          responseText = "No response";
         }
-      } else {
-        responseText = "No response";
-      }
 
-      return `Category: ${q.category}
+        return `Category: ${q.category}
 Question: ${q.question}
 Type: ${q.type}
 Weight: ${q.weight}
 Response: ${responseText}
 ${q.notes ? `Notes: ${q.notes}` : ""}
 ${q.evidence && q.evidence.length > 0 ? `Evidence: ${q.evidence.join(", ")}` : ""}`;
-    }).join("\n\n");
+      }).join("\n\n");
+    }
+    
+    return dataText || "No assessment data available.";
   }
 
   private validateSeverity(severity: string): "low" | "medium" | "high" | "critical" {

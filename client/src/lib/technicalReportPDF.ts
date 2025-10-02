@@ -166,7 +166,7 @@ Standards and Frameworks Applied:
   - Risk assessment and management frameworks
   - Security systems performance criteria
 
-• U.S. Army Field Manual (FM 3-19.30)
+• ANSI/ASIS Standards
   - Physical security standards for critical infrastructure
   - Perimeter security and access control requirements
   - Defense-in-depth security principles
@@ -499,7 +499,7 @@ Security Control Gaps:
 
 Standards Compliance Gaps:
 • Areas not meeting ASIS CPP professional standards
-• Deviations from Army FM 3-19.30 physical security requirements
+• Deviations from ANSI/ASIS physical security requirements
 • Performance criteria not achieved for critical security systems
 
 These gaps represent opportunities for security improvements and risk mitigation through the implementation of recommended treatment plans.`;
@@ -611,7 +611,7 @@ These gaps represent opportunities for security improvements and risk mitigation
 
     yPos += SPACING.sectionGap;
 
-    yPos = checkPageBreak(doc, yPos, 80);
+    yPos = checkPageBreak(doc, yPos, 150);
     yPos = addText(doc, '6.2 Standards References', SPACING.margin, yPos, {
       fontSize: FONT_SIZES.subheading,
       fontStyle: 'bold',
@@ -627,15 +627,12 @@ ASIS International Standards:
 • Security Systems Performance Criteria
 • Lighting Standards: Detection (0.5fc), Recognition (1.0fc), Identification (2.0fc)
 • CCTV Resolution: Recognition (35 Px/ft), Identification (46 Px/ft), License Plates (70 Px/ft)
-
-U.S. Army Field Manual Standards:
-• FM 3-19.30 - Physical Security
-• Perimeter Security Requirements: Minimum 7-foot chain link with 3-strand barbed wire
+• Perimeter Security: Minimum 7-foot chain link with 3-strand barbed wire topping
 • Defense-in-Depth Security Principles
 • Access Control Performance Standards
 • Balanced Design Principle: Each barrier element provides equal delay
 
-Additional References:
+ANSI Standards:
 • Life Safety Codes for Emergency Lighting
 • Parking Structure Lighting: 5 fc with uniformity ratio of 4:1 maximum
 • Intrusion Detection System Classifications: Passive/Active, Covert/Visible
