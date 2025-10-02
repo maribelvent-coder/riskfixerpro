@@ -22,7 +22,8 @@ import {
   Zap,
   Settings,
   Save,
-  Download
+  Download,
+  ArrowRight
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { assessmentApi, riskAssetApi, riskScenarioApi, treatmentPlanApi } from "@/lib/api";
@@ -844,6 +845,29 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                       );
                     })}
                     <div ref={scenariosEndRef} />
+                  </div>
+                )}
+                
+                {scenarios.length > 0 && (
+                  <div className="flex gap-3 mt-6 pt-6 border-t">
+                    <Button 
+                      onClick={handleAddScenario}
+                      disabled={assets.length === 0}
+                      variant="outline"
+                      className="flex-1"
+                      data-testid="button-add-scenario-bottom"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Another Scenario
+                    </Button>
+                    <Button 
+                      onClick={() => setCurrentStep(2)}
+                      className="flex-1"
+                      data-testid="button-continue-to-analysis"
+                    >
+                      Continue to Risk Analysis
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
                   </div>
                 )}
               </CardContent>
