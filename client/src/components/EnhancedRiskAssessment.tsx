@@ -394,7 +394,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
 
                 {assets.length > 0 && (
                   <div className="space-y-2 mb-4">
-                    <h4 className="font-medium">Assets to Protect</h4>
+                    <h4 className="font-medium">Assets to Protect ({assets.length} total)</h4>
                     <div className="grid gap-2">
                       {assets.map((asset) => (
                         <Card key={asset.id} className="hover-elevate">
@@ -621,7 +621,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                   </DialogTrigger>
                                   <DialogContent className="max-w-2xl max-h-[600px]">
                                     <DialogHeader>
-                                      <DialogTitle>Select Affected Asset</DialogTitle>
+                                      <DialogTitle>Select Affected Asset ({assets.length} available)</DialogTitle>
                                       <DialogDescription>
                                         Choose the asset that is affected by this risk scenario
                                       </DialogDescription>
