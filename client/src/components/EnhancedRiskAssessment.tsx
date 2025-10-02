@@ -390,11 +390,11 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                   </p>
                 </div>
 
-                {extractedAssets.length > 0 && (
+                {assets.length > 0 && (
                   <div className="space-y-2 mb-4">
                     <h4 className="font-medium">Assets to Protect</h4>
                     <div className="grid gap-2">
-                      {extractedAssets.map((asset) => (
+                      {assets.map((asset) => (
                         <Card key={asset.id} className="hover-elevate">
                           <CardContent className="p-3">
                             <div className="flex items-center justify-between">

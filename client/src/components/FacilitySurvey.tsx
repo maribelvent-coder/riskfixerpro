@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,6 +203,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const [currentCategory, setCurrentCategory] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Load existing facility survey data
   const { data: savedQuestions } = useQuery({
@@ -236,6 +237,11 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       setQuestions(mergedQuestions);
     }
   }, [savedQuestions]);
+
+  // Scroll to top when category changes
+  useEffect(() => {
+    contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [currentCategory]);
 
   const categories = Array.from(new Set(questions.map(q => q.category)));
   const currentCategoryQuestions = questions.filter(q => q.category === categories[currentCategory]);
@@ -513,7 +519,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       </Card>
 
       {/* Current Category Questions */}
-      <div className="space-y-4">
+      <div ref={contentRef} className="space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           {(() => {
             const Icon = getCategoryIcon(categories[currentCategory]);
