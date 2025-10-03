@@ -93,6 +93,48 @@ function calculateRiskLevel(likelihood: string, impact: string): { level: string
   return { level: "Very Low", score, color: "bg-gray-500" };
 }
 
+function calculateCurrentRisk(
+  scenario: RiskScenario,
+  vulnerabilities: Vulnerability[],
+  controls: Control[]
+): { currentLikelihood: number; currentImpact: number; currentRisk: { level: string; score: number; color: string }; reductionPercentage: number } {
+  const inherentLikelihood = LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.value || 0;
+  const inherentImpact = IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.value || 0;
+
+  const scenarioVulnerabilities = vulnerabilities.filter(v => v.scenarioId === scenario.id);
+  
+  if (scenarioVulnerabilities.length === 0) {
+    const currentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+    return { currentLikelihood: inherentLikelihood, currentImpact: inherentImpact, currentRisk, reductionPercentage: 0 };
+  }
+
+  const existingControls = controls.filter(c => 
+    scenarioVulnerabilities.some(v => v.id === c.vulnerabilityId) && 
+    c.type === 'existing' && 
+    c.effectiveness !== null
+  );
+
+  if (existingControls.length === 0) {
+    const currentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+    return { currentLikelihood: inherentLikelihood, currentImpact: inherentImpact, currentRisk, reductionPercentage: 0 };
+  }
+
+  const avgEffectiveness = existingControls.reduce((sum, c) => sum + (c.effectiveness || 0), 0) / existingControls.length;
+  const reductionPercentage = avgEffectiveness * 10;
+  
+  const reduction = Math.floor((inherentLikelihood * reductionPercentage) / 100);
+  const currentLikelihood = Math.max(1, inherentLikelihood - reduction);
+  const currentImpact = inherentImpact;
+
+  const currentLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
+    k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === currentLikelihood
+  ) || scenario.likelihood;
+  
+  const currentRisk = calculateRiskLevel(currentLikelihoodKey, scenario.impact);
+
+  return { currentLikelihood, currentImpact, currentRisk, reductionPercentage };
+}
+
 interface EnhancedRiskAssessmentProps {
   assessmentId: string;
   onComplete?: () => void;
@@ -1156,64 +1198,141 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           </div>
         );
 
-      case 3: // Prioritize Risks (was Risk Analysis)
+      case 3: // Prioritize Risks - Decision Table
         return (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5" />
-                  Step 3: Risk Analysis Matrix
+                  Step 4: Prioritize Risks
                 </CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Review risk calculations and make decisions for each scenario
+                </p>
               </CardHeader>
               <CardContent>
                 {existingScenarios.length === 0 ? (
-                  <p className="text-muted-foreground">Complete risk scenario development first.</p>
+                  <p className="text-muted-foreground">Complete risk scenarios and vulnerabilities & controls first.</p>
                 ) : (
                   <div className="space-y-4">
-                    <div className="grid gap-4">
-                      {existingScenarios.map((scenario) => {
-                        const risk = calculateRiskLevel(scenario.likelihood, scenario.impact);
-                        const asset = extractedAssets.find(a => a.id === scenario.assetId);
-                        
-                        return (
-                          <div key={scenario.id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex-1">
-                              <p className="font-medium">{asset?.name} - {scenario.threatDescription}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline">
-                                  L: {LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.value}
-                                </Badge>
-                                <Badge variant="outline">
-                                  I: {IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.value}
-                                </Badge>
-                              </div>
-                            </div>
-                            <Badge className={`${risk.color} text-white`}>
-                              {risk.level} ({risk.score})
-                            </Badge>
-                          </div>
-                        );
-                      })}
+                    {/* Decision Table */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="text-left p-3 font-medium">Risk Scenario</th>
+                            <th className="text-center p-3 font-medium w-32">Inherent Risk</th>
+                            <th className="text-center p-3 font-medium w-32">Current Risk</th>
+                            <th className="text-center p-3 font-medium w-24">Change</th>
+                            <th className="text-center p-3 font-medium w-40">Decision</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {existingScenarios.map((scenario) => {
+                            const asset = extractedAssets.find(a => a.id === scenario.assetId);
+                            const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+                            const { currentRisk, reductionPercentage } = calculateCurrentRisk(scenario, vulnerabilities, controls);
+                            const riskChange = inherentRisk.score - currentRisk.score;
+                            
+                            return (
+                              <tr key={scenario.id} className="border-t hover-elevate" data-testid={`row-risk-scenario-${scenario.id}`}>
+                                <td className="p-3">
+                                  <div className="font-medium">{asset?.name}</div>
+                                  <div className="text-sm text-muted-foreground">{scenario.threatDescription}</div>
+                                </td>
+                                <td className="text-center p-3">
+                                  <Badge className={`${inherentRisk.color} text-white`} data-testid={`badge-inherent-risk-${scenario.id}`}>
+                                    {inherentRisk.level} ({inherentRisk.score})
+                                  </Badge>
+                                </td>
+                                <td className="text-center p-3">
+                                  <Badge className={`${currentRisk.color} text-white`} data-testid={`badge-current-risk-${scenario.id}`}>
+                                    {currentRisk.level} ({currentRisk.score})
+                                  </Badge>
+                                  {reductionPercentage > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {reductionPercentage.toFixed(0)}% reduction
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="text-center p-3">
+                                  {riskChange > 0 ? (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200" data-testid={`badge-change-${scenario.id}`}>
+                                      ↓ {riskChange}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-muted-foreground" data-testid={`badge-change-${scenario.id}`}>
+                                      —
+                                    </Badge>
+                                  )}
+                                </td>
+                                <td className="text-center p-3">
+                                  <Select
+                                    value={scenario.decision || "undecided"}
+                                    onValueChange={(value) => {
+                                      updateScenarioMutation.mutate({
+                                        id: scenario.id,
+                                        data: { decision: value }
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-full" data-testid={`select-decision-${scenario.id}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="undecided" data-testid="option-undecided">
+                                        Undecided
+                                      </SelectItem>
+                                      <SelectItem value="accept" data-testid="option-accept">
+                                        Accept
+                                      </SelectItem>
+                                      <SelectItem value="transfer" data-testid="option-transfer">
+                                        Transfer
+                                      </SelectItem>
+                                      <SelectItem value="remediate" data-testid="option-remediate">
+                                        Remediate
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
 
-                    <div className="mt-6 p-4 bg-muted rounded-lg">
-                      <h4 className="font-medium mb-3">Risk Summary</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-sm">
-                        {["Very Low", "Low", "Medium", "High", "Critical"].map((level) => {
-                          const count = existingScenarios.filter(s => {
-                            const risk = calculateRiskLevel(s.likelihood, s.impact);
-                            return risk.level === level;
-                          }).length;
-                          
-                          return (
-                            <div key={level} className="p-2 border rounded">
-                              <p className="font-medium">{level}</p>
-                              <p className="text-lg">{count}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Total Scenarios</p>
+                            <p className="text-3xl font-bold mt-1" data-testid="text-total-scenarios">{existingScenarios.length}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Decisions Made</p>
+                            <p className="text-3xl font-bold mt-1" data-testid="text-decisions-made">
+                              {existingScenarios.filter(s => s.decision && s.decision !== 'undecided').length}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Require Treatment</p>
+                            <p className="text-3xl font-bold mt-1" data-testid="text-require-treatment">
+                              {existingScenarios.filter(s => s.decision === 'remediate').length}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   </div>
                 )}

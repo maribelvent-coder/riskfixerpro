@@ -28,6 +28,11 @@ Preferred communication style: Simple, everyday language.
 
 ### Database Design
 - **Assessments**: Core entity tracking security evaluations with status workflow
+- **Assets**: Protected assets categorized by type (people, property, information, reputation)
+- **Risk Scenarios**: Threat scenarios with inherent risk calculations
+- **Vulnerabilities**: Security weaknesses linked to risk scenarios
+- **Controls**: Existing and proposed controls with effectiveness ratings (1-5 for existing controls)
+- **Treatment Plans**: Risk treatment strategies with type/effect/value for residual risk calculation
 - **Facility Survey Questions**: Physical security controls evaluation
 - **Assessment Questions**: Risk assessment questionnaires
 - **Risk Insights**: AI-generated analysis and recommendations
@@ -48,9 +53,21 @@ Preferred communication style: Simple, everyday language.
 
 ### Assessment Workflow
 - **Phase 1**: Facility Survey - Physical security controls evaluation
-- **Phase 2**: Risk Assessment - Threat identification and analysis  
+- **Phase 2**: Enhanced Risk Assessment (7-step workflow)
+  - Step 1: Assets - Identify and categorize protected assets
+  - Step 2: Risk Scenarios - Define threat scenarios with inherent risk
+  - Step 3: Vulnerabilities & Controls - Identify vulnerabilities, add existing/proposed controls with effectiveness ratings (✅ COMPLETE)
+  - Step 4: Prioritize Risks - Consolidated decision table with Inherent/Current/Change/Decision columns
+  - Step 5: Treatment Planning - Define treatment type/effect/value for residual risk calculation
+  - Step 6: Executive Summary - Metrics, charts, and risk register
+  - Step 7: Review & Submit - Final review and submission
 - **Phase 3**: AI Analysis - Automated risk scoring and insights
 - **Phase 4**: Report Generation - Multiple format outputs (PDF, DOCX, HTML)
+
+### Triple Risk Calculation Model
+- **Inherent Risk**: Base risk level (Likelihood × Impact) before any controls
+- **Current Risk**: Risk after applying existing controls with effectiveness ratings (1-5 scale)
+- **Residual Risk**: Risk after implementing proposed treatments (reduction in Likelihood or Impact)
 
 ## External Dependencies
 
@@ -81,3 +98,23 @@ Preferred communication style: Simple, everyday language.
 ### Deployment
 - **Replit**: Development and hosting platform
 - **ESBuild**: Production bundling for server code
+
+## Recent Changes (October 2025)
+
+### Completed Features
+- ✅ **Vulnerabilities & Controls (Step 3)**: Complete inline editable interface for managing vulnerabilities and controls with effectiveness ratings
+  - Database schema: Added `vulnerabilities` and `controls` tables with proper relationships
+  - API layer: Full CRUD endpoints for vulnerabilities and controls
+  - UI: Inline editing with immediate persistence, control type badges, effectiveness ratings (1-5)
+  - Z-index fix: Applied to main content area to prevent sidebar overlay interference
+
+### Known Issues
+- **Phase 1 Facility Survey**: Combobox popover interference and progress counter desync issues prevent reliable completion in automated testing
+  - Combobox popovers can block the "Save Progress" button (z-index/overlay handling)
+  - Progress counter doesn't always update correctly after successful saves
+  - "Next Category" navigation can timeout due to element interception
+
+### Architecture Notes
+- Main content area uses `relative z-10` and header uses `relative z-20` for proper layering above sidebar overlay
+- EnhancedRiskAssessment is rendered via AssessmentForm when `phase="risk-assessment"`
+- Phase 2 tab is disabled until `facilitySurveyCompleted=true`
