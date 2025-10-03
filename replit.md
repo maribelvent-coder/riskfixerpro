@@ -146,6 +146,15 @@ Preferred communication style: Simple, everyday language.
   - Report generation and download successful
   - No API failures, all calculations match between UI and PDF
 
+- ✅ **Workflow UX Restructuring (October 3, 2025)**: Improved workflow clarity and user experience
+  - **Step 2**: Renamed "Vulnerability Description" → "Threat Description" to eliminate confusion with Step 3 vulnerability analysis
+  - **Step 3**: Removed "Proposed Control" button; now only accepts existing controls with effectiveness ratings (1-5)
+  - **Step 3**: Added filtering to display only controlType='existing' controls
+  - **Step 5**: Added "Proposed Controls" section for scenarios marked "remediate" with inline editing
+  - **Step 5**: Proposed controls linked to riskScenarioId for treatment planning
+  - **Routing Fix**: Fixed AppSidebar to use wouter Link component instead of preventDefault; added "/assessments" route
+  - **Result**: Clear workflow progression - existing controls in Step 3 for current risk → proposed controls in Step 5 for residual risk
+
 ### Known Issues
 - **Phase 1 Facility Survey**: Combobox popover interference and progress counter desync issues prevent reliable completion in automated testing
   - Combobox popovers can block the "Save Progress" button (z-index/overlay handling)

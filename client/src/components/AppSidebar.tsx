@@ -1,4 +1,5 @@
 import { Home, FileText, BarChart3, Settings, Shield, AlertTriangle, Users, Search } from "lucide-react";
+import { Link } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -78,13 +79,10 @@ export function AppSidebar() {
                     asChild 
                     data-testid={`nav-${item.title.toLowerCase().replace(' ', '-')}`}
                   >
-                    <a href={item.url} onClick={(e) => {
-                      e.preventDefault();
-                      console.log(`Navigate to ${item.title}`);
-                    }}>
+                    <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -102,13 +100,10 @@ export function AppSidebar() {
                     asChild
                     data-testid={`nav-${item.title.toLowerCase().replace(' ', '-')}`}
                   >
-                    <a href={item.url} onClick={(e) => {
-                      e.preventDefault();
-                      console.log(`Navigate to ${item.title}`);
-                    }}>
+                    <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

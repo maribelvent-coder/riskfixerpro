@@ -14,6 +14,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/assessments" component={Dashboard} />
       <Route path="/assessments/:id">
         {(params) => <AssessmentDetail assessmentId={params.id} />}
       </Route>
