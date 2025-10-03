@@ -39,6 +39,8 @@ export function AssessmentCard({
 }: AssessmentCardProps) {
   const config = statusConfig[status] || statusConfig.draft;
   
+  console.log('AssessmentCard status:', status, 'for id:', id);
+  
   return (
     <Card data-testid={`card-assessment-${id}`} className="hover-elevate">
       <CardHeader>
@@ -82,7 +84,7 @@ export function AssessmentCard({
         )}
 
         <div className="flex gap-2 pt-2">
-          {status === "draft" && (
+          {status === "draft" ? (
             <Button 
               size="sm" 
               onClick={() => onStart?.(id)}
@@ -91,9 +93,7 @@ export function AssessmentCard({
               <Play className="h-3 w-3 mr-1" />
               Start
             </Button>
-          )}
-          
-          {(status === "in-progress" || status === "completed" || status === "reviewed") && (
+          ) : (
             <Button 
               size="sm" 
               variant="outline"
