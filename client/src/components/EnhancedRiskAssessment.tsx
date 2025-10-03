@@ -135,6 +135,44 @@ function calculateCurrentRisk(
   return { currentLikelihood, currentImpact, currentRisk, reductionPercentage };
 }
 
+function calculateResidualRisk(
+  currentLikelihood: number,
+  currentImpact: number,
+  scenario: RiskScenario,
+  treatment: TreatmentPlan | undefined
+): { residualLikelihood: number; residualImpact: number; residualRisk: { level: string; score: number; color: string } } {
+  if (!treatment || !treatment.effect || !treatment.value) {
+    const residualLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
+      k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === currentLikelihood
+    ) || scenario.likelihood;
+    const residualImpactKey = Object.keys(IMPACT_VALUES).find(
+      k => IMPACT_VALUES[k as keyof typeof IMPACT_VALUES].value === currentImpact
+    ) || scenario.impact;
+    const residualRisk = calculateRiskLevel(residualLikelihoodKey, residualImpactKey);
+    return { residualLikelihood: currentLikelihood, residualImpact: currentImpact, residualRisk };
+  }
+
+  let residualLikelihood = currentLikelihood;
+  let residualImpact = currentImpact;
+
+  if (treatment.effect === 'reduce_likelihood') {
+    residualLikelihood = Math.max(1, currentLikelihood - (treatment.value || 0));
+  } else if (treatment.effect === 'reduce_impact') {
+    residualImpact = Math.max(1, currentImpact - (treatment.value || 0));
+  }
+
+  const residualLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
+    k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === residualLikelihood
+  ) || scenario.likelihood;
+  const residualImpactKey = Object.keys(IMPACT_VALUES).find(
+    k => IMPACT_VALUES[k as keyof typeof IMPACT_VALUES].value === residualImpact
+  ) || scenario.impact;
+
+  const residualRisk = calculateRiskLevel(residualLikelihoodKey, residualImpactKey);
+
+  return { residualLikelihood, residualImpact, residualRisk };
+}
+
 interface EnhancedRiskAssessmentProps {
   assessmentId: string;
   onComplete?: () => void;
@@ -1342,6 +1380,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
         );
 
       case 4: // Treatment Planning
+        const remediateScenarios = existingScenarios.filter(s => s.decision === 'remediate');
+        
         return (
           <div className="space-y-6">
             <Card>
@@ -1350,65 +1390,123 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                   <Settings className="h-5 w-5" />
                   Step 5: Risk Treatment Planning
                 </CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Define treatments for scenarios marked for remediation
+                </p>
               </CardHeader>
               <CardContent>
-                {scenarios.length === 0 ? (
-                  <p className="text-muted-foreground">Complete risk analysis first.</p>
+                {remediateScenarios.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No scenarios marked for remediation.</p>
+                    <p className="text-sm text-muted-foreground mt-2">Go to Step 4 to select scenarios that require treatment.</p>
+                  </div>
                 ) : (
                   <div className="space-y-4">
-                    {scenarios.map((scenario) => {
-                      const risk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+                    {remediateScenarios.map((scenario) => {
                       const asset = extractedAssets.find(a => a.id === scenario.assetId);
                       const existingPlan = treatmentPlans.find(p => p.riskScenarioId === scenario.id);
+                      const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+                      const { currentLikelihood, currentImpact, currentRisk } = calculateCurrentRisk(scenario, vulnerabilities, controls);
+                      const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, scenario, existingPlan);
                       
                       return (
                         <Card key={scenario.id}>
                           <CardHeader>
                             <div className="flex items-start justify-between">
-                              <div>
-                                <p className="font-medium">{asset?.name} - {scenario.threatDescription}</p>
-                                <Badge className={`${risk.color} text-white mt-1`}>
-                                  {risk.level} Risk
-                                </Badge>
+                              <div className="flex-1">
+                                <p className="font-medium">{asset?.name}</p>
+                                <p className="text-sm text-muted-foreground">{scenario.threatDescription}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Badge className={`${inherentRisk.color} text-white`}>
+                                    Inherent: {inherentRisk.level}
+                                  </Badge>
+                                  <span className="text-muted-foreground">→</span>
+                                  <Badge className={`${currentRisk.color} text-white`}>
+                                    Current: {currentRisk.level}
+                                  </Badge>
+                                  <span className="text-muted-foreground">→</span>
+                                  <Badge className={`${residualRisk.color} text-white`} data-testid={`badge-residual-risk-${scenario.id}`}>
+                                    Residual: {residualRisk.level}
+                                  </Badge>
+                                </div>
                               </div>
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-4">
-                            <div>
-                              <Label>Treatment Strategy</Label>
-                              <Select 
-                                value={existingPlan?.strategy || ""} 
-                                onValueChange={(value) => {
-                                  if (existingPlan) {
-                                    // Update existing plan
-                                    handleUpdateTreatment(existingPlan.id, "strategy", value);
-                                  } else {
-                                    // Create new plan
-                                    const newPlan: InsertTreatmentPlan = {
-                                      assessmentId,
-                                      riskScenarioId: scenario.id,
-                                      risk: scenario.threatDescription || "Unknown Risk",
-                                      strategy: value,
-                                      description: "",
-                                      responsible: "",
-                                      deadline: "",
-                                      status: "planned"
-                                    };
-                                    createTreatmentMutation.mutate(newPlan);
-                                  }
-                                }}
-                              >
-                                <SelectTrigger data-testid={`select-treatment-${scenario.id}`}>
-                                  <SelectValue placeholder="Select treatment strategy" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(TREATMENT_OPTIONS).map(([key, option]) => (
-                                    <SelectItem key={key} value={key}>
-                                      {option.label} - {option.description}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <Label>Treatment Type</Label>
+                                <Select 
+                                  value={existingPlan?.type || ""} 
+                                  onValueChange={(value) => {
+                                    if (existingPlan) {
+                                      handleUpdateTreatment(existingPlan.id, "type", value);
+                                    } else {
+                                      const newPlan: InsertTreatmentPlan = {
+                                        assessmentId,
+                                        riskScenarioId: scenario.id,
+                                        risk: scenario.threatDescription || "Unknown Risk",
+                                        strategy: "control",
+                                        description: "",
+                                        type: value,
+                                        responsible: "",
+                                        deadline: "",
+                                        status: "planned"
+                                      };
+                                      createTreatmentMutation.mutate(newPlan);
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`select-type-${scenario.id}`}>
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="people">People</SelectItem>
+                                    <SelectItem value="process">Process</SelectItem>
+                                    <SelectItem value="technology">Technology</SelectItem>
+                                    <SelectItem value="physical">Physical</SelectItem>
+                                    <SelectItem value="policy">Policy</SelectItem>
+                                    <SelectItem value="training">Training</SelectItem>
+                                    <SelectItem value="vendor">Vendor/Third Party</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Effect</Label>
+                                <Select 
+                                  value={existingPlan?.effect || ""} 
+                                  onValueChange={(value) => handleUpdateTreatment(existingPlan?.id || "", "effect", value)}
+                                  disabled={!existingPlan}
+                                >
+                                  <SelectTrigger data-testid={`select-effect-${scenario.id}`}>
+                                    <SelectValue placeholder="Select effect" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="reduce_likelihood">Reduce Likelihood</SelectItem>
+                                    <SelectItem value="reduce_impact">Reduce Impact</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Reduction Value (1-5)</Label>
+                                <Select 
+                                  value={existingPlan?.value?.toString() || ""} 
+                                  onValueChange={(value) => handleUpdateTreatment(existingPlan?.id || "", "value", parseInt(value))}
+                                  disabled={!existingPlan}
+                                >
+                                  <SelectTrigger data-testid={`select-value-${scenario.id}`}>
+                                    <SelectValue placeholder="Select value" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1">1 - Minimal</SelectItem>
+                                    <SelectItem value="2">2 - Slight</SelectItem>
+                                    <SelectItem value="3">3 - Moderate</SelectItem>
+                                    <SelectItem value="4">4 - Significant</SelectItem>
+                                    <SelectItem value="5">5 - Maximum</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
 
                             {existingPlan && (
@@ -1418,12 +1516,12 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                   <Textarea
                                     value={existingPlan.description}
                                     onChange={(e) => handleUpdateTreatment(existingPlan.id, "description", e.target.value)}
-                                    placeholder="Describe the specific actions to be taken..."
-                                    data-testid={`textarea-action-${scenario.id}`}
+                                    placeholder="Describe the specific treatment actions..."
+                                    data-testid={`textarea-description-${scenario.id}`}
                                     rows={2}
                                   />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                   <div>
                                     <Label>Responsible Party</Label>
                                     <Input
@@ -1441,23 +1539,6 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                       onChange={(e) => handleUpdateTreatment(existingPlan.id, "deadline", e.target.value)}
                                       data-testid={`input-deadline-${scenario.id}`}
                                     />
-                                  </div>
-                                  <div>
-                                    <Label>Status</Label>
-                                    <Select 
-                                      value={existingPlan.status || "planned"} 
-                                      onValueChange={(value) => handleUpdateTreatment(existingPlan.id, "status", value)}
-                                    >
-                                      <SelectTrigger data-testid={`select-status-${scenario.id}`}>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="planned">Planned</SelectItem>
-                                        <SelectItem value="in-progress">In Progress</SelectItem>
-                                        <SelectItem value="completed">Completed</SelectItem>
-                                        <SelectItem value="on-hold">On Hold</SelectItem>
-                                      </SelectContent>
-                                    </Select>
                                   </div>
                                 </div>
                               </div>
