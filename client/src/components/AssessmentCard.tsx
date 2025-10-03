@@ -37,7 +37,7 @@ export function AssessmentCard({
   onView,
   onGenerate
 }: AssessmentCardProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] || statusConfig.draft;
   
   return (
     <Card data-testid={`card-assessment-${id}`} className="hover-elevate">
