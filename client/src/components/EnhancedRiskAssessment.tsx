@@ -1129,7 +1129,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                 onClick={() => {
                                   createVulnerabilityMutation.mutate({
                                     assessmentId,
-                                    description: `[Scenario:${scenario.id}] New vulnerability`,
+                                    description: `[Scenario:${scenario.id}] `,
                                     notes: null
                                   });
                                 }}
