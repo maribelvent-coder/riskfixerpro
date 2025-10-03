@@ -1418,7 +1418,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                   Step 5: Risk Treatment Planning
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Define treatments for scenarios marked for remediation
+                  Add proposed controls and define treatment plans for scenarios marked for remediation. Proposed controls help visualize future risk reduction.
                 </p>
               </CardHeader>
               <CardContent>
@@ -1460,6 +1460,72 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-4">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-base font-medium">Proposed Controls</Label>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    createControlMutation.mutate({
+                                      assessmentId,
+                                      vulnerabilityId: null,
+                                      riskScenarioId: scenario.id,
+                                      controlType: 'proposed',
+                                      description: 'New proposed control',
+                                      effectiveness: null,
+                                      notes: null
+                                    });
+                                  }}
+                                  data-testid={`button-add-proposed-control-${scenario.id}`}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Add Proposed Control
+                                </Button>
+                              </div>
+                              
+                              {(() => {
+                                const scenarioProposedControls = localControls.filter(
+                                  c => c.riskScenarioId === scenario.id && c.controlType === 'proposed'
+                                );
+                                
+                                return scenarioProposedControls.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground">No proposed controls yet. Add controls to reduce risk.</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {scenarioProposedControls.map((control) => {
+                                      const localControl = localControls.find(c => c.id === control.id) || control;
+                                      
+                                      return (
+                                        <div key={control.id} className="flex items-center gap-2">
+                                          <Badge variant="outline" className="shrink-0">Proposed</Badge>
+                                          <Input
+                                            value={localControl.description || ''}
+                                            onChange={(e) => {
+                                              handleUpdateControlDebounced(control.id, e.target.value);
+                                            }}
+                                            placeholder="Describe the proposed control..."
+                                            className="flex-1"
+                                            data-testid={`input-proposed-control-${control.id}`}
+                                          />
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => deleteControlMutation.mutate(control.id)}
+                                            data-testid={`button-delete-proposed-control-${control.id}`}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                            
+                            <div className="border-t pt-4 mt-4">
+                              <Label className="text-base font-medium mb-3 block">Treatment Plan Details</Label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div>
                                 <Label>Treatment Type</Label>
@@ -1570,6 +1636,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                 </div>
                               </div>
                             )}
+                            </div>
                           </CardContent>
                         </Card>
                       );
