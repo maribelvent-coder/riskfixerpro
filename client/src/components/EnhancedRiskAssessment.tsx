@@ -202,6 +202,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   const contentRef = useRef<HTMLDivElement>(null);
   const scenariosEndRef = useRef<HTMLDivElement>(null);
   const previousScenariosCount = useRef(0);
+  const editingVulnerabilities = useRef<Set<string>>(new Set());
+  const editingControls = useRef<Set<string>>(new Set());
 
   // Load existing data
   const { data: assets = [], isLoading: assetsLoading } = useQuery({
@@ -247,11 +249,33 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   }, [existingPlans]);
 
   useEffect(() => {
-    if (vulnerabilities) setLocalVulnerabilities(vulnerabilities);
+    if (vulnerabilities) {
+      setLocalVulnerabilities(prev => {
+        const editing = editingVulnerabilities.current;
+        return vulnerabilities.map(v => {
+          if (editing.has(v.id)) {
+            // Keep local version if being edited
+            return prev.find(p => p.id === v.id) || v;
+          }
+          return v;
+        });
+      });
+    }
   }, [vulnerabilities]);
 
   useEffect(() => {
-    if (controls) setLocalControls(controls);
+    if (controls) {
+      setLocalControls(prev => {
+        const editing = editingControls.current;
+        return controls.map(c => {
+          if (editing.has(c.id)) {
+            // Keep local version if being edited
+            return prev.find(p => p.id === c.id) || c;
+          }
+          return c;
+        });
+      });
+    }
   }, [controls]);
 
   // Scroll to top when step changes
@@ -564,6 +588,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
       clearTimeout(debouncedTimeouts.current[key]);
     }
     
+    // Mark as being edited
+    editingVulnerabilities.current.add(id);
+    
     // Update local state immediately
     setLocalVulnerabilities(prev => prev.map(v => 
       v.id === id ? { ...v, description: value } : v
@@ -571,7 +598,16 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     
     // Debounce API call
     const timeoutId = setTimeout(() => {
-      updateVulnerabilityMutation.mutate({ id, data: { description: value } });
+      updateVulnerabilityMutation.mutate({ id, data: { description: value } }, {
+        onSuccess: () => {
+          // Remove from editing set after successful mutation
+          editingVulnerabilities.current.delete(id);
+        },
+        onError: () => {
+          // Remove from editing set on error too
+          editingVulnerabilities.current.delete(id);
+        }
+      });
       delete debouncedTimeouts.current[key];
     }, 500);
     
@@ -584,6 +620,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
       clearTimeout(debouncedTimeouts.current[key]);
     }
     
+    // Mark as being edited
+    editingControls.current.add(id);
+    
     // Update local state immediately
     setLocalControls(prev => prev.map(c => 
       c.id === id ? { ...c, description: value } : c
@@ -591,7 +630,16 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     
     // Debounce API call
     const timeoutId = setTimeout(() => {
-      updateControlMutation.mutate({ id, data: { description: value } });
+      updateControlMutation.mutate({ id, data: { description: value } }, {
+        onSuccess: () => {
+          // Remove from editing set after successful mutation
+          editingControls.current.delete(id);
+        },
+        onError: () => {
+          // Remove from editing set on error too
+          editingControls.current.delete(id);
+        }
+      });
       delete debouncedTimeouts.current[key];
     }, 500);
     
