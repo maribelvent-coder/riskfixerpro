@@ -1309,7 +1309,22 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                           {existingScenarios.map((scenario) => {
                             const asset = extractedAssets.find(a => a.id === scenario.assetId);
                             const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
-                            const { currentRisk, reductionPercentage } = calculateCurrentRisk(scenario, vulnerabilities, controls);
+                            
+                            const inherentL = LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES].value;
+                            const inherentI = IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES].value;
+                            const scenarioControls = controls.filter(c => c.riskScenarioId === scenario.id);
+                            const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+                            
+                            const currentRiskCalc = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+                            const currentRiskLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
+                              k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === currentRiskCalc.currentLikelihood
+                            ) || scenario.likelihood;
+                            const currentRiskImpactKey = Object.keys(IMPACT_VALUES).find(
+                              k => IMPACT_VALUES[k as keyof typeof IMPACT_VALUES].value === currentRiskCalc.currentImpact
+                            ) || scenario.impact;
+                            const currentRisk = calculateRiskLevel(currentRiskLikelihoodKey, currentRiskImpactKey);
+                            
+                            const reductionPercentage = currentRiskCalc.likelihoodReduction;
                             const riskChange = inherentRisk.score - currentRisk.score;
                             
                             return (
@@ -1329,7 +1344,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                   </Badge>
                                   {reductionPercentage > 0 && (
                                     <div className="text-xs text-muted-foreground mt-1">
-                                      {reductionPercentage.toFixed(0)}% reduction
+                                      {reductionPercentage.toFixed(1)}% reduction
                                     </div>
                                   )}
                                 </td>
@@ -1461,8 +1476,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                       );
                       
                       const residualRiskCalc = calculateResidualRiskCompound(
-                        currentRiskCalc.currentLikelihood,
-                        currentRiskCalc.currentImpact,
+                        currentRiskCalc.currentLikelihoodFloat,
+                        currentRiskCalc.currentImpactFloat,
                         scenarioProposedControls
                       );
                       
@@ -1766,8 +1781,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
           const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
           const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
-          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
-          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          const { currentLikelihoodFloat, currentImpactFloat } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihoodFloat, currentImpactFloat, proposedControls);
           return residualRiskLevel === 'Critical';
         }).length;
         const residualHigh = existingScenarios.filter(s => {
@@ -1776,8 +1791,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
           const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
           const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
-          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
-          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          const { currentLikelihoodFloat, currentImpactFloat } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihoodFloat, currentImpactFloat, proposedControls);
           return residualRiskLevel === 'High';
         }).length;
         const residualMedium = existingScenarios.filter(s => {
@@ -1786,8 +1801,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
           const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
           const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
-          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
-          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          const { currentLikelihoodFloat, currentImpactFloat } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihoodFloat, currentImpactFloat, proposedControls);
           return residualRiskLevel === 'Medium';
         }).length;
         const residualLow = existingScenarios.filter(s => {
@@ -1796,8 +1811,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
           const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
           const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
-          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
-          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          const { currentLikelihoodFloat, currentImpactFloat } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihoodFloat, currentImpactFloat, proposedControls);
           return residualRiskLevel === 'Low';
         }).length;
         const residualVeryLow = existingScenarios.filter(s => {
@@ -1806,8 +1821,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
           const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
           const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
-          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
-          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          const { currentLikelihoodFloat, currentImpactFloat } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihoodFloat, currentImpactFloat, proposedControls);
           return residualRiskLevel === 'Very Low';
         }).length;
         
@@ -1990,8 +2005,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
                             const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
                             
-                            const { currentRiskLevel, currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
-                            const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+                            const { currentRiskLevel, currentLikelihoodFloat, currentImpactFloat } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+                            const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihoodFloat, currentImpactFloat, proposedControls);
                             
                             const getRiskColor = (level: string) => {
                               if (level === 'Critical') return 'bg-red-600';

@@ -42,37 +42,40 @@ export function calculateRiskLevel(
 }
 
 /**
- * Convert effectiveness rating (1-5) to reduction percentage
- * Uses a compound reduction model with diminishing returns
- */
-export function effectivenessToReduction(effectiveness: number): number {
-  // Each point of effectiveness = 10% reduction of REMAINING risk
-  // This creates a realistic diminishing returns curve
-  const reductionPerPoint = 0.10;
-  return reductionPerPoint * effectiveness;
-}
-
-/**
- * Apply compound reduction from multiple controls
- * Each control reduces the REMAINING risk, not the original risk
+ * Apply compound reduction from multiple controls with effectiveness ratings
+ * Each control reduces the REMAINING risk based on its effectiveness
  * 
- * Example: 3 controls with effectiveness 5 each (10% reduction each)
- * - After control 1: 100% - 10% = 90% remaining
- * - After control 2: 90% - (90% × 10%) = 81% remaining
- * - After control 3: 81% - (81% × 10%) = 72.9% remaining
- * Total reduction: 27.1% (not 30%)
+ * Model: effectiveness 1-5 means 1-5 sequential 10% reductions
+ * Example: effectiveness 3 = apply 10% reduction 3 times
+ * - After reduction 1: 100% - 10% = 90% remaining
+ * - After reduction 2: 90% - 9% = 81% remaining  
+ * - After reduction 3: 81% - 8.1% = 72.9% remaining
+ * Total reduction: 27.1% (not linear 30%)
+ * 
+ * Three controls at effectiveness 5 each:
+ * Control 1: 100% → 59% remaining (41% reduction after 5 iterations)
+ * Control 2: 59% → 35% remaining (24% additional reduction)
+ * Control 3: 35% → 21% remaining (14% additional reduction)
+ * Total: 79% reduction
+ * 
+ * Returns floating point value - caller rounds to discrete levels
  */
 export function applyCompoundReduction(
   initialValue: number,
-  reductions: number[]
+  effectivenessRatings: number[]
 ): number {
+  const reductionPerIteration = 0.10; // 10% per iteration
   let remaining = initialValue;
   
-  for (const reduction of reductions) {
-    remaining = remaining * (1 - reduction);
+  for (const effectiveness of effectivenessRatings) {
+    // Apply the 10% reduction 'effectiveness' times
+    for (let i = 0; i < effectiveness; i++) {
+      remaining = remaining * (1 - reductionPerIteration);
+    }
   }
   
-  return Math.max(1, Math.round(remaining));
+  // Return TRUE floating point, no floor - caller handles min when mapping to tiers
+  return remaining;
 }
 
 /**
@@ -93,6 +96,8 @@ export function calculateCurrentRisk(
 ): {
   currentLikelihood: number;
   currentImpact: number;
+  currentLikelihoodFloat: number;
+  currentImpactFloat: number;
   currentRiskLevel: string;
   likelihoodReduction: number;
   impactReduction: number;
@@ -103,25 +108,29 @@ export function calculateCurrentRisk(
   );
   const impactControls: Control[] = []; // Future: when we add primaryEffect to existing controls
   
-  // Calculate likelihood reduction
-  const likelihoodReductions = likelihoodControls
-    .map(c => effectivenessToReduction(c.effectiveness!))
-    .filter(r => r > 0);
+  // Extract effectiveness ratings
+  const likelihoodEffectiveness = likelihoodControls
+    .map(c => c.effectiveness!)
+    .filter(e => e > 0);
   
-  const currentLikelihood = applyCompoundReduction(
+  const currentLikelihoodFloat = applyCompoundReduction(
     inherentLikelihood,
-    likelihoodReductions
+    likelihoodEffectiveness
   );
   
   // Calculate impact reduction
-  const impactReductions = impactControls
-    .map(c => effectivenessToReduction(c.effectiveness!))
-    .filter(r => r > 0);
+  const impactEffectiveness = impactControls
+    .map(c => c.effectiveness!)
+    .filter(e => e > 0);
   
-  const currentImpact = applyCompoundReduction(
+  const currentImpactFloat = applyCompoundReduction(
     inherentImpact,
-    impactReductions
+    impactEffectiveness
   );
+  
+  // Round to nearest discrete level for tier mapping
+  const currentLikelihood = Math.max(1, Math.round(currentLikelihoodFloat));
+  const currentImpact = Math.max(1, Math.round(currentImpactFloat));
   
   // Convert back to risk level keys
   const currentLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
@@ -134,29 +143,32 @@ export function calculateCurrentRisk(
   
   const currentRiskLevel = calculateRiskLevel(currentLikelihoodKey, currentImpactKey);
   
-  // Calculate total reduction percentages
-  const likelihoodReduction = Math.round(
-    (1 - (currentLikelihood / inherentLikelihood)) * 100
-  );
-  const impactReduction = Math.round(
-    (1 - (currentImpact / inherentImpact)) * 100
-  );
+  // Calculate total reduction percentages using FLOATING POINT for EXACT accuracy
+  // Return as floats to preserve precision (e.g., 27.1% not 27%)
+  const likelihoodReduction = (1 - (currentLikelihoodFloat / inherentLikelihood)) * 100;
+  const impactReduction = (1 - (currentImpactFloat / inherentImpact)) * 100;
   
   return {
     currentLikelihood,
     currentImpact,
+    currentLikelihoodFloat,
+    currentImpactFloat,
     currentRiskLevel,
-    likelihoodReduction,
-    impactReduction,
+    likelihoodReduction, // Float value, UI can format with toFixed(1)
+    impactReduction, // Float value, UI can format with toFixed(1)
   };
 }
 
 /**
  * Calculate residual risk after applying proposed controls
+ * 
+ * @param currentLikelihoodFloat - Floating point current likelihood value (not rounded)
+ * @param currentImpactFloat - Floating point current impact value (not rounded)
+ * @param proposedControls - Array of proposed controls to apply
  */
 export function calculateResidualRisk(
-  currentLikelihood: number,
-  currentImpact: number,
+  currentLikelihoodFloat: number,
+  currentImpactFloat: number,
   proposedControls: Control[]
 ): {
   residualLikelihood: number;
@@ -178,25 +190,29 @@ export function calculateResidualRisk(
          c.treatmentEffectiveness
   );
   
-  // Calculate likelihood reduction
-  const likelihoodReductions = likelihoodControls
-    .map(c => effectivenessToReduction(c.treatmentEffectiveness!))
-    .filter(r => r > 0);
+  // Extract effectiveness ratings
+  const likelihoodEffectiveness = likelihoodControls
+    .map(c => c.treatmentEffectiveness!)
+    .filter(e => e > 0);
   
-  const residualLikelihood = applyCompoundReduction(
-    currentLikelihood,
-    likelihoodReductions
+  const residualLikelihoodFloat = applyCompoundReduction(
+    currentLikelihoodFloat,
+    likelihoodEffectiveness
   );
   
   // Calculate impact reduction
-  const impactReductions = impactControls
-    .map(c => effectivenessToReduction(c.treatmentEffectiveness!))
-    .filter(r => r > 0);
+  const impactEffectiveness = impactControls
+    .map(c => c.treatmentEffectiveness!)
+    .filter(e => e > 0);
   
-  const residualImpact = applyCompoundReduction(
-    currentImpact,
-    impactReductions
+  const residualImpactFloat = applyCompoundReduction(
+    currentImpactFloat,
+    impactEffectiveness
   );
+  
+  // Round to nearest discrete level for display
+  const residualLikelihood = Math.max(1, Math.round(residualLikelihoodFloat));
+  const residualImpact = Math.max(1, Math.round(residualImpactFloat));
   
   // Convert back to risk level keys
   const residualLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
@@ -209,19 +225,16 @@ export function calculateResidualRisk(
   
   const residualRiskLevel = calculateRiskLevel(residualLikelihoodKey, residualImpactKey);
   
-  // Calculate total reduction percentages from current to residual
-  const likelihoodReduction = Math.round(
-    (1 - (residualLikelihood / currentLikelihood)) * 100
-  );
-  const impactReduction = Math.round(
-    (1 - (residualImpact / currentImpact)) * 100
-  );
+  // Calculate total reduction percentages using FLOATING POINT for EXACT accuracy
+  // Return as floats to preserve precision (e.g., 79.0% not 79%)
+  const likelihoodReduction = (1 - (residualLikelihoodFloat / currentLikelihoodFloat)) * 100;
+  const impactReduction = (1 - (residualImpactFloat / currentImpactFloat)) * 100;
   
   return {
     residualLikelihood,
     residualImpact,
     residualRiskLevel,
-    likelihoodReduction,
-    impactReduction,
+    likelihoodReduction, // Float value, UI can format with toFixed(1)
+    impactReduction, // Float value, UI can format with toFixed(1)
   };
 }
