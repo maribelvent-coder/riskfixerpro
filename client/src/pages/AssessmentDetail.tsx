@@ -39,8 +39,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     const tabs = {
       "facility-survey": true,
       "risk-assessment": assessmentData?.facilitySurveyCompleted || false,
-      "analysis": assessmentData?.riskAssessmentCompleted || false,
-      "reports": assessmentData?.status === "completed"
+      "reports": assessmentData?.riskAssessmentCompleted || false
     };
     return tabs;
   };
@@ -65,8 +64,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   };
 
   const handleRiskAssessmentComplete = () => {
-    console.log("Risk assessment completed, advancing to analysis");
-    setActiveTab("analysis");
+    console.log("Risk assessment completed, advancing to reports");
+    setActiveTab("reports");
   };
 
   const handleGenerateAnalysis = () => {
@@ -170,7 +169,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                     currentPhase >= 3 ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
                   }`}>
                     <FileText className="h-3 w-3" />
-                    Analysis & Reports
+                    Reports
                   </div>
                 </div>
               </div>
@@ -192,7 +191,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
       {/* Main Content - Two Phase Assessment */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger 
             value="facility-survey" 
             data-testid="tab-facility-survey"
@@ -211,15 +210,6 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <Shield className="h-4 w-4" />
             Security Risk Assessment
             {assessmentData.riskAssessmentCompleted && <CheckCircle className="h-3 w-3 text-green-500" />}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="analysis" 
-            data-testid="tab-analysis"
-            disabled={!tabsAvailable["analysis"]}
-            className="flex items-center gap-2"
-          >
-            <Shield className="h-4 w-4" />
-            AI Analysis
           </TabsTrigger>
           <TabsTrigger 
             value="reports" 
@@ -276,8 +266,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </Card>
         </TabsContent>
 
-        {/* AI-Powered Risk Analysis */}
-        <TabsContent value="analysis" className="space-y-4">
+        {/* AI-Powered Risk Analysis - Temporarily Disabled */}
+        {/* <TabsContent value="analysis" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -296,7 +286,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               />
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Professional Reports */}
         <TabsContent value="reports" className="space-y-4">
