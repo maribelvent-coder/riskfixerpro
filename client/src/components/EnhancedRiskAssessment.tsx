@@ -1129,7 +1129,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                           {vulnControls.map((control) => (
                                             <div key={control.id} className="flex items-center gap-2">
                                               <Badge variant="outline" className="shrink-0">
-                                                {control.control_type === 'existing' ? 'Existing' : 'Proposed'}
+                                                {control.controlType === 'existing' ? 'Existing' : 'Proposed'}
                                               </Badge>
                                               <Input
                                                 value={control.description || ''}
@@ -1143,7 +1143,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                                 className="flex-1"
                                                 data-testid={`input-control-${control.id}`}
                                               />
-                                              {control.control_type === 'existing' && (
+                                              {control.controlType === 'existing' && (
                                                 <Select
                                                   value={control.effectiveness?.toString() || ''}
                                                   onValueChange={(value) => {
