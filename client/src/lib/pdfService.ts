@@ -117,7 +117,7 @@ export function addHeader(
   doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2]);
   doc.setFont(FONTS.header.family, FONTS.header.style);
   doc.setFontSize(FONT_SIZES.title);
-  doc.text('Security Buzz', SPACING.margin, 12);
+  doc.text('RiskFixer', SPACING.margin, 12);
   
   doc.setFontSize(FONT_SIZES.body);
   doc.setFont(FONTS.body.family, FONTS.body.style);

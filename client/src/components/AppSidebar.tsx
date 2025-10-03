@@ -60,13 +60,12 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <img 
             src={logoPath} 
-            alt="The Security Buzz" 
+            alt="RiskFixer" 
             className="h-8 w-8 object-contain"
             data-testid="logo-sidebar"
           />
           <div className="flex flex-col">
-            <span className="font-bold text-sm leading-tight">THE SECURITY</span>
-            <span className="font-bold text-sm text-primary leading-tight">BUZZ</span>
+            <span className="font-bold text-base leading-tight text-primary">RiskFixer</span>
           </div>
         </div>
         <div className="text-xs text-muted-foreground mt-1 px-1">
