@@ -119,10 +119,13 @@ function calculateCurrentRisk(
   const avgEffectiveness = existingControls.reduce((sum, c) => sum + (c.effectiveness || 0), 0) / existingControls.length;
   const reductionPercentage = avgEffectiveness * 10;
   
-  const reduction = Math.floor((inherentLikelihood * reductionPercentage) / 100);
-  const currentLikelihood = Math.max(1, inherentLikelihood - reduction);
+  // Calculate reduction as decimal, then round to nearest integer
+  const reduction = (inherentLikelihood * reductionPercentage) / 100;
+  const currentLikelihoodRaw = inherentLikelihood - reduction;
+  const currentLikelihood = Math.max(1, Math.min(5, Math.round(currentLikelihoodRaw)));
   const currentImpact = inherentImpact;
 
+  // Find the key that matches the rounded likelihood value
   const currentLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
     k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === currentLikelihood
   ) || scenario.likelihood;
