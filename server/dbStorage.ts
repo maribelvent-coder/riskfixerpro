@@ -82,7 +82,14 @@ export class DbStorage implements IStorage {
   }
 
   async getAllAssessments(): Promise<Assessment[]> {
-    return await db.select().from(schema.assessments).orderBy(schema.assessments.updatedAt);
+    try {
+      const results = await db.select().from(schema.assessments);
+      console.log('getAllAssessments query results:', results.length, 'assessments');
+      return results;
+    } catch (error) {
+      console.error('Error in getAllAssessments:', error);
+      throw error;
+    }
   }
 
   async createAssessment(insertAssessment: InsertAssessment): Promise<Assessment> {
