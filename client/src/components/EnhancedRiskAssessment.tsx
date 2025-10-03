@@ -1090,8 +1090,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                   Step 3: Vulnerabilities & Controls
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Identify vulnerabilities for each risk scenario and document existing or proposed controls.
-                  Control effectiveness ratings (1-5) help calculate current risk levels.
+                  Identify vulnerabilities for each risk scenario and document EXISTING controls currently in place.
+                  Rate control effectiveness (1-5) to calculate current risk levels. Proposed controls will be added later after risk prioritization.
                 </p>
               </CardHeader>
               <CardContent>
@@ -1146,7 +1146,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             ) : (
                               <div className="space-y-3">
                                 {scenarioVulnerabilities.map((vulnerability) => {
-                                  const vulnControls = localControls.filter(c => c.vulnerabilityId === vulnerability.id);
+                                  const vulnControls = localControls.filter(c => c.vulnerabilityId === vulnerability.id && c.controlType === 'existing');
                                   const localVuln = localVulnerabilities.find(v => v.id === vulnerability.id) || vulnerability;
                                   
                                   return (
@@ -1243,25 +1243,6 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                             >
                                               <Plus className="h-3 w-3 mr-1" />
                                               Existing Control
-                                            </Button>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => {
-                                                createControlMutation.mutate({
-                                                  assessmentId,
-                                                  vulnerabilityId: vulnerability.id,
-                                                  riskScenarioId: scenario.id,
-                                                  controlType: 'proposed',
-                                                  description: 'New proposed control',
-                                                  effectiveness: null,
-                                                  notes: null
-                                                });
-                                              }}
-                                              data-testid={`button-add-proposed-control-${vulnerability.id}`}
-                                            >
-                                              <Plus className="h-3 w-3 mr-1" />
-                                              Proposed Control
                                             </Button>
                                           </div>
                                         </div>
