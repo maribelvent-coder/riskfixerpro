@@ -29,6 +29,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { assessmentApi, riskAssetApi, riskScenarioApi, vulnerabilityApi, controlApi, treatmentPlanApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import type { RiskAsset, RiskScenario, Vulnerability, Control, TreatmentPlan, InsertRiskScenario, InsertVulnerability, InsertControl, InsertTreatmentPlan } from "@shared/schema";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Risk calculation constants
 const LIKELIHOOD_VALUES = {
@@ -1555,6 +1556,53 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
         );
 
       case 5: // Executive Summary
+        const acceptScenarios = existingScenarios.filter(s => s.decision === 'accept');
+        const transferScenarios = existingScenarios.filter(s => s.decision === 'transfer');
+        const remediateWithPlans = existingScenarios.filter(s => s.decision === 'remediate');
+        
+        const inherentCritical = existingScenarios.filter(s => calculateRiskLevel(s.likelihood, s.impact).level === 'Critical').length;
+        const inherentHigh = existingScenarios.filter(s => calculateRiskLevel(s.likelihood, s.impact).level === 'High').length;
+        const inherentMedium = existingScenarios.filter(s => calculateRiskLevel(s.likelihood, s.impact).level === 'Medium').length;
+        const inherentLow = existingScenarios.filter(s => calculateRiskLevel(s.likelihood, s.impact).level === 'Low').length;
+        const inherentVeryLow = existingScenarios.filter(s => calculateRiskLevel(s.likelihood, s.impact).level === 'Very Low').length;
+        
+        const currentCritical = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Critical').length;
+        const currentHigh = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'High').length;
+        const currentMedium = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Medium').length;
+        const currentLow = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Low').length;
+        const currentVeryLow = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Very Low').length;
+        
+        const residualCritical = existingScenarios.filter(s => {
+          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
+          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
+          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
+          return residualRisk.level === 'Critical';
+        }).length;
+        const residualHigh = existingScenarios.filter(s => {
+          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
+          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
+          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
+          return residualRisk.level === 'High';
+        }).length;
+        const residualMedium = existingScenarios.filter(s => {
+          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
+          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
+          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
+          return residualRisk.level === 'Medium';
+        }).length;
+        const residualLow = existingScenarios.filter(s => {
+          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
+          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
+          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
+          return residualRisk.level === 'Low';
+        }).length;
+        const residualVeryLow = existingScenarios.filter(s => {
+          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
+          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
+          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
+          return residualRisk.level === 'Very Low';
+        }).length;
+        
         return (
           <div className="space-y-6">
             <Card>
@@ -1563,14 +1611,208 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                   <Activity className="h-5 w-5" />
                   Step 6: Executive Summary
                 </CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Comprehensive overview of risk assessment findings
+                </p>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    TODO: Build executive summary with metrics cards, charts (decision pie chart, risk categories bar chart),
-                    and risk register table showing the complete risk workflow progression.
-                  </p>
+              <CardContent className="space-y-6">
+                {/* Key Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Total Scenarios</p>
+                        <p className="text-3xl font-bold mt-1" data-testid="text-summary-total-scenarios">{existingScenarios.length}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Accepted</p>
+                        <p className="text-3xl font-bold mt-1 text-gray-600" data-testid="text-summary-accepted">{acceptScenarios.length}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Transferred</p>
+                        <p className="text-3xl font-bold mt-1 text-purple-600" data-testid="text-summary-transferred">{transferScenarios.length}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Remediated</p>
+                        <p className="text-3xl font-bold mt-1 text-green-600" data-testid="text-summary-remediated">{remediateWithPlans.length}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
+
+                {/* Charts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Decision Pie Chart */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Decision Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Accept', value: acceptScenarios.length, color: '#6b7280' },
+                              { name: 'Transfer', value: transferScenarios.length, color: '#9333ea' },
+                              { name: 'Remediate', value: remediateWithPlans.length, color: '#16a34a' },
+                              { name: 'Undecided', value: existingScenarios.filter(s => !s.decision || s.decision === 'undecided').length, color: '#d1d5db' }
+                            ].filter(item => item.value > 0)}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, value }) => `${name}: ${value}`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {[
+                              { name: 'Accept', value: acceptScenarios.length, color: '#6b7280' },
+                              { name: 'Transfer', value: transferScenarios.length, color: '#9333ea' },
+                              { name: 'Remediate', value: remediateWithPlans.length, color: '#16a34a' },
+                              { name: 'Undecided', value: existingScenarios.filter(s => !s.decision || s.decision === 'undecided').length, color: '#d1d5db' }
+                            ].filter(item => item.value > 0).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Risk Level Bar Chart */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Risk Level Comparison (Inherent → Current → Residual)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <BarChart
+                          data={[
+                            { 
+                              level: 'Critical', 
+                              Inherent: inherentCritical, 
+                              Current: currentCritical,
+                              Residual: residualCritical
+                            },
+                            { 
+                              level: 'High', 
+                              Inherent: inherentHigh, 
+                              Current: currentHigh,
+                              Residual: residualHigh
+                            },
+                            { 
+                              level: 'Medium', 
+                              Inherent: inherentMedium, 
+                              Current: currentMedium,
+                              Residual: residualMedium
+                            },
+                            { 
+                              level: 'Low', 
+                              Inherent: inherentLow, 
+                              Current: currentLow,
+                              Residual: residualLow
+                            },
+                            { 
+                              level: 'Very Low', 
+                              Inherent: inherentVeryLow, 
+                              Current: currentVeryLow,
+                              Residual: residualVeryLow
+                            }
+                          ]}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="level" 
+                            angle={-15}
+                            textAnchor="end"
+                            height={60}
+                          />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="Inherent" fill="#ef4444" />
+                          <Bar dataKey="Current" fill="#f59e0b" />
+                          <Bar dataKey="Residual" fill="#22c55e" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Risk Register */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Risk Register</CardTitle>
+                    <p className="text-sm text-muted-foreground">Complete risk progression for all scenarios</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="text-left p-3 font-medium">Scenario</th>
+                            <th className="text-center p-3 font-medium w-28">Inherent</th>
+                            <th className="text-center p-3 font-medium w-28">Current</th>
+                            <th className="text-center p-3 font-medium w-28">Residual</th>
+                            <th className="text-center p-3 font-medium w-28">Decision</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {existingScenarios.map((scenario) => {
+                            const asset = extractedAssets.find(a => a.id === scenario.assetId);
+                            const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+                            const { currentLikelihood, currentImpact, currentRisk } = calculateCurrentRisk(scenario, vulnerabilities, controls);
+                            const treatment = treatmentPlans.find(p => p.riskScenarioId === scenario.id);
+                            const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, scenario, treatment);
+                            
+                            return (
+                              <tr key={scenario.id} className="border-t" data-testid={`row-register-${scenario.id}`}>
+                                <td className="p-3">
+                                  <div className="font-medium">{asset?.name}</div>
+                                  <div className="text-muted-foreground text-xs">{scenario.threatDescription}</div>
+                                </td>
+                                <td className="text-center p-3">
+                                  <Badge className={`${inherentRisk.color} text-white text-xs`}>
+                                    {inherentRisk.level}
+                                  </Badge>
+                                </td>
+                                <td className="text-center p-3">
+                                  <Badge className={`${currentRisk.color} text-white text-xs`}>
+                                    {currentRisk.level}
+                                  </Badge>
+                                </td>
+                                <td className="text-center p-3">
+                                  <Badge className={`${residualRisk.color} text-white text-xs`}>
+                                    {residualRisk.level}
+                                  </Badge>
+                                </td>
+                                <td className="text-center p-3">
+                                  <Badge variant="outline" className="text-xs capitalize">
+                                    {scenario.decision || 'undecided'}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
           </div>
