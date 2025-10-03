@@ -43,11 +43,6 @@ const managementItems = [
     icon: Users,
   },
   {
-    title: "Compliance",
-    url: "/compliance",
-    icon: AlertTriangle,
-  },
-  {
     title: "Settings",
     url: "/settings",
     icon: Settings,

@@ -39,14 +39,6 @@ const mockReports: ReportConfig[] = [
     status: "ready",
     lastGenerated: "Dec 20, 2024",
     size: "8.7 MB"
-  },
-  {
-    id: "compliance-report",
-    title: "Compliance Checklist",
-    description: "Regulatory compliance mapping and gap analysis",
-    format: "docx",
-    sections: ["Compliance Framework", "Gap Analysis", "Remediation Plan"],
-    status: "generating",
   }
 ];
 

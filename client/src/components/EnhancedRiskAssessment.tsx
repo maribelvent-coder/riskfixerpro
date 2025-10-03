@@ -1931,61 +1931,54 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                     </CardContent>
                   </Card>
 
-                  {/* Risk Level Bar Chart */}
+                  {/* Risk Progression Chart */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg">Risk Level Comparison (Inherent → Current → Residual)</CardTitle>
+                      <CardTitle className="text-lg">Individual Risk Progression</CardTitle>
+                      <p className="text-sm text-muted-foreground">Each row shows one risk scenario's journey: Inherent → Current → Residual</p>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={250}>
+                      <ResponsiveContainer width="100%" height={Math.max(350, existingScenarios.length * 60)}>
                         <BarChart
-                          data={[
-                            { 
-                              level: 'Critical', 
-                              Inherent: inherentCritical, 
-                              Current: currentCritical,
-                              Residual: residualCritical
-                            },
-                            { 
-                              level: 'High', 
-                              Inherent: inherentHigh, 
-                              Current: currentHigh,
-                              Residual: residualHigh
-                            },
-                            { 
-                              level: 'Medium', 
-                              Inherent: inherentMedium, 
-                              Current: currentMedium,
-                              Residual: residualMedium
-                            },
-                            { 
-                              level: 'Low', 
-                              Inherent: inherentLow, 
-                              Current: currentLow,
-                              Residual: residualLow
-                            },
-                            { 
-                              level: 'Very Low', 
-                              Inherent: inherentVeryLow, 
-                              Current: currentVeryLow,
-                              Residual: residualVeryLow
-                            }
-                          ]}
-                          margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                          data={existingScenarios.map((scenario) => {
+                            const asset = extractedAssets.find(a => a.id === scenario.assetId);
+                            const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+                            
+                            const inherentL = SHARED_LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+                            const inherentI = SHARED_IMPACT_VALUES[scenario.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+                            const scenarioControls = controls.filter(c => c.riskScenarioId === scenario.id);
+                            const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+                            const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
+                            
+                            const { currentLikelihoodFloat, currentImpactFloat } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+                            const { residualLikelihood, residualImpact } = calculateResidualRiskCompound(currentLikelihoodFloat, currentImpactFloat, proposedControls);
+                            
+                            return {
+                              name: `${asset?.name || 'Unknown'}: ${scenario.threatDescription.substring(0, 35)}...`,
+                              Inherent: inherentRisk.score,
+                              Current: Math.round(currentLikelihoodFloat * currentImpactFloat * 10) / 10,
+                              Residual: Math.round(residualLikelihood * residualImpact * 10) / 10,
+                            };
+                          }).sort((a, b) => b.Inherent - a.Inherent)}
+                          layout="vertical"
+                          margin={{ top: 10, right: 30, left: 160, bottom: 10 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis 
-                            dataKey="level" 
-                            angle={-15}
-                            textAnchor="end"
-                            height={60}
+                          <XAxis type="number" domain={[0, 25]} label={{ value: 'Risk Score', position: 'insideBottom', offset: -5 }} />
+                          <YAxis 
+                            dataKey="name" 
+                            type="category" 
+                            width={150}
+                            tick={{ fontSize: 10 }}
                           />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="Inherent" fill="#ef4444" />
-                          <Bar dataKey="Current" fill="#f59e0b" />
-                          <Bar dataKey="Residual" fill="#22c55e" />
+                          <Tooltip 
+                            formatter={(value: number) => [`Risk Score: ${value}`, '']}
+                            labelStyle={{ fontSize: 11, fontWeight: 'bold' }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Bar dataKey="Inherent" fill="#ef4444" name="Inherent" radius={[0, 4, 4, 0]} />
+                          <Bar dataKey="Current" fill="#f59e0b" name="Current" radius={[0, 4, 4, 0]} />
+                          <Bar dataKey="Residual" fill="#22c55e" name="Residual" radius={[0, 4, 4, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
