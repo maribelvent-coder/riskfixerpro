@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   AlertTriangle, 
@@ -30,6 +31,12 @@ import { assessmentApi, riskAssetApi, riskScenarioApi, vulnerabilityApi, control
 import { useToast } from "@/hooks/use-toast";
 import type { RiskAsset, RiskScenario, Vulnerability, Control, TreatmentPlan, InsertRiskScenario, InsertVulnerability, InsertControl, InsertTreatmentPlan } from "@shared/schema";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { 
+  calculateResidualRisk as calculateResidualRiskCompound, 
+  calculateCurrentRisk as calculateCurrentRiskCompound,
+  LIKELIHOOD_VALUES as SHARED_LIKELIHOOD_VALUES, 
+  IMPACT_VALUES as SHARED_IMPACT_VALUES 
+} from '@shared/riskCalculations';
 
 // Risk calculation constants
 const LIKELIHOOD_VALUES = {
@@ -631,6 +638,38 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     // Debounce API call
     const timeoutId = setTimeout(() => {
       updateControlMutation.mutate({ id, data: { description: value } }, {
+        onSuccess: () => {
+          // Remove from editing set after successful mutation
+          editingControls.current.delete(id);
+        },
+        onError: () => {
+          // Remove from editing set on error too
+          editingControls.current.delete(id);
+        }
+      });
+      delete debouncedTimeouts.current[key];
+    }, 500);
+    
+    debouncedTimeouts.current[key] = timeoutId;
+  }, [updateControlMutation]);
+
+  const handleUpdateControlField = useCallback((id: string, field: string, value: any) => {
+    const key = `control-${id}-${field}`;
+    if (debouncedTimeouts.current[key]) {
+      clearTimeout(debouncedTimeouts.current[key]);
+    }
+    
+    // Mark as being edited
+    editingControls.current.add(id);
+    
+    // Update local state immediately
+    setLocalControls(prev => prev.map(c => 
+      c.id === id ? { ...c, [field]: value } : c
+    ));
+    
+    // Debounce API call
+    const timeoutId = setTimeout(() => {
+      updateControlMutation.mutate({ id, data: { [field]: value } }, {
         onSuccess: () => {
           // Remove from editing set after successful mutation
           editingControls.current.delete(id);
@@ -1482,10 +1521,44 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                   <div className="space-y-4">
                     {remediateScenarios.map((scenario) => {
                       const asset = extractedAssets.find(a => a.id === scenario.assetId);
-                      const existingPlan = treatmentPlans.find(p => p.riskScenarioId === scenario.id);
                       const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
-                      const { currentLikelihood, currentImpact, currentRisk } = calculateCurrentRisk(scenario, vulnerabilities, controls);
-                      const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, scenario, existingPlan);
+                      const inherentLikelihood = LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.value || 3;
+                      const inherentImpact = IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.value || 3;
+                      
+                      const scenarioExistingControls = localControls.filter(
+                        c => c.riskScenarioId === scenario.id && c.controlType === 'existing'
+                      );
+                      const scenarioProposedControls = localControls.filter(
+                        c => c.riskScenarioId === scenario.id && c.controlType === 'proposed'
+                      );
+                      
+                      const currentRiskCalc = calculateCurrentRiskCompound(
+                        inherentLikelihood,
+                        inherentImpact,
+                        scenarioExistingControls
+                      );
+                      
+                      const residualRiskCalc = calculateResidualRiskCompound(
+                        currentRiskCalc.currentLikelihood,
+                        currentRiskCalc.currentImpact,
+                        scenarioProposedControls
+                      );
+                      
+                      const currentRiskLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
+                        k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === currentRiskCalc.currentLikelihood
+                      ) || scenario.likelihood;
+                      const currentRiskImpactKey = Object.keys(IMPACT_VALUES).find(
+                        k => IMPACT_VALUES[k as keyof typeof IMPACT_VALUES].value === currentRiskCalc.currentImpact
+                      ) || scenario.impact;
+                      const currentRisk = calculateRiskLevel(currentRiskLikelihoodKey, currentRiskImpactKey);
+                      
+                      const residualRiskLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
+                        k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === residualRiskCalc.residualLikelihood
+                      ) || currentRiskLikelihoodKey;
+                      const residualRiskImpactKey = Object.keys(IMPACT_VALUES).find(
+                        k => IMPACT_VALUES[k as keyof typeof IMPACT_VALUES].value === residualRiskCalc.residualImpact
+                      ) || currentRiskImpactKey;
+                      const residualRisk = calculateRiskLevel(residualRiskLikelihoodKey, residualRiskImpactKey);
                       
                       return (
                         <Card key={scenario.id}>
@@ -1525,7 +1598,14 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                       controlType: 'proposed',
                                       description: '',
                                       effectiveness: null,
-                                      notes: null
+                                      notes: null,
+                                      treatmentType: 'physical',
+                                      primaryEffect: 'reduce_likelihood',
+                                      treatmentEffectiveness: 3,
+                                      actionDescription: '',
+                                      responsibleParty: '',
+                                      targetDate: '',
+                                      estimatedCost: ''
                                     });
                                   }}
                                   data-testid={`button-add-proposed-control-${scenario.id}`}
@@ -1543,150 +1623,157 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                 return scenarioProposedControls.length === 0 ? (
                                   <p className="text-sm text-muted-foreground">No proposed controls yet. Add controls to reduce risk.</p>
                                 ) : (
-                                  <div className="space-y-2">
+                                  <div className="space-y-4">
                                     {scenarioProposedControls.map((control) => {
                                       const localControl = localControls.find(c => c.id === control.id) || control;
                                       
                                       return (
-                                        <div key={control.id} className="flex items-center gap-2">
-                                          <Badge variant="outline" className="shrink-0">Proposed</Badge>
-                                          <Input
-                                            value={localControl.description || ''}
-                                            onChange={(e) => {
-                                              handleUpdateControlDebounced(control.id, e.target.value);
-                                            }}
-                                            placeholder="Describe the proposed control..."
-                                            className="flex-1"
-                                            data-testid={`input-proposed-control-${control.id}`}
-                                          />
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => deleteControlMutation.mutate(control.id)}
-                                            data-testid={`button-delete-proposed-control-${control.id}`}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
+                                        <Card key={control.id}>
+                                          <CardContent className="pt-4 space-y-4">
+                                            <div className="flex items-start gap-2">
+                                              <Badge variant="outline" className="shrink-0 mt-2">Proposed</Badge>
+                                              <Input
+                                                value={localControl.description || ''}
+                                                onChange={(e) => {
+                                                  handleUpdateControlDebounced(control.id, e.target.value);
+                                                }}
+                                                placeholder="Control description (e.g., 'Install security cameras')"
+                                                className="flex-1"
+                                                data-testid={`input-proposed-control-${control.id}`}
+                                              />
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => deleteControlMutation.mutate(control.id)}
+                                                data-testid={`button-delete-proposed-control-${control.id}`}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                              <div>
+                                                <Label>Treatment Type</Label>
+                                                <Select 
+                                                  value={localControl.treatmentType || "physical"} 
+                                                  onValueChange={(value) => {
+                                                    handleUpdateControlField(control.id, "treatmentType", value);
+                                                  }}
+                                                >
+                                                  <SelectTrigger data-testid={`select-treatment-type-${control.id}`}>
+                                                    <SelectValue placeholder="Select type" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="people">People</SelectItem>
+                                                    <SelectItem value="process">Process</SelectItem>
+                                                    <SelectItem value="technology">Technology</SelectItem>
+                                                    <SelectItem value="physical">Physical</SelectItem>
+                                                    <SelectItem value="policy">Policy</SelectItem>
+                                                    <SelectItem value="training">Training</SelectItem>
+                                                    <SelectItem value="vendor">Vendor/Third Party</SelectItem>
+                                                    <SelectItem value="other">Other</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
+                                              <div>
+                                                <Label>Primary Effect</Label>
+                                                <Select 
+                                                  value={localControl.primaryEffect || "reduce_likelihood"} 
+                                                  onValueChange={(value) => {
+                                                    handleUpdateControlField(control.id, "primaryEffect", value);
+                                                  }}
+                                                >
+                                                  <SelectTrigger data-testid={`select-primary-effect-${control.id}`}>
+                                                    <SelectValue placeholder="Select effect" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="reduce_likelihood">Reduce Likelihood</SelectItem>
+                                                    <SelectItem value="reduce_impact">Reduce Impact</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
+                                              <div>
+                                                <Label>Treatment Effectiveness</Label>
+                                                <div className="flex items-center gap-3">
+                                                  <Slider
+                                                    value={[localControl.treatmentEffectiveness || 3]}
+                                                    onValueChange={(value) => {
+                                                      handleUpdateControlField(control.id, "treatmentEffectiveness", value[0]);
+                                                    }}
+                                                    min={1}
+                                                    max={5}
+                                                    step={1}
+                                                    className="flex-1"
+                                                    data-testid={`slider-effectiveness-${control.id}`}
+                                                  />
+                                                  <span className="text-sm font-medium w-8">{localControl.treatmentEffectiveness || 3}</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                  {localControl.treatmentEffectiveness === 1 && "Minimal (10% reduction)"}
+                                                  {localControl.treatmentEffectiveness === 2 && "Slight (20% reduction)"}
+                                                  {localControl.treatmentEffectiveness === 3 && "Moderate (30% reduction)"}
+                                                  {localControl.treatmentEffectiveness === 4 && "Significant (40% reduction)"}
+                                                  {localControl.treatmentEffectiveness === 5 && "Maximum (50% reduction)"}
+                                                  {!localControl.treatmentEffectiveness && "Moderate (30% reduction)"}
+                                                </p>
+                                              </div>
+                                            </div>
+
+                                            <div>
+                                              <Label>Action Description</Label>
+                                              <Textarea
+                                                value={localControl.actionDescription || ''}
+                                                onChange={(e) => {
+                                                  handleUpdateControlField(control.id, "actionDescription", e.target.value);
+                                                }}
+                                                placeholder="Describe the specific actions to implement this control..."
+                                                data-testid={`textarea-action-description-${control.id}`}
+                                                rows={2}
+                                              />
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                              <div>
+                                                <Label>Responsible Party</Label>
+                                                <Input
+                                                  value={localControl.responsibleParty || ''}
+                                                  onChange={(e) => {
+                                                    handleUpdateControlField(control.id, "responsibleParty", e.target.value);
+                                                  }}
+                                                  placeholder="Who is responsible?"
+                                                  data-testid={`input-responsible-${control.id}`}
+                                                />
+                                              </div>
+                                              <div>
+                                                <Label>Target Date</Label>
+                                                <Input
+                                                  type="date"
+                                                  value={localControl.targetDate || ''}
+                                                  onChange={(e) => {
+                                                    handleUpdateControlField(control.id, "targetDate", e.target.value);
+                                                  }}
+                                                  data-testid={`input-target-date-${control.id}`}
+                                                />
+                                              </div>
+                                              <div>
+                                                <Label>Estimated Cost</Label>
+                                                <Input
+                                                  value={localControl.estimatedCost || ''}
+                                                  onChange={(e) => {
+                                                    handleUpdateControlField(control.id, "estimatedCost", e.target.value);
+                                                  }}
+                                                  placeholder="e.g., $5,000"
+                                                  data-testid={`input-estimated-cost-${control.id}`}
+                                                />
+                                              </div>
+                                            </div>
+                                          </CardContent>
+                                        </Card>
                                       );
                                     })}
                                   </div>
                                 );
                               })()}
-                            </div>
-                            
-                            <div className="border-t pt-4 mt-4">
-                              <Label className="text-base font-medium mb-3 block">Treatment Plan Details</Label>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div>
-                                <Label>Treatment Type</Label>
-                                <Select 
-                                  value={existingPlan?.type || ""} 
-                                  onValueChange={(value) => {
-                                    if (existingPlan) {
-                                      handleUpdateTreatment(existingPlan.id, "type", value);
-                                    } else {
-                                      const newPlan: InsertTreatmentPlan = {
-                                        assessmentId,
-                                        riskScenarioId: scenario.id,
-                                        risk: scenario.threatDescription || "Unknown Risk",
-                                        strategy: "control",
-                                        description: "",
-                                        type: value,
-                                        responsible: "",
-                                        deadline: "",
-                                        status: "planned"
-                                      };
-                                      createTreatmentMutation.mutate(newPlan);
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger data-testid={`select-type-${scenario.id}`}>
-                                    <SelectValue placeholder="Select type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="people">People</SelectItem>
-                                    <SelectItem value="process">Process</SelectItem>
-                                    <SelectItem value="technology">Technology</SelectItem>
-                                    <SelectItem value="physical">Physical</SelectItem>
-                                    <SelectItem value="policy">Policy</SelectItem>
-                                    <SelectItem value="training">Training</SelectItem>
-                                    <SelectItem value="vendor">Vendor/Third Party</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label>Effect</Label>
-                                <Select 
-                                  value={existingPlan?.effect || ""} 
-                                  onValueChange={(value) => handleUpdateTreatment(existingPlan?.id || "", "effect", value)}
-                                  disabled={!existingPlan}
-                                >
-                                  <SelectTrigger data-testid={`select-effect-${scenario.id}`}>
-                                    <SelectValue placeholder="Select effect" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="reduce_likelihood">Reduce Likelihood</SelectItem>
-                                    <SelectItem value="reduce_impact">Reduce Impact</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label>Reduction Value (1-5)</Label>
-                                <Select 
-                                  value={existingPlan?.value?.toString() || ""} 
-                                  onValueChange={(value) => handleUpdateTreatment(existingPlan?.id || "", "value", parseInt(value))}
-                                  disabled={!existingPlan}
-                                >
-                                  <SelectTrigger data-testid={`select-value-${scenario.id}`}>
-                                    <SelectValue placeholder="Select value" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="1">1 - Minimal</SelectItem>
-                                    <SelectItem value="2">2 - Slight</SelectItem>
-                                    <SelectItem value="3">3 - Moderate</SelectItem>
-                                    <SelectItem value="4">4 - Significant</SelectItem>
-                                    <SelectItem value="5">5 - Maximum</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            {existingPlan && (
-                              <div className="grid gap-3">
-                                <div>
-                                  <Label>Action Description</Label>
-                                  <Textarea
-                                    value={existingPlan.description}
-                                    onChange={(e) => handleUpdateTreatment(existingPlan.id, "description", e.target.value)}
-                                    placeholder="Describe the specific treatment actions..."
-                                    data-testid={`textarea-description-${scenario.id}`}
-                                    rows={2}
-                                  />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  <div>
-                                    <Label>Responsible Party</Label>
-                                    <Input
-                                      value={existingPlan.responsible}
-                                      onChange={(e) => handleUpdateTreatment(existingPlan.id, "responsible", e.target.value)}
-                                      placeholder="Who is responsible?"
-                                      data-testid={`input-responsible-${scenario.id}`}
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label>Target Deadline</Label>
-                                    <Input
-                                      type="date"
-                                      value={existingPlan.deadline}
-                                      onChange={(e) => handleUpdateTreatment(existingPlan.id, "deadline", e.target.value)}
-                                      data-testid={`input-deadline-${scenario.id}`}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                             </div>
                           </CardContent>
                         </Card>
