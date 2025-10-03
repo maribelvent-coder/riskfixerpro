@@ -1184,7 +1184,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                                   assessmentId,
                                                   vulnerabilityId: vulnerability.id,
                                                   riskScenarioId: scenario.id,
-                                                  control_type: 'existing',
+                                                  controlType: 'existing',
                                                   description: 'New existing control',
                                                   effectiveness: null,
                                                   notes: null
@@ -1203,7 +1203,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                                   assessmentId,
                                                   vulnerabilityId: vulnerability.id,
                                                   riskScenarioId: scenario.id,
-                                                  control_type: 'proposed',
+                                                  controlType: 'proposed',
                                                   description: 'New proposed control',
                                                   effectiveness: null,
                                                   notes: null
