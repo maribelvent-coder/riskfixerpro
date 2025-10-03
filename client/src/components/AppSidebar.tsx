@@ -56,12 +56,12 @@ const managementItems = [
 export function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-main">
-      <SidebarHeader className="p-4">
-        <div className="flex flex-col gap-2">
+      <SidebarHeader className="p-4 pb-3">
+        <div className="flex flex-col -my-2">
           <img 
             src={logoPath} 
             alt="RiskFixer - Security Site Survey" 
-            className="h-12 w-auto object-contain"
+            className="h-20 w-auto object-cover object-center scale-110"
             data-testid="logo-sidebar"
           />
         </div>
