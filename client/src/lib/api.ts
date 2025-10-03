@@ -7,6 +7,10 @@ import type {
   InsertRiskAsset,
   RiskScenario,
   InsertRiskScenario,
+  Vulnerability,
+  InsertVulnerability,
+  Control,
+  InsertControl,
   TreatmentPlan,
   InsertTreatmentPlan,
   RiskInsight,
@@ -177,6 +181,52 @@ export const treatmentPlanApi = {
     apiRequest(`/assessments/${assessmentId}/treatment-plans/bulk`, {
       method: 'POST',  
       body: JSON.stringify({ plans }),
+    }),
+};
+
+// Vulnerabilities API functions
+export const vulnerabilityApi = {
+  getAll: (assessmentId: string): Promise<Vulnerability[]> => 
+    apiRequest(`/assessments/${assessmentId}/vulnerabilities`),
+
+  create: (data: InsertVulnerability): Promise<Vulnerability> => 
+    apiRequest(`/assessments/${data.assessmentId}/vulnerabilities`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<Vulnerability>): Promise<Vulnerability> => 
+    apiRequest(`/vulnerabilities/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string): Promise<void> => 
+    apiRequest(`/vulnerabilities/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Controls API functions
+export const controlApi = {
+  getAll: (assessmentId: string): Promise<Control[]> => 
+    apiRequest(`/assessments/${assessmentId}/controls`),
+
+  create: (data: InsertControl): Promise<Control> => 
+    apiRequest(`/assessments/${data.assessmentId}/controls`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<Control>): Promise<Control> => 
+    apiRequest(`/controls/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string): Promise<void> => 
+    apiRequest(`/controls/${id}`, {
+      method: 'DELETE',
     }),
 };
 

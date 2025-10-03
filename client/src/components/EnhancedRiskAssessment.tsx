@@ -26,9 +26,9 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { assessmentApi, riskAssetApi, riskScenarioApi, treatmentPlanApi } from "@/lib/api";
+import { assessmentApi, riskAssetApi, riskScenarioApi, vulnerabilityApi, controlApi, treatmentPlanApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import type { RiskAsset, RiskScenario, TreatmentPlan, InsertRiskScenario, InsertTreatmentPlan } from "@shared/schema";
+import type { RiskAsset, RiskScenario, Vulnerability, Control, TreatmentPlan, InsertRiskScenario, InsertVulnerability, InsertControl, InsertTreatmentPlan } from "@shared/schema";
 
 // Risk calculation constants
 const LIKELIHOOD_VALUES = {
@@ -140,6 +140,18 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     enabled: !!assessmentId,
   });
 
+  const { data: vulnerabilities = [], isLoading: vulnerabilitiesLoading } = useQuery({
+    queryKey: ["/api/assessments", assessmentId, "vulnerabilities"],
+    queryFn: () => vulnerabilityApi.getAll(assessmentId),
+    enabled: !!assessmentId,
+  });
+
+  const { data: controls = [], isLoading: controlsLoading } = useQuery({
+    queryKey: ["/api/assessments", assessmentId, "controls"],
+    queryFn: () => controlApi.getAll(assessmentId),
+    enabled: !!assessmentId,
+  });
+
   useEffect(() => {
     setExtractedAssets(assets);
   }, [assets]);
@@ -248,11 +260,75 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     },
   });
 
+  // Vulnerability mutations
+  const createVulnerabilityMutation = useMutation({
+    mutationFn: (data: InsertVulnerability) => vulnerabilityApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "vulnerabilities"] });
+      toast({
+        title: "Vulnerability Added",
+        description: "Vulnerability has been created successfully.",
+      });
+    },
+  });
+
+  const updateVulnerabilityMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Vulnerability> }) => 
+      vulnerabilityApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "vulnerabilities"] });
+    },
+  });
+
+  const deleteVulnerabilityMutation = useMutation({
+    mutationFn: (id: string) => vulnerabilityApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "vulnerabilities"] });
+      toast({
+        title: "Vulnerability Deleted",
+        description: "Vulnerability has been removed.",
+      });
+    },
+  });
+
+  // Control mutations
+  const createControlMutation = useMutation({
+    mutationFn: (data: InsertControl) => controlApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "controls"] });
+      toast({
+        title: "Control Added",
+        description: "Control has been created successfully.",
+      });
+    },
+  });
+
+  const updateControlMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Control> }) => 
+      controlApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "controls"] });
+    },
+  });
+
+  const deleteControlMutation = useMutation({
+    mutationFn: (id: string) => controlApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "controls"] });
+      toast({
+        title: "Control Deleted",
+        description: "Control has been removed.",
+      });
+    },
+  });
+
   const steps = [
     { title: "Asset Identification", icon: Target },
     { title: "Risk Scenarios", icon: AlertTriangle },
-    { title: "Risk Analysis", icon: Activity },
-    { title: "Treatment Planning", icon: Shield },
+    { title: "Vulnerabilities & Controls", icon: Shield },
+    { title: "Prioritize Risks", icon: Activity },
+    { title: "Treatment Planning", icon: Settings },
+    { title: "Executive Summary", icon: Activity },
     { title: "Review & Submit", icon: CheckCircle }
   ];
 
@@ -877,7 +953,210 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           </div>
         );
 
-      case 2: // Risk Analysis
+      case 2: // Vulnerabilities & Controls
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Step 3: Vulnerabilities & Controls
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Identify vulnerabilities for each risk scenario and document existing or proposed controls.
+                  Control effectiveness ratings (1-5) help calculate current risk levels.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {scenarios.length === 0 ? (
+                  <p className="text-muted-foreground">Complete risk scenario development first.</p>
+                ) : (
+                  <div className="space-y-6">
+                    {scenarios.map((scenario) => {
+                      const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
+                      const asset = extractedAssets.find(a => a.id === scenario.assetId);
+                      const scenarioVulnerabilities = vulnerabilities.filter(v => 
+                        v.description && v.description.includes(scenario.id)
+                      );
+                      
+                      return (
+                        <Card key={scenario.id} className="border-l-4" style={{ borderLeftColor: inherentRisk.color.replace('bg-', '') }}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline">{asset?.name}</Badge>
+                                  <Badge className={`${inherentRisk.color} text-white`}>
+                                    Inherent Risk: {inherentRisk.level} ({inherentRisk.score})
+                                  </Badge>
+                                </div>
+                                <p className="font-medium text-sm">{scenario.threatDescription}</p>
+                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                  <span>Likelihood: {LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.label}</span>
+                                  <span>Impact: {IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.label}</span>
+                                </div>
+                              </div>
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  createVulnerabilityMutation.mutate({
+                                    assessmentId,
+                                    description: `[Scenario:${scenario.id}] New vulnerability`,
+                                    notes: null
+                                  });
+                                }}
+                                data-testid={`button-add-vulnerability-${scenario.id}`}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Vulnerability
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {scenarioVulnerabilities.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">No vulnerabilities identified yet. Click "Add Vulnerability" to begin.</p>
+                            ) : (
+                              <div className="space-y-3">
+                                {scenarioVulnerabilities.map((vulnerability) => {
+                                  const vulnControls = controls.filter(c => c.vulnerabilityId === vulnerability.id);
+                                  
+                                  return (
+                                    <Card key={vulnerability.id} className="bg-muted/30">
+                                      <CardContent className="p-4 space-y-3">
+                                        <div className="flex items-start gap-2">
+                                          <Badge variant="secondary" className="mt-0.5">Vulnerability</Badge>
+                                          <Input
+                                            value={vulnerability.description?.replace(`[Scenario:${scenario.id}] `, '') || ''}
+                                            onChange={(e) => {
+                                              updateVulnerabilityMutation.mutate({
+                                                id: vulnerability.id,
+                                                data: { description: `[Scenario:${scenario.id}] ${e.target.value}` }
+                                              });
+                                            }}
+                                            placeholder="Describe the vulnerability..."
+                                            className="flex-1"
+                                            data-testid={`input-vulnerability-${vulnerability.id}`}
+                                          />
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => deleteVulnerabilityMutation.mutate(vulnerability.id)}
+                                            data-testid={`button-delete-vulnerability-${vulnerability.id}`}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                        
+                                        <div className="ml-6 space-y-2">
+                                          {vulnControls.map((control) => (
+                                            <div key={control.id} className="flex items-center gap-2">
+                                              <Badge variant="outline" className="shrink-0">
+                                                {control.control_type === 'existing' ? 'Existing' : 'Proposed'}
+                                              </Badge>
+                                              <Input
+                                                value={control.description || ''}
+                                                onChange={(e) => {
+                                                  updateControlMutation.mutate({
+                                                    id: control.id,
+                                                    data: { description: e.target.value }
+                                                  });
+                                                }}
+                                                placeholder="Control description..."
+                                                className="flex-1"
+                                                data-testid={`input-control-${control.id}`}
+                                              />
+                                              {control.control_type === 'existing' && (
+                                                <Select
+                                                  value={control.effectiveness?.toString() || ''}
+                                                  onValueChange={(value) => {
+                                                    updateControlMutation.mutate({
+                                                      id: control.id,
+                                                      data: { effectiveness: parseInt(value) }
+                                                    });
+                                                  }}
+                                                >
+                                                  <SelectTrigger className="w-32" data-testid={`select-effectiveness-${control.id}`}>
+                                                    <SelectValue placeholder="Rate" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="1">1 - Poor</SelectItem>
+                                                    <SelectItem value="2">2 - Fair</SelectItem>
+                                                    <SelectItem value="3">3 - Good</SelectItem>
+                                                    <SelectItem value="4">4 - Very Good</SelectItem>
+                                                    <SelectItem value="5">5 - Excellent</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                              )}
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => deleteControlMutation.mutate(control.id)}
+                                                data-testid={`button-delete-control-${control.id}`}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          ))}
+                                          <div className="flex gap-2">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                createControlMutation.mutate({
+                                                  assessmentId,
+                                                  vulnerabilityId: vulnerability.id,
+                                                  riskScenarioId: scenario.id,
+                                                  control_type: 'existing',
+                                                  description: 'New existing control',
+                                                  effectiveness: null,
+                                                  notes: null
+                                                });
+                                              }}
+                                              data-testid={`button-add-existing-control-${vulnerability.id}`}
+                                            >
+                                              <Plus className="h-3 w-3 mr-1" />
+                                              Existing Control
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                createControlMutation.mutate({
+                                                  assessmentId,
+                                                  vulnerabilityId: vulnerability.id,
+                                                  riskScenarioId: scenario.id,
+                                                  control_type: 'proposed',
+                                                  description: 'New proposed control',
+                                                  effectiveness: null,
+                                                  notes: null
+                                                });
+                                              }}
+                                              data-testid={`button-add-proposed-control-${vulnerability.id}`}
+                                            >
+                                              <Plus className="h-3 w-3 mr-1" />
+                                              Proposed Control
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 3: // Prioritize Risks (was Risk Analysis)
         return (
           <div className="space-y-6">
             <Card>
@@ -943,14 +1222,14 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           </div>
         );
 
-      case 3: // Treatment Planning
+      case 4: // Treatment Planning
         return (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Step 4: Risk Treatment Planning
+                  <Settings className="h-5 w-5" />
+                  Step 5: Risk Treatment Planning
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1075,14 +1354,36 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           </div>
         );
 
-      case 4: // Review & Submit
+      case 5: // Executive Summary
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Step 6: Executive Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    TODO: Build executive summary with metrics cards, charts (decision pie chart, risk categories bar chart),
+                    and risk register table showing the complete risk workflow progression.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 6: // Review & Submit
         return (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
-                  Step 5: Review & Submit Assessment
+                  Step 7: Review & Submit Assessment
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
