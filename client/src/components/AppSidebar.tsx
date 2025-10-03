@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import logoPath from "@assets/logo TSB cutout_1758890068148.png";
+import logoPath from "@assets/RiskFixer Logo_1759487773302.png";
 
 const navigationItems = [
   {
@@ -57,19 +57,13 @@ export function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2">
           <img 
             src={logoPath} 
-            alt="RiskFixer" 
-            className="h-8 w-8 object-contain"
+            alt="RiskFixer - Security Site Survey" 
+            className="h-12 w-auto object-contain"
             data-testid="logo-sidebar"
           />
-          <div className="flex flex-col">
-            <span className="font-bold text-base leading-tight text-primary">RiskFixer</span>
-          </div>
-        </div>
-        <div className="text-xs text-muted-foreground mt-1 px-1">
-          Physical Security Risk Assessment
         </div>
       </SidebarHeader>
       
