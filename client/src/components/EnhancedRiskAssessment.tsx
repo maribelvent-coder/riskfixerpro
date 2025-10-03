@@ -102,16 +102,12 @@ function calculateCurrentRisk(
   const inherentLikelihood = LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.value || 0;
   const inherentImpact = IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.value || 0;
 
-  const scenarioVulnerabilities = vulnerabilities.filter(v => v.scenarioId === scenario.id);
+  const scenarioVulnerabilities = vulnerabilities.filter(v => v.riskScenarioId === scenario.id);
   
-  if (scenarioVulnerabilities.length === 0) {
-    const currentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
-    return { currentLikelihood: inherentLikelihood, currentImpact: inherentImpact, currentRisk, reductionPercentage: 0 };
-  }
-
+  // Get existing controls - both via vulnerabilities and directly linked to scenario
   const existingControls = controls.filter(c => 
-    scenarioVulnerabilities.some(v => v.id === c.vulnerabilityId) && 
-    c.type === 'existing' && 
+    (scenarioVulnerabilities.some(v => v.id === c.vulnerabilityId) || c.riskScenarioId === scenario.id) &&
+    c.controlType === 'existing' && 
     c.effectiveness !== null
   );
 

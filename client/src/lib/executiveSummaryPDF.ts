@@ -10,24 +10,24 @@ import {
   getRiskLevel,
   calculateRiskScore,
 } from './pdfService';
-import type { Assessment, RiskScenario, RiskAsset, TreatmentPlan } from '@shared/schema';
+import type { Assessment, RiskScenario, RiskAsset, TreatmentPlan, Vulnerability, Control } from '@shared/schema';
 
 const { SPACING, FONT_SIZES, COLORS } = PDF_CONFIG;
 
 function mapLikelihoodToNumber(likelihood: string): number {
   const mapping: Record<string, number> = {
-    'rare': 1,
-    'unlikely': 2,
-    'possible': 3,
-    'likely': 4,
-    'almost certain': 5,
+    'very-low': 1,
+    'low': 2,
+    'medium': 3,
+    'high': 4,
+    'very-high': 5,
   };
   return mapping[likelihood.toLowerCase()] || 3;
 }
 
 function mapImpactToNumber(impact: string): number {
   const mapping: Record<string, number> = {
-    'insignificant': 1,
+    'negligible': 1,
     'minor': 2,
     'moderate': 3,
     'major': 4,
@@ -36,15 +36,95 @@ function mapImpactToNumber(impact: string): number {
   return mapping[impact.toLowerCase()] || 3;
 }
 
+function calculateRiskLevel(likelihood: number, impact: number): { score: number; level: string } {
+  const score = likelihood * impact;
+  let level = '';
+  
+  if (score >= 20) level = 'Critical';
+  else if (score >= 15) level = 'High';
+  else if (score >= 10) level = 'Medium';
+  else if (score >= 5) level = 'Low';
+  else level = 'Very Low';
+  
+  return { score, level };
+}
+
+function calculateCurrentRisk(
+  scenario: RiskScenario, 
+  vulnerabilities: Vulnerability[], 
+  controls: Control[]
+): { currentLikelihood: number; currentImpact: number; currentRisk: { score: number; level: string }; reduction: number } {
+  const inherentLikelihood = mapLikelihoodToNumber(scenario.likelihood);
+  const inherentImpact = mapImpactToNumber(scenario.impact);
+
+  // Get vulnerabilities for this scenario
+  const scenarioVulns = vulnerabilities.filter(v => v.riskScenarioId === scenario.id);
+  
+  // Get existing controls - both via vulnerabilities and directly linked to scenario
+  const existingControls = controls.filter(c => 
+    (scenarioVulns.some(v => v.id === c.vulnerabilityId) || c.riskScenarioId === scenario.id) &&
+    c.controlType === 'existing' && 
+    c.effectiveness !== null
+  );
+
+  if (existingControls.length === 0) {
+    const currentRisk = calculateRiskLevel(inherentLikelihood, inherentImpact);
+    return { currentLikelihood: inherentLikelihood, currentImpact: inherentImpact, currentRisk, reduction: 0 };
+  }
+
+  // Calculate average effectiveness and reduction (10% per effectiveness point)
+  const avgEffectiveness = existingControls.reduce((sum, c) => sum + (c.effectiveness || 0), 0) / existingControls.length;
+  const reductionPercentage = avgEffectiveness * 10;
+  
+  // Calculate current likelihood with floor-rounded reduction
+  const reductionAmount = Math.floor((inherentLikelihood * reductionPercentage) / 100);
+  const currentLikelihood = Math.max(1, inherentLikelihood - reductionAmount);
+  const currentImpact = inherentImpact;
+
+  const currentRisk = calculateRiskLevel(currentLikelihood, currentImpact);
+  
+  return { currentLikelihood, currentImpact, currentRisk, reduction: Math.round(reductionPercentage) };
+}
+
+function calculateResidualRisk(
+  currentLikelihood: number,
+  currentImpact: number,
+  scenario: RiskScenario,
+  treatment?: TreatmentPlan
+): { residualLikelihood: number; residualImpact: number; residualRisk: { score: number; level: string } } {
+  if (!treatment || !treatment.effect || !treatment.value) {
+    return {
+      residualLikelihood: currentLikelihood,
+      residualImpact: currentImpact,
+      residualRisk: calculateRiskLevel(currentLikelihood, currentImpact)
+    };
+  }
+
+  const reductionValue = treatment.value || 0;
+  let residualLikelihood = currentLikelihood;
+  let residualImpact = currentImpact;
+
+  if (treatment.effect === 'reduce_likelihood') {
+    residualLikelihood = Math.max(1, currentLikelihood - reductionValue);
+  } else if (treatment.effect === 'reduce_impact') {
+    residualImpact = Math.max(1, currentImpact - reductionValue);
+  }
+
+  const residualRisk = calculateRiskLevel(residualLikelihood, residualImpact);
+  return { residualLikelihood, residualImpact, residualRisk };
+}
+
 export async function generateExecutiveSummaryPDF(assessmentId: string): Promise<void> {
   try {
     console.log(`Starting Executive Summary PDF generation for assessment ${assessmentId}`);
 
-    const [assessmentRes, scenariosRes, assetsRes, plansRes] = await Promise.all([
+    const [assessmentRes, scenariosRes, assetsRes, plansRes, vulnerabilitiesRes, controlsRes] = await Promise.all([
       fetch(`/api/assessments/${assessmentId}`),
       fetch(`/api/assessments/${assessmentId}/risk-scenarios`),
       fetch(`/api/assessments/${assessmentId}/risk-assets`),
       fetch(`/api/assessments/${assessmentId}/treatment-plans`),
+      fetch(`/api/assessments/${assessmentId}/vulnerabilities`),
+      fetch(`/api/assessments/${assessmentId}/controls`),
     ]);
 
     if (!assessmentRes.ok || !scenariosRes.ok || !assetsRes.ok || !plansRes.ok) {
@@ -55,11 +135,15 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
     const scenarios: RiskScenario[] = await scenariosRes.json();
     const assets: RiskAsset[] = await assetsRes.json();
     const plans: TreatmentPlan[] = await plansRes.json();
+    const vulnerabilities: Vulnerability[] = vulnerabilitiesRes.ok ? await vulnerabilitiesRes.json() : [];
+    const controls: Control[] = controlsRes.ok ? await controlsRes.json() : [];
 
     console.log('Data fetched successfully:', { 
       scenarios: scenarios.length, 
       assets: assets.length, 
-      plans: plans.length 
+      plans: plans.length,
+      vulnerabilities: vulnerabilities.length,
+      controls: controls.length
     });
 
     const doc = createPDF();
@@ -123,14 +207,55 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
     });
     yPos += SPACING.lineHeight;
 
-    const criticalHighCount = scenarios.filter(s => {
-      const level = s.riskLevel?.toLowerCase() || '';
-      return level === 'critical' || level === 'high' || level === 'extreme';
+    // Calculate triple risk metrics
+    const inherentCritical = scenarios.filter(s => {
+      const likelihood = mapLikelihoodToNumber(s.likelihood);
+      const impact = mapImpactToNumber(s.impact);
+      return calculateRiskLevel(likelihood, impact).level === 'Critical';
     }).length;
+
+    const currentCritical = scenarios.filter(s => {
+      const { currentRisk } = calculateCurrentRisk(s, vulnerabilities, controls);
+      return currentRisk.level === 'Critical';
+    }).length;
+
+    const residualCritical = scenarios.filter(s => {
+      const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
+      const treatment = plans.find(p => p.riskScenarioId === s.id);
+      const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
+      return residualRisk.level === 'Critical';
+    }).length;
+
+    const criticalHighCount = inherentCritical;
 
     yPos = addText(doc, `Critical/High Risk Scenarios: ${criticalHighCount}`, SPACING.margin, yPos, {
       fontStyle: 'bold',
       color: criticalHighCount > 0 ? COLORS.danger : COLORS.success,
+    });
+    yPos += SPACING.sectionGap;
+
+    // Add Triple Risk Progression
+    yPos = checkPageBreak(doc, yPos, 60);
+    yPos = addSection(doc, 'RISK PROGRESSION (INHERENT → CURRENT → RESIDUAL)', yPos);
+
+    yPos = addText(doc, 'The triple risk model shows how risks are reduced through existing controls and proposed treatments:', SPACING.margin, yPos);
+    yPos += SPACING.lineHeight;
+
+    yPos = addText(doc, `Inherent Risk (Critical): ${inherentCritical} scenarios`, SPACING.margin, yPos, {
+      color: COLORS.danger,
+      fontStyle: 'bold',
+    });
+    yPos += SPACING.smallGap;
+
+    yPos = addText(doc, `Current Risk (Critical): ${currentCritical} scenarios (after existing controls)`, SPACING.margin, yPos, {
+      color: COLORS.warning,
+      fontStyle: 'bold',
+    });
+    yPos += SPACING.smallGap;
+
+    yPos = addText(doc, `Residual Risk (Critical): ${residualCritical} scenarios (after proposed treatments)`, SPACING.margin, yPos, {
+      color: COLORS.success,
+      fontStyle: 'bold',
     });
     yPos += SPACING.sectionGap;
 
@@ -168,7 +293,8 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
       const likelihoodNum = mapLikelihoodToNumber(scenario.likelihood);
       const impactNum = mapImpactToNumber(scenario.impact);
       const score = calculateRiskScore(likelihoodNum, impactNum);
-      return { ...scenario, numericScore: score };
+      const { currentRisk } = calculateCurrentRisk(scenario, vulnerabilities, controls);
+      return { ...scenario, numericScore: score, currentRisk };
     });
 
     const topScenarios = scenariosWithScores
@@ -182,16 +308,11 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
       });
     } else {
       topScenarios.forEach((scenario, index) => {
-        yPos = checkPageBreak(doc, yPos, 35);
+        yPos = checkPageBreak(doc, yPos, 50);
         
         yPos = addText(doc, `${index + 1}. ${scenario.scenario}`, SPACING.margin, yPos, {
           fontStyle: 'bold',
           fontSize: FONT_SIZES.subheading,
-        });
-        yPos += SPACING.smallGap;
-
-        yPos = addText(doc, `   Risk Level: ${scenario.riskLevel}`, SPACING.margin, yPos, {
-          color: COLORS.textLight,
         });
         yPos += SPACING.smallGap;
 
@@ -202,6 +323,20 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
 
         yPos = addText(doc, `   Likelihood: ${scenario.likelihood} | Impact: ${scenario.impact}`, SPACING.margin, yPos, {
           color: COLORS.textLight,
+        });
+        yPos += SPACING.smallGap;
+
+        // Show triple risk progression
+        const likelihoodNum = mapLikelihoodToNumber(scenario.likelihood);
+        const impactNum = mapImpactToNumber(scenario.impact);
+        const inherentRisk = calculateRiskLevel(likelihoodNum, impactNum);
+        const { currentLikelihood, currentImpact, currentRisk } = calculateCurrentRisk(scenario, vulnerabilities, controls);
+        const treatment = plans.find(p => p.riskScenarioId === scenario.id);
+        const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, scenario, treatment);
+
+        yPos = addText(doc, `   Inherent → Current → Residual: ${inherentRisk.level} → ${currentRisk.level} → ${residualRisk.level}`, SPACING.margin, yPos, {
+          color: residualRisk.level === 'Critical' ? COLORS.danger : residualRisk.level === 'High' ? COLORS.warning : COLORS.success,
+          fontStyle: 'bold',
         });
         yPos += SPACING.lineHeight;
       });
