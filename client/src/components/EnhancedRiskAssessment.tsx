@@ -163,6 +163,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     queryKey: ["/api/assessments", assessmentId, "controls"],
     queryFn: () => controlApi.getAll(assessmentId),
     enabled: !!assessmentId,
+    refetchOnWindowFocus: false, // Prevent refetch on window focus to avoid interrupting editing
   });
 
   useEffect(() => {
@@ -193,16 +194,30 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   }, [vulnerabilities]);
 
   useEffect(() => {
-    if (controls) {
+    if (controls && controls.length > 0) {
       setLocalControls(prev => {
         const editing = editingControls.current;
-        return controls.map(c => {
+        const newControls = controls.map(c => {
           if (editing.has(c.id)) {
             // Keep local version if being edited
-            return prev.find(p => p.id === c.id) || c;
+            const localVersion = prev.find(p => p.id === c.id);
+            return localVersion || c;
           }
           return c;
         });
+        
+        // Only update if there are actual changes
+        if (prev.length === 0) return newControls;
+        if (prev.length !== newControls.length) return newControls;
+        
+        // Check if any control has changed
+        const hasChanges = newControls.some((newCtrl, idx) => {
+          const prevCtrl = prev[idx];
+          return !prevCtrl || newCtrl.id !== prevCtrl.id || 
+                 (!editing.has(newCtrl.id) && JSON.stringify(newCtrl) !== JSON.stringify(prevCtrl));
+        });
+        
+        return hasChanges ? newControls : prev;
       });
     }
   }, [controls]);
@@ -350,7 +365,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     mutationFn: ({ id, data }: { id: string; data: Partial<Control> }) => 
       controlApi.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "controls"] });
+      // Don't invalidate query during editing to prevent focus loss
+      // The local state is already updated optimistically
     },
   });
 
