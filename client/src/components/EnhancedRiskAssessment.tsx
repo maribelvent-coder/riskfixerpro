@@ -1187,7 +1187,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                                   onChange={(e) => {
                                                     handleUpdateControlDebounced(control.id, e.target.value);
                                                   }}
-                                                  placeholder="Control description..."
+                                                  placeholder="Describe the existing control..."
                                                   className="flex-1"
                                                   data-testid={`input-control-${control.id}`}
                                                 />
@@ -1234,7 +1234,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                                   vulnerabilityId: vulnerability.id,
                                                   riskScenarioId: scenario.id,
                                                   controlType: 'existing',
-                                                  description: 'New existing control',
+                                                  description: '',
                                                   effectiveness: null,
                                                   notes: null
                                                 });
@@ -1472,7 +1472,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                       vulnerabilityId: null,
                                       riskScenarioId: scenario.id,
                                       controlType: 'proposed',
-                                      description: 'New proposed control',
+                                      description: '',
                                       effectiveness: null,
                                       notes: null
                                     });
