@@ -8,6 +8,8 @@ import {
   insertAssessmentQuestionSchema,
   insertRiskAssetSchema,
   insertRiskScenarioSchema,
+  insertVulnerabilitySchema,
+  insertControlSchema,
   insertTreatmentPlanSchema,
   insertReportSchema 
 } from "@shared/schema";
@@ -467,6 +469,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error bulk upserting treatment plans:", error);
       res.status(500).json({ error: "Failed to bulk upsert treatment plans" });
+    }
+  });
+
+  // Vulnerabilities routes
+  app.get("/api/assessments/:id/vulnerabilities", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const vulnerabilities = await storage.getVulnerabilities(id);
+      res.json(vulnerabilities);
+    } catch (error) {
+      console.error("Error fetching vulnerabilities:", error);
+      res.status(500).json({ error: "Failed to fetch vulnerabilities" });
+    }
+  });
+
+  app.post("/api/assessments/:id/vulnerabilities", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const vulnerabilityData = insertVulnerabilitySchema.parse({ ...req.body, assessmentId: id });
+      const result = await storage.createVulnerability(vulnerabilityData);
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid vulnerability data", details: error.errors });
+      }
+      console.error("Error creating vulnerability:", error);
+      res.status(500).json({ error: "Failed to create vulnerability" });
+    }
+  });
+
+  app.put("/api/vulnerabilities/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.updateVulnerability(id, req.body);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Vulnerability not found" });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating vulnerability:", error);
+      res.status(500).json({ error: "Failed to update vulnerability" });
+    }
+  });
+
+  app.delete("/api/vulnerabilities/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteVulnerability(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Vulnerability not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting vulnerability:", error);
+      res.status(500).json({ error: "Failed to delete vulnerability" });
+    }
+  });
+
+  // Controls routes
+  app.get("/api/assessments/:id/controls", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const controls = await storage.getControls(id);
+      res.json(controls);
+    } catch (error) {
+      console.error("Error fetching controls:", error);
+      res.status(500).json({ error: "Failed to fetch controls" });
+    }
+  });
+
+  app.post("/api/assessments/:id/controls", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const controlData = insertControlSchema.parse({ ...req.body, assessmentId: id });
+      const result = await storage.createControl(controlData);
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid control data", details: error.errors });
+      }
+      console.error("Error creating control:", error);
+      res.status(500).json({ error: "Failed to create control" });
+    }
+  });
+
+  app.put("/api/controls/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.updateControl(id, req.body);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Control not found" });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating control:", error);
+      res.status(500).json({ error: "Failed to update control" });
+    }
+  });
+
+  app.delete("/api/controls/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteControl(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Control not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting control:", error);
+      res.status(500).json({ error: "Failed to delete control" });
     }
   });
 

@@ -97,14 +97,53 @@ export const riskScenarios = pgTable("risk_scenarios", {
   assetId: varchar("asset_id").references(() => riskAssets.id),
   scenario: text("scenario").notNull(), // "Theft of cash register"
   asset: text("asset").notNull(), // "Cash register" 
-  likelihood: text("likelihood").notNull(), // "Almost Certain", "Likely", "Possible", "Unlikely", "Rare"
-  impact: text("impact").notNull(), // "Insignificant", "Minor", "Moderate", "Major", "Catastrophic"
-  riskLevel: text("risk_level").notNull(), // "Low", "Medium", "High", "Extreme" (auto-calculated)
+  
+  // Threat information
+  threatType: text("threat_type"), // human, environmental, technical, operational
+  threatDescription: text("threat_description"), // Specific threat
+  vulnerabilityDescription: text("vulnerability_description"), // What makes this possible
+  
+  // Inherent Risk (before any controls)
+  likelihood: text("likelihood").notNull(), // "very-low", "low", "medium", "high", "very-high"
+  impact: text("impact").notNull(), // "negligible", "minor", "moderate", "major", "catastrophic"
+  riskLevel: text("risk_level").notNull(), // "Low", "Medium", "High", "Critical" (auto-calculated)
+  
+  // Current Risk (after existing controls)
+  currentLikelihood: text("current_likelihood"), 
+  currentImpact: text("current_impact"),
+  currentRiskLevel: text("current_risk_level"),
+  
+  // Decision and treatment
+  decision: text("decision").default("undecided"), // "undecided", "accept", "transfer", "remediate"
+  
   riskRating: text("risk_rating"), // User's assessment
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-// Step 5: Treatment Plans  
+// Step 4: Vulnerabilities - specific weaknesses that enable threats
+export const vulnerabilities = pgTable("vulnerabilities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  riskScenarioId: varchar("risk_scenario_id").references(() => riskScenarios.id),
+  description: text("description").notNull(), // "No controls in place", "Poor lighting"
+  notes: text("notes"), // Additional context
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Step 4: Controls - existing and proposed controls for vulnerabilities
+export const controls = pgTable("controls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  vulnerabilityId: varchar("vulnerability_id").references(() => vulnerabilities.id),
+  riskScenarioId: varchar("risk_scenario_id").references(() => riskScenarios.id),
+  description: text("description").notNull(), // "Cameras", "Access control system"
+  controlType: text("control_type").notNull(), // "existing" or "proposed"
+  effectiveness: integer("effectiveness"), // 1-5 rating (only for existing controls)
+  notes: text("notes"), // Evidence, references, comments
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Step 6: Treatment Plans  
 export const treatmentPlans = pgTable("treatment_plans", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
@@ -112,7 +151,13 @@ export const treatmentPlans = pgTable("treatment_plans", {
   risk: text("risk").notNull(), // Which risk this treats
   threatDescription: text("threat_description"), // Description of the threat being treated
   strategy: text("strategy").notNull(), // "Accept", "Avoid", "Control", "Transfer"
-  description: text("description").notNull(),
+  description: text("description").notNull(), // The treatment action
+  
+  // Treatment details
+  type: text("type"), // "people", "process", "technology", "physical", "policy", "training", "vendor", "other"
+  effect: text("effect"), // "reduce_likelihood", "reduce_impact"
+  value: integer("value"), // How much to reduce (1-5)
+  
   responsible: text("responsible"), // Who is responsible
   deadline: text("deadline"), // When to implement
   cost: text("cost"), // Estimated cost
@@ -194,6 +239,16 @@ export const insertRiskScenarioSchema = createInsertSchema(riskScenarios).omit({
   createdAt: true,
 });
 
+export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertControlSchema = createInsertSchema(controls).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertTreatmentPlanSchema = createInsertSchema(treatmentPlans).omit({
   id: true,
   createdAt: true,
@@ -231,6 +286,12 @@ export type InsertRiskAsset = z.infer<typeof insertRiskAssetSchema>;
 
 export type RiskScenario = typeof riskScenarios.$inferSelect;
 export type InsertRiskScenario = z.infer<typeof insertRiskScenarioSchema>;
+
+export type Vulnerability = typeof vulnerabilities.$inferSelect;
+export type InsertVulnerability = z.infer<typeof insertVulnerabilitySchema>;
+
+export type Control = typeof controls.$inferSelect;
+export type InsertControl = z.infer<typeof insertControlSchema>;
 
 export type TreatmentPlan = typeof treatmentPlans.$inferSelect;
 export type InsertTreatmentPlan = z.infer<typeof insertTreatmentPlanSchema>;
