@@ -179,6 +179,7 @@ Preferred communication style: Simple, everyday language.
   - **Benefits**: Users can immediately see which specific scenarios have the highest risk and how controls/treatments impact each one
   - **Dynamic Height**: Chart scales based on scenario count (minimum 300px, +60px per scenario) for readability
   - **Compliance Feature**: Hidden compliance checklist report and sidebar menu item (removed from ReportGenerator and AppSidebar)
+  - **Layout Fix**: Removed z-index classes from main content area that were causing content to overlap sidebar
 
 ### Known Issues
 - **Phase 1 Facility Survey**: Combobox popover interference and progress counter desync issues prevent reliable completion in automated testing
@@ -193,6 +194,6 @@ Preferred communication style: Simple, everyday language.
 - Enhance combobox testid stability for more reliable automated testing
 
 ### Architecture Notes
-- Main content area uses `relative z-10` and header uses `relative z-20` for proper layering above sidebar overlay
+- Main content layout uses flexbox with sidebar on left, content area on right (no z-index needed)
 - EnhancedRiskAssessment is rendered via AssessmentForm when `phase="risk-assessment"`
 - Phase 2 tab is disabled until `facilitySurveyCompleted=true`
