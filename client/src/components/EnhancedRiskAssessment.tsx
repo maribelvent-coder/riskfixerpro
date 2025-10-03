@@ -180,6 +180,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   const [extractedAssets, setExtractedAssets] = useState<RiskAsset[]>([]);
   const [scenarios, setScenarios] = useState<RiskScenario[]>([]);
   const [treatmentPlans, setTreatmentPlans] = useState<TreatmentPlan[]>([]);
+  const [localVulnerabilities, setLocalVulnerabilities] = useState<Vulnerability[]>([]);
+  const [localControls, setLocalControls] = useState<Control[]>([]);
   const [newAsset, setNewAsset] = useState({ 
     name: "", 
     type: "", 
@@ -240,6 +242,14 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   useEffect(() => {
     setTreatmentPlans(existingPlans);
   }, [existingPlans]);
+
+  useEffect(() => {
+    if (vulnerabilities) setLocalVulnerabilities(vulnerabilities);
+  }, [vulnerabilities]);
+
+  useEffect(() => {
+    if (controls) setLocalControls(controls);
+  }, [controls]);
 
   // Scroll to top when step changes
   useEffect(() => {
@@ -544,6 +554,46 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     
     debouncedTimeouts.current[key] = timeoutId;
   }, []);
+
+  const handleUpdateVulnerabilityDebounced = useCallback((id: string, value: string) => {
+    const key = `vuln-${id}`;
+    if (debouncedTimeouts.current[key]) {
+      clearTimeout(debouncedTimeouts.current[key]);
+    }
+    
+    // Update local state immediately
+    setLocalVulnerabilities(prev => prev.map(v => 
+      v.id === id ? { ...v, description: value } : v
+    ));
+    
+    // Debounce API call
+    const timeoutId = setTimeout(() => {
+      updateVulnerabilityMutation.mutate({ id, data: { description: value } });
+      delete debouncedTimeouts.current[key];
+    }, 500);
+    
+    debouncedTimeouts.current[key] = timeoutId;
+  }, [updateVulnerabilityMutation]);
+
+  const handleUpdateControlDebounced = useCallback((id: string, value: string) => {
+    const key = `control-${id}`;
+    if (debouncedTimeouts.current[key]) {
+      clearTimeout(debouncedTimeouts.current[key]);
+    }
+    
+    // Update local state immediately
+    setLocalControls(prev => prev.map(c => 
+      c.id === id ? { ...c, description: value } : c
+    ));
+    
+    // Debounce API call
+    const timeoutId = setTimeout(() => {
+      updateControlMutation.mutate({ id, data: { description: value } });
+      delete debouncedTimeouts.current[key];
+    }, 500);
+    
+    debouncedTimeouts.current[key] = timeoutId;
+  }, [updateControlMutation]);
 
   const handleUpdateTreatment = (id: string, field: string, value: any) => {
     const originalPlans = treatmentPlans;
@@ -1052,7 +1102,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                     {scenarios.map((scenario) => {
                       const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
                       const asset = extractedAssets.find(a => a.id === scenario.assetId);
-                      const scenarioVulnerabilities = vulnerabilities.filter(v => 
+                      const scenarioVulnerabilities = localVulnerabilities.filter(v => 
                         v.description && v.description.includes(scenario.id)
                       );
                       
@@ -1096,7 +1146,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             ) : (
                               <div className="space-y-3">
                                 {scenarioVulnerabilities.map((vulnerability) => {
-                                  const vulnControls = controls.filter(c => c.vulnerabilityId === vulnerability.id);
+                                  const vulnControls = localControls.filter(c => c.vulnerabilityId === vulnerability.id);
+                                  const localVuln = localVulnerabilities.find(v => v.id === vulnerability.id) || vulnerability;
                                   
                                   return (
                                     <Card key={vulnerability.id} className="bg-muted/30">
@@ -1104,12 +1155,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                         <div className="flex items-start gap-2">
                                           <Badge variant="secondary" className="mt-0.5">Vulnerability</Badge>
                                           <Input
-                                            value={vulnerability.description?.replace(`[Scenario:${scenario.id}] `, '') || ''}
+                                            value={localVuln.description?.replace(`[Scenario:${scenario.id}] `, '') || ''}
                                             onChange={(e) => {
-                                              updateVulnerabilityMutation.mutate({
-                                                id: vulnerability.id,
-                                                data: { description: `[Scenario:${scenario.id}] ${e.target.value}` }
-                                              });
+                                              handleUpdateVulnerabilityDebounced(vulnerability.id, `[Scenario:${scenario.id}] ${e.target.value}`);
                                             }}
                                             placeholder="Describe the vulnerability..."
                                             className="flex-1"
@@ -1126,23 +1174,23 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                         </div>
                                         
                                         <div className="ml-6 space-y-2">
-                                          {vulnControls.map((control) => (
-                                            <div key={control.id} className="flex items-center gap-2">
-                                              <Badge variant="outline" className="shrink-0">
-                                                {control.controlType === 'existing' ? 'Existing' : 'Proposed'}
-                                              </Badge>
-                                              <Input
-                                                value={control.description || ''}
-                                                onChange={(e) => {
-                                                  updateControlMutation.mutate({
-                                                    id: control.id,
-                                                    data: { description: e.target.value }
-                                                  });
-                                                }}
-                                                placeholder="Control description..."
-                                                className="flex-1"
-                                                data-testid={`input-control-${control.id}`}
-                                              />
+                                          {vulnControls.map((control) => {
+                                            const localControl = localControls.find(c => c.id === control.id) || control;
+                                            
+                                            return (
+                                              <div key={control.id} className="flex items-center gap-2">
+                                                <Badge variant="outline" className="shrink-0">
+                                                  {control.controlType === 'existing' ? 'Existing' : 'Proposed'}
+                                                </Badge>
+                                                <Input
+                                                  value={localControl.description || ''}
+                                                  onChange={(e) => {
+                                                    handleUpdateControlDebounced(control.id, e.target.value);
+                                                  }}
+                                                  placeholder="Control description..."
+                                                  className="flex-1"
+                                                  data-testid={`input-control-${control.id}`}
+                                                />
                                               {control.controlType === 'existing' && (
                                                 <Select
                                                   value={control.effectiveness?.toString() || ''}
@@ -1174,7 +1222,8 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                                 <Trash2 className="h-4 w-4" />
                                               </Button>
                                             </div>
-                                          ))}
+                                            );
+                                          })}
                                           <div className="flex gap-2">
                                             <Button
                                               size="sm"
