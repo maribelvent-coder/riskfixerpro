@@ -317,9 +317,11 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
         });
         toast({
           title: "Asset Saved",
-          description: "Asset added successfully. Ready to proceed to next step.",
+          description: "Moving to next step...",
         });
         queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-assets"] });
+        // Auto-advance to next step
+        setCurrentStep(1);
       },
       onError: (error: any) => {
         toast({

@@ -446,11 +446,11 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               <SelectValue placeholder="Select rating" />
             </SelectTrigger>
             <SelectContent>
-              {[1,2,3,4,5,6,7,8,9,10].map(num => (
-                <SelectItem key={num} value={num.toString()}>{num} - {
-                  num <= 3 ? "Poor" : num <= 5 ? "Fair" : num <= 7 ? "Good" : "Excellent"
-                }</SelectItem>
-              ))}
+              <SelectItem value="1">1 - Poor</SelectItem>
+              <SelectItem value="2">2 - Fair</SelectItem>
+              <SelectItem value="3">3 - Satisfactory</SelectItem>
+              <SelectItem value="4">4 - Good</SelectItem>
+              <SelectItem value="5">5 - Excellent</SelectItem>
             </SelectContent>
           </Select>
         );
