@@ -133,9 +133,10 @@ Preferred communication style: Simple, everyday language.
 - ✅ **Executive Summary (Step 6)**: Complete visualization dashboard with charts and metrics
   - Metrics Cards: Total scenarios, accepted, transferred, remediated counts
   - Decision Pie Chart: Accept/Transfer/Remediate distribution using Recharts
-  - Risk Level Bar Chart: All 5 levels (Very Low to Critical) × 3 risk types (Inherent/Current/Residual)
+  - Individual Risk Progression Chart: Horizontal bar chart showing each scenario's risk journey (Inherent → Current → Residual)
   - Risk Register Table: Complete scenario list with full risk progression
-  - Color coding: Inherent (red), Current (orange), Residual (green)
+  - Color coding: Inherent (red #ef4444), Current (orange #f59e0b), Residual (green #22c55e)
+  - Chart sorting: Scenarios ordered by inherent risk score (highest first) for priority focus
 
 - ✅ **PDF Report Updates**: Complete alignment with UI triple risk calculations
   - Fixed likelihood/impact mappings to match UI values (very-low/low/medium/high/very-high)
@@ -170,6 +171,14 @@ Preferred communication style: Simple, everyday language.
   - **Solution**: Disabled query invalidation on control updates, added refetchOnWindowFocus: false, improved useEffect comparison logic
   - **Result**: Stable focus during text entry, slider adjustments, and all field edits with debounced auto-save (500ms)
   - **Testing**: End-to-end test confirmed all treatment fields maintain focus, data persists correctly
+
+- ✅ **Chart Visualization Improvements (October 3, 2025)**: Enhanced Executive Summary with clearer risk progression display
+  - **Replaced**: Risk Level Comparison bar chart (grouped by risk level) with Individual Risk Progression chart
+  - **New Chart**: Horizontal bar layout showing each risk scenario's complete journey
+  - **Layout**: Three bars per scenario (Inherent, Current, Residual) displayed side-by-side, not stacked
+  - **Benefits**: Users can immediately see which specific scenarios have the highest risk and how controls/treatments impact each one
+  - **Dynamic Height**: Chart scales based on scenario count (minimum 300px, +60px per scenario) for readability
+  - **Compliance Feature**: Hidden compliance checklist report and sidebar menu item (removed from ReportGenerator and AppSidebar)
 
 ### Known Issues
 - **Phase 1 Facility Survey**: Combobox popover interference and progress counter desync issues prevent reliable completion in automated testing
