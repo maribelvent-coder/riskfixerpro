@@ -164,6 +164,13 @@ Preferred communication style: Simple, everyday language.
   - **Routing Fix**: Fixed AppSidebar to use wouter Link component instead of preventDefault; added "/assessments" route
   - **Result**: Clear workflow progression - existing controls in Step 3 for current risk → proposed controls in Step 5 for residual risk
 
+- ✅ **Focus Stability Fix (October 3, 2025)**: Eliminated focus jumping in treatment planning fields
+  - **Problem**: Users experienced focus loss while typing in text fields and jumping between scenarios when adjusting sliders
+  - **Root Cause**: Query invalidation after every field update caused component re-renders and DOM element recreation
+  - **Solution**: Disabled query invalidation on control updates, added refetchOnWindowFocus: false, improved useEffect comparison logic
+  - **Result**: Stable focus during text entry, slider adjustments, and all field edits with debounced auto-save (500ms)
+  - **Testing**: End-to-end test confirmed all treatment fields maintain focus, data persists correctly
+
 ### Known Issues
 - **Phase 1 Facility Survey**: Combobox popover interference and progress counter desync issues prevent reliable completion in automated testing
   - Combobox popovers can block the "Save Progress" button (z-index/overlay handling)
