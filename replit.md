@@ -102,6 +102,16 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes (October 2025)
 
 ### Completed Features
+- ✅ **Floating Point Compound Risk Reduction System (October 3, 2025)**: Accurate risk reduction calculations with mathematical precision
+  - **Compound Reduction Model**: Implements diminishing returns with 10% reduction per effectiveness point
+  - **Mathematical Accuracy**: Single effectiveness-3 control = 27.1% reduction (5 × 0.9³ = 3.645)
+  - **Multiple Controls**: Three effectiveness-5 controls = 79.4% reduction (5 → 2.95 → 1.74 → 1.03)
+  - **Floating Point Precision**: All calculations use floats throughout chain, no premature rounding
+  - **Display Precision**: Percentages shown with one decimal place (e.g., 27.1%, 79.4%)
+  - **Inline Treatment Fields**: Controls schema extended with treatmentType, primaryEffect, treatmentEffectiveness, actionDescription, responsibleParty, targetDate, estimatedCost
+  - **Input Fix**: Vulnerability/control text fields use editing state tracking to prevent server data overwrites during typing
+  - **Risk Types**: Separates likelihood and impact reductions for accurate compound calculations
+
 - ✅ **Vulnerabilities & Controls (Step 3)**: Complete inline editable interface for managing vulnerabilities and controls with effectiveness ratings
   - Database schema: Added `vulnerabilities` and `controls` tables with proper relationships
   - API layer: Full CRUD endpoints for vulnerabilities and controls
@@ -109,16 +119,15 @@ Preferred communication style: Simple, everyday language.
   - Z-index fix: Applied to main content area to prevent sidebar overlay interference
 
 - ✅ **Prioritize Risks (Step 4)**: Consolidated decision table with Current Risk calculation
-  - Current Risk calculation: Reduces inherent risk based on control effectiveness (1-5 scale)
+  - Current Risk calculation: Uses compound reduction model with floating point precision
   - Decision table: Shows Inherent, Current, Change %, and Decision columns
   - Decision dropdown: Accept, Transfer, Remediate, Undecided options
   - Summary metrics: Displays count of each decision type
 
-- ✅ **Treatment Planning (Step 5)**: Risk treatment with Type/Effect/Value for Residual Risk
-  - Treatment Type: Likelihood or Impact reduction
-  - Effect: Reduction amount (1-5 scale)
-  - Value: Treatment investment/effort
-  - Residual Risk: Calculated based on treatment parameters
+- ✅ **Treatment Planning (Step 5)**: Risk treatment with inline control fields
+  - Treatment fields: Type (likelihood/impact), Effect (1-5), Effectiveness (1-5)
+  - Additional fields: Description, Responsible Party, Target Date, Estimated Cost
+  - Residual Risk: Calculated using compound reduction on current risk values
   - Filtering: Only shows "remediate" scenarios
 
 - ✅ **Executive Summary (Step 6)**: Complete visualization dashboard with charts and metrics
