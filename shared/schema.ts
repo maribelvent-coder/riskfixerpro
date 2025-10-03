@@ -140,6 +140,16 @@ export const controls = pgTable("controls", {
   controlType: text("control_type").notNull(), // "existing" or "proposed"
   effectiveness: integer("effectiveness"), // 1-5 rating (only for existing controls)
   notes: text("notes"), // Evidence, references, comments
+  
+  // Treatment plan fields (for proposed controls)
+  treatmentType: text("treatment_type"), // "people", "process", "technology", "physical", "policy", "training", "vendor", "other"
+  primaryEffect: text("primary_effect"), // "reduce_likelihood", "reduce_impact"
+  treatmentEffectiveness: integer("treatment_effectiveness"), // 1-5 reduction value (for proposed controls)
+  actionDescription: text("action_description"), // Detailed action plan
+  responsibleParty: text("responsible_party"), // Who implements this
+  targetDate: text("target_date"), // Implementation deadline
+  estimatedCost: text("estimated_cost"), // Budget estimate
+  
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
