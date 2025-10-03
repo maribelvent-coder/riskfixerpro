@@ -996,12 +996,12 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             </div>
 
                             <div>
-                              <Label>Vulnerability Description</Label>
+                              <Label>Threat Description</Label>
                               <Textarea
                                 value={scenario.vulnerabilityDescription || ""}
                                 onChange={(e) => handleUpdateScenarioDebounced(scenario.id, "vulnerabilityDescription", e.target.value)}
-                                placeholder="Describe the specific vulnerability that enables this threat..."
-                                data-testid={`textarea-vulnerability-${scenario.id}`}
+                                placeholder="Describe what makes this threat scenario possible and its potential impact..."
+                                data-testid={`textarea-threat-description-${scenario.id}`}
                                 rows={2}
                                 spellCheck={false}
                               />
