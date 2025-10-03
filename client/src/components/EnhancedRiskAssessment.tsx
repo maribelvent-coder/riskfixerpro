@@ -35,7 +35,8 @@ import {
   calculateResidualRisk as calculateResidualRiskCompound, 
   calculateCurrentRisk as calculateCurrentRiskCompound,
   LIKELIHOOD_VALUES as SHARED_LIKELIHOOD_VALUES, 
-  IMPACT_VALUES as SHARED_IMPACT_VALUES 
+  IMPACT_VALUES as SHARED_IMPACT_VALUES,
+  calculateRiskLevel as calculateRiskLevelNew
 } from '@shared/riskCalculations';
 
 // Risk calculation constants
@@ -99,85 +100,6 @@ function calculateRiskLevel(likelihood: string, impact: string): { level: string
   if (score >= 10) return { level: "Medium", score, color: "bg-yellow-500" };
   if (score >= 5) return { level: "Low", score, color: "bg-green-500" };
   return { level: "Very Low", score, color: "bg-gray-500" };
-}
-
-function calculateCurrentRisk(
-  scenario: RiskScenario,
-  vulnerabilities: Vulnerability[],
-  controls: Control[]
-): { currentLikelihood: number; currentImpact: number; currentRisk: { level: string; score: number; color: string }; reductionPercentage: number } {
-  const inherentLikelihood = LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.value || 0;
-  const inherentImpact = IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.value || 0;
-
-  const scenarioVulnerabilities = vulnerabilities.filter(v => v.riskScenarioId === scenario.id);
-  
-  // Get existing controls - both via vulnerabilities and directly linked to scenario
-  const existingControls = controls.filter(c => 
-    (scenarioVulnerabilities.some(v => v.id === c.vulnerabilityId) || c.riskScenarioId === scenario.id) &&
-    c.controlType === 'existing' && 
-    c.effectiveness !== null
-  );
-
-  if (existingControls.length === 0) {
-    const currentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
-    return { currentLikelihood: inherentLikelihood, currentImpact: inherentImpact, currentRisk, reductionPercentage: 0 };
-  }
-
-  const avgEffectiveness = existingControls.reduce((sum, c) => sum + (c.effectiveness || 0), 0) / existingControls.length;
-  const reductionPercentage = avgEffectiveness * 10;
-  
-  // Calculate reduction as decimal, then round to nearest integer
-  const reduction = (inherentLikelihood * reductionPercentage) / 100;
-  const currentLikelihoodRaw = inherentLikelihood - reduction;
-  const currentLikelihood = Math.max(1, Math.min(5, Math.round(currentLikelihoodRaw)));
-  const currentImpact = inherentImpact;
-
-  // Find the key that matches the rounded likelihood value
-  const currentLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
-    k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === currentLikelihood
-  ) || scenario.likelihood;
-  
-  const currentRisk = calculateRiskLevel(currentLikelihoodKey, scenario.impact);
-
-  return { currentLikelihood, currentImpact, currentRisk, reductionPercentage };
-}
-
-function calculateResidualRisk(
-  currentLikelihood: number,
-  currentImpact: number,
-  scenario: RiskScenario,
-  treatment: TreatmentPlan | undefined
-): { residualLikelihood: number; residualImpact: number; residualRisk: { level: string; score: number; color: string } } {
-  if (!treatment || !treatment.effect || !treatment.value) {
-    const residualLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
-      k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === currentLikelihood
-    ) || scenario.likelihood;
-    const residualImpactKey = Object.keys(IMPACT_VALUES).find(
-      k => IMPACT_VALUES[k as keyof typeof IMPACT_VALUES].value === currentImpact
-    ) || scenario.impact;
-    const residualRisk = calculateRiskLevel(residualLikelihoodKey, residualImpactKey);
-    return { residualLikelihood: currentLikelihood, residualImpact: currentImpact, residualRisk };
-  }
-
-  let residualLikelihood = currentLikelihood;
-  let residualImpact = currentImpact;
-
-  if (treatment.effect === 'reduce_likelihood') {
-    residualLikelihood = Math.max(1, currentLikelihood - (treatment.value || 0));
-  } else if (treatment.effect === 'reduce_impact') {
-    residualImpact = Math.max(1, currentImpact - (treatment.value || 0));
-  }
-
-  const residualLikelihoodKey = Object.keys(LIKELIHOOD_VALUES).find(
-    k => LIKELIHOOD_VALUES[k as keyof typeof LIKELIHOOD_VALUES].value === residualLikelihood
-  ) || scenario.likelihood;
-  const residualImpactKey = Object.keys(IMPACT_VALUES).find(
-    k => IMPACT_VALUES[k as keyof typeof IMPACT_VALUES].value === residualImpact
-  ) || scenario.impact;
-
-  const residualRisk = calculateRiskLevel(residualLikelihoodKey, residualImpactKey);
-
-  return { residualLikelihood, residualImpact, residualRisk };
 }
 
 interface EnhancedRiskAssessmentProps {
@@ -1797,41 +1719,96 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
         const inherentLow = existingScenarios.filter(s => calculateRiskLevel(s.likelihood, s.impact).level === 'Low').length;
         const inherentVeryLow = existingScenarios.filter(s => calculateRiskLevel(s.likelihood, s.impact).level === 'Very Low').length;
         
-        const currentCritical = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Critical').length;
-        const currentHigh = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'High').length;
-        const currentMedium = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Medium').length;
-        const currentLow = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Low').length;
-        const currentVeryLow = existingScenarios.filter(s => calculateCurrentRisk(s, vulnerabilities, controls).currentRisk.level === 'Very Low').length;
+        const currentCritical = existingScenarios.filter(s => {
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const { currentRiskLevel } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          return currentRiskLevel === 'Critical';
+        }).length;
+        const currentHigh = existingScenarios.filter(s => {
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const { currentRiskLevel } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          return currentRiskLevel === 'High';
+        }).length;
+        const currentMedium = existingScenarios.filter(s => {
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const { currentRiskLevel } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          return currentRiskLevel === 'Medium';
+        }).length;
+        const currentLow = existingScenarios.filter(s => {
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const { currentRiskLevel } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          return currentRiskLevel === 'Low';
+        }).length;
+        const currentVeryLow = existingScenarios.filter(s => {
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const { currentRiskLevel } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          return currentRiskLevel === 'Very Low';
+        }).length;
         
         const residualCritical = existingScenarios.filter(s => {
-          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
-          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
-          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
-          return residualRisk.level === 'Critical';
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
+          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          return residualRiskLevel === 'Critical';
         }).length;
         const residualHigh = existingScenarios.filter(s => {
-          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
-          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
-          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
-          return residualRisk.level === 'High';
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
+          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          return residualRiskLevel === 'High';
         }).length;
         const residualMedium = existingScenarios.filter(s => {
-          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
-          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
-          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
-          return residualRisk.level === 'Medium';
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
+          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          return residualRiskLevel === 'Medium';
         }).length;
         const residualLow = existingScenarios.filter(s => {
-          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
-          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
-          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
-          return residualRisk.level === 'Low';
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
+          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          return residualRiskLevel === 'Low';
         }).length;
         const residualVeryLow = existingScenarios.filter(s => {
-          const { currentLikelihood, currentImpact } = calculateCurrentRisk(s, vulnerabilities, controls);
-          const treatment = treatmentPlans.find(p => p.riskScenarioId === s.id);
-          const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, s, treatment);
-          return residualRisk.level === 'Very Low';
+          const inherentL = SHARED_LIKELIHOOD_VALUES[s.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+          const inherentI = SHARED_IMPACT_VALUES[s.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+          const scenarioControls = controls.filter(c => c.riskScenarioId === s.id);
+          const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+          const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
+          const { currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+          const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+          return residualRiskLevel === 'Very Low';
         }).length;
         
         return (
@@ -2006,9 +1983,23 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                           {existingScenarios.map((scenario) => {
                             const asset = extractedAssets.find(a => a.id === scenario.assetId);
                             const inherentRisk = calculateRiskLevel(scenario.likelihood, scenario.impact);
-                            const { currentLikelihood, currentImpact, currentRisk } = calculateCurrentRisk(scenario, vulnerabilities, controls);
-                            const treatment = treatmentPlans.find(p => p.riskScenarioId === scenario.id);
-                            const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, scenario, treatment);
+                            
+                            const inherentL = SHARED_LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof SHARED_LIKELIHOOD_VALUES].value;
+                            const inherentI = SHARED_IMPACT_VALUES[scenario.impact as keyof typeof SHARED_IMPACT_VALUES].value;
+                            const scenarioControls = controls.filter(c => c.riskScenarioId === scenario.id);
+                            const existingControls = scenarioControls.filter(c => c.controlType === 'existing');
+                            const proposedControls = scenarioControls.filter(c => c.controlType === 'proposed');
+                            
+                            const { currentRiskLevel, currentLikelihood, currentImpact } = calculateCurrentRiskCompound(inherentL, inherentI, existingControls);
+                            const { residualRiskLevel } = calculateResidualRiskCompound(currentLikelihood, currentImpact, proposedControls);
+                            
+                            const getRiskColor = (level: string) => {
+                              if (level === 'Critical') return 'bg-red-600';
+                              if (level === 'High') return 'bg-red-500';
+                              if (level === 'Medium') return 'bg-yellow-500';
+                              if (level === 'Low') return 'bg-green-500';
+                              return 'bg-gray-500';
+                            };
                             
                             return (
                               <tr key={scenario.id} className="border-t" data-testid={`row-register-${scenario.id}`}>
@@ -2022,13 +2013,13 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                   </Badge>
                                 </td>
                                 <td className="text-center p-3">
-                                  <Badge className={`${currentRisk.color} text-white text-xs`}>
-                                    {currentRisk.level}
+                                  <Badge className={`${getRiskColor(currentRiskLevel)} text-white text-xs`}>
+                                    {currentRiskLevel}
                                   </Badge>
                                 </td>
                                 <td className="text-center p-3">
-                                  <Badge className={`${residualRisk.color} text-white text-xs`}>
-                                    {residualRisk.level}
+                                  <Badge className={`${getRiskColor(residualRiskLevel)} text-white text-xs`}>
+                                    {residualRiskLevel}
                                   </Badge>
                                 </td>
                                 <td className="text-center p-3">
