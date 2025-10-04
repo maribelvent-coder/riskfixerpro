@@ -166,15 +166,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validatedData = loginSchema.parse(req.body);
+      console.log('[DEBUG] Login attempt for username:', validatedData.username);
 
       // Find user by username
       const user = await storage.getUserByUsername(validatedData.username);
       if (!user) {
+        console.log('[DEBUG] User not found:', validatedData.username);
         return res.status(401).json({ error: "Invalid username or password" });
       }
+      
+      console.log('[DEBUG] User found:', user.username, 'ID:', user.id);
+      console.log('[DEBUG] Stored password hash:', user.password);
+      console.log('[DEBUG] Attempting password:', validatedData.password);
 
       // Verify password
       const isValidPassword = await bcrypt.compare(validatedData.password, user.password);
+      console.log('[DEBUG] Password valid:', isValidPassword);
+      
       if (!isValidPassword) {
         return res.status(401).json({ error: "Invalid username or password" });
       }
