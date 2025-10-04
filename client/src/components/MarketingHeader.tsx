@@ -5,12 +5,13 @@ import logoPath from "@assets/logo_1759576687177.jpeg";
 export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 bg-white border-b">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" data-testid="link-home">
+      <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+        <Link href="/" data-testid="link-home" className="overflow-hidden flex items-center -my-8">
           <img 
             src={logoPath} 
             alt="RiskFixer Logo" 
-            className="h-[240px] w-auto object-contain transition-transform hover:scale-105"
+            className="h-[360px] w-auto object-cover scale-150 transition-transform hover:scale-[1.55]"
+            style={{ objectPosition: 'center' }}
             data-testid="img-logo"
           />
         </Link>
