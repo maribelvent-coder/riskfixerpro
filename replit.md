@@ -38,6 +38,15 @@ Preferred communication style: Simple, everyday language.
     -   Dashboard stats filtered by userId to prevent data leakage
     -   All 40+ API routes secured against cross-user access
     -   Site ownership verification ensures users cannot access or modify other users' sites
+    -   Admin access control middleware for admin-only routes
+-   **Admin Features**:
+    -   Admin role system with `isAdmin` boolean field in users table
+    -   Admin-only routes protected by `verifyAdminAccess` middleware
+    -   Admin Panel UI at `/app/admin` for user management
+    -   User list view showing all users with their account tier and admin status
+    -   Password reset functionality: admins can reset any user's password (min 8 characters)
+    -   Admin navigation link in sidebar (only visible to admin users)
+    -   To create an admin: `UPDATE users SET is_admin = true WHERE id = 'user-id'`
 -   **Route Structure**: 
     -   Public marketing routes: `/` (landing), `/pricing`, `/classes`, `/consulting`, `/contact`
     -   Protected app routes: `/app/*` (dashboard, assessments, sites, analysis, settings)
