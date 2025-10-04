@@ -3,18 +3,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { AssessmentCard } from "@/components/AssessmentCard";
 import { Plus, Search, Filter, TrendingUp, Users, Building2, Clock, AlertCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { dashboardApi, assessmentApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import type { Assessment } from "@shared/schema";
+import type { Assessment, Site, InsertAssessment } from "@shared/schema";
+
+const createAssessmentFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  siteId: z.string().optional(),
+  location: z.string().optional(),
+  assessor: z.string().min(1, "Assessor name is required"),
+}).refine((data) => {
+  // Require location if siteId is not provided or is "manual"
+  if (!data.siteId || data.siteId === "manual") {
+    return !!data.location && data.location.length > 0;
+  }
+  return true;
+}, {
+  message: "Location is required when no site is selected",
+  path: ["location"],
+});
+
+type CreateAssessmentFormData = z.infer<typeof createAssessmentFormSchema>;
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -32,16 +57,64 @@ export default function Dashboard() {
     queryFn: () => assessmentApi.getAll(),
   });
 
+  // Fetch all sites for site selection
+  const { data: sites = [], isLoading: sitesLoading, isError: sitesError } = useQuery<Site[]>({
+    queryKey: ["/api/sites"],
+  });
+
   // Check free tier limitations
   const isFreeAccount = user?.accountTier === "free";
   const hasReachedFreeLimit = isFreeAccount && assessments.length >= 1;
 
+  // Form for creating assessments
+  const form = useForm<CreateAssessmentFormData>({
+    resolver: zodResolver(createAssessmentFormSchema),
+    defaultValues: {
+      title: "New Security Assessment",
+      siteId: "",
+      location: "",
+      assessor: user?.username || "Current User",
+    },
+  });
+
+  // Watch siteId to conditionally require location
+  const selectedSiteId = form.watch("siteId");
+
   // Create new assessment mutation
   const createAssessmentMutation = useMutation({
-    mutationFn: assessmentApi.create,
+    mutationFn: (data: CreateAssessmentFormData) => {
+      // Prepare assessment payload based on site selection
+      let assessmentPayload: Omit<InsertAssessment, "userId">;
+
+      // If a site is selected (not manual), include siteId
+      if (data.siteId && data.siteId !== "manual") {
+        const selectedSite = sites.find(s => s.id.toString() === data.siteId);
+        assessmentPayload = {
+          title: data.title,
+          assessor: data.assessor,
+          status: "draft" as const,
+          siteId: data.siteId,
+          location: selectedSite 
+            ? `${selectedSite.name} - ${selectedSite.city}, ${selectedSite.state}`
+            : "Site Location",
+        };
+      } else {
+        // Manual location entry - no siteId
+        assessmentPayload = {
+          title: data.title,
+          assessor: data.assessor,
+          status: "draft" as const,
+          location: data.location || "",
+        };
+      }
+
+      return assessmentApi.create(assessmentPayload);
+    },
     onSuccess: (newAssessment) => {
       queryClient.invalidateQueries({ queryKey: ["/api/assessments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      setIsCreateDialogOpen(false);
+      form.reset();
       toast({
         title: "Assessment Created",
         description: `New assessment "${newAssessment.title}" has been created.`,
@@ -67,14 +140,11 @@ export default function Dashboard() {
   });
 
   const handleCreateNew = () => {
-    const newAssessment = {
-      title: "New Security Assessment",
-      location: "Enter facility location",
-      assessor: "Current User", // In real app, get from auth context
-      status: "draft" as const,
-    };
-    
-    createAssessmentMutation.mutate(newAssessment);
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleSubmit = (data: CreateAssessmentFormData) => {
+    createAssessmentMutation.mutate(data);
   };
 
   const handleSearch = (query: string) => {
@@ -302,6 +372,162 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Create Assessment Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent data-testid="dialog-create-assessment">
+          <DialogHeader>
+            <DialogTitle>Create New Assessment</DialogTitle>
+            <DialogDescription>
+              Create a new physical security risk assessment for a facility or site.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assessment Title</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., Main Office Security Assessment"
+                        {...field}
+                        data-testid="input-assessment-title"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="siteId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={sitesLoading}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-site">
+                          <SelectValue placeholder={
+                            sitesLoading 
+                              ? "Loading sites..." 
+                              : sitesError 
+                              ? "Error loading sites - enter manually" 
+                              : "Select a site or enter manually"
+                          } />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="manual">Enter location manually</SelectItem>
+                        {sites.length > 0 ? (
+                          sites.map((site) => (
+                            <SelectItem key={site.id} value={site.id.toString()}>
+                              {site.name} - {site.city}, {site.state}
+                            </SelectItem>
+                          ))
+                        ) : !sitesLoading && (
+                          <SelectItem value="no-sites" disabled>
+                            No sites available - create one first
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedSiteId && selectedSiteId !== "manual" 
+                        ? "Assessment will be linked to the selected site"
+                        : "Select a site or enter location manually below"}
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {(!selectedSiteId || selectedSiteId === "manual") && (
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., 123 Main St, New York, NY"
+                          {...field}
+                          data-testid="input-location"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="assessor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assessor</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Your name"
+                        {...field}
+                        data-testid="input-assessor"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {createAssessmentMutation.isError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-sm text-destructive">
+                    Failed to create assessment. Please try again.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsCreateDialogOpen(false);
+                    form.reset();
+                    createAssessmentMutation.reset();
+                  }}
+                  disabled={createAssessmentMutation.isPending}
+                  data-testid="button-cancel-assessment"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createAssessmentMutation.isPending || sitesLoading}
+                  data-testid="button-submit-assessment"
+                >
+                  {createAssessmentMutation.isPending ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Assessment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

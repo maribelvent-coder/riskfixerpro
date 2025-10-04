@@ -43,7 +43,7 @@ export const assessmentApi = {
   getById: (id: string): Promise<AssessmentWithQuestions> => 
     apiRequest(`/assessments/${id}`),
 
-  create: (data: InsertAssessment): Promise<Assessment> => 
+  create: (data: Omit<InsertAssessment, "userId">): Promise<Assessment> => 
     apiRequest('/assessments', {
       method: 'POST',
       body: JSON.stringify(data),
