@@ -57,7 +57,7 @@ export default function Login() {
         title: "Welcome back",
         description: "You have successfully logged in.",
       });
-      setLocation("/");
+      setLocation("/app");
     },
     onError: (error: any) => {
       toast({
