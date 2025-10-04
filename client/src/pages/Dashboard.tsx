@@ -18,6 +18,7 @@ import { dashboardApi, assessmentApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import type { Assessment, Site, InsertAssessment } from "@shared/schema";
+import { getTierLimits, getUpgradeMessage, type AccountTier } from "@shared/tierLimits";
 
 const createAssessmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -62,9 +63,10 @@ export default function Dashboard() {
     queryKey: ["/api/sites"],
   });
 
-  // Check free tier limitations
-  const isFreeAccount = user?.accountTier === "free";
-  const hasReachedFreeLimit = isFreeAccount && assessments.length >= 1;
+  // Check tier limitations
+  const tier = (user?.accountTier || "free") as AccountTier;
+  const tierLimits = getTierLimits(tier);
+  const hasReachedLimit = tierLimits.assessments !== null && assessments.length >= tierLimits.assessments;
 
   // Form for creating assessments
   const form = useForm<CreateAssessmentFormData>({
@@ -178,16 +180,16 @@ export default function Dashboard() {
         <div className="flex flex-col items-end gap-2">
           <Button 
             onClick={handleCreateNew} 
-            disabled={createAssessmentMutation.isPending || hasReachedFreeLimit}
+            disabled={createAssessmentMutation.isPending || hasReachedLimit}
             data-testid="button-create-assessment"
           >
             <Plus className="h-4 w-4 mr-2" />
             {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
           </Button>
-          {hasReachedFreeLimit && (
+          {hasReachedLimit && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="message-upgrade-assessment">
               <AlertCircle className="h-4 w-4" />
-              <span>Free accounts are limited to 1 assessment. <a href="/pricing" className="text-primary hover:underline">Upgrade to create more.</a></span>
+              <span>{getUpgradeMessage(tier, "assessments")} <a href="/pricing" className="text-primary hover:underline">Upgrade now.</a></span>
             </div>
           )}
         </div>

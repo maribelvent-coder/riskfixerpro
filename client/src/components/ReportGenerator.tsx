@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { FileText, Download, Eye, Share, Mail, AlertCircle } from "lucide-react";
 import { generateExecutiveSummaryPDF } from "@/lib/executiveSummaryPDF";
 import { generateTechnicalReportPDF } from "@/lib/technicalReportPDF";
+import { canExportPDF, getUpgradeMessage, type AccountTier } from "@shared/tierLimits";
 
 interface ReportConfig {
   id: string;
@@ -64,7 +65,8 @@ export function ReportGenerator({
   const [previewReport, setPreviewReport] = useState<ReportConfig | null>(null);
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
   
-  const isFreeAccount = user?.accountTier === "free";
+  const tier = (user?.accountTier || "free") as AccountTier;
+  const canExport = canExportPDF(tier);
   
   const handleGenerate = (reportId: string) => {
     console.log(`Generating report: ${reportId}`);
@@ -77,10 +79,10 @@ export function ReportGenerator({
   };
 
   const handleDownload = async (reportId: string) => {
-    if (isFreeAccount) {
+    if (!canExport) {
       toast({
         title: "Upgrade Required",
-        description: "PDF exports require a Pro or Enterprise account",
+        description: getUpgradeMessage(tier, "pdfExport"),
         variant: "destructive",
       });
       return;
@@ -193,7 +195,7 @@ export function ReportGenerator({
                       <Button
                         size="sm"
                         onClick={() => handleDownload(report.id)}
-                        disabled={generatingPDF === report.id || isFreeAccount}
+                        disabled={generatingPDF === report.id || !canExport}
                         data-testid={`button-download-${report.id}`}
                       >
                         <Download className="h-3 w-3 mr-1" />
@@ -232,10 +234,10 @@ export function ReportGenerator({
                     </Button>
                   )}
                 </div>
-                {isFreeAccount && report.status === "ready" && (
+                {!canExport && report.status === "ready" && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="message-upgrade-pdf">
                     <AlertCircle className="h-4 w-4" />
-                    <span>PDF exports require a Pro or Enterprise account. <a href="/pricing" className="text-primary hover:underline">Upgrade now</a></span>
+                    <span>{getUpgradeMessage(tier, "pdfExport")} <a href="/pricing" className="text-primary hover:underline">Upgrade now</a></span>
                   </div>
                 )}
               </div>
