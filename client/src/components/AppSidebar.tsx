@@ -1,5 +1,5 @@
-import { Home, FileText, BarChart3, Settings, Shield, AlertTriangle, Users, Search, Building2, ShieldCheck } from "lucide-react";
-import { Link } from "wouter";
+import { Home, FileText, BarChart3, Settings, Shield, AlertTriangle, Users, Search, Building2, ShieldCheck, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -10,9 +10,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import logoPath from "@assets/RiskFixer Logo_1759487773302.png";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const navigationItems = [
   {
@@ -58,6 +61,27 @@ const managementItems = [
 export function AppSidebar() {
   const { user } = useAuth();
   const isAdmin = user?.isAdmin || false;
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+      
+      setLocation("/");
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Sidebar data-testid="sidebar-main">
@@ -129,6 +153,20 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-4 pt-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton 
+              onClick={handleLogout}
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
