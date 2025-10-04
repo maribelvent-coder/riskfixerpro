@@ -463,7 +463,7 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
         const impactNum = mapImpactToNumber(scenario.impact);
         const inherentRisk = calculateRiskLevel(likelihoodNum, impactNum);
         
-        const actionText = control.actionDescription || control.description;
+        const actionText = control.actionDescription || control.description || 'Control measure';
         
         if (inherentRisk.level === 'Critical' || inherentRisk.level === 'High') {
           highPriorityActions.push(actionText);
