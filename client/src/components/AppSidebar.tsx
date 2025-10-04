@@ -16,22 +16,22 @@ import logoPath from "@assets/RiskFixer Logo_1759487773302.png";
 const navigationItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/app",
     icon: Home,
   },
   {
     title: "Assessments",
-    url: "/assessments", 
+    url: "/app/assessments", 
     icon: FileText,
   },
   {
     title: "Risk Analytics",
-    url: "/analytics",
+    url: "/app/analytics",
     icon: BarChart3,
   },
   {
     title: "Templates",
-    url: "/templates",
+    url: "/app/templates",
     icon: Shield,
   },
 ];
@@ -39,12 +39,12 @@ const navigationItems = [
 const managementItems = [
   {
     title: "Team Members",
-    url: "/team",
+    url: "/app/team",
     icon: Users,
   },
   {
     title: "Settings",
-    url: "/settings",
+    url: "/app/settings",
     icon: Settings,
   },
 ];

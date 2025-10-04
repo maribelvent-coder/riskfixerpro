@@ -61,7 +61,7 @@ export default function Signup() {
         title: "Account created",
         description: "Your account has been created successfully.",
       });
-      setLocation("/");
+      setLocation("/app");
     },
     onError: (error: any) => {
       toast({
