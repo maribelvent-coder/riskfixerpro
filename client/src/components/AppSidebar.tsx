@@ -1,4 +1,4 @@
-import { Home, FileText, BarChart3, Settings, Shield, AlertTriangle, Users, Search } from "lucide-react";
+import { Home, FileText, BarChart3, Settings, Shield, AlertTriangle, Users, Search, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import {
   Sidebar,
@@ -23,6 +23,11 @@ const navigationItems = [
     title: "Assessments",
     url: "/app/assessments", 
     icon: FileText,
+  },
+  {
+    title: "Sites",
+    url: "/app/sites",
+    icon: Building2,
   },
   {
     title: "Risk Analytics",

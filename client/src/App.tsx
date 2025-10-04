@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import AssessmentDetail from "@/pages/AssessmentDetail";
+import Sites from "@/pages/Sites";
 import Settings from "@/pages/Settings";
 import Signup from "@/pages/Signup";
 import Login from "@/pages/Login";
@@ -84,6 +85,12 @@ function App() {
                 <AssessmentDetail assessmentId={params.id} />
               </ProtectedAppLayout>
             )}
+          </Route>
+          
+          <Route path="/app/sites">
+            <ProtectedAppLayout>
+              <Sites />
+            </ProtectedAppLayout>
           </Route>
           
           <Route path="/app/settings">
