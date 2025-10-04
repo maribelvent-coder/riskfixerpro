@@ -3,7 +3,7 @@
 ## Overview
 This enterprise-grade platform conducts professional physical security assessments in accordance with ASIS International standards and Army FM guidelines. It provides structured facility surveys, detailed risk analysis, and automated reporting. The platform is designed for security professionals to evaluate physical security controls, identify vulnerabilities, and generate compliance-ready reports, aiming to streamline the assessment process and enhance security posture.
 
-**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), route protection, and production-ready session management. Site/location management system for organizing assessments by physical facilities. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports. Sessions persist across server restarts using PostgreSQL storage.
+**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), route protection, production-ready session management, and self-service password reset. Site/location management system for organizing assessments by physical facilities. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports. Sessions persist across server restarts using PostgreSQL storage.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -47,16 +47,27 @@ Preferred communication style: Simple, everyday language.
     -   Password reset functionality: admins can reset any user's password (min 8 characters)
     -   Admin navigation link in sidebar (only visible to admin users)
     -   To create an admin: `UPDATE users SET is_admin = true WHERE id = 'user-id'`
+-   **Password Reset System**: Secure self-service password reset functionality:
+    -   Username-based reset flow (users don't have email addresses yet)
+    -   Cryptographically strong tokens generated via crypto.randomBytes
+    -   Tokens hashed with bcrypt before database storage
+    -   1-hour token expiration
+    -   One-time use tokens (marked as used after successful reset)
+    -   Old unused tokens automatically invalidated when new ones are requested
+    -   Uniform API responses to prevent user enumeration attacks
+    -   UI routes: `/forgot-password` (request), `/reset-password?token=xxx` (reset)
+    -   Backend routes: POST `/api/auth/request-password-reset`, POST `/api/auth/reset-password`
+    -   In production: tokens would be emailed; in development: logged to console
 -   **Route Structure**: 
     -   Public marketing routes: `/` (landing), `/pricing`, `/classes`, `/consulting`, `/contact`
     -   Protected app routes: `/app/*` (dashboard, assessments, sites, analysis, settings)
-    -   Authentication routes: `/login`, `/signup`
+    -   Authentication routes: `/login`, `/signup`, `/forgot-password`, `/reset-password`
 -   **AI Integration**: OpenAI GPT-5 for risk analysis and insight generation, adhering to ASIS CPP standards.
 -   **Assessment Workflow**: A multi-phase process including Facility Survey, a 7-step Enhanced Risk Assessment (Assets, Risk Scenarios, Vulnerabilities & Controls, Prioritize Risks, Treatment Planning, Executive Summary, Review & Submit), AI Analysis, and Report Generation.
 -   **Triple Risk Calculation Model**: Calculates Inherent, Current (after existing controls), and Residual (after proposed treatments) risks using a floating-point compound reduction system.
 
 ### Feature Specifications
--   **Core Entities**: Assessments, Sites/Locations, Assets (people, property, information, reputation), Risk Scenarios, Vulnerabilities, Controls (existing and proposed), Treatment Plans, Facility Survey Questions, Assessment Questions, Risk Insights, Reports, Users.
+-   **Core Entities**: Assessments, Sites/Locations, Assets (people, property, information, reputation), Risk Scenarios, Vulnerabilities, Controls (existing and proposed), Treatment Plans, Facility Survey Questions, Assessment Questions, Risk Insights, Reports, Users, Password Reset Tokens.
 -   **Sites Management**: 
     -   CRUD operations for physical sites/locations
     -   Site fields: name, address (city, state, zip, country), facility type, contact information, notes
