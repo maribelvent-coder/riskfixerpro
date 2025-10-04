@@ -131,6 +131,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   const contentRef = useRef<HTMLDivElement>(null);
   const scenariosEndRef = useRef<HTMLDivElement>(null);
   const previousScenariosCount = useRef(0);
+  const editingScenarios = useRef<Map<string, number>>(new Map()); // Reference counting for concurrent edits
   const editingVulnerabilities = useRef<Set<string>>(new Set());
   const editingControls = useRef<Set<string>>(new Set());
 
@@ -145,6 +146,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     queryKey: ["/api/assessments", assessmentId, "risk-scenarios"], 
     queryFn: () => riskScenarioApi.getAll(assessmentId),
     enabled: !!assessmentId,
+    refetchOnWindowFocus: false, // Prevent refetch on window focus to avoid interrupting editing
   });
 
   const { data: existingPlans = [], isLoading: plansLoading } = useQuery({
@@ -171,7 +173,18 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   }, [assets]);
 
   useEffect(() => {
-    setScenarios(existingScenarios);
+    if (existingScenarios) {
+      setScenarios(prev => {
+        const editing = editingScenarios.current;
+        return existingScenarios.map(s => {
+          // Keep local version if being edited (ref count > 0)
+          if (editing.has(s.id) && (editing.get(s.id) || 0) > 0) {
+            return prev.find(p => p.id === s.id) || s;
+          }
+          return s;
+        });
+      });
+    }
   }, [existingScenarios]);
 
   useEffect(() => {
@@ -483,11 +496,30 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     createScenarioMutation.mutate(newScenario);
   };
 
+  // Helper functions for reference counting
+  const incrementEditingRef = (id: string) => {
+    const count = editingScenarios.current.get(id) || 0;
+    editingScenarios.current.set(id, count + 1);
+  };
+  
+  const decrementEditingRef = (id: string) => {
+    const count = editingScenarios.current.get(id) || 0;
+    if (count <= 1) {
+      editingScenarios.current.delete(id);
+    } else {
+      editingScenarios.current.set(id, count - 1);
+    }
+  };
+
   const handleUpdateScenario = (id: string, field: string, value: any) => {
     const scenario = scenarios.find(s => s.id === id);
     if (!scenario) return;
 
+    // Increment reference count for this edit
+    incrementEditingRef(id);
+    
     let updatedData = { [field]: value };
+    let localUpdates: any = { [field]: value };
     
     // Recalculate risk if likelihood or impact changed
     if (field === "likelihood" || field === "impact") {
@@ -498,9 +530,20 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
         ...updatedData,
         riskLevel: risk.level
       };
+      localUpdates.riskLevel = risk.level;
     }
+    
+    // Update local state immediately (single update)
+    setScenarios(prev => prev.map(s => 
+      s.id === id ? { ...s, ...localUpdates } : s
+    ));
 
-    updateScenarioMutation.mutate({ id, data: updatedData });
+    updateScenarioMutation.mutate({ id, data: updatedData }, {
+      onSettled: () => {
+        // Decrement reference count after mutation completes
+        decrementEditingRef(id);
+      }
+    });
   };
 
   // Debounced version for text inputs to prevent API spam
@@ -511,7 +554,12 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     const key = `${id}-${field}`;
     if (debouncedTimeouts.current[key]) {
       clearTimeout(debouncedTimeouts.current[key]);
+      // Decrement the previous pending edit's ref count
+      decrementEditingRef(id);
     }
+    
+    // Increment reference count for this edit
+    incrementEditingRef(id);
     
     // Update local state immediately for responsive UI
     setScenarios(prev => prev.map(s => 
@@ -520,12 +568,23 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     
     // Debounce the API call
     const timeoutId = setTimeout(() => {
-      handleUpdateScenario(id, field, value);
+      const scenario = scenarios.find(s => s.id === id);
+      if (scenario) {
+        updateScenarioMutation.mutate({ id, data: { [field]: value } }, {
+          onSettled: () => {
+            // Decrement reference count after mutation completes
+            decrementEditingRef(id);
+          }
+        });
+      } else {
+        // Scenario not found, decrement anyway to avoid leaks
+        decrementEditingRef(id);
+      }
       delete debouncedTimeouts.current[key];
     }, 800); // Increased delay for better stability
     
     debouncedTimeouts.current[key] = timeoutId;
-  }, []);
+  }, [scenarios, updateScenarioMutation]);
 
   const handleUpdateVulnerabilityDebounced = useCallback((id: string, value: string) => {
     const key = `vuln-${id}`;
@@ -1024,12 +1083,12 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                             </div>
 
                             <div>
-                              <Label>Threat Description</Label>
+                              <Label>Vulnerability / Scenario Description</Label>
                               <Textarea
                                 value={scenario.vulnerabilityDescription || ""}
                                 onChange={(e) => handleUpdateScenarioDebounced(scenario.id, "vulnerabilityDescription", e.target.value)}
                                 placeholder="Describe what makes this threat scenario possible and its potential impact..."
-                                data-testid={`textarea-threat-description-${scenario.id}`}
+                                data-testid={`textarea-vulnerability-description-${scenario.id}`}
                                 rows={2}
                                 spellCheck={false}
                               />
