@@ -1,0 +1,241 @@
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Open+Sans:wght@400;600&display=swap');
+
+/* CSS Variables for Branding */
+:root {
+    --primary-blue: #2B5A9A;
+    --accent-green: #8BC53F;
+    --accent-orange: #F26C29;
+    --dark-gray: #414042;
+    --light-gray-bg: #F4F6F8;
+    --white: #FFFFFF;
+    --heading-font: 'Montserrat', sans-serif;
+    --body-font: 'Open Sans', sans-serif;
+}
+
+/* Basic Reset & Body Styling */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--body-font);
+    color: var(--dark-gray);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Typography */
+h1, h2, h3 {
+    font-family: var(--heading-font);
+    color: var(--primary-blue);
+    margin-bottom: 1rem;
+}
+
+h1 { font-size: 3rem; line-height: 1.2; }
+h2 { font-size: 2.2rem; }
+p { margin-bottom: 1rem; }
+
+/* Header & Navigation */
+.main-header {
+    background: var(--white);
+    /* make the header a clear visual area and control its height */
+    padding: 0; /* we'll control vertical spacing with height */
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 220px; /* larger header height so logo appears bigger */
+}
+
+.main-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%; /* fill the header area */
+    padding: 0 20px; /* keep horizontal padding consistent */
+}
+
+/* Make the logo more prominent in the header */
+.logo {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 20px;
+    height: 100%;
+}
+
+.logo img {
+    max-height: 100%; /* fill the header vertically */
+    width: auto;
+    display: block;
+}
+
+.main-nav ul {
+    display: flex;
+    list-style: none;
+    align-items: center;
+}
+
+.main-nav li {
+    margin-left: 25px;
+}
+
+.main-nav a {
+    text-decoration: none;
+    color: var(--dark-gray);
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.main-nav a:hover {
+    color: var(--primary-blue);
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+    background: var(--accent-green);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background: #7ab431;
+}
+
+.btn-secondary {
+    background: var(--primary-blue);
+    color: var(--white);
+}
+
+.btn-secondary:hover {
+    background: #244b81;
+}
+
+/* Hero Section */
+.hero {
+    background: var(--light-gray-bg);
+    text-align: center;
+    padding: 80px 0;
+}
+
+.hero p {
+    max-width: 600px;
+    margin: 0 auto 2rem auto;
+    font-size: 1.1rem;
+}
+
+/* Features Section */
+.features {
+    padding: 60px 0;
+    text-align: center;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    margin-top: 2rem;
+}
+
+.feature-card {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+/* CTA Sections */
+.cta-section {
+    background: var(--primary-blue);
+    color: var(--white);
+    padding: 60px 0;
+    text-align: center;
+}
+
+.cta-section h2, .cta-section h3 {
+    color: var(--white);
+}
+
+.cta-section .btn {
+    background: var(--white);
+    color: var(--primary-blue);
+}
+
+/* Footer */
+.main-footer {
+    background: var(--dark-gray);
+    color: var(--white);
+    padding: 40px 0;
+    margin-top: 40px;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.footer-grid h4 {
+    color: var(--accent-orange);
+    margin-bottom: 1rem;
+}
+
+.footer-grid ul {
+    list-style: none;
+}
+
+.footer-grid a {
+    color: var(--white);
+    text-decoration: none;
+}
+
+.copyright {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #555;
+}
+
+/* Basic Responsiveness */
+@media(max-width: 768px) {
+    h1 { font-size: 2.2rem; }
+    h2 { font-size: 1.8rem; }
+
+    .features-grid, .footer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* make header smaller on mobile and keep items centered */
+    .main-header {
+        height: 120px; /* larger mobile header so logo is more prominent */
+    }
+
+    .main-header .container {
+        padding: 0 16px;
+    }
+
+    .main-nav ul { display: none; } /* Hide nav for mobile; JS will handle it */
+
+    .logo {
+        margin-right: 12px;
+    }
+
+    .logo img {
+        max-height: 100%;
+    }
+}
