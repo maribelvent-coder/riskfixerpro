@@ -236,7 +236,7 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
 
     // Add Triple Risk Progression
     yPos = checkPageBreak(doc, yPos, 60);
-    yPos = addSection(doc, 'RISK PROGRESSION (INHERENT → CURRENT → RESIDUAL)', yPos);
+    yPos = addSection(doc, 'RISK PROGRESSION (INHERENT -> CURRENT -> RESIDUAL)', yPos);
 
     yPos = addText(doc, 'The triple risk model shows how risks are reduced through existing controls and proposed treatments:', SPACING.margin, yPos);
     yPos += SPACING.lineHeight;
@@ -335,7 +335,7 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
         const treatment = plans.find(p => p.riskScenarioId === scenario.id);
         const { residualRisk } = calculateResidualRisk(currentLikelihood, currentImpact, scenario, treatment);
 
-        yPos = addText(doc, `   Inherent → Current → Residual: ${inherentRisk.level} → ${currentRisk.level} → ${residualRisk.level}`, SPACING.margin, yPos, {
+        yPos = addText(doc, `   Inherent -> Current -> Residual: ${inherentRisk.level} -> ${currentRisk.level} -> ${residualRisk.level}`, SPACING.margin, yPos, {
           color: residualRisk.level === 'Critical' ? COLORS.danger : residualRisk.level === 'High' ? COLORS.warning : COLORS.success,
           fontStyle: 'bold',
         });
@@ -444,39 +444,53 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
     yPos = checkPageBreak(doc, yPos, 60);
     yPos = addSection(doc, 'ACTION ITEMS', yPos);
 
-    const immediatePlans = plans.filter(p => 
-      p.status?.toLowerCase().includes('immediate') || 
-      p.deadline?.toLowerCase().includes('immediate')
-    );
-    const shortTermPlans = plans.filter(p => 
-      p.status?.toLowerCase().includes('short') || 
-      p.deadline?.toLowerCase().includes('short') ||
-      p.deadline?.toLowerCase().includes('30') ||
-      p.deadline?.toLowerCase().includes('days')
-    );
-    const longTermPlans = plans.filter(p => 
-      p.status?.toLowerCase().includes('long') || 
-      p.deadline?.toLowerCase().includes('long') ||
-      p.deadline?.toLowerCase().includes('months') ||
-      p.deadline?.toLowerCase().includes('year')
-    );
+    // Get proposed controls for action items
+    const proposedControls = controls.filter(c => c.controlType === 'proposed');
+    
+    // Categorize by priority based on the risk scenarios they address
+    const highPriorityActions: string[] = [];
+    const mediumPriorityActions: string[] = [];
+    const longTermActions: string[] = [];
 
-    yPos = addText(doc, 'Immediate Actions Needed:', SPACING.margin, yPos, {
+    proposedControls.forEach(control => {
+      const scenario = scenarios.find(s => 
+        s.id === control.riskScenarioId || 
+        vulnerabilities.some(v => v.id === control.vulnerabilityId && v.riskScenarioId === s.id)
+      );
+      
+      if (scenario) {
+        const likelihoodNum = mapLikelihoodToNumber(scenario.likelihood);
+        const impactNum = mapImpactToNumber(scenario.impact);
+        const inherentRisk = calculateRiskLevel(likelihoodNum, impactNum);
+        
+        const actionText = control.actionDescription || control.description;
+        
+        if (inherentRisk.level === 'Critical' || inherentRisk.level === 'High') {
+          highPriorityActions.push(actionText);
+        } else if (inherentRisk.level === 'Medium') {
+          mediumPriorityActions.push(actionText);
+        } else {
+          longTermActions.push(actionText);
+        }
+      }
+    });
+
+    yPos = addText(doc, 'Immediate Actions Needed (High/Critical Risks):', SPACING.margin, yPos, {
       fontStyle: 'bold',
       fontSize: FONT_SIZES.subheading,
       color: COLORS.danger,
     });
     yPos += SPACING.lineHeight;
 
-    if (immediatePlans.length === 0) {
-      yPos = addText(doc, '• No immediate actions identified', SPACING.margin + 5, yPos, {
+    if (highPriorityActions.length === 0) {
+      yPos = addText(doc, '• No immediate high-priority actions identified', SPACING.margin + 5, yPos, {
         color: COLORS.textLight,
       });
       yPos += SPACING.lineHeight;
     } else {
-      immediatePlans.slice(0, 5).forEach(plan => {
+      highPriorityActions.slice(0, 5).forEach(action => {
         yPos = checkPageBreak(doc, yPos, 15);
-        yPos = addText(doc, `• ${plan.description}`, SPACING.margin + 5, yPos);
+        yPos = addText(doc, `• ${action}`, SPACING.margin + 5, yPos);
         yPos += SPACING.lineHeight;
       });
     }
@@ -484,22 +498,22 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
     yPos += SPACING.smallGap;
 
     yPos = checkPageBreak(doc, yPos, 40);
-    yPos = addText(doc, 'Short-term Improvements:', SPACING.margin, yPos, {
+    yPos = addText(doc, 'Short-term Improvements (Medium Risks):', SPACING.margin, yPos, {
       fontStyle: 'bold',
       fontSize: FONT_SIZES.subheading,
       color: COLORS.warning,
     });
     yPos += SPACING.lineHeight;
 
-    if (shortTermPlans.length === 0) {
-      yPos = addText(doc, '• No short-term improvements identified', SPACING.margin + 5, yPos, {
+    if (mediumPriorityActions.length === 0) {
+      yPos = addText(doc, '• No medium-priority improvements identified', SPACING.margin + 5, yPos, {
         color: COLORS.textLight,
       });
       yPos += SPACING.lineHeight;
     } else {
-      shortTermPlans.slice(0, 5).forEach(plan => {
+      mediumPriorityActions.slice(0, 5).forEach(action => {
         yPos = checkPageBreak(doc, yPos, 15);
-        yPos = addText(doc, `• ${plan.description}`, SPACING.margin + 5, yPos);
+        yPos = addText(doc, `• ${action}`, SPACING.margin + 5, yPos);
         yPos += SPACING.lineHeight;
       });
     }
@@ -507,22 +521,22 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
     yPos += SPACING.smallGap;
 
     yPos = checkPageBreak(doc, yPos, 40);
-    yPos = addText(doc, 'Long-term Strategic Initiatives:', SPACING.margin, yPos, {
+    yPos = addText(doc, 'Long-term Strategic Initiatives (Low Risks):', SPACING.margin, yPos, {
       fontStyle: 'bold',
       fontSize: FONT_SIZES.subheading,
       color: COLORS.info,
     });
     yPos += SPACING.lineHeight;
 
-    if (longTermPlans.length === 0) {
+    if (longTermActions.length === 0) {
       yPos = addText(doc, '• No long-term initiatives identified', SPACING.margin + 5, yPos, {
         color: COLORS.textLight,
       });
       yPos += SPACING.lineHeight;
     } else {
-      longTermPlans.slice(0, 5).forEach(plan => {
+      longTermActions.slice(0, 5).forEach(action => {
         yPos = checkPageBreak(doc, yPos, 15);
-        yPos = addText(doc, `• ${plan.description}`, SPACING.margin + 5, yPos);
+        yPos = addText(doc, `• ${action}`, SPACING.margin + 5, yPos);
         yPos += SPACING.lineHeight;
       });
     }
