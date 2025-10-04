@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
+import Assessments from "@/pages/Assessments";
 import AssessmentDetail from "@/pages/AssessmentDetail";
 import Sites from "@/pages/Sites";
 import Settings from "@/pages/Settings";
@@ -75,7 +76,7 @@ function App() {
           
           <Route path="/app/assessments">
             <ProtectedAppLayout>
-              <Dashboard />
+              <Assessments />
             </ProtectedAppLayout>
           </Route>
           
