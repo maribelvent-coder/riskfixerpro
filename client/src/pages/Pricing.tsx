@@ -74,9 +74,9 @@ const pricingTiers: PricingTier[] = [
       users: "10",
       riskRegister: true,
       basicReporting: true,
-      projectIntegrations: true,
+      projectIntegrations: false,
       advancedRiskModeling: true,
-      customizableDashboards: true,
+      customizableDashboards: false,
       sso: false,
       rbac: false,
     },
@@ -192,7 +192,7 @@ export default function Pricing() {
                 <CardHeader className="text-center pb-4">
                   <CardTitle className="text-2xl mb-2">{tier.name}</CardTitle>
                   {tier.comingSoon ? (
-                    <div className="text-3xl font-bold mb-2">Contact Us</div>
+                    <div className="text-3xl font-bold mb-2">Coming Soon</div>
                   ) : (
                     <>
                       <div className="text-4xl font-bold mb-2">
