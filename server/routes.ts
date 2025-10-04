@@ -24,6 +24,7 @@ import {
 } from "@shared/tierLimits";
 import { z } from "zod";
 import bcrypt from "bcrypt";
+import { randomBytes } from "crypto";
 
 // Extend Express session types
 declare module "express-session" {
@@ -213,6 +214,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error during logout:", error);
       res.status(500).json({ error: "Failed to logout" });
+    }
+  });
+
+  // Password reset - request token
+  app.post("/api/auth/request-password-reset", async (req, res) => {
+    try {
+      const requestSchema = z.object({
+        username: z.string().min(1, "Username is required"),
+      });
+
+      const validatedData = requestSchema.parse(req.body);
+
+      // Find user by username
+      const user = await storage.getUserByUsername(validatedData.username);
+      
+      // Always return the same response to prevent user enumeration
+      const response = { 
+        message: "If an account with that username exists, a password reset token has been generated. Please contact an administrator to receive your reset token." 
+      };
+
+      if (user) {
+        // Invalidate any existing unused tokens for this user
+        await storage.invalidateUserPasswordResetTokens(user.id);
+
+        // Generate random token (unhashed)
+        const token = randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+        // Hash the token before storing
+        const tokenHash = await bcrypt.hash(token, 10);
+
+        // Store hashed token in database
+        await storage.createPasswordResetToken({
+          userId: user.id,
+          token: tokenHash,
+          expiresAt,
+          used: false,
+        });
+
+        // In production, email the plain token to the user
+        // For development/admin use, log it (in production, never log or return this)
+        console.log(`Password reset token for ${validatedData.username}: ${token}`);
+        console.log(`Expires at: ${expiresAt}`);
+      }
+
+      // Always return the same response
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error requesting password reset:", error);
+      res.status(500).json({ error: "Failed to request password reset" });
+    }
+  });
+
+  // Password reset - verify token and reset password
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const resetSchema = z.object({
+        token: z.string().min(1, "Token is required"),
+        newPassword: z.string().min(8, "Password must be at least 8 characters"),
+      });
+
+      const validatedData = resetSchema.parse(req.body);
+
+      // Get all valid (unused, unexpired) tokens for verification
+      const validTokens = await storage.getValidPasswordResetTokens();
+      
+      // Find a matching token by comparing hashes
+      let matchedToken = null;
+      for (const storedToken of validTokens) {
+        const isMatch = await bcrypt.compare(validatedData.token, storedToken.token);
+        if (isMatch) {
+          matchedToken = storedToken;
+          break;
+        }
+      }
+
+      if (!matchedToken) {
+        return res.status(400).json({ error: "Invalid or expired token" });
+      }
+
+      // Check if token is expired or already used (double-check)
+      if (matchedToken.used) {
+        return res.status(400).json({ error: "This token has already been used" });
+      }
+
+      if (new Date() > new Date(matchedToken.expiresAt)) {
+        return res.status(400).json({ error: "This token has expired" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(validatedData.newPassword, 10);
+
+      // Update user password
+      await storage.updateUserPassword(matchedToken.userId, hashedPassword);
+
+      // Mark token as used
+      await storage.markPasswordResetTokenAsUsed(matchedToken.id);
+
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error resetting password:", error);
+      res.status(500).json({ error: "Failed to reset password" });
     }
   });
 

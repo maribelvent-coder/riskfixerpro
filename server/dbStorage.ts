@@ -1,10 +1,12 @@
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import type { IStorage } from "./storage";
 import type {
   User,
   InsertUser,
+  PasswordResetToken,
+  InsertPasswordResetToken,
   Site,
   InsertSite,
   Assessment,
@@ -58,6 +60,41 @@ export class DbStorage implements IStorage {
     await db.update(schema.users)
       .set({ password: hashedPassword })
       .where(eq(schema.users.id, userId));
+  }
+
+  // Password reset token methods
+  async createPasswordResetToken(insertToken: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const results = await db.insert(schema.passwordResetTokens).values(insertToken).returning();
+    return results[0];
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const results = await db.select().from(schema.passwordResetTokens).where(eq(schema.passwordResetTokens.token, token));
+    return results[0];
+  }
+
+  async getValidPasswordResetTokens(): Promise<PasswordResetToken[]> {
+    const results = await db.select().from(schema.passwordResetTokens)
+      .where(and(
+        eq(schema.passwordResetTokens.used, false),
+        gt(schema.passwordResetTokens.expiresAt, new Date())
+      ));
+    return results;
+  }
+
+  async markPasswordResetTokenAsUsed(tokenId: string): Promise<void> {
+    await db.update(schema.passwordResetTokens)
+      .set({ used: true })
+      .where(eq(schema.passwordResetTokens.id, tokenId));
+  }
+
+  async invalidateUserPasswordResetTokens(userId: string): Promise<void> {
+    await db.update(schema.passwordResetTokens)
+      .set({ used: true })
+      .where(and(
+        eq(schema.passwordResetTokens.userId, userId),
+        eq(schema.passwordResetTokens.used, false)
+      ));
   }
 
   // Site methods

@@ -1,6 +1,8 @@
 import { 
   type User, 
   type InsertUser,
+  type PasswordResetToken,
+  type InsertPasswordResetToken,
   type Site,
   type InsertSite,
   type Assessment,
@@ -36,6 +38,13 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+
+  // Password reset token methods
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  getValidPasswordResetTokens(): Promise<PasswordResetToken[]>;
+  markPasswordResetTokenAsUsed(tokenId: string): Promise<void>;
+  invalidateUserPasswordResetTokens(userId: string): Promise<void>;
 
   // Site methods
   getSite(id: string): Promise<Site | undefined>;
@@ -120,6 +129,7 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private passwordResetTokens: Map<string, PasswordResetToken>;
   private sites: Map<string, Site>;
   private assessments: Map<string, Assessment>;
   private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
@@ -135,6 +145,7 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.users = new Map();
+    this.passwordResetTokens = new Map();
     this.sites = new Map();
     this.assessments = new Map();
     this.facilitySurveyQuestions = new Map();
@@ -183,6 +194,49 @@ export class MemStorage implements IStorage {
     if (user) {
       user.password = hashedPassword;
       this.users.set(userId, user);
+    }
+  }
+
+  // Password reset token methods
+  async createPasswordResetToken(insertToken: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const token: PasswordResetToken = {
+      ...insertToken,
+      id,
+      used: insertToken.used ?? false,
+      createdAt
+    };
+    this.passwordResetTokens.set(token.token, token);
+    return token;
+  }
+
+  async getPasswordResetToken(tokenValue: string): Promise<PasswordResetToken | undefined> {
+    return this.passwordResetTokens.get(tokenValue);
+  }
+
+  async getValidPasswordResetTokens(): Promise<PasswordResetToken[]> {
+    const now = new Date();
+    return Array.from(this.passwordResetTokens.values()).filter(
+      (token) => !token.used && new Date(token.expiresAt) > now
+    );
+  }
+
+  async markPasswordResetTokenAsUsed(tokenId: string): Promise<void> {
+    const token = Array.from(this.passwordResetTokens.values()).find(t => t.id === tokenId);
+    if (token) {
+      token.used = true;
+      this.passwordResetTokens.set(token.token, token);
+    }
+  }
+
+  async invalidateUserPasswordResetTokens(userId: string): Promise<void> {
+    const userTokens = Array.from(this.passwordResetTokens.values()).filter(
+      (token) => token.userId === userId && !token.used
+    );
+    for (const token of userTokens) {
+      token.used = true;
+      this.passwordResetTokens.set(token.token, token);
     }
   }
 
