@@ -17,6 +17,8 @@ import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
 import Signup from "@/pages/Signup";
 import Login from "@/pages/Login";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import Landing from "@/pages/Landing";
 import Pricing from "@/pages/Pricing";
 import Classes from "@/pages/Classes";
@@ -59,6 +61,8 @@ function App() {
           <Route path="/" component={Landing} />
           <Route path="/signup" component={Signup} />
           <Route path="/login" component={Login} />
+          <Route path="/forgot-password" component={ForgotPassword} />
+          <Route path="/reset-password" component={ResetPassword} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/classes" component={Classes} />
           <Route path="/consulting" component={Consulting} />
