@@ -49,6 +49,17 @@ export class DbStorage implements IStorage {
     return results[0];
   }
 
+  async getAllUsers(): Promise<User[]> {
+    const results = await db.select().from(schema.users);
+    return results;
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    await db.update(schema.users)
+      .set({ password: hashedPassword })
+      .where(eq(schema.users.id, userId));
+  }
+
   // Site methods
   async getSite(id: string): Promise<Site | undefined> {
     const results = await db.select().from(schema.sites).where(eq(schema.sites.id, id));

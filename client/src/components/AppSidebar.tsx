@@ -1,4 +1,4 @@
-import { Home, FileText, BarChart3, Settings, Shield, AlertTriangle, Users, Search, Building2 } from "lucide-react";
+import { Home, FileText, BarChart3, Settings, Shield, AlertTriangle, Users, Search, Building2, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import {
   Sidebar,
@@ -12,6 +12,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import logoPath from "@assets/RiskFixer Logo_1759487773302.png";
+import { useAuth } from "@/hooks/useAuth";
 
 const navigationItems = [
   {
@@ -55,6 +56,9 @@ const managementItems = [
 ];
 
 export function AppSidebar() {
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || false;
+
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="p-4 pb-3">
@@ -107,6 +111,20 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    asChild
+                    data-testid="nav-admin"
+                  >
+                    <Link href="/app/admin">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Admin Panel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

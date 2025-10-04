@@ -4,6 +4,7 @@ export interface User {
   id: string;
   username: string;
   accountTier: string;
+  isAdmin: boolean;
   createdAt: string;
 }
 
