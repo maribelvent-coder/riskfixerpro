@@ -1,8 +1,12 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import logoPath from "@assets/logo_1759576687177.jpeg";
+import { useAuth } from "@/hooks/useAuth";
 
 export function MarketingHeader() {
+  const { isAuthenticated } = useAuth();
+  const appLink = isAuthenticated ? "/app/dashboard" : "/signup";
+
   return (
     <header className="sticky top-0 z-50 bg-white border-b">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-8">
@@ -17,7 +21,7 @@ export function MarketingHeader() {
         </Link>
         
         <nav className="flex items-center gap-8">
-          <Link href="/signup" data-testid="link-app">
+          <Link href={appLink} data-testid="link-app">
             <span className="text-foreground hover:text-primary-blue transition-colors font-sans">
               The App
             </span>
@@ -42,12 +46,12 @@ export function MarketingHeader() {
               Contact
             </span>
           </Link>
-          <Link href="/signup" data-testid="link-get-started">
+          <Link href={appLink} data-testid="link-get-started">
             <Button 
               className="bg-accent-green hover:bg-accent-green/90 text-white border-accent-green"
               data-testid="button-get-started"
             >
-              Get Started for Free
+              {isAuthenticated ? "Go to Dashboard" : "Get Started for Free"}
             </Button>
           </Link>
         </nav>
