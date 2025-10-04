@@ -1,9 +1,21 @@
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Landing() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  const handleStartAssessment = () => {
+    if (isAuthenticated) {
+      setLocation("/app");
+    } else {
+      setLocation("/signup");
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <MarketingHeader />
@@ -23,15 +35,15 @@ export default function Landing() {
             >
               Our intuitive software guides you step-by-step from vulnerability discovery to remediation planning.
             </p>
-            <Link href="/signup" data-testid="link-hero-cta">
-              <Button 
-                size="lg"
-                className="bg-accent-green hover:bg-accent-green/90 text-white border-accent-green text-lg px-8"
-                data-testid="button-start-assessment"
-              >
-                Start My Assessment
-              </Button>
-            </Link>
+            <Button 
+              size="lg"
+              className="bg-accent-green hover:bg-accent-green/90 text-white border-accent-green text-lg px-8"
+              data-testid="button-start-assessment"
+              onClick={handleStartAssessment}
+              disabled={isLoading}
+            >
+              {isAuthenticated ? "Go to Dashboard" : "Start My Assessment"}
+            </Button>
           </div>
         </section>
 
@@ -97,15 +109,15 @@ export default function Landing() {
             >
               See how the RiskFixer app can transform your security planning from a complex chore into a simple, actionable process.
             </p>
-            <Link href="/signup" data-testid="link-cta">
-              <Button 
-                size="lg"
-                className="bg-white hover:bg-white/90 text-primary-blue border-white text-lg px-8"
-                data-testid="button-see-app"
-              >
-                See The App in Action
-              </Button>
-            </Link>
+            <Button 
+              size="lg"
+              className="bg-white hover:bg-white/90 text-primary-blue border-white text-lg px-8"
+              data-testid="button-see-app"
+              onClick={handleStartAssessment}
+              disabled={isLoading}
+            >
+              {isAuthenticated ? "Go to Dashboard" : "See The App in Action"}
+            </Button>
           </div>
         </section>
       </main>
