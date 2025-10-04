@@ -6,7 +6,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(), // nullable for now to allow migration
   password: text("password").notNull(),
   accountTier: text("account_tier").notNull().default("free"), // free, basic, pro, enterprise
   isAdmin: boolean("is_admin").notNull().default(false),
@@ -250,7 +250,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 }).extend({
   username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username must be less than 50 characters"),
-  email: z.string().email("Please enter a valid email address"),
+  email: z.string().email("Please enter a valid email address").nullable(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 

@@ -26,6 +26,7 @@ import {
 import { Shield, ArrowLeft } from "lucide-react";
 
 const signupSchema = insertUserSchema.extend({
+  email: z.string().email("Please enter a valid email address"), // Make email required for signup
   confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

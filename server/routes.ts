@@ -142,10 +142,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Username already exists" });
       }
 
-      // Check if email already exists
-      const existingEmail = await storage.getUserByEmail(validatedData.email);
-      if (existingEmail) {
-        return res.status(400).json({ error: "Email already exists" });
+      // Check if email already exists (only if provided)
+      if (validatedData.email) {
+        const existingEmail = await storage.getUserByEmail(validatedData.email);
+        if (existingEmail) {
+          return res.status(400).json({ error: "Email already exists" });
+        }
       }
 
       // Hash password
@@ -154,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user with hashed password (accountTier will default to "free")
       const user = await storage.createUser({
         username: validatedData.username,
-        email: validatedData.email,
+        email: validatedData.email || null,
         password: hashedPassword,
       });
 

@@ -182,7 +182,8 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const createdAt = new Date();
     const user: User = { 
-      ...insertUser, 
+      ...insertUser,
+      email: insertUser.email || null, // Convert undefined to null
       id,
       accountTier: "free",
       isAdmin: false,
