@@ -3,6 +3,8 @@
 ## Overview
 This enterprise-grade platform conducts professional physical security assessments in accordance with ASIS International standards and Army FM guidelines. It provides structured facility surveys, detailed risk analysis, and automated reporting. The platform is designed for security professionals to evaluate physical security controls, identify vulnerabilities, and generate compliance-ready reports, aiming to streamline the assessment process and enhance security posture.
 
+**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), and route protection. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
@@ -20,7 +22,17 @@ Preferred communication style: Simple, everyday language.
 -   **Backend**: Express.js with Node.js ESM modules, TypeScript.
 -   **Database**: PostgreSQL with Drizzle ORM; shared TypeScript schemas between client and server.
 -   **API Design**: RESTful endpoints with JSON responses.
--   **Authentication**: Session-based using `express-session` with PostgreSQL store; username/password with secure hashing; role-based access control.
+-   **Authentication**: Session-based using `express-session` with PostgreSQL store; username/password with bcrypt hashing; role-based access control with free/pro/enterprise tiers.
+-   **Security Model**: Multi-layered protection:
+    -   Session authentication on all protected routes (401 if not authenticated)
+    -   Ownership verification middleware for all assessment and sub-resource routes (403 if not owner)
+    -   Payload sanitization on all PUT routes to prevent ownership field tampering
+    -   Dashboard stats filtered by userId to prevent data leakage
+    -   All 35+ API routes secured against cross-user access
+-   **Route Structure**: 
+    -   Public marketing routes: `/` (landing), `/pricing`, `/classes`, `/consulting`, `/contact`
+    -   Protected app routes: `/app/*` (dashboard, assessments, analysis)
+    -   Authentication routes: `/login`, `/signup`
 -   **AI Integration**: OpenAI GPT-5 for risk analysis and insight generation, adhering to ASIS CPP standards.
 -   **Assessment Workflow**: A multi-phase process including Facility Survey, a 7-step Enhanced Risk Assessment (Assets, Risk Scenarios, Vulnerabilities & Controls, Prioritize Risks, Treatment Planning, Executive Summary, Review & Submit), AI Analysis, and Report Generation.
 -   **Triple Risk Calculation Model**: Calculates Inherent, Current (after existing controls), and Residual (after proposed treatments) risks using a floating-point compound reduction system.
@@ -29,6 +41,11 @@ Preferred communication style: Simple, everyday language.
 -   **Core Entities**: Assessments, Assets (people, property, information, reputation), Risk Scenarios, Vulnerabilities, Controls (existing and proposed), Treatment Plans, Facility Survey Questions, Assessment Questions, Risk Insights, Reports, Users.
 -   **Risk Calculation**: Employs a precise compound reduction model (10% reduction per effectiveness point) for current and residual risk calculations, considering likelihood and impact reductions separately.
 -   **Reporting**: Generates reports in multiple formats (PDF, DOCX, HTML) with visualizations, executive summaries, and categorized action items based on risk levels.
+-   **Account Tiers**: 
+    -   **Free**: 1 assessment maximum, no AI insights, no PDF exports
+    -   **Pro**: Unlimited assessments, full AI analysis, all export formats
+    -   **Enterprise**: Custom limits, priority support, white-label options
+-   **Marketing Website**: Professional landing page with hero section, feature highlights, testimonials, pricing grid, and CTAs for signup/demo.
 
 ## External Dependencies
 
