@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import logoPath from "@assets/logo_1759576687177.jpeg";
 
 export function MarketingFooter() {
   return (
@@ -7,13 +6,9 @@ export function MarketingFooter() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <img 
-              src={logoPath} 
-              alt="RiskFixer Logo" 
-              className="h-10 mb-4"
-              style={{ filter: 'brightness(0) invert(1)' }}
-              data-testid="img-footer-logo"
-            />
+            <h3 className="font-heading text-xl mb-4 text-white" data-testid="heading-footer-brand">
+              RiskFixer
+            </h3>
             <p className="text-sm text-white/80" data-testid="text-tagline">
               Actionable Security Risk Assessments, Simplified.
             </p>
