@@ -3,7 +3,7 @@
 ## Overview
 This enterprise-grade platform conducts professional physical security assessments in accordance with ASIS International standards and Army FM guidelines. It provides structured facility surveys, detailed risk analysis, and automated reporting. The platform is designed for security professionals to evaluate physical security controls, identify vulnerabilities, and generate compliance-ready reports, aiming to streamline the assessment process and enhance security posture.
 
-**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), and route protection. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports.
+**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), route protection, and production-ready session management. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports. Sessions persist across server restarts using PostgreSQL storage.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -22,7 +22,15 @@ Preferred communication style: Simple, everyday language.
 -   **Backend**: Express.js with Node.js ESM modules, TypeScript.
 -   **Database**: PostgreSQL with Drizzle ORM; shared TypeScript schemas between client and server.
 -   **API Design**: RESTful endpoints with JSON responses.
--   **Authentication**: Session-based using `express-session` with PostgreSQL store; username/password with bcrypt hashing; role-based access control with free/pro/enterprise tiers.
+-   **Authentication**: Session-based using `express-session` with PostgreSQL store (connect-pg-simple); username/password with bcrypt hashing; role-based access control with free/pro/enterprise tiers.
+-   **Session Management**: Production-ready configuration with:
+    -   PostgreSQL-backed session storage (persists across server restarts)
+    -   Environment-based security: secure cookies in production, HTTP in development
+    -   Required environment variables: SESSION_SECRET, DATABASE_URL
+    -   httpOnly cookies (XSS protection)
+    -   sameSite: 'lax' (CSRF protection)
+    -   7-day session expiration
+    -   Trust proxy configured for production deployments
 -   **Security Model**: Multi-layered protection:
     -   Session authentication on all protected routes (401 if not authenticated)
     -   Ownership verification middleware for all assessment and sub-resource routes (403 if not owner)
