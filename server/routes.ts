@@ -15,6 +15,13 @@ import {
   insertReportSchema,
   insertUserSchema 
 } from "@shared/schema";
+import { 
+  canCreateAssessment, 
+  canCreateSite, 
+  canUseAIAnalysis,
+  getUpgradeMessage,
+  type AccountTier 
+} from "@shared/tierLimits";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 
@@ -299,6 +306,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Check tier site limit
+      const existingSites = await storage.getAllSites(userId);
+      const tier = user.accountTier as AccountTier;
+      
+      if (!canCreateSite(tier, existingSites.length)) {
+        return res.status(403).json({ 
+          error: getUpgradeMessage(tier, "site"),
+          needsUpgrade: true 
+        });
+      }
+
       const validatedData = insertSiteSchema.parse({
         ...req.body,
         userId
@@ -378,15 +401,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      // Check free tier limit
-      if (user.accountTier === "free") {
-        const existingAssessments = await storage.getAllAssessments(userId);
-        if (existingAssessments.length >= 1) {
-          return res.status(403).json({ 
-            error: "Free accounts are limited to 1 assessment. Upgrade to create more.",
-            needsUpgrade: true 
-          });
-        }
+      // Check tier assessment limit
+      const existingAssessments = await storage.getAllAssessments(userId);
+      const tier = user.accountTier as AccountTier;
+      
+      if (!canCreateAssessment(tier, existingAssessments.length)) {
+        return res.status(403).json({ 
+          error: getUpgradeMessage(tier, "assessment"),
+          needsUpgrade: true 
+        });
       }
 
       const validatedData = insertAssessmentSchema.parse({
@@ -1095,10 +1118,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      // Check free tier limitation
-      if (user.accountTier === "free") {
+      // Check tier AI analysis access
+      const tier = user.accountTier as AccountTier;
+      if (!canUseAIAnalysis(tier)) {
         return res.status(403).json({ 
-          error: "AI analysis requires a Pro or Enterprise account",
+          error: getUpgradeMessage(tier, "aiAnalysis"),
           needsUpgrade: true 
         });
       }
