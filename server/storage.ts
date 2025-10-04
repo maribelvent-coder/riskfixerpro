@@ -34,6 +34,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
 
   // Site methods
   getSite(id: string): Promise<Site | undefined>;
@@ -165,10 +167,23 @@ export class MemStorage implements IStorage {
       ...insertUser, 
       id,
       accountTier: "free",
+      isAdmin: false,
       createdAt
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.password = hashedPassword;
+      this.users.set(userId, user);
+    }
   }
 
   // Site methods
