@@ -11,15 +11,179 @@ import {
   insertVulnerabilitySchema,
   insertControlSchema,
   insertTreatmentPlanSchema,
-  insertReportSchema 
+  insertReportSchema,
+  insertUserSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import bcrypt from "bcrypt";
+
+// Extend Express session types
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+  }
+}
+
+// Extend Express Request type
+declare global {
+  namespace Express {
+    interface Request {
+      assessment?: any;
+    }
+  }
+}
+
+// Middleware to verify assessment ownership
+async function verifyAssessmentOwnership(req: any, res: any, next: any) {
+  try {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const assessmentId = req.params.id;
+    const assessment = await storage.getAssessmentWithQuestions(assessmentId);
+    
+    if (!assessment) {
+      return res.status(404).json({ error: "Assessment not found" });
+    }
+
+    if (assessment.userId !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Store assessment in request for reuse
+    req.assessment = assessment;
+    next();
+  } catch (error) {
+    console.error("Error verifying assessment ownership:", error);
+    res.status(500).json({ error: "Failed to verify access" });
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const signupSchema = insertUserSchema.extend({
+        confirmPassword: z.string(),
+      }).refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+      });
+
+      const validatedData = signupSchema.parse(req.body);
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+
+      // Create user with hashed password (accountTier will default to "free")
+      const user = await storage.createUser({
+        username: validatedData.username,
+        password: hashedPassword,
+      });
+
+      // Set session
+      req.session.userId = user.id;
+
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error during signup:", error);
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const loginSchema = z.object({
+        username: z.string().min(1, "Username is required"),
+        password: z.string().min(1, "Password is required"),
+      });
+
+      const validatedData = loginSchema.parse(req.body);
+
+      // Find user by username
+      const user = await storage.getUserByUsername(validatedData.username);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(validatedData.password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+
+      // Set session
+      req.session.userId = user.id;
+
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error during login:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return res.status(500).json({ error: "Failed to logout" });
+        }
+        res.json({ message: "Logged out successfully" });
+      });
+    } catch (error) {
+      console.error("Error during logout:", error);
+      res.status(500).json({ error: "Failed to logout" });
+    }
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
   // Assessment routes
   app.get("/api/assessments", async (req, res) => {
     try {
-      const assessments = await storage.getAllAssessments();
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const assessments = await storage.getAllAssessments(userId);
       res.json(assessments);
     } catch (error) {
       console.error("Error fetching assessments:", error);
@@ -27,16 +191,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/assessments/:id", async (req, res) => {
+  app.get("/api/assessments/:id", verifyAssessmentOwnership, async (req, res) => {
     try {
-      const { id } = req.params;
-      const assessment = await storage.getAssessmentWithQuestions(id);
-      
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found" });
-      }
-      
-      res.json(assessment);
+      // Assessment already verified and stored in req.assessment by middleware
+      res.json(req.assessment);
     } catch (error) {
       console.error("Error fetching assessment:", error);
       res.status(500).json({ error: "Failed to fetch assessment" });
@@ -45,7 +203,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assessments", async (req, res) => {
     try {
-      const validatedData = insertAssessmentSchema.parse(req.body);
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Check free tier limit
+      if (user.accountTier === "free") {
+        const existingAssessments = await storage.getAllAssessments(userId);
+        if (existingAssessments.length >= 1) {
+          return res.status(403).json({ 
+            error: "Free accounts are limited to 1 assessment. Upgrade to create more.",
+            needsUpgrade: true 
+          });
+        }
+      }
+
+      const validatedData = insertAssessmentSchema.parse({
+        ...req.body,
+        userId
+      });
       const assessment = await storage.createAssessment(validatedData);
       res.status(201).json(assessment);
     } catch (error) {
@@ -57,16 +239,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/assessments/:id", async (req, res) => {
+  app.put("/api/assessments/:id", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
-      const updateData = req.body;
-      
+      // Sanitize: Remove ownership fields from update payload
+      const { userId, ...updateData } = req.body;
       const updated = await storage.updateAssessment(id, updateData);
-      
-      if (!updated) {
-        return res.status(404).json({ error: "Assessment not found" });
-      }
       
       res.json(updated);
     } catch (error) {
@@ -75,15 +253,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/assessments/:id", async (req, res) => {
+  app.delete("/api/assessments/:id", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteAssessment(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: "Assessment not found" });
-      }
-      
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting assessment:", error);
@@ -92,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Facility Survey routes
-  app.get("/api/assessments/:id/facility-survey", async (req, res) => {
+  app.get("/api/assessments/:id/facility-survey", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const questions = await storage.getFacilitySurveyQuestions(id);
@@ -103,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/facility-survey", async (req, res) => {
+  app.post("/api/assessments/:id/facility-survey", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const { questions } = req.body;
@@ -142,7 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Asset Bridge route - Extract assets from facility survey for Phase 2
-  app.post("/api/assessments/:id/extract-assets", async (req, res) => {
+  app.post("/api/assessments/:id/extract-assets", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -242,7 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Risk Assets routes
-  app.get("/api/assessments/:id/risk-assets", async (req, res) => {
+  app.get("/api/assessments/:id/risk-assets", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const assets = await storage.getRiskAssets(id);
@@ -253,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/risk-assets", async (req, res) => {
+  app.post("/api/assessments/:id/risk-assets", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const assetData = insertRiskAssetSchema.parse({ ...req.body, assessmentId: id });
@@ -270,11 +443,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/risk-assets/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const deleted = await storage.deleteRiskAsset(id);
-      if (!deleted) {
+      
+      const resource = await storage.getRiskAsset(id);
+      if (!resource) {
         return res.status(404).json({ error: "Risk asset not found" });
       }
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const deleted = await storage.deleteRiskAsset(id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting risk asset:", error);
@@ -282,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/risk-assets/bulk", async (req, res) => {
+  app.post("/api/assessments/:id/risk-assets/bulk", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const { assets } = req.body;
@@ -307,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Risk Scenarios routes
-  app.get("/api/assessments/:id/risk-scenarios", async (req, res) => {
+  app.get("/api/assessments/:id/risk-scenarios", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const scenarios = await storage.getRiskScenarios(id);
@@ -318,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/risk-scenarios", async (req, res) => {
+  app.post("/api/assessments/:id/risk-scenarios", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const scenarioData = insertRiskScenarioSchema.parse({ ...req.body, assessmentId: id });
@@ -335,13 +521,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/risk-scenarios/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const result = await storage.updateRiskScenario(id, req.body);
       
-      if (!result) {
+      const resource = await storage.getRiskScenario(id);
+      if (!resource) {
         return res.status(404).json({ error: "Risk scenario not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Sanitize: Remove ownership fields to prevent reassignment
+      const { assessmentId, ...updateData } = req.body;
+      const result = await storage.updateRiskScenario(id, updateData);
       res.json(result);
     } catch (error) {
       console.error("Error updating risk scenario:", error);
@@ -351,13 +550,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/risk-scenarios/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const deleted = await storage.deleteRiskScenario(id);
       
-      if (!deleted) {
+      const resource = await storage.getRiskScenario(id);
+      if (!resource) {
         return res.status(404).json({ error: "Risk scenario not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const deleted = await storage.deleteRiskScenario(id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting risk scenario:", error);
@@ -365,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/risk-scenarios/bulk", async (req, res) => {
+  app.post("/api/assessments/:id/risk-scenarios/bulk", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const { scenarios } = req.body;
@@ -390,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Treatment Plans routes
-  app.get("/api/assessments/:id/treatment-plans", async (req, res) => {
+  app.get("/api/assessments/:id/treatment-plans", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const plans = await storage.getTreatmentPlans(id);
@@ -401,7 +611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/treatment-plans", async (req, res) => {
+  app.post("/api/assessments/:id/treatment-plans", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const planData = insertTreatmentPlanSchema.parse({ ...req.body, assessmentId: id });
@@ -418,13 +628,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/treatment-plans/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const result = await storage.updateTreatmentPlan(id, req.body);
       
-      if (!result) {
+      const resource = await storage.getTreatmentPlan(id);
+      if (!resource) {
         return res.status(404).json({ error: "Treatment plan not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Sanitize: Remove ownership fields to prevent reassignment
+      const { assessmentId, riskScenarioId, ...updateData } = req.body;
+      const result = await storage.updateTreatmentPlan(id, updateData);
       res.json(result);
     } catch (error) {
       console.error("Error updating treatment plan:", error);
@@ -434,13 +657,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/treatment-plans/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const deleted = await storage.deleteTreatmentPlan(id);
       
-      if (!deleted) {
+      const resource = await storage.getTreatmentPlan(id);
+      if (!resource) {
         return res.status(404).json({ error: "Treatment plan not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const deleted = await storage.deleteTreatmentPlan(id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting treatment plan:", error);
@@ -448,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/treatment-plans/bulk", async (req, res) => {
+  app.post("/api/assessments/:id/treatment-plans/bulk", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const { plans } = req.body;
@@ -473,7 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vulnerabilities routes
-  app.get("/api/assessments/:id/vulnerabilities", async (req, res) => {
+  app.get("/api/assessments/:id/vulnerabilities", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const vulnerabilities = await storage.getVulnerabilities(id);
@@ -484,7 +718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/vulnerabilities", async (req, res) => {
+  app.post("/api/assessments/:id/vulnerabilities", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const vulnerabilityData = insertVulnerabilitySchema.parse({ ...req.body, assessmentId: id });
@@ -501,13 +735,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/vulnerabilities/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const result = await storage.updateVulnerability(id, req.body);
       
-      if (!result) {
+      const resource = await storage.getVulnerability(id);
+      if (!resource) {
         return res.status(404).json({ error: "Vulnerability not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Sanitize: Remove ownership fields to prevent reassignment
+      const { assessmentId, riskScenarioId, ...updateData } = req.body;
+      const result = await storage.updateVulnerability(id, updateData);
       res.json(result);
     } catch (error) {
       console.error("Error updating vulnerability:", error);
@@ -517,13 +764,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/vulnerabilities/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const deleted = await storage.deleteVulnerability(id);
       
-      if (!deleted) {
+      const resource = await storage.getVulnerability(id);
+      if (!resource) {
         return res.status(404).json({ error: "Vulnerability not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const deleted = await storage.deleteVulnerability(id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting vulnerability:", error);
@@ -532,7 +790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Controls routes
-  app.get("/api/assessments/:id/controls", async (req, res) => {
+  app.get("/api/assessments/:id/controls", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const controls = await storage.getControls(id);
@@ -543,7 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/controls", async (req, res) => {
+  app.post("/api/assessments/:id/controls", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const controlData = insertControlSchema.parse({ ...req.body, assessmentId: id });
@@ -560,13 +818,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/controls/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const result = await storage.updateControl(id, req.body);
       
-      if (!result) {
+      const resource = await storage.getControl(id);
+      if (!resource) {
         return res.status(404).json({ error: "Control not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Sanitize: Remove ownership fields to prevent reassignment
+      const { assessmentId, riskScenarioId, vulnerabilityId, ...updateData } = req.body;
+      const result = await storage.updateControl(id, updateData);
       res.json(result);
     } catch (error) {
       console.error("Error updating control:", error);
@@ -576,13 +847,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/controls/:id", async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { id } = req.params;
-      const deleted = await storage.deleteControl(id);
       
-      if (!deleted) {
+      const resource = await storage.getControl(id);
+      if (!resource) {
         return res.status(404).json({ error: "Control not found" });
       }
-      
+
+      const assessment = await storage.getAssessment(resource.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const deleted = await storage.deleteControl(id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting control:", error);
@@ -591,7 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Assessment Questions routes
-  app.get("/api/assessments/:id/questions", async (req, res) => {
+  app.get("/api/assessments/:id/questions", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const questions = await storage.getAssessmentQuestions(id);
@@ -602,7 +884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/questions/bulk", async (req, res) => {
+  app.post("/api/assessments/:id/questions/bulk", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const { questions } = req.body;
@@ -636,8 +918,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Risk Analysis routes
-  app.post("/api/assessments/:id/analyze", async (req, res) => {
+  app.post("/api/assessments/:id/analyze", verifyAssessmentOwnership, async (req, res) => {
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Check free tier limitation
+      if (user.accountTier === "free") {
+        return res.status(403).json({ 
+          error: "AI analysis requires a Pro or Enterprise account",
+          needsUpgrade: true 
+        });
+      }
+
       const { id } = req.params;
       const assessment = await storage.getAssessmentWithQuestions(id);
       
@@ -692,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/assessments/:id/insights", async (req, res) => {
+  app.get("/api/assessments/:id/insights", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const insights = await storage.getRiskInsights(id);
@@ -704,7 +1004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports routes
-  app.get("/api/assessments/:id/reports", async (req, res) => {
+  app.get("/api/assessments/:id/reports", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const reports = await storage.getReports(id);
@@ -715,7 +1015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments/:id/reports", async (req, res) => {
+  app.post("/api/assessments/:id/reports", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
       const { type, title, format } = req.body;
@@ -798,7 +1098,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Statistics/Dashboard routes
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
-      const assessments = await storage.getAllAssessments();
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const assessments = await storage.getAllAssessments(userId);
       
       const stats = {
         totalAssessments: assessments.length,

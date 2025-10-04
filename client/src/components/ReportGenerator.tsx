@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Download, Eye, Share, Mail } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { FileText, Download, Eye, Share, Mail, AlertCircle } from "lucide-react";
 import { generateExecutiveSummaryPDF } from "@/lib/executiveSummaryPDF";
 import { generateTechnicalReportPDF } from "@/lib/technicalReportPDF";
 
@@ -58,9 +59,12 @@ export function ReportGenerator({
   onShare
 }: ReportGeneratorProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewReport, setPreviewReport] = useState<ReportConfig | null>(null);
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
+  
+  const isFreeAccount = user?.accountTier === "free";
   
   const handleGenerate = (reportId: string) => {
     console.log(`Generating report: ${reportId}`);
@@ -73,6 +77,15 @@ export function ReportGenerator({
   };
 
   const handleDownload = async (reportId: string) => {
+    if (isFreeAccount) {
+      toast({
+        title: "Upgrade Required",
+        description: "PDF exports require a Pro or Enterprise account",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setGeneratingPDF(reportId);
     
     try {
@@ -173,49 +186,57 @@ export function ReportGenerator({
                 </div>
               )}
 
-              <div className="flex gap-2">
-                {report.status === "ready" ? (
-                  <>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  {report.status === "ready" ? (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => handleDownload(report.id)}
+                        disabled={generatingPDF === report.id || isFreeAccount}
+                        data-testid={`button-download-${report.id}`}
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        {generatingPDF === report.id ? "Generating..." : "Download PDF"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePreview(report)}
+                        data-testid={`button-preview-${report.id}`}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        Preview
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleShare(report.id)}
+                        data-testid={`button-share-${report.id}`}
+                      >
+                        <Share className="h-3 w-3 mr-1" />
+                        Share
+                      </Button>
+                    </>
+                  ) : report.status === "generating" ? (
+                    <Button size="sm" disabled>
+                      Generating...
+                    </Button>
+                  ) : (
                     <Button
                       size="sm"
-                      onClick={() => handleDownload(report.id)}
-                      disabled={generatingPDF === report.id}
-                      data-testid={`button-download-${report.id}`}
+                      onClick={() => handleGenerate(report.id)}
+                      data-testid={`button-generate-${report.id}`}
                     >
-                      <Download className="h-3 w-3 mr-1" />
-                      {generatingPDF === report.id ? "Generating..." : "Download"}
+                      Generate Report
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handlePreview(report)}
-                      data-testid={`button-preview-${report.id}`}
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      Preview
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleShare(report.id)}
-                      data-testid={`button-share-${report.id}`}
-                    >
-                      <Share className="h-3 w-3 mr-1" />
-                      Share
-                    </Button>
-                  </>
-                ) : report.status === "generating" ? (
-                  <Button size="sm" disabled>
-                    Generating...
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => handleGenerate(report.id)}
-                    data-testid={`button-generate-${report.id}`}
-                  >
-                    Generate Report
-                  </Button>
+                  )}
+                </div>
+                {isFreeAccount && report.status === "ready" && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="message-upgrade-pdf">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>PDF exports require a Pro or Enterprise account. <a href="/pricing" className="text-primary hover:underline">Upgrade now</a></span>
+                  </div>
                 )}
               </div>
             </CardContent>

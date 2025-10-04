@@ -1,0 +1,56 @@
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import logoPath from "@assets/logo_1759576687177.jpeg";
+
+export function MarketingHeader() {
+  return (
+    <header className="sticky top-0 z-50 bg-white border-b">
+      <div className="container mx-auto px-4 h-[220px] flex items-center justify-between">
+        <Link href="/" data-testid="link-home">
+          <img 
+            src={logoPath} 
+            alt="RiskFixer Logo" 
+            className="h-[200px] object-contain"
+            data-testid="img-logo"
+          />
+        </Link>
+        
+        <nav className="flex items-center gap-8">
+          <Link href="/signup" data-testid="link-app">
+            <span className="text-foreground hover:text-primary-blue transition-colors font-sans">
+              The App
+            </span>
+          </Link>
+          <Link href="/pricing" data-testid="link-pricing">
+            <span className="text-foreground hover:text-primary-blue transition-colors font-sans">
+              Pricing
+            </span>
+          </Link>
+          <Link href="/classes" data-testid="link-classes">
+            <span className="text-foreground hover:text-primary-blue transition-colors font-sans">
+              Classes
+            </span>
+          </Link>
+          <Link href="/consulting" data-testid="link-consulting">
+            <span className="text-foreground hover:text-primary-blue transition-colors font-sans">
+              Consulting
+            </span>
+          </Link>
+          <Link href="/contact" data-testid="link-contact">
+            <span className="text-foreground hover:text-primary-blue transition-colors font-sans">
+              Contact
+            </span>
+          </Link>
+          <Link href="/signup" data-testid="link-get-started">
+            <Button 
+              className="bg-accent-green hover:bg-accent-green/90 text-white border-accent-green"
+              data-testid="button-get-started"
+            >
+              Get Started for Free
+            </Button>
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}

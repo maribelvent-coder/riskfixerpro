@@ -36,7 +36,7 @@ export interface IStorage {
   // Assessment methods
   getAssessment(id: string): Promise<Assessment | undefined>;
   getAssessmentWithQuestions(id: string): Promise<AssessmentWithQuestions | undefined>;
-  getAllAssessments(): Promise<Assessment[]>;
+  getAllAssessments(userId?: string): Promise<Assessment[]>;
   createAssessment(assessment: InsertAssessment): Promise<Assessment>;
   updateAssessment(id: string, assessment: Partial<Assessment>): Promise<Assessment | undefined>;
   deleteAssessment(id: string): Promise<boolean>;
@@ -58,6 +58,7 @@ export interface IStorage {
   bulkCreateIdentifiedThreats(threats: InsertIdentifiedThreat[]): Promise<IdentifiedThreat[]>;
 
   // Risk Assets methods
+  getRiskAsset(id: string): Promise<RiskAsset | undefined>;
   getRiskAssets(assessmentId: string): Promise<RiskAsset[]>;
   createRiskAsset(asset: InsertRiskAsset): Promise<RiskAsset>;
   deleteRiskAsset(id: string): Promise<boolean>;
@@ -65,6 +66,7 @@ export interface IStorage {
   bulkUpsertRiskAssets(assessmentId: string, assets: InsertRiskAsset[]): Promise<RiskAsset[]>;
 
   // Risk Scenarios methods
+  getRiskScenario(id: string): Promise<RiskScenario | undefined>;
   getRiskScenarios(assessmentId: string): Promise<RiskScenario[]>;
   createRiskScenario(scenario: InsertRiskScenario): Promise<RiskScenario>;
   updateRiskScenario(id: string, scenario: Partial<RiskScenario>): Promise<RiskScenario | undefined>;
@@ -72,18 +74,21 @@ export interface IStorage {
   bulkUpsertRiskScenarios(assessmentId: string, scenarios: InsertRiskScenario[]): Promise<RiskScenario[]>;
 
   // Vulnerabilities methods
+  getVulnerability(id: string): Promise<Vulnerability | undefined>;
   getVulnerabilities(assessmentId: string): Promise<Vulnerability[]>;
   createVulnerability(vulnerability: InsertVulnerability): Promise<Vulnerability>;
   updateVulnerability(id: string, vulnerability: Partial<Vulnerability>): Promise<Vulnerability | undefined>;
   deleteVulnerability(id: string): Promise<boolean>;
 
   // Controls methods
+  getControl(id: string): Promise<Control | undefined>;
   getControls(assessmentId: string): Promise<Control[]>;
   createControl(control: InsertControl): Promise<Control>;
   updateControl(id: string, control: Partial<Control>): Promise<Control | undefined>;
   deleteControl(id: string): Promise<boolean>;
 
   // Treatment Plans methods
+  getTreatmentPlan(id: string): Promise<TreatmentPlan | undefined>;
   getTreatmentPlans(assessmentId: string): Promise<TreatmentPlan[]>;
   createTreatmentPlan(plan: InsertTreatmentPlan): Promise<TreatmentPlan>;
   updateTreatmentPlan(id: string, plan: Partial<TreatmentPlan>): Promise<TreatmentPlan | undefined>;
@@ -144,7 +149,13 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const createdAt = new Date();
+    const user: User = { 
+      ...insertUser, 
+      id,
+      accountTier: "free",
+      createdAt
+    };
     this.users.set(id, user);
     return user;
   }
@@ -314,6 +325,10 @@ export class MemStorage implements IStorage {
   }
 
   // Risk Assets methods
+  async getRiskAsset(id: string): Promise<RiskAsset | undefined> {
+    return this.riskAssets.get(id);
+  }
+
   async getRiskAssets(assessmentId: string): Promise<RiskAsset[]> {
     return Array.from(this.riskAssets.values())
       .filter(a => a.assessmentId === assessmentId);
@@ -372,7 +387,11 @@ export class MemStorage implements IStorage {
     return this.bulkUpsertRiskAssets(assessmentId, assets);
   }
 
-  // Risk Scenarios methods  
+  // Risk Scenarios methods
+  async getRiskScenario(id: string): Promise<RiskScenario | undefined> {
+    return this.riskScenarios.get(id);
+  }
+
   async getRiskScenarios(assessmentId: string): Promise<RiskScenario[]> {
     return Array.from(this.riskScenarios.values())
       .filter(s => s.assessmentId === assessmentId);
@@ -438,6 +457,10 @@ export class MemStorage implements IStorage {
   }
 
   // Vulnerabilities methods
+  async getVulnerability(id: string): Promise<Vulnerability | undefined> {
+    return this.vulnerabilities.get(id);
+  }
+
   async getVulnerabilities(assessmentId: string): Promise<Vulnerability[]> {
     return Array.from(this.vulnerabilities.values())
       .filter(v => v.assessmentId === assessmentId);
@@ -473,6 +496,10 @@ export class MemStorage implements IStorage {
   }
 
   // Controls methods
+  async getControl(id: string): Promise<Control | undefined> {
+    return this.controls.get(id);
+  }
+
   async getControls(assessmentId: string): Promise<Control[]> {
     return Array.from(this.controls.values())
       .filter(c => c.assessmentId === assessmentId);
@@ -487,6 +514,13 @@ export class MemStorage implements IStorage {
       riskScenarioId: insertControl.riskScenarioId || null,
       effectiveness: insertControl.effectiveness || null,
       notes: insertControl.notes || null,
+      treatmentType: insertControl.treatmentType || null,
+      primaryEffect: insertControl.primaryEffect || null,
+      treatmentEffectiveness: insertControl.treatmentEffectiveness || null,
+      actionDescription: insertControl.actionDescription || null,
+      responsibleParty: insertControl.responsibleParty || null,
+      targetDate: insertControl.targetDate || null,
+      estimatedCost: insertControl.estimatedCost || null,
       createdAt: new Date()
     };
     this.controls.set(id, control);
@@ -510,6 +544,10 @@ export class MemStorage implements IStorage {
   }
 
   // Treatment Plans methods
+  async getTreatmentPlan(id: string): Promise<TreatmentPlan | undefined> {
+    return this.treatmentPlans.get(id);
+  }
+
   async getTreatmentPlans(assessmentId: string): Promise<TreatmentPlan[]> {
     return Array.from(this.treatmentPlans.values())
       .filter(p => p.assessmentId === assessmentId);

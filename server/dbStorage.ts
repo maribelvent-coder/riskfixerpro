@@ -81,8 +81,14 @@ export class DbStorage implements IStorage {
     };
   }
 
-  async getAllAssessments(): Promise<Assessment[]> {
+  async getAllAssessments(userId?: string): Promise<Assessment[]> {
     try {
+      if (userId) {
+        const results = await db.select().from(schema.assessments)
+          .where(eq(schema.assessments.userId, userId));
+        console.log('getAllAssessments query results:', results.length, 'assessments for user', userId);
+        return results;
+      }
       const results = await db.select().from(schema.assessments);
       console.log('getAllAssessments query results:', results.length, 'assessments');
       return results;
@@ -181,6 +187,11 @@ export class DbStorage implements IStorage {
   }
 
   // Risk Assets methods
+  async getRiskAsset(id: string): Promise<RiskAsset | undefined> {
+    const results = await db.select().from(schema.riskAssets).where(eq(schema.riskAssets.id, id));
+    return results[0];
+  }
+
   async getRiskAssets(assessmentId: string): Promise<RiskAsset[]> {
     return await db.select().from(schema.riskAssets)
       .where(eq(schema.riskAssets.assessmentId, assessmentId));
@@ -210,6 +221,11 @@ export class DbStorage implements IStorage {
   }
 
   // Risk Scenarios methods
+  async getRiskScenario(id: string): Promise<RiskScenario | undefined> {
+    const results = await db.select().from(schema.riskScenarios).where(eq(schema.riskScenarios.id, id));
+    return results[0];
+  }
+
   async getRiskScenarios(assessmentId: string): Promise<RiskScenario[]> {
     return await db.select().from(schema.riskScenarios)
       .where(eq(schema.riskScenarios.assessmentId, assessmentId));
@@ -242,6 +258,11 @@ export class DbStorage implements IStorage {
   }
 
   // Vulnerabilities methods
+  async getVulnerability(id: string): Promise<Vulnerability | undefined> {
+    const results = await db.select().from(schema.vulnerabilities).where(eq(schema.vulnerabilities.id, id));
+    return results[0];
+  }
+
   async getVulnerabilities(assessmentId: string): Promise<Vulnerability[]> {
     return await db.select().from(schema.vulnerabilities)
       .where(eq(schema.vulnerabilities.assessmentId, assessmentId));
@@ -267,6 +288,11 @@ export class DbStorage implements IStorage {
   }
 
   // Controls methods
+  async getControl(id: string): Promise<Control | undefined> {
+    const results = await db.select().from(schema.controls).where(eq(schema.controls.id, id));
+    return results[0];
+  }
+
   async getControls(assessmentId: string): Promise<Control[]> {
     return await db.select().from(schema.controls)
       .where(eq(schema.controls.assessmentId, assessmentId));
@@ -292,6 +318,11 @@ export class DbStorage implements IStorage {
   }
 
   // Treatment Plans methods
+  async getTreatmentPlan(id: string): Promise<TreatmentPlan | undefined> {
+    const results = await db.select().from(schema.treatmentPlans).where(eq(schema.treatmentPlans.id, id));
+    return results[0];
+  }
+
   async getTreatmentPlans(assessmentId: string): Promise<TreatmentPlan[]> {
     return await db.select().from(schema.treatmentPlans)
       .where(eq(schema.treatmentPlans.assessmentId, assessmentId));

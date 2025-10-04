@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Open+Sans:wght@400;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -76,9 +78,17 @@
   --chart-4: 0 84% 50%;
   --chart-5: 200 95% 55%;
 
-  --font-sans: Open Sans, sans-serif;
+  --font-sans: 'Open Sans', sans-serif;
+  --font-heading: 'Montserrat', sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
+  
+  /* Marketing colors from attached style.css */
+  --primary-blue: 210 64% 38%;
+  --accent-green: 81 52% 58%;
+  --accent-orange: 15 88% 56%;
+  --dark-gray: 0 2% 25%;
+  --light-gray-bg: 210 22% 97%;
   --radius: .5rem; /* 8px */
   --shadow-2xs: 0px 2px 0px 0px hsl(220 15% 0% / 0.02);
   --shadow-xs: 0px 2px 0px 0px hsl(220 15% 0% / 0.03);

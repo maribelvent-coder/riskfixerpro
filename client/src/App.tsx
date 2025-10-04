@@ -6,46 +6,81 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import AssessmentDetail from "@/pages/AssessmentDetail";
+import Signup from "@/pages/Signup";
+import Login from "@/pages/Login";
+import Landing from "@/pages/Landing";
+import Pricing from "@/pages/Pricing";
+import Classes from "@/pages/Classes";
+import Consulting from "@/pages/Consulting";
+import Contact from "@/pages/Contact";
 import NotFound from "@/pages/not-found";
 
-function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/assessments" component={Dashboard} />
-      <Route path="/assessments/:id">
-        {(params) => <AssessmentDetail assessmentId={params.id} />}
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-function App() {
+function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
   };
 
   return (
+    <ProtectedRoute>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1">
+            <header className="flex items-center justify-between p-4 border-b bg-background">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <ThemeToggle />
+            </header>
+            <main className="flex-1 overflow-auto p-6">
+              {children}
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
+    </ProtectedRoute>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <div className="flex flex-col flex-1">
-              <header className="flex items-center justify-between p-4 border-b bg-background">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <ThemeToggle />
-              </header>
-              <main className="flex-1 overflow-auto p-6">
-                <Router />
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        <Switch>
+          {/* Public routes */}
+          <Route path="/" component={Landing} />
+          <Route path="/signup" component={Signup} />
+          <Route path="/login" component={Login} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/classes" component={Classes} />
+          <Route path="/consulting" component={Consulting} />
+          <Route path="/contact" component={Contact} />
+          
+          {/* Protected routes */}
+          <Route path="/app">
+            <ProtectedAppLayout>
+              <Dashboard />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/assessments">
+            <ProtectedAppLayout>
+              <Dashboard />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/assessments/:id">
+            {(params) => (
+              <ProtectedAppLayout>
+                <AssessmentDetail assessmentId={params.id} />
+              </ProtectedAppLayout>
+            )}
+          </Route>
+          
+          <Route component={NotFound} />
+        </Switch>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

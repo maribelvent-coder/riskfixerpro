@@ -81,9 +81,16 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        // Marketing colors from attached style.css
+        "primary-blue": "hsl(var(--primary-blue) / <alpha-value>)",
+        "accent-green": "hsl(var(--accent-green) / <alpha-value>)",
+        "accent-orange": "hsl(var(--accent-orange) / <alpha-value>)",
+        "dark-gray": "hsl(var(--dark-gray) / <alpha-value>)",
+        "light-gray-bg": "hsl(var(--light-gray-bg) / <alpha-value>)",
       },
       fontFamily: {
-        sans: ["Inter", "var(--font-sans)"],
+        sans: ["'Open Sans'", "var(--font-sans)"],
+        heading: ["'Montserrat'", "var(--font-heading)"],
         serif: ["var(--font-serif)"],
         mono: ["JetBrains Mono", "var(--font-mono)"],
       },

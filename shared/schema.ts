@@ -7,10 +7,13 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  accountTier: text("account_tier").notNull().default("free"), // free, pro, enterprise
+  createdAt: timestamp("created_at").default(sql`now()`),
 });
 
 export const assessments = pgTable("assessments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
   location: text("location").notNull(),
   assessor: text("assessor").notNull(),
@@ -215,6 +218,9 @@ export const reports = pgTable("reports", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+}).extend({
+  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username must be less than 50 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export const insertAssessmentSchema = createInsertSchema(assessments).omit({

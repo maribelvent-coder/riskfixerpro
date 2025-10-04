@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { AssessmentCard } from "@/components/AssessmentCard";
-import { Plus, Search, Filter, TrendingUp, Users, Building2, Clock } from "lucide-react";
+import { Plus, Search, Filter, TrendingUp, Users, Building2, Clock, AlertCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { dashboardApi, assessmentApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import type { Assessment } from "@shared/schema";
 
 export default function Dashboard() {
@@ -16,6 +18,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
   // Fetch dashboard statistics
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -29,6 +32,10 @@ export default function Dashboard() {
     queryFn: () => assessmentApi.getAll(),
   });
 
+  // Check free tier limitations
+  const isFreeAccount = user?.accountTier === "free";
+  const hasReachedFreeLimit = isFreeAccount && assessments.length >= 1;
+
   // Create new assessment mutation
   const createAssessmentMutation = useMutation({
     mutationFn: assessmentApi.create,
@@ -40,14 +47,22 @@ export default function Dashboard() {
         description: `New assessment "${newAssessment.title}" has been created.`,
       });
       // Navigate to the new assessment
-      setLocation(`/assessments/${newAssessment.id}`);
+      setLocation(`/app/assessments/${newAssessment.id}`);
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create assessment: ${error.message}`,
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      if (error.needsUpgrade) {
+        toast({
+          title: "Upgrade Required",
+          description: error.message || "Free accounts are limited to 1 assessment. Upgrade to create more.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to create assessment: ${error.message}`,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -90,14 +105,22 @@ export default function Dashboard() {
             Comprehensive facility surveys and professional risk analysis following ASIS International standards
           </p>
         </div>
-        <Button 
-          onClick={handleCreateNew} 
-          disabled={createAssessmentMutation.isPending}
-          data-testid="button-create-assessment"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <Button 
+            onClick={handleCreateNew} 
+            disabled={createAssessmentMutation.isPending || hasReachedFreeLimit}
+            data-testid="button-create-assessment"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
+          </Button>
+          {hasReachedFreeLimit && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="message-upgrade-assessment">
+              <AlertCircle className="h-4 w-4" />
+              <span>Free accounts are limited to 1 assessment. <a href="/pricing" className="text-primary hover:underline">Upgrade to create more.</a></span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -271,8 +294,8 @@ export default function Dashboard() {
                 createdDate={formatDate(assessment.createdAt)}
                 lastModified={formatDate(assessment.updatedAt)}
                 riskLevel={assessment.riskLevel as any}
-                onStart={(id) => setLocation(`/assessments/${id}`)}
-                onView={(id) => setLocation(`/assessments/${id}`)}
+                onStart={(id) => setLocation(`/app/assessments/${id}`)}
+                onView={(id) => setLocation(`/app/assessments/${id}`)}
                 onGenerate={(id) => console.log(`Generate report for ${id}`)} // TODO: Implement report generation
               />
             ))}
