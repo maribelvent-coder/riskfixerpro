@@ -11,9 +11,27 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+export const sites = pgTable("sites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country"),
+  facilityType: text("facility_type"), // office, warehouse, retail, manufacturing, datacenter, other
+  contactName: text("contact_name"),
+  contactPhone: text("contact_phone"),
+  contactEmail: text("contact_email"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 export const assessments = pgTable("assessments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  siteId: varchar("site_id").references(() => sites.id),
   title: text("title").notNull(),
   location: text("location").notNull(),
   assessor: text("assessor").notNull(),
@@ -223,6 +241,11 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+export const insertSiteSchema = createInsertSchema(sites).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   id: true,
   createdAt: true,
@@ -284,6 +307,9 @@ export const insertReportSchema = createInsertSchema(reports).omit({
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type Site = typeof sites.$inferSelect;
+export type InsertSite = z.infer<typeof insertSiteSchema>;
 
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
