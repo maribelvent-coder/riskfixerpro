@@ -149,7 +149,7 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
     const doc = createPDF();
     let yPos = SPACING.margin;
 
-    yPos = addHeader(doc, 'Executive Summary Report', assessmentId);
+    yPos = addHeader(doc, 'Executive Summary Report', assessmentId.substring(0, 8));
 
     yPos = checkPageBreak(doc, yPos, 60);
     doc.setFont('helvetica', 'bold');
@@ -310,7 +310,8 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
       topScenarios.forEach((scenario, index) => {
         yPos = checkPageBreak(doc, yPos, 50);
         
-        yPos = addText(doc, `${index + 1}. ${scenario.scenario}`, SPACING.margin, yPos, {
+        const scenarioTitle = scenario.threatDescription || scenario.scenario || 'Risk Scenario';
+        yPos = addText(doc, `${index + 1}. ${scenarioTitle}`, SPACING.margin, yPos, {
           fontStyle: 'bold',
           fontSize: FONT_SIZES.subheading,
         });
@@ -371,21 +372,47 @@ export async function generateExecutiveSummaryPDF(assessmentId: string): Promise
       sortedPlans.forEach((plan, index) => {
         yPos = checkPageBreak(doc, yPos, 40);
 
-        yPos = addText(doc, `${index + 1}. ${plan.description}`, SPACING.margin, yPos, {
+        const planTitle = plan.threatDescription || plan.risk || 'Treatment Plan';
+        yPos = addText(doc, `${index + 1}. ${planTitle}`, SPACING.margin, yPos, {
           fontStyle: 'bold',
           fontSize: FONT_SIZES.subheading,
         });
         yPos += SPACING.smallGap;
 
-        yPos = addText(doc, `   Strategy: ${plan.strategy}`, SPACING.margin, yPos, {
+        if (plan.description) {
+          yPos = addText(doc, `   Action: ${plan.description}`, SPACING.margin, yPos, {
+            color: COLORS.textLight,
+          });
+          yPos += SPACING.smallGap;
+        }
+
+        const strategyLabel = plan.strategy === 'control' ? 'Mitigate/Control' : plan.strategy || 'Planned';
+        yPos = addText(doc, `   Strategy: ${strategyLabel}`, SPACING.margin, yPos, {
           color: COLORS.textLight,
         });
         yPos += SPACING.smallGap;
 
-        yPos = addText(doc, `   Status: ${plan.status || 'Planned'}`, SPACING.margin, yPos, {
-          color: COLORS.textLight,
-        });
-        yPos += SPACING.smallGap;
+        if (plan.type) {
+          yPos = addText(doc, `   Type: ${plan.type.charAt(0).toUpperCase() + plan.type.slice(1)}`, SPACING.margin, yPos, {
+            color: COLORS.textLight,
+          });
+          yPos += SPACING.smallGap;
+        }
+
+        if (plan.effect && plan.value) {
+          const effectLabel = plan.effect === 'reduce_likelihood' ? 'Reduce Likelihood' : 'Reduce Impact';
+          yPos = addText(doc, `   Effect: ${effectLabel} by ${plan.value} levels`, SPACING.margin, yPos, {
+            color: COLORS.textLight,
+          });
+          yPos += SPACING.smallGap;
+        }
+
+        if (plan.status) {
+          yPos = addText(doc, `   Status: ${plan.status}`, SPACING.margin, yPos, {
+            color: COLORS.textLight,
+          });
+          yPos += SPACING.smallGap;
+        }
 
         if (plan.responsible) {
           yPos = addText(doc, `   Responsible: ${plan.responsible}`, SPACING.margin, yPos, {
