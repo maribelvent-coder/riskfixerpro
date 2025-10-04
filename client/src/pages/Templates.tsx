@@ -3,11 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Building2, Server, Package, ShoppingCart, Factory, Heart, GraduationCap, Landmark, Search } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Building2, Server, Package, ShoppingCart, Factory, Heart, GraduationCap, Landmark, Search, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { assessmentApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { assessmentApi, dashboardApi } from "@/lib/api";
 
 interface Template {
   id: string;
@@ -109,6 +111,17 @@ export default function Templates() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Check user tier and assessment count
+  const { user } = useAuth();
+
+  const { data: stats } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+    queryFn: () => dashboardApi.getStats(),
+  });
+
+  const isFreeUser = user?.accountTier === "free";
+  const hasReachedFreeLimit = isFreeUser && (stats?.totalAssessments || 0) >= 1;
+
   const createFromTemplateMutation = useMutation({
     mutationFn: async (template: Template) => {
       return assessmentApi.create({
@@ -126,10 +139,11 @@ export default function Templates() {
       });
       setLocation(`/app/assessments/${data.id}`);
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to create assessment from template";
       toast({
-        title: "Error",
-        description: "Failed to create assessment from template",
+        title: "Cannot Create Assessment",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -153,6 +167,20 @@ export default function Templates() {
           Start with pre-configured templates for common facility types
         </p>
       </div>
+
+      {/* Free Tier Limit Alert */}
+      {hasReachedFreeLimit && (
+        <Alert variant="destructive" data-testid="alert-free-limit">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Free accounts are limited to 1 assessment. {" "}
+            <a href="/pricing" className="underline font-medium">
+              Upgrade to Pro or Enterprise
+            </a>
+            {" "} to create unlimited assessments from templates.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -249,10 +277,10 @@ export default function Templates() {
                 <Button 
                   className="w-full"
                   onClick={() => createFromTemplateMutation.mutate(template)}
-                  disabled={createFromTemplateMutation.isPending}
+                  disabled={createFromTemplateMutation.isPending || hasReachedFreeLimit}
                   data-testid={`button-use-template-${template.id}`}
                 >
-                  {createFromTemplateMutation.isPending ? "Creating..." : "Use This Template"}
+                  {createFromTemplateMutation.isPending ? "Creating..." : hasReachedFreeLimit ? "Upgrade Required" : "Use This Template"}
                 </Button>
               </CardContent>
             </Card>
