@@ -188,6 +188,16 @@ export class MemStorage implements IStorage {
     const site: Site = {
       ...insertSite,
       id,
+      address: insertSite.address ?? null,
+      city: insertSite.city ?? null,
+      state: insertSite.state ?? null,
+      zipCode: insertSite.zipCode ?? null,
+      country: insertSite.country ?? null,
+      facilityType: insertSite.facilityType ?? null,
+      contactName: insertSite.contactName ?? null,
+      contactPhone: insertSite.contactPhone ?? null,
+      contactEmail: insertSite.contactEmail ?? null,
+      notes: insertSite.notes ?? null,
       createdAt
     };
     this.sites.set(id, site);

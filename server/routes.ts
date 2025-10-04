@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { openaiService } from "./openai-service";
 import { 
   insertAssessmentSchema,
+  insertSiteSchema,
   insertFacilitySurveyQuestionSchema,
   insertAssessmentQuestionSchema,
   insertRiskAssetSchema,
@@ -29,6 +30,7 @@ declare global {
   namespace Express {
     interface Request {
       assessment?: any;
+      site?: any;
     }
   }
 }
@@ -57,6 +59,34 @@ async function verifyAssessmentOwnership(req: any, res: any, next: any) {
     next();
   } catch (error) {
     console.error("Error verifying assessment ownership:", error);
+    res.status(500).json({ error: "Failed to verify access" });
+  }
+}
+
+// Middleware to verify site ownership
+async function verifySiteOwnership(req: any, res: any, next: any) {
+  try {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const siteId = req.params.id;
+    const site = await storage.getSite(siteId);
+    
+    if (!site) {
+      return res.status(404).json({ error: "Site not found" });
+    }
+
+    if (site.userId !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Store site in request for reuse
+    req.site = site;
+    next();
+  } catch (error) {
+    console.error("Error verifying site ownership:", error);
     res.status(500).json({ error: "Failed to verify access" });
   }
 }
@@ -172,6 +202,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching current user:", error);
       res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // Site routes
+  app.get("/api/sites", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const sites = await storage.getAllSites(userId);
+      res.json(sites);
+    } catch (error) {
+      console.error("Error fetching sites:", error);
+      res.status(500).json({ error: "Failed to fetch sites" });
+    }
+  });
+
+  app.get("/api/sites/:id", verifySiteOwnership, async (req, res) => {
+    try {
+      // Site already verified and stored in req.site by middleware
+      res.json(req.site);
+    } catch (error) {
+      console.error("Error fetching site:", error);
+      res.status(500).json({ error: "Failed to fetch site" });
+    }
+  });
+
+  app.post("/api/sites", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const validatedData = insertSiteSchema.parse({
+        ...req.body,
+        userId
+      });
+
+      const site = await storage.createSite(validatedData);
+      res.status(201).json(site);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating site:", error);
+      res.status(500).json({ error: "Failed to create site" });
+    }
+  });
+
+  app.put("/api/sites/:id", verifySiteOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      // Sanitize: Remove ownership fields from update payload
+      const { userId, ...updateData } = req.body;
+      const updated = await storage.updateSite(id, updateData);
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating site:", error);
+      res.status(500).json({ error: "Failed to update site" });
+    }
+  });
+
+  app.delete("/api/sites/:id", verifySiteOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSite(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting site:", error);
+      res.status(500).json({ error: "Failed to delete site" });
     }
   });
 
