@@ -3,7 +3,7 @@
 ## Overview
 This enterprise-grade platform conducts professional physical security assessments in accordance with ASIS International standards and Army FM guidelines. It provides structured facility surveys, detailed risk analysis, and automated reporting. The platform is designed for security professionals to evaluate physical security controls, identify vulnerabilities, and generate compliance-ready reports, aiming to streamline the assessment process and enhance security posture.
 
-**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), route protection, and production-ready session management. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports. Sessions persist across server restarts using PostgreSQL storage.
+**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), route protection, and production-ready session management. Site/location management system for organizing assessments by physical facilities. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports. Sessions persist across server restarts using PostgreSQL storage.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -33,20 +33,27 @@ Preferred communication style: Simple, everyday language.
     -   Trust proxy configured for production deployments
 -   **Security Model**: Multi-layered protection:
     -   Session authentication on all protected routes (401 if not authenticated)
-    -   Ownership verification middleware for all assessment and sub-resource routes (403 if not owner)
+    -   Ownership verification middleware for all assessment, site, and sub-resource routes (403 if not owner)
     -   Payload sanitization on all PUT routes to prevent ownership field tampering
     -   Dashboard stats filtered by userId to prevent data leakage
-    -   All 35+ API routes secured against cross-user access
+    -   All 40+ API routes secured against cross-user access
+    -   Site ownership verification ensures users cannot access or modify other users' sites
 -   **Route Structure**: 
     -   Public marketing routes: `/` (landing), `/pricing`, `/classes`, `/consulting`, `/contact`
-    -   Protected app routes: `/app/*` (dashboard, assessments, analysis)
+    -   Protected app routes: `/app/*` (dashboard, assessments, sites, analysis, settings)
     -   Authentication routes: `/login`, `/signup`
 -   **AI Integration**: OpenAI GPT-5 for risk analysis and insight generation, adhering to ASIS CPP standards.
 -   **Assessment Workflow**: A multi-phase process including Facility Survey, a 7-step Enhanced Risk Assessment (Assets, Risk Scenarios, Vulnerabilities & Controls, Prioritize Risks, Treatment Planning, Executive Summary, Review & Submit), AI Analysis, and Report Generation.
 -   **Triple Risk Calculation Model**: Calculates Inherent, Current (after existing controls), and Residual (after proposed treatments) risks using a floating-point compound reduction system.
 
 ### Feature Specifications
--   **Core Entities**: Assessments, Assets (people, property, information, reputation), Risk Scenarios, Vulnerabilities, Controls (existing and proposed), Treatment Plans, Facility Survey Questions, Assessment Questions, Risk Insights, Reports, Users.
+-   **Core Entities**: Assessments, Sites/Locations, Assets (people, property, information, reputation), Risk Scenarios, Vulnerabilities, Controls (existing and proposed), Treatment Plans, Facility Survey Questions, Assessment Questions, Risk Insights, Reports, Users.
+-   **Sites Management**: 
+    -   CRUD operations for physical sites/locations
+    -   Site fields: name, address (city, state, zip, country), facility type, contact information, notes
+    -   Ownership verification ensures users can only access their own sites
+    -   Assessments can be linked to sites via optional siteId foreign key
+    -   Assessment creation flow supports both site selection and manual location entry
 -   **Risk Calculation**: Employs a precise compound reduction model (10% reduction per effectiveness point) for current and residual risk calculations, considering likelihood and impact reductions separately.
 -   **Reporting**: Generates reports in multiple formats (PDF, DOCX, HTML) with visualizations, executive summaries, and categorized action items based on risk levels.
 -   **Account Tiers**: 
