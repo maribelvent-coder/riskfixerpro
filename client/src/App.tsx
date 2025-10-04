@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Assessments from "@/pages/Assessments";
 import Analytics from "@/pages/Analytics";
+import Templates from "@/pages/Templates";
 import AssessmentDetail from "@/pages/AssessmentDetail";
 import Sites from "@/pages/Sites";
 import Settings from "@/pages/Settings";
@@ -92,6 +93,12 @@ function App() {
           <Route path="/app/analytics">
             <ProtectedAppLayout>
               <Analytics />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/templates">
+            <ProtectedAppLayout>
+              <Templates />
             </ProtectedAppLayout>
           </Route>
           
