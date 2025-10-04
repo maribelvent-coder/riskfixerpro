@@ -46,6 +46,11 @@ export class DbStorage implements IStorage {
     return results[0];
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const results = await db.select().from(schema.users).where(eq(schema.users.email, email));
+    return results[0];
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const results = await db.insert(schema.users).values(insertUser).returning();
     return results[0];

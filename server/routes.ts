@@ -142,12 +142,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Username already exists" });
       }
 
+      // Check if email already exists
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      if (existingEmail) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
       // Hash password
       const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
       // Create user with hashed password (accountTier will default to "free")
       const user = await storage.createUser({
         username: validatedData.username,
+        email: validatedData.email,
         password: hashedPassword,
       });
 
@@ -221,17 +228,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/request-password-reset", async (req, res) => {
     try {
       const requestSchema = z.object({
-        username: z.string().min(1, "Username is required"),
+        email: z.string().email("Please enter a valid email address"),
       });
 
       const validatedData = requestSchema.parse(req.body);
 
-      // Find user by username
-      const user = await storage.getUserByUsername(validatedData.username);
+      // Find user by email
+      const user = await storage.getUserByEmail(validatedData.email);
       
       // Always return the same response to prevent user enumeration
       const response = { 
-        message: "If an account with that username exists, a password reset token has been generated. Please contact an administrator to receive your reset token." 
+        message: "If an account with that email exists, a password reset link has been sent." 
       };
 
       if (user) {
@@ -255,7 +262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // In production, email the plain token to the user
         // For development/admin use, log it (in production, never log or return this)
-        console.log(`Password reset token for ${validatedData.username}: ${token}`);
+        console.log(`Password reset token for ${validatedData.email}: ${token}`);
+        console.log(`Reset link: ${process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://localhost:5000'}/reset-password?token=${token}`);
         console.log(`Expires at: ${expiresAt}`);
       }
 

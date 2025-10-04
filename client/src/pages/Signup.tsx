@@ -42,6 +42,7 @@ export default function Signup() {
     resolver: zodResolver(signupSchema),
     defaultValues: {
       username: "",
+      email: "",
       password: "",
       confirmPassword: "",
     },
@@ -110,6 +111,24 @@ export default function Signup() {
                       <Input
                         placeholder="Enter your username"
                         data-testid="input-username"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="your.email@example.com"
+                        data-testid="input-email"
                         {...field}
                       />
                     </FormControl>

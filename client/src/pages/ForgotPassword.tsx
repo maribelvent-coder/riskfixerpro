@@ -26,7 +26,7 @@ import { Shield, ArrowLeft, Mail } from "lucide-react";
 import { useState } from "react";
 
 const forgotPasswordSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Please enter a valid email address"),
 });
 
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
@@ -39,7 +39,7 @@ export default function ForgotPassword() {
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
-      username: "",
+      email: "",
     },
   });
 
@@ -55,8 +55,8 @@ export default function ForgotPassword() {
     onSuccess: () => {
       setRequestSent(true);
       toast({
-        title: "Request submitted",
-        description: "If an account exists with that username, a password reset link has been generated.",
+        title: "Check your email",
+        description: "If an account exists with that email, we've sent password reset instructions.",
       });
     },
     onError: (error: any) => {
@@ -91,8 +91,8 @@ export default function ForgotPassword() {
             </div>
             <CardDescription>
               {requestSent 
-                ? "A password reset link has been generated for your account."
-                : "Enter your username and we'll generate a password reset link for you."
+                ? "We've sent you an email with instructions to reset your password."
+                : "Enter your email address and we'll send you instructions to reset your password."
               }
             </CardDescription>
           </CardHeader>
@@ -103,8 +103,11 @@ export default function ForgotPassword() {
                   <Mail className="h-12 w-12 text-primary" />
                 </div>
                 <p className="text-sm text-center text-muted-foreground">
-                  Your password reset link has been generated. In a production environment, this would be sent to your email. 
-                  For now, check the server console logs for the reset link. The link expires in 1 hour.
+                  Check your inbox and follow the link in the email to reset your password. 
+                  The link will expire in 1 hour.
+                </p>
+                <p className="text-xs text-center text-muted-foreground">
+                  (Development note: For now, check the server console logs for the reset link)
                 </p>
                 <Button
                   variant="outline"
@@ -120,15 +123,15 @@ export default function ForgotPassword() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="username"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Username</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
                           <Input
-                            type="text"
-                            placeholder="Enter your username"
-                            data-testid="input-username"
+                            type="email"
+                            placeholder="your.email@example.com"
+                            data-testid="input-email"
                             {...field}
                           />
                         </FormControl>
