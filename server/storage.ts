@@ -1,6 +1,8 @@
 import { 
   type User, 
   type InsertUser,
+  type Site,
+  type InsertSite,
   type Assessment,
   type InsertAssessment,
   type FacilitySurveyQuestion,
@@ -32,6 +34,13 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  // Site methods
+  getSite(id: string): Promise<Site | undefined>;
+  getAllSites(userId: string): Promise<Site[]>;
+  createSite(site: InsertSite): Promise<Site>;
+  updateSite(id: string, site: Partial<Site>): Promise<Site | undefined>;
+  deleteSite(id: string): Promise<boolean>;
 
   // Assessment methods
   getAssessment(id: string): Promise<Assessment | undefined>;
@@ -109,6 +118,7 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private sites: Map<string, Site>;
   private assessments: Map<string, Assessment>;
   private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
   private assessmentQuestions: Map<string, AssessmentQuestion>;
@@ -123,6 +133,7 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.users = new Map();
+    this.sites = new Map();
     this.assessments = new Map();
     this.facilitySurveyQuestions = new Map();
     this.assessmentQuestions = new Map();
@@ -158,6 +169,45 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, user);
     return user;
+  }
+
+  // Site methods
+  async getSite(id: string): Promise<Site | undefined> {
+    return this.sites.get(id);
+  }
+
+  async getAllSites(userId: string): Promise<Site[]> {
+    return Array.from(this.sites.values())
+      .filter(site => site.userId === userId)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async createSite(insertSite: InsertSite): Promise<Site> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const site: Site = {
+      ...insertSite,
+      id,
+      createdAt
+    };
+    this.sites.set(id, site);
+    return site;
+  }
+
+  async updateSite(id: string, updateData: Partial<Site>): Promise<Site | undefined> {
+    const site = this.sites.get(id);
+    if (!site) return undefined;
+
+    const updated: Site = {
+      ...site,
+      ...updateData
+    };
+    this.sites.set(id, updated);
+    return updated;
+  }
+
+  async deleteSite(id: string): Promise<boolean> {
+    return this.sites.delete(id);
   }
 
   // Assessment methods
@@ -210,6 +260,7 @@ export class MemStorage implements IStorage {
     const assessment: Assessment = {
       ...insertAssessment,
       id,
+      siteId: insertAssessment.siteId ?? null,
       status: insertAssessment.status || "draft",
       createdAt: now,
       updatedAt: now,

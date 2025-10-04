@@ -5,6 +5,8 @@ import type { IStorage } from "./storage";
 import type {
   User,
   InsertUser,
+  Site,
+  InsertSite,
   Assessment,
   InsertAssessment,
   FacilitySurveyQuestion,
@@ -45,6 +47,38 @@ export class DbStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const results = await db.insert(schema.users).values(insertUser).returning();
     return results[0];
+  }
+
+  // Site methods
+  async getSite(id: string): Promise<Site | undefined> {
+    const results = await db.select().from(schema.sites).where(eq(schema.sites.id, id));
+    return results[0];
+  }
+
+  async getAllSites(userId: string): Promise<Site[]> {
+    const results = await db.select().from(schema.sites)
+      .where(eq(schema.sites.userId, userId));
+    return results;
+  }
+
+  async createSite(insertSite: InsertSite): Promise<Site> {
+    const results = await db.insert(schema.sites).values(insertSite).returning();
+    return results[0];
+  }
+
+  async updateSite(id: string, updateData: Partial<Site>): Promise<Site | undefined> {
+    const results = await db.update(schema.sites)
+      .set(updateData)
+      .where(eq(schema.sites.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteSite(id: string): Promise<boolean> {
+    const results = await db.delete(schema.sites)
+      .where(eq(schema.sites.id, id))
+      .returning();
+    return results.length > 0;
   }
 
   // Assessment methods
