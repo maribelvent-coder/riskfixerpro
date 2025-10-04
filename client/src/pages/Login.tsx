@@ -22,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Shield } from "lucide-react";
+import { Shield, ArrowLeft } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -74,7 +74,16 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-background">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-4">
+        <button
+          onClick={() => setLocation("/")}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="link-back-home"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </button>
+        <Card className="w-full">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
             <Shield className="h-6 w-6 text-primary" />
@@ -144,6 +153,7 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
