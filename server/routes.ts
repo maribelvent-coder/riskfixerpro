@@ -355,6 +355,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update current user's email
+  app.patch("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const updateSchema = z.object({
+        email: z.string().email("Please enter a valid email address"),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+
+      // Check if email already exists (for another user)
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      if (existingEmail && existingEmail.id !== req.session.userId) {
+        return res.status(400).json({ error: "Email already in use" });
+      }
+
+      // Update user email
+      await storage.updateUserEmail(req.session.userId, validatedData.email);
+
+      // Get updated user
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Return user without password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating user email:", error);
+      res.status(500).json({ error: "Failed to update email" });
+    }
+  });
+
   // Admin routes
   app.get("/api/admin/users", verifyAdminAccess, async (req, res) => {
     try {

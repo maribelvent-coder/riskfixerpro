@@ -28,6 +28,7 @@ import { Shield, Key, UserCog } from "lucide-react";
 type User = {
   id: string;
   username: string;
+  email: string | null;
   accountTier: string;
   isAdmin: boolean;
   createdAt: string;

@@ -67,6 +67,12 @@ export class DbStorage implements IStorage {
       .where(eq(schema.users.id, userId));
   }
 
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    await db.update(schema.users)
+      .set({ email })
+      .where(eq(schema.users.id, userId));
+  }
+
   // Password reset token methods
   async createPasswordResetToken(insertToken: InsertPasswordResetToken): Promise<PasswordResetToken> {
     const results = await db.insert(schema.passwordResetTokens).values(insertToken).returning();
