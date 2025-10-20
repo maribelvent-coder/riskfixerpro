@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import type { IStorage } from "./storage";
 import type {
@@ -165,6 +165,31 @@ export class DbStorage implements IStorage {
   }
 
   async getAllSites(userId: string): Promise<Site[]> {
+    const results = await db.select().from(schema.sites)
+      .where(eq(schema.sites.userId, userId));
+    return results;
+  }
+
+  async getOrganizationSites(organizationId: string): Promise<Site[]> {
+    // Get all users in the organization first
+    const orgMembers = await this.getOrganizationMembers(organizationId);
+    const memberIds = orgMembers.map(m => m.id);
+    
+    if (memberIds.length === 0) {
+      return [];
+    }
+    
+    // Get sites for all organization members
+    const results = await db.select().from(schema.sites)
+      .where(
+        memberIds.length === 1
+          ? eq(schema.sites.userId, memberIds[0])
+          : sql`${schema.sites.userId} = ANY(${memberIds})`
+      );
+    return results;
+  }
+
+  async getSitesByUserId(userId: string): Promise<Site[]> {
     const results = await db.select().from(schema.sites)
       .where(eq(schema.sites.userId, userId));
     return results;

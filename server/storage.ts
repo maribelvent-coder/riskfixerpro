@@ -63,6 +63,8 @@ export interface IStorage {
   // Site methods
   getSite(id: string): Promise<Site | undefined>;
   getAllSites(userId: string): Promise<Site[]>;
+  getOrganizationSites(organizationId: string): Promise<Site[]>;
+  getSitesByUserId(userId: string): Promise<Site[]>;
   createSite(site: InsertSite): Promise<Site>;
   updateSite(id: string, site: Partial<Site>): Promise<Site | undefined>;
   deleteSite(id: string): Promise<boolean>;
@@ -192,8 +194,13 @@ export class MemStorage implements IStorage {
     const createdAt = new Date();
     const organization: Organization = {
       id,
+      name: insertOrganization.name,
+      accountTier: insertOrganization.accountTier || 'basic',
+      ownerId: insertOrganization.ownerId,
+      maxMembers: insertOrganization.maxMembers || 2,
+      maxSites: insertOrganization.maxSites || 2,
+      maxAssessments: insertOrganization.maxAssessments || 5,
       createdAt,
-      ...insertOrganization,
     };
     this.organizations.set(id, organization);
     return organization;
@@ -257,6 +264,8 @@ export class MemStorage implements IStorage {
       email: insertUser.email || null, // Convert undefined to null
       id,
       accountTier: "free",
+      organizationId: null,
+      organizationRole: 'member',
       isAdmin: false,
       createdAt
     };
@@ -341,6 +350,23 @@ export class MemStorage implements IStorage {
   }
 
   async getAllSites(userId: string): Promise<Site[]> {
+    return Array.from(this.sites.values())
+      .filter(site => site.userId === userId)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async getOrganizationSites(organizationId: string): Promise<Site[]> {
+    // Get all users in the organization
+    const orgMembers = await this.getOrganizationMembers(organizationId);
+    const memberIds = orgMembers.map(m => m.id);
+    
+    // Return sites belonging to any organization member
+    return Array.from(this.sites.values())
+      .filter(site => memberIds.includes(site.userId))
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async getSitesByUserId(userId: string): Promise<Site[]> {
     return Array.from(this.sites.values())
       .filter(site => site.userId === userId)
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());

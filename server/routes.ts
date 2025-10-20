@@ -395,6 +395,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team management routes
+  app.get("/api/team/organization", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.organizationId) {
+        return res.json(null);
+      }
+
+      const organization = await storage.getOrganization(user.organizationId);
+      res.json(organization);
+    } catch (error) {
+      console.error("Error fetching organization:", error);
+      res.status(500).json({ error: "Failed to fetch organization" });
+    }
+  });
+
+  app.get("/api/team/members", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user || !user.organizationId) {
+        return res.json([]);
+      }
+
+      const members = await storage.getOrganizationMembers(user.organizationId);
+      // Remove passwords from response
+      const membersWithoutPasswords = members.map(({ password, ...member }) => member);
+      res.json(membersWithoutPasswords);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ error: "Failed to fetch team members" });
+    }
+  });
+
+  app.get("/api/team/sites", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { memberId } = req.query;
+
+      let sites;
+      if (memberId && typeof memberId === 'string') {
+        // Get sites for a specific team member
+        // Verify the member is in the same organization
+        const member = await storage.getUser(memberId);
+        if (!member || member.organizationId !== user.organizationId) {
+          return res.status(403).json({ error: "Access denied" });
+        }
+        sites = await storage.getSitesByUserId(memberId);
+      } else if (user.organizationId) {
+        // Get all sites for the organization
+        sites = await storage.getOrganizationSites(user.organizationId);
+      } else {
+        // Free tier user - only their own sites
+        sites = await storage.getAllSites(user.id);
+      }
+
+      res.json(sites);
+    } catch (error) {
+      console.error("Error fetching team sites:", error);
+      res.status(500).json({ error: "Failed to fetch sites" });
+    }
+  });
+
   // Admin routes
   app.get("/api/admin/users", verifyAdminAccess, async (req, res) => {
     try {
@@ -429,6 +511,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error resetting password:", error);
       res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  app.post("/api/admin/users/:id/tier", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { accountTier } = req.body;
+
+      const validTiers = ['free', 'basic', 'pro', 'enterprise'];
+      if (!accountTier || !validTiers.includes(accountTier)) {
+        return res.status(400).json({ error: "Invalid account tier. Must be one of: free, basic, pro, enterprise" });
+      }
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await storage.updateUserAccountTier(id, accountTier);
+
+      res.json({ message: "Account tier updated successfully", accountTier });
+    } catch (error) {
+      console.error("Error updating account tier:", error);
+      res.status(500).json({ error: "Failed to update account tier" });
     }
   });
 
