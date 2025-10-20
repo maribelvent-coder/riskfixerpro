@@ -3,6 +3,8 @@ import { eq, and, gt } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import type { IStorage } from "./storage";
 import type {
+  Organization,
+  InsertOrganization,
   User,
   InsertUser,
   PasswordResetToken,
@@ -35,6 +37,48 @@ import type {
 } from "@shared/schema";
 
 export class DbStorage implements IStorage {
+  // Organization methods
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    const results = await db.select().from(schema.organizations).where(eq(schema.organizations.id, id));
+    return results[0];
+  }
+
+  async getOrganizationByOwnerId(ownerId: string): Promise<Organization | undefined> {
+    const results = await db.select().from(schema.organizations).where(eq(schema.organizations.ownerId, ownerId));
+    return results[0];
+  }
+
+  async createOrganization(insertOrganization: InsertOrganization): Promise<Organization> {
+    const results = await db.insert(schema.organizations).values(insertOrganization).returning();
+    return results[0];
+  }
+
+  async updateOrganization(id: string, partialOrganization: Partial<Organization>): Promise<Organization | undefined> {
+    const results = await db.update(schema.organizations)
+      .set(partialOrganization)
+      .where(eq(schema.organizations.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async getOrganizationMembers(organizationId: string): Promise<User[]> {
+    const results = await db.select().from(schema.users)
+      .where(eq(schema.users.organizationId, organizationId));
+    return results;
+  }
+
+  async addUserToOrganization(userId: string, organizationId: string, role: string): Promise<void> {
+    await db.update(schema.users)
+      .set({ organizationId, organizationRole: role })
+      .where(eq(schema.users.id, userId));
+  }
+
+  async removeUserFromOrganization(userId: string): Promise<void> {
+    await db.update(schema.users)
+      .set({ organizationId: null, organizationRole: 'member' })
+      .where(eq(schema.users.id, userId));
+  }
+
   // User methods
   async getUser(id: string): Promise<User | undefined> {
     const results = await db.select().from(schema.users).where(eq(schema.users.id, id));
@@ -70,6 +114,12 @@ export class DbStorage implements IStorage {
   async updateUserEmail(userId: string, email: string): Promise<void> {
     await db.update(schema.users)
       .set({ email })
+      .where(eq(schema.users.id, userId));
+  }
+
+  async updateUserAccountTier(userId: string, accountTier: string): Promise<void> {
+    await db.update(schema.users)
+      .set({ accountTier })
       .where(eq(schema.users.id, userId));
   }
 

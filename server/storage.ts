@@ -27,11 +27,22 @@ import {
   type InsertRiskInsight,
   type Report,
   type InsertReport,
-  type AssessmentWithQuestions
+  type AssessmentWithQuestions,
+  type Organization,
+  type InsertOrganization
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
+  // Organization methods
+  getOrganization(id: string): Promise<Organization | undefined>;
+  getOrganizationByOwnerId(ownerId: string): Promise<Organization | undefined>;
+  createOrganization(organization: InsertOrganization): Promise<Organization>;
+  updateOrganization(id: string, organization: Partial<Organization>): Promise<Organization | undefined>;
+  getOrganizationMembers(organizationId: string): Promise<User[]>;
+  addUserToOrganization(userId: string, organizationId: string, role: string): Promise<void>;
+  removeUserFromOrganization(userId: string): Promise<void>;
+
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -40,6 +51,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
   updateUserEmail(userId: string, email: string): Promise<void>;
+  updateUserAccountTier(userId: string, accountTier: string): Promise<void>;
 
   // Password reset token methods
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
@@ -130,6 +142,7 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
+  private organizations: Map<string, Organization>;
   private users: Map<string, User>;
   private passwordResetTokens: Map<string, PasswordResetToken>;
   private sites: Map<string, Site>;
@@ -146,6 +159,7 @@ export class MemStorage implements IStorage {
   private reports: Map<string, Report>;
 
   constructor() {
+    this.organizations = new Map();
     this.users = new Map();
     this.passwordResetTokens = new Map();
     this.sites = new Map();
@@ -160,6 +174,62 @@ export class MemStorage implements IStorage {
     this.treatmentPlans = new Map();
     this.riskInsights = new Map();
     this.reports = new Map();
+  }
+
+  // Organization methods
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    return this.organizations.get(id);
+  }
+
+  async getOrganizationByOwnerId(ownerId: string): Promise<Organization | undefined> {
+    return Array.from(this.organizations.values()).find(
+      (org) => org.ownerId === ownerId,
+    );
+  }
+
+  async createOrganization(insertOrganization: InsertOrganization): Promise<Organization> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const organization: Organization = {
+      id,
+      createdAt,
+      ...insertOrganization,
+    };
+    this.organizations.set(id, organization);
+    return organization;
+  }
+
+  async updateOrganization(id: string, partialOrganization: Partial<Organization>): Promise<Organization | undefined> {
+    const organization = this.organizations.get(id);
+    if (!organization) return undefined;
+    
+    const updated = { ...organization, ...partialOrganization };
+    this.organizations.set(id, updated);
+    return updated;
+  }
+
+  async getOrganizationMembers(organizationId: string): Promise<User[]> {
+    return Array.from(this.users.values()).filter(
+      (user) => user.organizationId === organizationId
+    );
+  }
+
+  async addUserToOrganization(userId: string, organizationId: string, role: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.organizationId = organizationId;
+      user.organizationRole = role;
+      this.users.set(userId, user);
+    }
+  }
+
+  async removeUserFromOrganization(userId: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.organizationId = null;
+      user.organizationRole = 'member';
+      this.users.set(userId, user);
+    }
   }
 
   // User methods
@@ -210,6 +280,14 @@ export class MemStorage implements IStorage {
     const user = this.users.get(userId);
     if (user) {
       user.email = email;
+      this.users.set(userId, user);
+    }
+  }
+
+  async updateUserAccountTier(userId: string, accountTier: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.accountTier = accountTier;
       this.users.set(userId, user);
     }
   }
