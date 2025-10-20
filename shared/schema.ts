@@ -3,12 +3,25 @@ import { pgTable, text, varchar, jsonb, timestamp, integer, boolean } from "driz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  accountTier: text("account_tier").notNull().default("basic"), // basic, pro, enterprise (free users don't have orgs)
+  ownerId: varchar("owner_id").notNull(), // References users.id but not enforced to avoid circular dependency
+  maxMembers: integer("max_members").notNull().default(2), // Basic: 2, Pro: 10, Enterprise: unlimited (-1)
+  maxSites: integer("max_sites").notNull().default(2), // Basic: 2, Pro: 10, Enterprise: unlimited (-1)
+  maxAssessments: integer("max_assessments").notNull().default(5), // Basic: 5, Pro: 50, Enterprise: unlimited (-1)
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   email: text("email").unique(), // nullable for now to allow migration
   password: text("password").notNull(),
   accountTier: text("account_tier").notNull().default("free"), // free, basic, pro, enterprise
+  organizationId: varchar("organization_id").references(() => organizations.id), // null for free tier users
+  organizationRole: text("organization_role").default("member"), // owner, admin, member
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -244,6 +257,11 @@ export const reports = pgTable("reports", {
 });
 
 // Insert schemas
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   email: true,
@@ -323,6 +341,9 @@ export const insertReportSchema = createInsertSchema(reports).omit({
 });
 
 // Types
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
