@@ -529,6 +529,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
+      // If downgrading to free tier, validate organization constraints BEFORE updating
+      if (accountTier === 'free' && user.organizationId) {
+        // Check if user is the organization owner
+        const org = await storage.getOrganization(user.organizationId);
+        if (org && org.ownerId === id) {
+          // Cannot downgrade organization owner to free tier
+          return res.status(400).json({ 
+            error: "Cannot downgrade organization owner to free tier. Please transfer ownership or delete the organization first." 
+          });
+        }
+        // Remove user from organization first
+        await storage.removeUserFromOrganization(id);
+      }
+
+      // Update the user's account tier after all validations pass
       await storage.updateUserAccountTier(id, accountTier);
 
       res.json({ message: "Account tier updated successfully", accountTier });
