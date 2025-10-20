@@ -15,6 +15,7 @@ import AssessmentDetail from "@/pages/AssessmentDetail";
 import Sites from "@/pages/Sites";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
+import TeamMembers from "@/pages/TeamMembers";
 import Signup from "@/pages/Signup";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -116,6 +117,12 @@ function App() {
           <Route path="/app/settings">
             <ProtectedAppLayout>
               <Settings />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/team">
+            <ProtectedAppLayout>
+              <TeamMembers />
             </ProtectedAppLayout>
           </Route>
           

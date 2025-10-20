@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -71,6 +78,31 @@ export default function Admin() {
     },
   });
 
+  const changeTierMutation = useMutation({
+    mutationFn: async ({ userId, tier }: { userId: string; tier: string }) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/users/${userId}/tier`,
+        { accountTier: tier }
+      );
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Tier updated successfully",
+        description: `Account tier has been changed to ${variables.tier}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Tier update failed",
+        description: error.message || "Failed to update tier. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleResetPassword = (user: User) => {
     setSelectedUser(user);
     setShowResetDialog(true);
@@ -96,11 +128,17 @@ export default function Admin() {
         return "bg-purple-500";
       case "pro":
         return "bg-blue-500";
+      case "basic":
+        return "bg-green-500";
       case "free":
         return "bg-gray-500";
       default:
         return "bg-gray-400";
     }
+  };
+
+  const handleChangeTier = (userId: string, tier: string) => {
+    changeTierMutation.mutate({ userId, tier });
   };
 
   return (
@@ -155,9 +193,21 @@ export default function Admin() {
                         {user.username}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getTierColor(user.accountTier)}>
-                          {user.accountTier}
-                        </Badge>
+                        <Select
+                          value={user.accountTier}
+                          onValueChange={(tier) => handleChangeTier(user.id, tier)}
+                          disabled={changeTierMutation.isPending}
+                        >
+                          <SelectTrigger className="w-[140px]" data-testid={`select-tier-${user.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="free">Free</SelectItem>
+                            <SelectItem value="basic">Basic</SelectItem>
+                            <SelectItem value="pro">Pro</SelectItem>
+                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         {user.isAdmin && (
@@ -170,7 +220,7 @@ export default function Admin() {
                       <TableCell className="text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
