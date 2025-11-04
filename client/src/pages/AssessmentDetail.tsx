@@ -358,6 +358,132 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Executive Protection Paradigm Tabs */}
+        <TabsContent value="executive-profile" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Executive Profile & Threat Assessment
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Comprehensive assessment of the executive's profile, public visibility, and threat landscape based on industry, position, and known threats.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Executive Protection Assessment</h3>
+                <p className="text-muted-foreground">This section will capture executive profile, industry threats, and risk factors.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="digital-footprint" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Digital Footprint Analysis
+              </CardTitle>
+              <p className="text-muted-foreground">
+                OSINT assessment, social media analysis, PII exposure, and dark web monitoring for the executive and their family.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-muted rounded-lg p-8">
+                <p className="text-center text-muted-foreground">
+                  This workflow includes 38 pre-loaded survey questions covering OSINT, social media review, and digital threat analysis.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="physical-security" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Physical Security Review
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Assessment of residential security, executive office protection, travel routes, and pattern-of-life analysis.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <FacilitySurvey 
+                assessmentId={assessmentId} 
+                onComplete={handleFacilitySurveyComplete}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="risk-analysis" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Risk Analysis
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Comprehensive risk analysis combining digital footprint findings, physical security assessment, and threat intelligence.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Executive Risk Analysis</h3>
+                <p className="text-muted-foreground">Risk prioritization and analysis for executive protection scenarios.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="treatment-plan" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Security Treatment Plan
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Protective measures, security controls, procedures, and recommendations for executive protection.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Security Treatment Planning</h3>
+                <p className="text-muted-foreground">Develop comprehensive security measures and protective controls.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="executive-summary" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                Executive Summary
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Final executive summary with key findings, priority risks, and recommended protective measures.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Executive Summary Report</h3>
+                <p className="text-muted-foreground">Comprehensive summary of findings and recommendations for leadership.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Progress Summary */}
