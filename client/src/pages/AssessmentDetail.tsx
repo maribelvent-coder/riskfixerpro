@@ -262,29 +262,62 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
       {/* Main Content - Paradigm-Aware Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`w-full ${
-          workflowConfig.tabs.length === 3 
-            ? 'grid grid-cols-3' 
-            : 'flex flex-wrap justify-start gap-1'
-        }`}>
-          {workflowConfig.tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <TabsTrigger 
-                key={tab.id}
-                value={tab.id}
-                data-testid={`tab-${tab.id}`}
-                disabled={!tabsAvailable[tab.id]}
-                className={`flex items-center gap-2 ${
-                  workflowConfig.tabs.length === 6 ? 'flex-1 min-w-[140px]' : ''
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className={workflowConfig.tabs.length === 6 ? 'text-xs' : ''}>{tab.label}</span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+        {workflowConfig.tabs.length === 6 ? (
+          <div className="w-full space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              {workflowConfig.tabs.slice(0, 3).map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger 
+                    key={tab.id}
+                    value={tab.id}
+                    data-testid={`tab-${tab.id}`}
+                    disabled={!tabsAvailable[tab.id]}
+                    className="flex items-center gap-2 justify-center"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {workflowConfig.tabs.slice(3, 6).map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger 
+                    key={tab.id}
+                    value={tab.id}
+                    data-testid={`tab-${tab.id}`}
+                    disabled={!tabsAvailable[tab.id]}
+                    className="flex items-center gap-2 justify-center"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <TabsList className="grid w-full grid-cols-3">
+            {workflowConfig.tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger 
+                  key={tab.id}
+                  value={tab.id}
+                  data-testid={`tab-${tab.id}`}
+                  disabled={!tabsAvailable[tab.id]}
+                  className="flex items-center gap-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        )}
 
         {/* Phase 1: Facility Physical Security Survey */}
         <TabsContent value="facility-survey" className="space-y-4">
