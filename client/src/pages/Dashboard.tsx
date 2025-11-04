@@ -22,6 +22,7 @@ import { getTierLimits, getUpgradeMessage, type AccountTier } from "@shared/tier
 
 const createAssessmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  templateId: z.string().optional(),
   siteId: z.string().optional(),
   location: z.string().optional(),
   assessor: z.string().min(1, "Assessor name is required"),
@@ -63,6 +64,11 @@ export default function Dashboard() {
     queryKey: ["/api/sites"],
   });
 
+  // Fetch assessment templates
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+    queryKey: ["/api/templates"],
+  });
+
   // Check tier limitations
   const tier = (user?.accountTier || "free") as AccountTier;
   const tierLimits = getTierLimits(tier);
@@ -73,6 +79,7 @@ export default function Dashboard() {
     resolver: zodResolver(createAssessmentFormSchema),
     defaultValues: {
       title: "New Security Assessment",
+      templateId: "none",
       siteId: "",
       location: "",
       assessor: user?.username || "Current User",
@@ -95,6 +102,7 @@ export default function Dashboard() {
           title: data.title,
           assessor: data.assessor,
           status: "draft" as const,
+          templateId: data.templateId && data.templateId !== "none" ? data.templateId : undefined,
           siteId: data.siteId,
           location: selectedSite 
             ? `${selectedSite.name} - ${selectedSite.city}, ${selectedSite.state}`
@@ -106,6 +114,7 @@ export default function Dashboard() {
           title: data.title,
           assessor: data.assessor,
           status: "draft" as const,
+          templateId: data.templateId && data.templateId !== "none" ? data.templateId : undefined,
           location: data.location || "",
         };
       }
@@ -400,6 +409,39 @@ export default function Dashboard() {
                         data-testid="input-assessment-title"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="templateId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assessment Template (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={templatesLoading}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-template">
+                          <SelectValue placeholder={
+                            templatesLoading 
+                              ? "Loading templates..." 
+                              : "Select a template (optional)"
+                          } />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No template (blank assessment)</SelectItem>
+                        {templates.length > 0 && templates.map((template: any) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Templates pre-load survey questions and set the assessment workflow
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
