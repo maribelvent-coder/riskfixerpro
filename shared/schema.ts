@@ -57,6 +57,7 @@ export const assessments = pgTable("assessments", {
   userId: varchar("user_id").notNull().references(() => users.id),
   siteId: varchar("site_id").references(() => sites.id),
   templateId: text("template_id"), // Source template: executive-protection, office-building, etc.
+  surveyParadigm: text("survey_paradigm").notNull().default("facility"), // facility, executive, custom
   title: text("title").notNull(),
   location: text("location").notNull(),
   assessor: text("assessor").notNull(),

@@ -17,6 +17,7 @@ interface Template {
   description: string;
   icon: any;
   category: string;
+  surveyParadigm: "facility" | "executive" | "custom"; // Determines workflow type
   assetTypes: string[];
   commonRisks: string[];
   typicalControls: string[];
@@ -29,6 +30,7 @@ const templates: Template[] = [
     description: "Standard commercial office space with workstations, meeting rooms, and common areas",
     icon: Building2,
     category: "Commercial",
+    surveyParadigm: "facility",
     assetTypes: ["Personnel", "IT Equipment", "Confidential Data", "Office Assets"],
     commonRisks: ["Unauthorized Access", "Theft of Equipment", "Data Breach", "Workplace Violence"],
     typicalControls: ["Access Control System", "CCTV Surveillance", "Visitor Management", "Security Guards"]
@@ -39,6 +41,7 @@ const templates: Template[] = [
     description: "High-security facility housing servers, network equipment, and critical IT infrastructure",
     icon: Server,
     category: "Technology",
+    surveyParadigm: "facility",
     assetTypes: ["Server Infrastructure", "Network Equipment", "Critical Data", "Power Systems"],
     commonRisks: ["Physical Intrusion", "Environmental Damage", "Power Failure", "Equipment Theft"],
     typicalControls: ["Biometric Access", "24/7 Surveillance", "Environmental Monitoring", "Redundant Power"]
@@ -49,6 +52,7 @@ const templates: Template[] = [
     description: "Storage and logistics facility with inventory, loading docks, and material handling",
     icon: Package,
     category: "Industrial",
+    surveyParadigm: "facility",
     assetTypes: ["Inventory", "Equipment", "Vehicles", "Personnel"],
     commonRisks: ["Cargo Theft", "Unauthorized Entry", "Vehicle Accidents", "Inventory Shrinkage"],
     typicalControls: ["Perimeter Fencing", "Gate Access Control", "Dock Security", "Inventory Tracking"]
@@ -59,6 +63,7 @@ const templates: Template[] = [
     description: "Customer-facing retail location with merchandise, cash handling, and public access",
     icon: ShoppingCart,
     category: "Retail",
+    surveyParadigm: "facility",
     assetTypes: ["Merchandise", "Cash/Payment Systems", "Personnel", "Customer Data"],
     commonRisks: ["Shoplifting", "Robbery", "Employee Theft", "Customer Injury"],
     typicalControls: ["EAS Systems", "POS Surveillance", "Safe Drop Procedures", "Staff Training"]
@@ -69,6 +74,7 @@ const templates: Template[] = [
     description: "Industrial production facility with machinery, raw materials, and production lines",
     icon: Factory,
     category: "Industrial",
+    surveyParadigm: "facility",
     assetTypes: ["Production Equipment", "Raw Materials", "Finished Goods", "Intellectual Property"],
     commonRisks: ["Industrial Espionage", "Sabotage", "Equipment Damage", "Supply Chain Disruption"],
     typicalControls: ["Restricted Access Zones", "CCTV Coverage", "Cybersecurity Measures", "Background Checks"]
@@ -79,6 +85,7 @@ const templates: Template[] = [
     description: "Medical facility with patient care areas, pharmaceutical storage, and medical records",
     icon: Heart,
     category: "Healthcare",
+    surveyParadigm: "facility",
     assetTypes: ["Patients", "Medical Equipment", "Pharmaceuticals", "Patient Records"],
     commonRisks: ["Infant Abduction", "Drug Theft", "Violence Against Staff", "HIPAA Violations"],
     typicalControls: ["Infant Security Systems", "Pharmacy Access Control", "Panic Buttons", "Privacy Protocols"]
@@ -89,6 +96,7 @@ const templates: Template[] = [
     description: "School or university campus with classrooms, labs, dormitories, and common areas",
     icon: GraduationCap,
     category: "Education",
+    surveyParadigm: "facility",
     assetTypes: ["Students", "Staff", "Educational Equipment", "Research Data"],
     commonRisks: ["Active Shooter", "Unauthorized Access", "Bullying/Violence", "Theft of Equipment"],
     typicalControls: ["Controlled Entry Points", "Emergency Notification", "Visitor Screening", "Campus Police"]
@@ -99,6 +107,7 @@ const templates: Template[] = [
     description: "Public sector facility with classified areas, sensitive information, and public services",
     icon: Landmark,
     category: "Government",
+    surveyParadigm: "facility",
     assetTypes: ["Classified Information", "Public Officials", "IT Systems", "Citizens"],
     commonRisks: ["Terrorism", "Espionage", "Cyber Attack", "Public Disruption"],
     typicalControls: ["Security Clearances", "Screening Technology", "Armed Security", "Cyber Defense"]
@@ -109,6 +118,7 @@ const templates: Template[] = [
     description: "Comprehensive security assessment for high-profile executives covering digital footprint, travel security, residential protection, and corporate office security",
     icon: Shield,
     category: "Executive",
+    surveyParadigm: "executive",
     assetTypes: [
       "Executive Personnel",
       "Family Members",
@@ -174,7 +184,8 @@ export default function Templates() {
         location: "",
         assessor: "",
         status: "draft",
-        templateId: template.id
+        templateId: template.id,
+        surveyParadigm: template.surveyParadigm
       });
     },
     onSuccess: (data, template) => {
