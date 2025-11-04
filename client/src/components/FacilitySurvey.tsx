@@ -603,6 +603,13 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             <Save className="h-4 w-4 mr-2" />
             {saveSurveyMutation.isPending ? "Saving..." : "Save Progress"}
           </Button>
+          <Button 
+            variant="outline"
+            onClick={handleComplete}
+            data-testid="button-skip-survey"
+          >
+            Skip to Risk Assessment
+          </Button>
         </div>
         
         <div className="flex gap-2">
@@ -626,7 +633,6 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
           ) : (
             <Button 
               onClick={handleComplete}
-              disabled={progress < 80}
               data-testid="button-complete-survey"
             >
               Complete Survey & Start Risk Assessment

@@ -321,21 +321,38 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         </Card>
       ))}
 
-      {/* Complete Button */}
-      {onComplete && progressPercent === 100 && (
-        <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
+      {/* Action Buttons */}
+      {onComplete && (
+        <Card className={progressPercent === 100 ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900" : ""}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-                <div>
-                  <h4 className="font-semibold">Assessment Complete</h4>
-                  <p className="text-sm text-muted-foreground">All questions have been answered</p>
-                </div>
+                {progressPercent === 100 ? (
+                  <>
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                    <div>
+                      <h4 className="font-semibold">Section Complete</h4>
+                      <p className="text-sm text-muted-foreground">All questions have been answered</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Info className="h-6 w-6 text-muted-foreground" />
+                    <div>
+                      <h4 className="font-semibold">Progress: {Math.round(progressPercent)}%</h4>
+                      <p className="text-sm text-muted-foreground">{answeredQuestions} of {totalQuestions} questions answered</p>
+                    </div>
+                  </>
+                )}
               </div>
-              <Button onClick={onComplete} data-testid="button-complete-section">
-                Mark Section Complete
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onComplete} data-testid="button-skip-section">
+                  Skip Section
+                </Button>
+                <Button onClick={onComplete} data-testid="button-complete-section">
+                  {progressPercent === 100 ? "Mark Complete" : "Save & Continue"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
