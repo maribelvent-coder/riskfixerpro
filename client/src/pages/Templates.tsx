@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building2, Server, Package, ShoppingCart, Factory, Heart, GraduationCap, Landmark, Search, AlertCircle } from "lucide-react";
+import { Building2, Server, Package, ShoppingCart, Factory, Heart, GraduationCap, Landmark, Shield, Search, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -102,6 +102,51 @@ const templates: Template[] = [
     assetTypes: ["Classified Information", "Public Officials", "IT Systems", "Citizens"],
     commonRisks: ["Terrorism", "Espionage", "Cyber Attack", "Public Disruption"],
     typicalControls: ["Security Clearances", "Screening Technology", "Armed Security", "Cyber Defense"]
+  },
+  {
+    id: "executive-protection",
+    name: "Executive Protection",
+    description: "Comprehensive security assessment for high-profile executives covering digital footprint, travel security, residential protection, and corporate office security",
+    icon: Shield,
+    category: "Executive",
+    assetTypes: [
+      "Executive Personnel",
+      "Family Members",
+      "Personal Information (PII)",
+      "Residential Property",
+      "Executive Office Suite",
+      "Digital Assets & Credentials",
+      "Travel & Transportation",
+      "Confidential Communications"
+    ],
+    commonRisks: [
+      "Doxxing & PII Exposure",
+      "Social Engineering & Phishing",
+      "Surveillance & Pattern-of-Life Analysis",
+      "Kidnapping & Extortion",
+      "Home Invasion",
+      "Travel Ambush",
+      "Cyber Compromise (BEC/Account Takeover)",
+      "Corporate Espionage",
+      "Insider Threats",
+      "Active Threats & Violence"
+    ],
+    typicalControls: [
+      "OSINT Assessment & Dark Web Monitoring",
+      "Social Media Privacy Controls",
+      "Secure Travel Risk Assessments",
+      "Residential Perimeter Security (CPTED)",
+      "Access Control Systems (Biometric/RBAC)",
+      "24/7 CCTV & Intrusion Detection",
+      "Safe Room / Panic Room",
+      "Executive Protection Detail",
+      "Secure Transportation (Vetted Drivers)",
+      "TSCM Sweeps (Bug Detection)",
+      "VPN & Multi-Factor Authentication",
+      "Mail Screening Procedures",
+      "Emergency Evacuation Plans",
+      "Household Staff Vetting"
+    ]
   }
 ];
 
