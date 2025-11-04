@@ -15,7 +15,6 @@ interface AssessmentDetailProps {
 }
 
 export default function AssessmentDetail({ assessmentId = "demo-001" }: AssessmentDetailProps) {
-  const [activeTab, setActiveTab] = useState("facility-survey");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Fetch assessment data
@@ -23,7 +22,54 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     queryKey: ["/api/assessments", assessmentId],
     enabled: !!assessmentId
   });
+  
+  // Set initial activeTab based on paradigm
+  const getInitialTab = () => {
+    const paradigm = assessmentData?.surveyParadigm || "facility";
+    return paradigm === "executive" ? "executive-profile" : "facility-survey";
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab());
 
+  // Get paradigm-specific workflow configuration
+  const getWorkflowConfig = () => {
+    const paradigm = assessmentData?.surveyParadigm || "facility";
+    
+    if (paradigm === "executive") {
+      return {
+        tabs: [
+          { id: "executive-profile", label: "Executive Profile & Threat Assessment", icon: User },
+          { id: "digital-footprint", label: "Digital Footprint Analysis", icon: Shield },
+          { id: "physical-security", label: "Physical Security Review", icon: Building },
+          { id: "risk-analysis", label: "Risk Analysis", icon: Shield },
+          { id: "treatment-plan", label: "Security Treatment Plan", icon: FileText },
+          { id: "executive-summary", label: "Executive Summary", icon: CheckCircle }
+        ],
+        phases: [
+          { label: "Profile & Threats", completed: false },
+          { label: "Analysis", completed: false },
+          { label: "Treatment & Summary", completed: false }
+        ]
+      };
+    }
+    
+    // Default facility paradigm
+    return {
+      tabs: [
+        { id: "facility-survey", label: "Facility Survey", icon: Building },
+        { id: "risk-assessment", label: "Security Risk Assessment", icon: Shield },
+        { id: "reports", label: "Reports", icon: FileText }
+      ],
+      phases: [
+        { label: "Phase 1: Facility Survey", completed: assessmentData?.facilitySurveyCompleted || false },
+        { label: "Phase 2: Risk Assessment", completed: assessmentData?.riskAssessmentCompleted || false },
+        { label: "Reports", completed: false }
+      ]
+    };
+  };
+
+  const workflowConfig = getWorkflowConfig();
+  
   // Determine current phase based on assessment status
   const getCurrentPhase = () => {
     if (!assessmentData) return 1;
@@ -36,6 +82,17 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   
   // Auto-advance tabs based on completion
   const getTabsAvailability = () => {
+    const paradigm = assessmentData?.surveyParadigm || "facility";
+    
+    if (paradigm === "executive") {
+      // Executive paradigm - all tabs available from start for now
+      return workflowConfig.tabs.reduce((acc, tab) => ({
+        ...acc,
+        [tab.id]: true
+      }), {});
+    }
+    
+    // Facility paradigm - sequential unlock
     const tabs = {
       "facility-survey": true,
       "risk-assessment": assessmentData?.facilitySurveyCompleted || false,
@@ -189,37 +246,28 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         </div>
       </div>
 
-      {/* Main Content - Two Phase Assessment */}
+      {/* Main Content - Paradigm-Aware Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger 
-            value="facility-survey" 
-            data-testid="tab-facility-survey"
-            className="flex items-center gap-2"
-          >
-            <Building className="h-4 w-4" />
-            Facility Survey
-            {assessmentData.facilitySurveyCompleted && <CheckCircle className="h-3 w-3 text-green-500" />}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="risk-assessment" 
-            data-testid="tab-risk-assessment"
-            disabled={!tabsAvailable["risk-assessment"]}
-            className="flex items-center gap-2"
-          >
-            <Shield className="h-4 w-4" />
-            Security Risk Assessment
-            {assessmentData.riskAssessmentCompleted && <CheckCircle className="h-3 w-3 text-green-500" />}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="reports" 
-            data-testid="tab-reports"
-            disabled={!tabsAvailable["reports"]}
-            className="flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Reports
-          </TabsTrigger>
+        <TabsList className={`grid w-full ${
+          workflowConfig.tabs.length === 3 ? 'grid-cols-3' :
+          workflowConfig.tabs.length === 6 ? 'grid-cols-6' :
+          'grid-cols-3'
+        }`}>
+          {workflowConfig.tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger 
+                key={tab.id}
+                value={tab.id}
+                data-testid={`tab-${tab.id}`}
+                disabled={!tabsAvailable[tab.id]}
+                className="flex items-center gap-2"
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden md:inline">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         {/* Phase 1: Facility Physical Security Survey */}
