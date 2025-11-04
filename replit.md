@@ -63,7 +63,11 @@ Preferred communication style: Simple, everyday language.
     -   Protected app routes: `/app/*` (dashboard, assessments, sites, analysis, settings)
     -   Authentication routes: `/login`, `/signup`, `/forgot-password`, `/reset-password`
 -   **AI Integration**: OpenAI GPT-5 for risk analysis and insight generation, adhering to ASIS CPP standards.
--   **Assessment Workflow**: A multi-phase process including Facility Survey, a 7-step Enhanced Risk Assessment (Assets, Risk Scenarios, Vulnerabilities & Controls, Prioritize Risks, Treatment Planning, Executive Summary, Review & Submit), AI Analysis, and Report Generation.
+-   **Multi-Paradigm Assessment System**: Assessments support different workflow paradigms based on assessment type:
+    -   **Facility Paradigm** (Standard): Traditional facility security assessment with 7-step workflow - Facility Survey, Asset Identification, Risk Scenarios, Vulnerabilities & Controls, Risk Prioritization, Treatment Planning, Executive Summary
+    -   **Executive Paradigm**: Specialized workflow for executive protection assessments with 6-step process - Executive Profile & Threat Assessment, Digital Footprint Analysis, Physical Security Review, Risk Analysis, Security Treatment Plan, Executive Summary
+    -   Each template specifies its surveyParadigm field which determines the workflow structure
+    -   The assessments table stores surveyParadigm to maintain workflow type throughout assessment lifecycle
 -   **Triple Risk Calculation Model**: Calculates Inherent, Current (after existing controls), and Residual (after proposed treatments) risks using a floating-point compound reduction system.
 
 ### Feature Specifications
