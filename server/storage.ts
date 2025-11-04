@@ -501,6 +501,13 @@ export class MemStorage implements IStorage {
   }
 
   // Facility Survey methods
+  // Template Questions methods
+  async getTemplateQuestions(templateId: string): Promise<TemplateQuestion[]> {
+    // MemStorage doesn't track template questions - return empty array
+    return [];
+  }
+
+  // Facility Survey methods
   async getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]> {
     return Array.from(this.facilitySurveyQuestions.values())
       .filter(q => q.assessmentId === assessmentId);
@@ -517,10 +524,24 @@ export class MemStorage implements IStorage {
       notes: insertQuestion.notes || null,
       evidence: insertQuestion.evidence || null,
       recommendations: insertQuestion.recommendations || null,
+      bestPractice: insertQuestion.bestPractice || null,
+      rationale: insertQuestion.rationale || null,
+      importance: insertQuestion.importance || null,
+      orderIndex: insertQuestion.orderIndex || null,
+      templateQuestionId: insertQuestion.templateQuestionId || null,
       createdAt: new Date()
     };
     this.facilitySurveyQuestions.set(id, question);
     return question;
+  }
+
+  async bulkCreateFacilityQuestions(questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]> {
+    const results: FacilitySurveyQuestion[] = [];
+    for (const questionData of questions) {
+      const created = await this.createFacilitySurveyQuestion(questionData);
+      results.push(created);
+    }
+    return results;
   }
 
   async bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]> {

@@ -106,6 +106,7 @@ export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
   bestPractice: text("best_practice"), // How to conduct the review
   rationale: text("rationale"), // Risk being mitigated
   importance: text("importance"), // Critical, High, Medium, Low
+  orderIndex: integer("order_index"), // Display order from template
   standard: text("standard"), // Reference to CPP/Army FM standard
   type: text("type").notNull(), // condition, measurement, yes-no, rating
   response: jsonb("response"), // Condition, measurements, ratings

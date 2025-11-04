@@ -731,6 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bestPractice: tq.bestPractice || null,
               rationale: tq.rationale || null,
               importance: tq.importance || null,
+              orderIndex: tq.orderIndex,
               type: tq.type || "yes-no",
               response: null,
               notes: null,
