@@ -7,9 +7,10 @@ import { FacilitySurvey } from "@/components/FacilitySurvey";
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
+import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
 import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { SelectAssessment } from "@shared/schema";
+import type { Assessment } from "@shared/schema";
 
 interface AssessmentDetailProps {
   assessmentId?: string;
@@ -20,7 +21,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const hasInitializedTab = useRef(false);
 
   // Fetch assessment data with proper typing
-  const { data: assessmentData, isLoading, error } = useQuery<SelectAssessment>({
+  const { data: assessmentData, isLoading, error } = useQuery<Assessment>({
     queryKey: ["/api/assessments", assessmentId],
     enabled: !!assessmentId
   });
@@ -384,14 +385,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 Comprehensive assessment of the executive's profile, public visibility, and threat landscape based on industry, position, and known threats.
               </p>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Executive Protection Assessment</h3>
-                <p className="text-muted-foreground">This section will capture executive profile, industry threats, and risk factors.</p>
-              </div>
-            </CardContent>
           </Card>
+          
+          <ExecutiveSurveyQuestions 
+            assessmentId={assessmentId} 
+          />
         </TabsContent>
 
         <TabsContent value="digital-footprint" className="space-y-4">
@@ -405,14 +403,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 OSINT assessment, social media analysis, PII exposure, and dark web monitoring for the executive and their family.
               </p>
             </CardHeader>
-            <CardContent>
-              <div className="bg-muted rounded-lg p-8">
-                <p className="text-center text-muted-foreground">
-                  This workflow includes 38 pre-loaded survey questions covering OSINT, social media review, and digital threat analysis.
-                </p>
-              </div>
-            </CardContent>
           </Card>
+          
+          <ExecutiveSurveyQuestions 
+            assessmentId={assessmentId} 
+            sectionCategory="OSINT & Digital Footprint Analysis"
+          />
         </TabsContent>
 
         <TabsContent value="physical-security" className="space-y-4">
@@ -426,13 +422,17 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 Assessment of residential security, executive office protection, travel routes, and pattern-of-life analysis.
               </p>
             </CardHeader>
-            <CardContent>
-              <FacilitySurvey 
-                assessmentId={assessmentId} 
-                onComplete={handleFacilitySurveyComplete}
-              />
-            </CardContent>
           </Card>
+          
+          <ExecutiveSurveyQuestions 
+            assessmentId={assessmentId} 
+            sectionCategory="Residential Security Assessment"
+          />
+          
+          <ExecutiveSurveyQuestions 
+            assessmentId={assessmentId} 
+            sectionCategory="Executive Office & Corporate Security"
+          />
         </TabsContent>
 
         <TabsContent value="risk-analysis" className="space-y-4">

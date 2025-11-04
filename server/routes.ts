@@ -1437,6 +1437,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Facility Survey Questions routes
+  app.get("/api/assessments/:id/facility-survey-questions", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const questions = await storage.getFacilitySurveyQuestions(id);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching facility survey questions:", error);
+      res.status(500).json({ error: "Failed to fetch facility survey questions" });
+    }
+  });
+
+  app.patch("/api/assessments/:id/facility-survey-questions/:questionId", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const updateData = req.body;
+      
+      // Sanitize: don't allow changing assessmentId or templateQuestionId
+      const { assessmentId, templateQuestionId, ...safeData } = updateData;
+      
+      const updated = await storage.updateFacilitySurveyQuestion(questionId, safeData);
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating facility survey question:", error);
+      res.status(500).json({ error: "Failed to update question" });
+    }
+  });
+
   // AI Risk Analysis routes
   app.post("/api/assessments/:id/analyze", verifyAssessmentOwnership, async (req, res) => {
     try {

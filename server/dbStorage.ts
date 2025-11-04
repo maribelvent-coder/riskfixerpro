@@ -311,6 +311,14 @@ export class DbStorage implements IStorage {
     return results;
   }
 
+  async updateFacilitySurveyQuestion(questionId: string, data: Partial<FacilitySurveyQuestion>): Promise<FacilitySurveyQuestion | null> {
+    const results = await db.update(schema.facilitySurveyQuestions)
+      .set(data)
+      .where(eq(schema.facilitySurveyQuestions.id, questionId))
+      .returning();
+    return results[0] || null;
+  }
+
   async bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]> {
     // Delete existing and insert new
     await db.delete(schema.facilitySurveyQuestions)

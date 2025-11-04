@@ -85,6 +85,7 @@ export interface IStorage {
   getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]>;
   createFacilitySurveyQuestion(question: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion>;
   bulkCreateFacilityQuestions(questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
+  updateFacilitySurveyQuestion(questionId: string, data: Partial<FacilitySurveyQuestion>): Promise<FacilitySurveyQuestion | null>;
   bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
 
   // Assessment Questions methods
@@ -542,6 +543,19 @@ export class MemStorage implements IStorage {
       results.push(created);
     }
     return results;
+  }
+
+  async updateFacilitySurveyQuestion(questionId: string, data: Partial<FacilitySurveyQuestion>): Promise<FacilitySurveyQuestion | null> {
+    const existing = this.facilitySurveyQuestions.get(questionId);
+    if (!existing) {
+      return null;
+    }
+    const updated: FacilitySurveyQuestion = {
+      ...existing,
+      ...data
+    };
+    this.facilitySurveyQuestions.set(questionId, updated);
+    return updated;
   }
 
   async bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]> {
