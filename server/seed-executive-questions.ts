@@ -57,10 +57,27 @@ function inferQuestionType(questionText: string, importance: string): string {
 function parseSection(questionId: string): { section: number; category: string } {
   const sectionNum = parseInt(questionId.charAt(0));
   
+  // Special handling for specific questions that need to be recategorized
+  // 1.1.1 (PII) and 1.1.3 (Dark Web) → Digital Footprint
+  if (questionId === '1.1.1' || questionId === '1.1.3') {
+    return {
+      section: 1,
+      category: 'Digital Footprint Analysis'
+    };
+  }
+  
+  // 1.1.2 (Residential Imagery) → Residential Security
+  if (questionId === '1.1.2') {
+    return {
+      section: 2,
+      category: 'Residential Security Assessment'
+    };
+  }
+  
   if (sectionNum === 1) {
     return {
       section: 1,
-      category: 'OSINT & Digital Footprint Analysis'
+      category: 'OSINT & Threat Assessment'
     };
   } else if (sectionNum === 2) {
     return {
@@ -79,8 +96,17 @@ function parseSection(questionId: string): { section: number; category: string }
 
 // Extract subcategory from section headers
 function getSubcategory(questionId: string, questionText: string): string {
-  // Section 1 subcategories
-  if (questionId.startsWith('1.1')) return 'Open-Source Intelligence (OSINT) & Digital Footprint';
+  // Special handling for recategorized questions
+  if (questionId === '1.1.1' || questionId === '1.1.3') {
+    return 'PII & Dark Web Exposure';
+  }
+  
+  if (questionId === '1.1.2') {
+    return 'Residential Physical Security';
+  }
+  
+  // Section 1 subcategories (OSINT & Threat Assessment)
+  if (questionId.startsWith('1.1')) return 'Open-Source Intelligence (OSINT)';
   if (questionId.startsWith('1.2')) return 'Social Media Review (Executive & Family)';
   if (questionId.startsWith('1.3')) return 'Personal Practices & Pattern of Life';
   if (questionId.startsWith('1.4')) return 'Travel Security & Advance Work';
@@ -194,6 +220,20 @@ async function seedExecutiveProtectionQuestions() {
     }
     
     console.log(`✅ Prepared ${questionsToInsert.length} questions for insertion`);
+    
+    // Add "Additional Observations" section at the end
+    questionsToInsert.push({
+      templateId: 'executive-protection',
+      questionId: '4.1.1',
+      category: 'Additional Observations',
+      subcategory: 'Ad-Hoc Interview Notes',
+      question: 'Document any additional observations, concerns, or topics discussed during the assessment that were not covered in the structured framework above.',
+      bestPractice: 'Use this section to capture important details that emerged during the interview or site visit that don\'t fit into the standard assessment categories. This ensures comprehensive documentation.',
+      rationale: 'Assessments often reveal unexpected findings or unique circumstances that require documentation. This catch-all section ensures nothing critical is missed.',
+      importance: 'Medium',
+      type: 'text',
+      orderIndex: orderIndex++
+    });
     
     // Insert all questions
     if (questionsToInsert.length > 0) {

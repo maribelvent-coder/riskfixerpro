@@ -12,13 +12,15 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
-  Camera
+  Camera,
+  FileDown
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { FacilitySurveyQuestion } from "@shared/schema";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { generateSurveyFindingsPDF } from "@/lib/surveyFindingsPDF";
 
 interface ExecutiveSurveyQuestionsProps {
   assessmentId: string;
@@ -48,6 +50,27 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      await generateSurveyFindingsPDF(assessmentId);
+      toast({
+        title: "PDF Generated",
+        description: "Survey findings have been exported successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Fetch questions
   const { data: questions, isLoading } = useQuery<FacilitySurveyQuestion[]>({
@@ -214,18 +237,32 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
       {/* Progress Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base">Assessment Progress</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <CardTitle className="text-base">Assessment Progress</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPDF}
+                  disabled={isExporting || answeredQuestions === 0}
+                  data-testid="button-export-survey-pdf"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  {isExporting ? "Generating..." : "Export Findings (PDF)"}
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
                 {answeredQuestions} of {totalQuestions} questions completed
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Progress value={progressPercent} className="flex-1" />
+                <Badge variant="outline" className="text-sm">
+                  {Math.round(progressPercent)}%
+                </Badge>
+              </div>
             </div>
-            <Badge variant="outline" className="text-sm">
-              {Math.round(progressPercent)}%
-            </Badge>
           </div>
-          <Progress value={progressPercent} className="mt-2" />
         </CardHeader>
       </Card>
 
@@ -233,13 +270,39 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
       {Object.entries(groupedQuestions).map(([category, subcategories]) => (
         <Card key={category}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              {category}
-            </CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                {category}
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  // Mark all questions in this category as skipped and collapse
+                  const categoryQuestions = filteredQuestions.filter(q => q.category === category);
+                  categoryQuestions.forEach(q => {
+                    updateQuestionMutation.mutate({
+                      questionId: q.id,
+                      data: { notes: q.notes || '[Section Skipped]' }
+                    });
+                  });
+                  // Collapse this category
+                  setExpandedCategories(prev => prev.filter(c => c !== category));
+                }}
+                data-testid={`button-skip-category-${category}`}
+              >
+                Skip Section
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <Accordion type="multiple" className="w-full">
+            <Accordion 
+              type="multiple" 
+              className="w-full"
+              value={expandedCategories}
+              onValueChange={setExpandedCategories}
+            >
               {Object.entries(subcategories).map(([subcategory, questions]) => (
                 <AccordionItem key={subcategory} value={subcategory}>
                   <AccordionTrigger className="text-left">
@@ -345,14 +408,9 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
                   </>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={onComplete} data-testid="button-skip-section">
-                  Skip Section
-                </Button>
-                <Button onClick={onComplete} data-testid="button-complete-section">
-                  {progressPercent === 100 ? "Mark Complete" : "Save & Continue"}
-                </Button>
-              </div>
+              <Button onClick={onComplete} data-testid="button-complete-section">
+                {progressPercent === 100 ? "Continue to Next Section" : "Save & Continue"}
+              </Button>
             </div>
           </CardContent>
         </Card>

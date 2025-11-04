@@ -520,13 +520,37 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
 
       {/* Current Category Questions */}
       <div ref={contentRef} className="space-y-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          {(() => {
-            const Icon = getCategoryIcon(categories[currentCategory]);
-            return <Icon className="h-4 w-4" />;
-          })()}
-          {categories[currentCategory]?.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            {(() => {
+              const Icon = getCategoryIcon(categories[currentCategory]);
+              return <Icon className="h-4 w-4" />;
+            })()}
+            {categories[currentCategory]?.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
+          </h3>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              // Skip this category - mark all questions with notes
+              const categoryQuestions = questions.filter(q => q.category === categories[currentCategory]);
+              categoryQuestions.forEach(q => {
+                if (!q.notes) {
+                  updateQuestion(q.id, "notes", "[Section Skipped]");
+                }
+              });
+              // Move to next category or complete
+              if (currentCategory < categories.length - 1) {
+                setCurrentCategory(prev => prev + 1);
+              } else {
+                handleComplete();
+              }
+            }}
+            data-testid={`button-skip-category-${categories[currentCategory]}`}
+          >
+            Skip Section
+          </Button>
+        </div>
 
         {currentCategoryQuestions.map((question) => (
           <Card key={question.id}>
@@ -593,24 +617,15 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
 
       {/* Action Buttons */}
       <div className="flex justify-between items-center pt-4">
-        <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={handleSave}
-            disabled={saveSurveyMutation.isPending}
-            data-testid="button-save-survey"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {saveSurveyMutation.isPending ? "Saving..." : "Save Progress"}
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={handleComplete}
-            data-testid="button-skip-survey"
-          >
-            Skip to Risk Assessment
-          </Button>
-        </div>
+        <Button 
+          variant="outline"
+          onClick={handleSave}
+          disabled={saveSurveyMutation.isPending}
+          data-testid="button-save-survey"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {saveSurveyMutation.isPending ? "Saving..." : "Save Progress"}
+        </Button>
         
         <div className="flex gap-2">
           {currentCategory > 0 && (
