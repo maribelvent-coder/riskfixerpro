@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building2, Server, Package, ShoppingCart, Factory, Heart, GraduationCap, Landmark, Shield, Search, AlertCircle } from "lucide-react";
+import { Shield, Search, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,94 +24,6 @@ interface Template {
 }
 
 const templates: Template[] = [
-  {
-    id: "office-building",
-    name: "Office Building",
-    description: "Standard commercial office space with workstations, meeting rooms, and common areas",
-    icon: Building2,
-    category: "Commercial",
-    surveyParadigm: "facility",
-    assetTypes: ["Personnel", "IT Equipment", "Confidential Data", "Office Assets"],
-    commonRisks: ["Unauthorized Access", "Theft of Equipment", "Data Breach", "Workplace Violence"],
-    typicalControls: ["Access Control System", "CCTV Surveillance", "Visitor Management", "Security Guards"]
-  },
-  {
-    id: "data-center",
-    name: "Data Center",
-    description: "High-security facility housing servers, network equipment, and critical IT infrastructure",
-    icon: Server,
-    category: "Technology",
-    surveyParadigm: "facility",
-    assetTypes: ["Server Infrastructure", "Network Equipment", "Critical Data", "Power Systems"],
-    commonRisks: ["Physical Intrusion", "Environmental Damage", "Power Failure", "Equipment Theft"],
-    typicalControls: ["Biometric Access", "24/7 Surveillance", "Environmental Monitoring", "Redundant Power"]
-  },
-  {
-    id: "warehouse",
-    name: "Warehouse / Distribution Center",
-    description: "Storage and logistics facility with inventory, loading docks, and material handling",
-    icon: Package,
-    category: "Industrial",
-    surveyParadigm: "facility",
-    assetTypes: ["Inventory", "Equipment", "Vehicles", "Personnel"],
-    commonRisks: ["Cargo Theft", "Unauthorized Entry", "Vehicle Accidents", "Inventory Shrinkage"],
-    typicalControls: ["Perimeter Fencing", "Gate Access Control", "Dock Security", "Inventory Tracking"]
-  },
-  {
-    id: "retail-store",
-    name: "Retail Store",
-    description: "Customer-facing retail location with merchandise, cash handling, and public access",
-    icon: ShoppingCart,
-    category: "Retail",
-    surveyParadigm: "facility",
-    assetTypes: ["Merchandise", "Cash/Payment Systems", "Personnel", "Customer Data"],
-    commonRisks: ["Shoplifting", "Robbery", "Employee Theft", "Customer Injury"],
-    typicalControls: ["EAS Systems", "POS Surveillance", "Safe Drop Procedures", "Staff Training"]
-  },
-  {
-    id: "manufacturing",
-    name: "Manufacturing Facility",
-    description: "Industrial production facility with machinery, raw materials, and production lines",
-    icon: Factory,
-    category: "Industrial",
-    surveyParadigm: "facility",
-    assetTypes: ["Production Equipment", "Raw Materials", "Finished Goods", "Intellectual Property"],
-    commonRisks: ["Industrial Espionage", "Sabotage", "Equipment Damage", "Supply Chain Disruption"],
-    typicalControls: ["Restricted Access Zones", "CCTV Coverage", "Cybersecurity Measures", "Background Checks"]
-  },
-  {
-    id: "healthcare",
-    name: "Healthcare Facility",
-    description: "Medical facility with patient care areas, pharmaceutical storage, and medical records",
-    icon: Heart,
-    category: "Healthcare",
-    surveyParadigm: "facility",
-    assetTypes: ["Patients", "Medical Equipment", "Pharmaceuticals", "Patient Records"],
-    commonRisks: ["Infant Abduction", "Drug Theft", "Violence Against Staff", "HIPAA Violations"],
-    typicalControls: ["Infant Security Systems", "Pharmacy Access Control", "Panic Buttons", "Privacy Protocols"]
-  },
-  {
-    id: "education",
-    name: "Educational Institution",
-    description: "School or university campus with classrooms, labs, dormitories, and common areas",
-    icon: GraduationCap,
-    category: "Education",
-    surveyParadigm: "facility",
-    assetTypes: ["Students", "Staff", "Educational Equipment", "Research Data"],
-    commonRisks: ["Active Shooter", "Unauthorized Access", "Bullying/Violence", "Theft of Equipment"],
-    typicalControls: ["Controlled Entry Points", "Emergency Notification", "Visitor Screening", "Campus Police"]
-  },
-  {
-    id: "government",
-    name: "Government Building",
-    description: "Public sector facility with classified areas, sensitive information, and public services",
-    icon: Landmark,
-    category: "Government",
-    surveyParadigm: "facility",
-    assetTypes: ["Classified Information", "Public Officials", "IT Systems", "Citizens"],
-    commonRisks: ["Terrorism", "Espionage", "Cyber Attack", "Public Disruption"],
-    typicalControls: ["Security Clearances", "Screening Technology", "Armed Security", "Cyber Defense"]
-  },
   {
     id: "executive-protection",
     name: "Executive Protection",
