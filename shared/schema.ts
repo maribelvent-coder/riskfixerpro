@@ -79,13 +79,33 @@ export const assessments = pgTable("assessments", {
   riskAssessmentCompletedAt: timestamp("risk_assessment_completed_at"),
 });
 
+// Template Questions - Master survey questions for each template type
+export const templateQuestions = pgTable("template_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: text("template_id").notNull(), // executive-protection, office-building, etc.
+  questionId: text("question_id").notNull(), // 1.1.1, 1.1.2, etc.
+  category: text("category").notNull(), // OSINT & Digital Footprint, Travel Security, etc.
+  subcategory: text("subcategory"), // Secondary categorization
+  question: text("question").notNull(), // The actual question text
+  bestPractice: text("best_practice"), // How to conduct the review
+  rationale: text("rationale"), // Risk being mitigated
+  importance: text("importance"), // Critical, High, Medium, Low
+  type: text("type").notNull().default("yes-no"), // yes-no, rating, text, checklist
+  orderIndex: integer("order_index").notNull(), // Display order
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Facility Survey Questions - Physical assessment of existing controls
 export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  templateQuestionId: varchar("template_question_id").references(() => templateQuestions.id), // Link to master template
   category: text("category").notNull(), // barriers, lighting, access-control, surveillance, etc.
   subcategory: text("subcategory"), // doors, windows, cameras, etc.
   question: text("question").notNull(),
+  bestPractice: text("best_practice"), // How to conduct the review
+  rationale: text("rationale"), // Risk being mitigated
+  importance: text("importance"), // Critical, High, Medium, Low
   standard: text("standard"), // Reference to CPP/Army FM standard
   type: text("type").notNull(), // condition, measurement, yes-no, rating
   response: jsonb("response"), // Condition, measurements, ratings
@@ -290,6 +310,11 @@ export const insertAssessmentSchema = createInsertSchema(assessments).omit({
 });
 
 // Insert schemas
+export const insertTemplateQuestionSchema = createInsertSchema(templateQuestions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertFacilitySurveyQuestionSchema = createInsertSchema(facilitySurveyQuestions).omit({
   id: true,
   createdAt: true,
@@ -355,6 +380,9 @@ export type InsertSite = z.infer<typeof insertSiteSchema>;
 
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
+
+export type TemplateQuestion = typeof templateQuestions.$inferSelect;
+export type InsertTemplateQuestion = z.infer<typeof insertTemplateQuestionSchema>;
 
 export type FacilitySurveyQuestion = typeof facilitySurveyQuestions.$inferSelect;
 export type InsertFacilitySurveyQuestion = z.infer<typeof insertFacilitySurveyQuestionSchema>;
