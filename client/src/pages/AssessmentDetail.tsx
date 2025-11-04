@@ -262,10 +262,10 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
       {/* Main Content - Paradigm-Aware Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`grid w-full ${
-          workflowConfig.tabs.length === 3 ? 'grid-cols-3' :
-          workflowConfig.tabs.length === 6 ? 'grid-cols-6' :
-          'grid-cols-3'
+        <TabsList className={`w-full ${
+          workflowConfig.tabs.length === 3 
+            ? 'grid grid-cols-3' 
+            : 'flex flex-wrap justify-start gap-1'
         }`}>
           {workflowConfig.tabs.map((tab) => {
             const Icon = tab.icon;
@@ -275,10 +275,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 value={tab.id}
                 data-testid={`tab-${tab.id}`}
                 disabled={!tabsAvailable[tab.id]}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 ${
+                  workflowConfig.tabs.length === 6 ? 'flex-1 min-w-[140px]' : ''
+                }`}
               >
                 <Icon className="h-4 w-4" />
-                <span className="hidden md:inline">{tab.label}</span>
+                <span className={workflowConfig.tabs.length === 6 ? 'text-xs' : ''}>{tab.label}</span>
               </TabsTrigger>
             );
           })}
