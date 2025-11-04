@@ -42,10 +42,12 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    name: 'connect.sid',
     cookie: {
-      secure: isProduction,
+      secure: false, // Replit handles HTTPS at the proxy level
       httpOnly: true,
       sameSite: 'lax',
+      path: '/',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
