@@ -173,7 +173,8 @@ export default function Templates() {
         title: `${template.name} - Security Assessment`,
         location: "",
         assessor: "",
-        status: "draft"
+        status: "draft",
+        templateId: template.id
       });
     },
     onSuccess: (data, template) => {

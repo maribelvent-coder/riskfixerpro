@@ -56,6 +56,7 @@ export const assessments = pgTable("assessments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   siteId: varchar("site_id").references(() => sites.id),
+  templateId: text("template_id"), // Source template: executive-protection, office-building, etc.
   title: text("title").notNull(),
   location: text("location").notNull(),
   assessor: text("assessor").notNull(),
