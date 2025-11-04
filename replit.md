@@ -63,11 +63,26 @@ Preferred communication style: Simple, everyday language.
     -   Protected app routes: `/app/*` (dashboard, assessments, sites, analysis, settings)
     -   Authentication routes: `/login`, `/signup`, `/forgot-password`, `/reset-password`
 -   **AI Integration**: OpenAI GPT-5 for risk analysis and insight generation, adhering to ASIS CPP standards.
--   **Multi-Paradigm Assessment System**: Assessments support different workflow paradigms based on assessment type:
-    -   **Facility Paradigm** (Standard): Traditional facility security assessment with 7-step workflow - Facility Survey, Asset Identification, Risk Scenarios, Vulnerabilities & Controls, Risk Prioritization, Treatment Planning, Executive Summary
-    -   **Executive Paradigm**: Specialized workflow for executive protection assessments with 6-step process - Executive Profile & Threat Assessment, Digital Footprint Analysis, Physical Security Review, Risk Analysis, Security Treatment Plan, Executive Summary
-    -   Each template specifies its surveyParadigm field which determines the workflow structure
-    -   The assessments table stores surveyParadigm to maintain workflow type throughout assessment lifecycle
+-   **Multi-Paradigm Assessment System**: Dynamic workflow system where different assessment types display completely different tab structures and workflows (not just different questions):
+    -   **Architecture**: 
+        -   `surveyParadigm` field in templates and assessments determines workflow type ("facility" or "executive")
+        -   AssessmentDetail component dynamically renders tabs and phase indicators based on paradigm
+        -   Each paradigm has its own tab configuration, phase labels, and completion tracking
+    -   **Facility Paradigm** (Standard): Traditional 3-tab workflow
+        -   Tabs: Facility Survey → Risk Assessment → Reports
+        -   Phase indicators: "Phase 1: Facility Survey", "Phase 2: Risk Assessment", "Reports"
+        -   Completion tracking via `facilitySurveyCompleted` and `riskAssessmentCompleted` fields
+    -   **Executive Paradigm**: Specialized 6-tab workflow for executive protection
+        -   Tabs: Executive Profile & Threat Assessment → Digital Footprint Analysis → Physical Security Review → Risk Analysis → Security Treatment Plan → Executive Summary
+        -   Phase indicators: "Profile & Threats", "Analysis", "Treatment & Summary"
+        -   38 pre-loaded survey questions covering OSINT, social media analysis, and digital threat assessment
+        -   Currently placeholder content for executive-specific tabs (ready for future implementation)
+    -   **Implementation Details**:
+        -   Tab initialization: useEffect with useRef ensures correct initial tab selection based on paradigm
+        -   Loading guards prevent rendering until paradigm is determined
+        -   TypeScript typing via SelectAssessment ensures type safety
+        -   Phase progress indicators dynamically render based on workflowConfig.phases
+        -   Template selection automatically sets assessment paradigm on creation
 -   **Triple Risk Calculation Model**: Calculates Inherent, Current (after existing controls), and Residual (after proposed treatments) risks using a floating-point compound reduction system.
 
 ### Feature Specifications
