@@ -13,6 +13,7 @@ import type {
   InsertSite,
   Assessment,
   InsertAssessment,
+  TemplateQuestion,
   FacilitySurveyQuestion,
   InsertFacilitySurveyQuestion,
   AssessmentQuestion,
@@ -286,6 +287,14 @@ export class DbStorage implements IStorage {
   }
 
   // Facility Survey methods
+  // Template Questions methods
+  async getTemplateQuestions(templateId: string): Promise<TemplateQuestion[]> {
+    return await db.select().from(schema.templateQuestions)
+      .where(eq(schema.templateQuestions.templateId, templateId))
+      .orderBy(schema.templateQuestions.orderIndex);
+  }
+
+  // Facility Survey methods
   async getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]> {
     return await db.select().from(schema.facilitySurveyQuestions)
       .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId));
@@ -294,6 +303,12 @@ export class DbStorage implements IStorage {
   async createFacilitySurveyQuestion(question: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion> {
     const results = await db.insert(schema.facilitySurveyQuestions).values(question).returning();
     return results[0];
+  }
+
+  async bulkCreateFacilityQuestions(questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]> {
+    if (questions.length === 0) return [];
+    const results = await db.insert(schema.facilitySurveyQuestions).values(questions).returning();
+    return results;
   }
 
   async bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]> {

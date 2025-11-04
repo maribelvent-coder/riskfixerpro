@@ -7,6 +7,7 @@ import {
   type InsertSite,
   type Assessment,
   type InsertAssessment,
+  type TemplateQuestion,
   type FacilitySurveyQuestion,
   type InsertFacilitySurveyQuestion,
   type AssessmentQuestion,
@@ -77,9 +78,13 @@ export interface IStorage {
   updateAssessment(id: string, assessment: Partial<Assessment>): Promise<Assessment | undefined>;
   deleteAssessment(id: string): Promise<boolean>;
 
+  // Template Questions methods
+  getTemplateQuestions(templateId: string): Promise<TemplateQuestion[]>;
+  
   // Facility Survey methods
   getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]>;
   createFacilitySurveyQuestion(question: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion>;
+  bulkCreateFacilityQuestions(questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
   bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
 
   // Assessment Questions methods

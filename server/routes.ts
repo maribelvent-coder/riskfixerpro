@@ -13,7 +13,8 @@ import {
   insertControlSchema,
   insertTreatmentPlanSchema,
   insertReportSchema,
-  insertUserSchema 
+  insertUserSchema,
+  type InsertFacilitySurveyQuestion 
 } from "@shared/schema";
 import { 
   canCreateAssessment, 
@@ -713,6 +714,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId
       });
       const assessment = await storage.createAssessment(validatedData);
+
+      // Auto-populate template questions if templateId is provided
+      const { templateId } = req.body;
+      if (templateId) {
+        try {
+          const templateQuestions = await storage.getTemplateQuestions(templateId);
+          
+          if (templateQuestions.length > 0) {
+            const facilityQuestions: InsertFacilitySurveyQuestion[] = templateQuestions.map(tq => ({
+              assessmentId: assessment.id,
+              templateQuestionId: tq.id,
+              category: tq.category,
+              subcategory: tq.subcategory || null,
+              question: tq.question,
+              bestPractice: tq.bestPractice || null,
+              rationale: tq.rationale || null,
+              importance: tq.importance || null,
+              type: tq.type || "yes-no",
+              response: null,
+              notes: null,
+              evidence: null,
+              recommendations: null,
+              standard: null
+            }));
+            
+            await storage.bulkCreateFacilityQuestions(facilityQuestions);
+            console.log(`✓ Auto-populated ${facilityQuestions.length} survey questions from template: ${templateId}`);
+          }
+        } catch (templateError) {
+          console.error(`Error auto-populating template questions:`, templateError);
+          // Don't fail the assessment creation if template population fails
+        }
+      }
+
       res.status(201).json(assessment);
     } catch (error) {
       if (error instanceof z.ZodError) {
