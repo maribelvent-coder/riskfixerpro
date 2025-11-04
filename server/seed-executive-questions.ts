@@ -77,7 +77,7 @@ function parseSection(questionId: string): { section: number; category: string }
   if (sectionNum === 1) {
     return {
       section: 1,
-      category: 'OSINT & Threat Assessment'
+      category: 'Travel Assessment'
     };
   } else if (sectionNum === 2) {
     return {

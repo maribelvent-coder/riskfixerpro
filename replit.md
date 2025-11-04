@@ -77,7 +77,7 @@ Preferred communication style: Simple, everyday language.
         -   Phase indicators: "Profile & Threats", "Analysis", "Treatment & Summary"
         -   39 pre-loaded survey questions with enhanced categorization:
             -   **Digital Footprint Analysis**: PII exposure, dark web monitoring, social media review (executive & family)
-            -   **OSINT & Threat Assessment**: Personal practices, travel security, transportation protocols, digital hygiene
+            -   **Travel Assessment**: Personal practices, travel security, transportation protocols, digital hygiene
             -   **Residential Security**: Perimeter security, access control, alarm systems, emergency planning (includes residential imagery analysis)
             -   **Executive Office & Corporate Security**: Office physical security and CPTED
             -   **Additional Observations**: Free-form section for ad-hoc interview notes
