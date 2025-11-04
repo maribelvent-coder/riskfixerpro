@@ -8,6 +8,7 @@ import { AssessmentForm } from "@/components/AssessmentForm";
 import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
+import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
 import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Assessment } from "@shared/schema";
@@ -388,7 +389,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </Card>
           
           <ExecutiveSurveyQuestions 
-            assessmentId={assessmentId} 
+            assessmentId={assessmentId}
+            onComplete={() => setActiveTab('digital-footprint')}
           />
         </TabsContent>
 
@@ -408,6 +410,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           <ExecutiveSurveyQuestions 
             assessmentId={assessmentId} 
             sectionCategory="OSINT & Digital Footprint Analysis"
+            onComplete={() => setActiveTab('physical-security')}
           />
         </TabsContent>
 
@@ -432,6 +435,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           <ExecutiveSurveyQuestions 
             assessmentId={assessmentId} 
             sectionCategory="Executive Office & Corporate Security"
+            onComplete={() => setActiveTab('risk-analysis')}
           />
         </TabsContent>
 
@@ -440,18 +444,17 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Risk Analysis
+                Executive Risk Analysis
               </CardTitle>
               <p className="text-muted-foreground">
                 Comprehensive risk analysis combining digital footprint findings, physical security assessment, and threat intelligence.
               </p>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Executive Risk Analysis</h3>
-                <p className="text-muted-foreground">Risk prioritization and analysis for executive protection scenarios.</p>
-              </div>
+              <EnhancedRiskAssessment 
+                assessmentId={assessmentId}
+                onComplete={() => setActiveTab('treatment-plan')}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -468,11 +471,15 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               </p>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Security Treatment Planning</h3>
-                <p className="text-muted-foreground">Develop comprehensive security measures and protective controls.</p>
-              </div>
+              <p className="text-muted-foreground">Treatment planning controls are managed within the Risk Analysis tab above. Navigate to Risk Analysis to define and implement security controls for identified risks.</p>
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab('risk-analysis')}
+                className="mt-4"
+                data-testid="button-goto-risk-analysis"
+              >
+                Go to Risk Analysis
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -482,18 +489,19 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                Executive Summary
+                Executive Summary & Reports
               </CardTitle>
               <p className="text-muted-foreground">
                 Final executive summary with key findings, priority risks, and recommended protective measures.
               </p>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Executive Summary Report</h3>
-                <p className="text-muted-foreground">Comprehensive summary of findings and recommendations for leadership.</p>
-              </div>
+              <ReportGenerator 
+                assessmentId={assessmentId}
+                onGenerate={handleGenerateReport}
+                onDownload={handleDownloadReport}
+                onShare={handleShareReport}
+              />
             </CardContent>
           </Card>
         </TabsContent>
