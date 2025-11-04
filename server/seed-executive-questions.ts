@@ -58,8 +58,8 @@ function parseSection(questionId: string): { section: number; category: string }
   const sectionNum = parseInt(questionId.charAt(0));
   
   // Special handling for specific questions that need to be recategorized
-  // 1.1.1 (PII) and 1.1.3 (Dark Web) → Digital Footprint
-  if (questionId === '1.1.1' || questionId === '1.1.3') {
+  // 1.1.1 (PII), 1.1.3 (Dark Web), and 1.2.x (Social Media) → Digital Footprint
+  if (questionId === '1.1.1' || questionId === '1.1.3' || questionId.startsWith('1.2')) {
     return {
       section: 1,
       category: 'Digital Footprint Analysis'
@@ -101,13 +101,16 @@ function getSubcategory(questionId: string, questionText: string): string {
     return 'PII & Dark Web Exposure';
   }
   
+  if (questionId.startsWith('1.2')) {
+    return 'Social Media Review (Executive & Family)';
+  }
+  
   if (questionId === '1.1.2') {
     return 'Residential Physical Security';
   }
   
   // Section 1 subcategories (OSINT & Threat Assessment)
   if (questionId.startsWith('1.1')) return 'Open-Source Intelligence (OSINT)';
-  if (questionId.startsWith('1.2')) return 'Social Media Review (Executive & Family)';
   if (questionId.startsWith('1.3')) return 'Personal Practices & Pattern of Life';
   if (questionId.startsWith('1.4')) return 'Travel Security & Advance Work';
   if (questionId.startsWith('1.5')) return 'Secure Transportation Protocols';

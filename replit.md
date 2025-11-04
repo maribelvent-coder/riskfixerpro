@@ -75,8 +75,14 @@ Preferred communication style: Simple, everyday language.
     -   **Executive Paradigm**: Specialized 6-tab workflow for executive protection
         -   Tabs: Executive Profile & Threat Assessment → Digital Footprint Analysis → Physical Security Review → Risk Analysis → Security Treatment Plan → Executive Summary
         -   Phase indicators: "Profile & Threats", "Analysis", "Treatment & Summary"
-        -   38 pre-loaded survey questions covering OSINT, social media analysis, and digital threat assessment
-        -   Currently placeholder content for executive-specific tabs (ready for future implementation)
+        -   39 pre-loaded survey questions with enhanced categorization:
+            -   **Digital Footprint Analysis**: PII exposure, dark web monitoring, social media review (executive & family)
+            -   **OSINT & Threat Assessment**: Personal practices, travel security, transportation protocols, digital hygiene
+            -   **Residential Security**: Perimeter security, access control, alarm systems, emergency planning (includes residential imagery analysis)
+            -   **Executive Office & Corporate Security**: Office physical security and CPTED
+            -   **Additional Observations**: Free-form section for ad-hoc interview notes
+        -   Section-level skip functionality: Skip buttons at each category header mark all questions with "[Section Skipped]"
+        -   Standalone PDF export: Generate survey findings report without completing full risk analysis workflow
     -   **Implementation Details**:
         -   Tab initialization: useEffect with useRef ensures correct initial tab selection based on paradigm
         -   Loading guards prevent rendering until paradigm is determined
