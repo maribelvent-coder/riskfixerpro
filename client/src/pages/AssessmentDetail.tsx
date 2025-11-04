@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import type { SelectAssessment } from "@shared/schema";
 
 interface AssessmentDetailProps {
   assessmentId?: string;
@@ -16,20 +17,26 @@ interface AssessmentDetailProps {
 
 export default function AssessmentDetail({ assessmentId = "demo-001" }: AssessmentDetailProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const hasInitializedTab = useRef(false);
 
-  // Fetch assessment data
-  const { data: assessmentData, isLoading, error } = useQuery({
+  // Fetch assessment data with proper typing
+  const { data: assessmentData, isLoading, error } = useQuery<SelectAssessment>({
     queryKey: ["/api/assessments", assessmentId],
     enabled: !!assessmentId
   });
   
-  // Set initial activeTab based on paradigm
-  const getInitialTab = () => {
-    const paradigm = assessmentData?.surveyParadigm || "facility";
-    return paradigm === "executive" ? "executive-profile" : "facility-survey";
-  };
+  // Initialize activeTab to null, then set via useEffect when data loads
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   
-  const [activeTab, setActiveTab] = useState(getInitialTab());
+  // Set initial tab based on paradigm after data loads (only once)
+  useEffect(() => {
+    if (assessmentData && !hasInitializedTab.current) {
+      const paradigm = assessmentData.surveyParadigm || "facility";
+      const initialTab = paradigm === "executive" ? "executive-profile" : "facility-survey";
+      setActiveTab(initialTab);
+      hasInitializedTab.current = true;
+    }
+  }, [assessmentData]);
 
   // Get paradigm-specific workflow configuration
   const getWorkflowConfig = () => {
@@ -70,9 +77,19 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
   const workflowConfig = getWorkflowConfig();
   
-  // Determine current phase based on assessment status
+  // Determine current phase based on assessment status and paradigm
   const getCurrentPhase = () => {
     if (!assessmentData) return 1;
+    
+    const paradigm = assessmentData.surveyParadigm || "facility";
+    
+    if (paradigm === "executive") {
+      // Executive paradigm - simpler phase tracking for now
+      // In the future, this could track executive-specific completion flags
+      return 1;
+    }
+    
+    // Facility paradigm - sequential phase tracking
     if (!assessmentData.facilitySurveyCompleted) return 1;
     if (!assessmentData.riskAssessmentCompleted) return 2;
     return 3;
@@ -148,7 +165,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     console.log("Sharing report:", reportId);
   };
 
-  if (isLoading) {
+  // Show loading state while data or activeTab are not ready
+  if (isLoading || !activeTab) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -205,29 +223,24 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 </div>
               </div>
               
-              {/* Phase Progress Indicator */}
+              {/* Phase Progress Indicator - Paradigm-Aware */}
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center gap-2">
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-                    currentPhase >= 1 ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                  }`}>
-                    {assessmentData.facilitySurveyCompleted ? <CheckCircle className="h-3 w-3" /> : <Building className="h-3 w-3" />}
-                    Phase 1: Facility Survey
-                  </div>
-                  <div className={`w-8 h-0.5 ${currentPhase >= 2 ? "bg-green-500" : "bg-muted"}`} />
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-                    currentPhase >= 2 ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                  }`}>
-                    {assessmentData.riskAssessmentCompleted ? <CheckCircle className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-                    Phase 2: Risk Assessment
-                  </div>
-                  <div className={`w-8 h-0.5 ${currentPhase >= 3 ? "bg-green-500" : "bg-muted"}`} />
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-                    currentPhase >= 3 ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                  }`}>
-                    <FileText className="h-3 w-3" />
-                    Reports
-                  </div>
+                  {workflowConfig.phases.map((phase, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                        phase.completed ? "bg-green-100 text-green-700" : 
+                        currentPhase > index ? "bg-blue-100 text-blue-700" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {phase.completed ? <CheckCircle className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+                        {phase.label}
+                      </div>
+                      {index < workflowConfig.phases.length - 1 && (
+                        <div className={`w-8 h-0.5 ${currentPhase > index + 1 ? "bg-green-500" : "bg-muted"}`} />
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
