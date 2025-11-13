@@ -16,6 +16,9 @@ import type {
   TemplateQuestion,
   FacilitySurveyQuestion,
   InsertFacilitySurveyQuestion,
+  ExecutiveInterviewQuestion,
+  ExecutiveInterviewResponse,
+  InsertExecutiveInterviewResponse,
   AssessmentQuestion,
   InsertAssessmentQuestion,
   IdentifiedThreat,
@@ -292,6 +295,35 @@ export class DbStorage implements IStorage {
     return await db.select().from(schema.templateQuestions)
       .where(eq(schema.templateQuestions.templateId, templateId))
       .orderBy(schema.templateQuestions.orderIndex);
+  }
+
+  // Executive Interview methods
+  async getAllExecutiveInterviewQuestions(): Promise<ExecutiveInterviewQuestion[]> {
+    return await db.select().from(schema.executiveInterviewQuestions)
+      .orderBy(schema.executiveInterviewQuestions.orderIndex);
+  }
+
+  async getExecutiveInterviewResponses(assessmentId: string): Promise<ExecutiveInterviewResponse[]> {
+    return await db.select().from(schema.executiveInterviewResponses)
+      .where(eq(schema.executiveInterviewResponses.assessmentId, assessmentId));
+  }
+
+  async upsertExecutiveInterviewResponse(response: InsertExecutiveInterviewResponse): Promise<ExecutiveInterviewResponse> {
+    const results = await db.insert(schema.executiveInterviewResponses)
+      .values({
+        ...response,
+        updatedAt: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [schema.executiveInterviewResponses.assessmentId, schema.executiveInterviewResponses.questionId],
+        set: {
+          yesNoResponse: response.yesNoResponse,
+          textResponse: response.textResponse,
+          updatedAt: new Date()
+        }
+      })
+      .returning();
+    return results[0];
   }
 
   // Facility Survey methods

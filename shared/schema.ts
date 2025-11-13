@@ -100,7 +100,7 @@ export const templateQuestions = pgTable("template_questions", {
 // Executive Interview Questions - Master interview questions for executive protection assessments
 export const executiveInterviewQuestions = pgTable("executive_interview_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  questionNumber: integer("question_number").notNull(), // 1-34
+  questionNumber: integer("question_number").notNull().unique(), // 1-34, unique to prevent duplicate seeds
   category: text("category").notNull(), // "Incident History & Threats", "Executive Protection", etc.
   question: text("question").notNull(), // The actual interview question
   responseType: text("response_type").notNull().default("text"), // "text" or "yes-no-text"
@@ -117,7 +117,9 @@ export const executiveInterviewResponses = pgTable("executive_interview_response
   textResponse: text("text_response"), // Detailed narrative response
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
-});
+}, (table) => ({
+  uniqueAssessmentQuestion: sql`UNIQUE (${table.assessmentId}, ${table.questionId})` // Ensure one response per question per assessment for upserts
+}));
 
 // Facility Survey Questions - Physical assessment of existing controls
 export const facilitySurveyQuestions = pgTable("facility_survey_questions", {

@@ -10,6 +10,10 @@ import {
   type TemplateQuestion,
   type FacilitySurveyQuestion,
   type InsertFacilitySurveyQuestion,
+  type ExecutiveInterviewQuestion,
+  type InsertExecutiveInterviewQuestion,
+  type ExecutiveInterviewResponse,
+  type InsertExecutiveInterviewResponse,
   type AssessmentQuestion,
   type InsertAssessmentQuestion,
   type IdentifiedThreat,
@@ -80,6 +84,11 @@ export interface IStorage {
 
   // Template Questions methods
   getTemplateQuestions(templateId: string): Promise<TemplateQuestion[]>;
+  
+  // Executive Interview methods
+  getAllExecutiveInterviewQuestions(): Promise<ExecutiveInterviewQuestion[]>;
+  getExecutiveInterviewResponses(assessmentId: string): Promise<ExecutiveInterviewResponse[]>;
+  upsertExecutiveInterviewResponse(response: InsertExecutiveInterviewResponse): Promise<ExecutiveInterviewResponse>;
   
   // Facility Survey methods
   getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]>;
