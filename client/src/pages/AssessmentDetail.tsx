@@ -28,15 +28,17 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     enabled: !!assessmentId
   });
   
-  // Initialize activeTab to null, then set via useEffect when data loads
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  // Derive initial tab directly from assessment data (defaults to facility-survey for loading state)
+  const paradigm = assessmentData?.surveyParadigm || "facility";
+  const defaultTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
   
-  // Set initial tab based on paradigm after data loads (only once)
+  // Set initial tab based on paradigm after data loads (only once to prevent reset on refetch)
   useEffect(() => {
     if (assessmentData && !hasInitializedTab.current) {
       const paradigm = assessmentData.surveyParadigm || "facility";
-      const initialTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
-      setActiveTab(initialTab);
+      const correctTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
+      setActiveTab(correctTab);
       hasInitializedTab.current = true;
     }
   }, [assessmentData]);
