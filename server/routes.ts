@@ -6,6 +6,7 @@ import {
   insertAssessmentSchema,
   insertSiteSchema,
   insertFacilitySurveyQuestionSchema,
+  insertExecutiveInterviewResponseSchema,
   insertAssessmentQuestionSchema,
   insertRiskAssetSchema,
   insertRiskScenarioSchema,
