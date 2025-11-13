@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Assessments from "@/pages/Assessments";
+import NewAssessment from "@/pages/NewAssessment";
 import Analytics from "@/pages/Analytics";
 import Templates from "@/pages/Templates";
 import AssessmentDetail from "@/pages/AssessmentDetail";
@@ -85,6 +86,12 @@ function App() {
           <Route path="/app/assessments">
             <ProtectedAppLayout>
               <Assessments />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/assessments/new">
+            <ProtectedAppLayout>
+              <NewAssessment />
             </ProtectedAppLayout>
           </Route>
           

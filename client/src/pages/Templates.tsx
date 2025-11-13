@@ -10,67 +10,22 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { assessmentApi, dashboardApi } from "@/lib/api";
+import { ASSESSMENT_TEMPLATES, type TemplateDefinition } from "@shared/templates";
 
-interface Template {
-  id: string;
-  name: string;
-  description: string;
+interface Template extends TemplateDefinition {
   icon: any;
-  category: string;
-  surveyParadigm: "facility" | "executive" | "custom"; // Determines workflow type
-  assetTypes: string[];
-  commonRisks: string[];
-  typicalControls: string[];
 }
 
-const templates: Template[] = [
-  {
-    id: "executive-protection",
-    name: "Executive Protection",
-    description: "Comprehensive security assessment for high-profile executives covering digital footprint, travel security, residential protection, and corporate office security",
-    icon: Shield,
-    category: "Executive",
-    surveyParadigm: "executive",
-    assetTypes: [
-      "Executive Personnel",
-      "Family Members",
-      "Personal Information (PII)",
-      "Residential Property",
-      "Executive Office Suite",
-      "Digital Assets & Credentials",
-      "Travel & Transportation",
-      "Confidential Communications"
-    ],
-    commonRisks: [
-      "Doxxing & PII Exposure",
-      "Social Engineering & Phishing",
-      "Surveillance & Pattern-of-Life Analysis",
-      "Kidnapping & Extortion",
-      "Home Invasion",
-      "Travel Ambush",
-      "Cyber Compromise (BEC/Account Takeover)",
-      "Corporate Espionage",
-      "Insider Threats",
-      "Active Threats & Violence"
-    ],
-    typicalControls: [
-      "OSINT Assessment & Dark Web Monitoring",
-      "Social Media Privacy Controls",
-      "Secure Travel Risk Assessments",
-      "Residential Perimeter Security (CPTED)",
-      "Access Control Systems (Biometric/RBAC)",
-      "24/7 CCTV & Intrusion Detection",
-      "Safe Room / Panic Room",
-      "Executive Protection Detail",
-      "Secure Transportation (Vetted Drivers)",
-      "TSCM Sweeps (Bug Detection)",
-      "VPN & Multi-Factor Authentication",
-      "Mail Screening Procedures",
-      "Emergency Evacuation Plans",
-      "Household Staff Vetting"
-    ]
-  }
-];
+// Icon mapping for templates
+const templateIconMap: Record<string, any> = {
+  "executive-protection": Shield,
+};
+
+// Merge shared templates with UI-specific icon data
+const templates: Template[] = ASSESSMENT_TEMPLATES.map(template => ({
+  ...template,
+  icon: templateIconMap[template.id] || Shield
+}));
 
 export default function Templates() {
   const [, setLocation] = useLocation();

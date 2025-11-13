@@ -24,6 +24,7 @@ import {
   getUpgradeMessage,
   type AccountTier 
 } from "@shared/tierLimits";
+import { getSurveyParadigmFromTemplate } from "@shared/templates";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
@@ -710,14 +711,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Set surveyParadigm from template if templateId is provided
+      const { templateId } = req.body;
+      const surveyParadigm = getSurveyParadigmFromTemplate(templateId) || req.body.surveyParadigm || "facility";
+
       const validatedData = insertAssessmentSchema.parse({
         ...req.body,
-        userId
+        userId,
+        surveyParadigm
       });
       const assessment = await storage.createAssessment(validatedData);
 
       // Auto-populate template questions if templateId is provided
-      const { templateId } = req.body;
       if (templateId) {
         try {
           const templateQuestions = await storage.getTemplateQuestions(templateId);
