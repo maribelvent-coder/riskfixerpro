@@ -72,9 +72,15 @@ Preferred communication style: Simple, everyday language.
         -   Tabs: Facility Survey → Risk Assessment → Reports
         -   Phase indicators: "Phase 1: Facility Survey", "Phase 2: Risk Assessment", "Reports"
         -   Completion tracking via `facilitySurveyCompleted` and `riskAssessmentCompleted` fields
-    -   **Executive Paradigm**: Specialized 6-tab workflow for executive protection
-        -   Tabs: Executive Profile & Threat Assessment → Digital Footprint Analysis → Physical Security Review → Risk Analysis → Security Treatment Plan → Executive Summary
+    -   **Executive Paradigm**: Specialized 7-tab workflow for executive protection
+        -   Tabs: Executive Interview → Executive Profile & Threat Assessment → Digital Footprint Analysis → Physical Security Review → Risk Analysis → Security Treatment Plan → Executive Summary
         -   Phase indicators: "Profile & Threats", "Analysis", "Treatment & Summary"
+        -   **Executive Interview** (NEW - 1st tab): Comprehensive interview component with 34 pre-loaded questions across 11 categories:
+            -   Categories: Incident History & Threats, Executive Protection, Public Profile, Daily Routines & Travel, Residences, Family Information, Office Security, Mail & Packages, Transportation, Itinerary Planning, Travel Security
+            -   Question types: Yes/No + text (23 questions) and text-only (11 questions)
+            -   Features: Auto-save on all responses (debounced for text, immediate for yes/no), collapsible category sections, progress tracking
+            -   Database: executive_interview_questions and executive_interview_responses tables with unique constraints for upsert operations
+            -   State management: Ref-based approach prevents stale closure bugs and preserves user edits during auto-save
         -   39 pre-loaded survey questions with enhanced categorization:
             -   **Digital Footprint Analysis**: PII exposure, dark web monitoring, social media review (executive & family)
             -   **Travel Assessment**: Personal practices, travel security, transportation protocols, digital hygiene
