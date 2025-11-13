@@ -97,6 +97,28 @@ export const templateQuestions = pgTable("template_questions", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Executive Interview Questions - Master interview questions for executive protection assessments
+export const executiveInterviewQuestions = pgTable("executive_interview_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionNumber: integer("question_number").notNull(), // 1-34
+  category: text("category").notNull(), // "Incident History & Threats", "Executive Protection", etc.
+  question: text("question").notNull(), // The actual interview question
+  responseType: text("response_type").notNull().default("text"), // "text" or "yes-no-text"
+  orderIndex: integer("order_index").notNull(), // Display order within category
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Executive Interview Responses - Answers collected during executive interviews
+export const executiveInterviewResponses = pgTable("executive_interview_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  questionId: varchar("question_id").notNull().references(() => executiveInterviewQuestions.id),
+  yesNoResponse: boolean("yes_no_response"), // For yes-no-text questions
+  textResponse: text("text_response"), // Detailed narrative response
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 // Facility Survey Questions - Physical assessment of existing controls
 export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -368,6 +390,17 @@ export const insertReportSchema = createInsertSchema(reports).omit({
   generatedAt: true,
 });
 
+export const insertExecutiveInterviewQuestionSchema = createInsertSchema(executiveInterviewQuestions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertExecutiveInterviewResponseSchema = createInsertSchema(executiveInterviewResponses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -416,6 +449,12 @@ export type InsertRiskInsight = z.infer<typeof insertRiskInsightSchema>;
 
 export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
+
+export type ExecutiveInterviewQuestion = typeof executiveInterviewQuestions.$inferSelect;
+export type InsertExecutiveInterviewQuestion = z.infer<typeof insertExecutiveInterviewQuestionSchema>;
+
+export type ExecutiveInterviewResponse = typeof executiveInterviewResponses.$inferSelect;
+export type InsertExecutiveInterviewResponse = z.infer<typeof insertExecutiveInterviewResponseSchema>;
 
 // Assessment with related data
 export type AssessmentWithQuestions = Assessment & {
