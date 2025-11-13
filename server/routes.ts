@@ -834,6 +834,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Executive Interview routes
+  app.get("/api/assessments/:id/executive-interview/questions", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const questions = await storage.getAllExecutiveInterviewQuestions();
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching executive interview questions:", error);
+      res.status(500).json({ error: "Failed to fetch executive interview questions" });
+    }
+  });
+
+  app.get("/api/assessments/:id/executive-interview/responses", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const responses = await storage.getExecutiveInterviewResponses(id);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching executive interview responses:", error);
+      res.status(500).json({ error: "Failed to fetch executive interview responses" });
+    }
+  });
+
+  app.post("/api/assessments/:id/executive-interview/responses", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { questionId, yesNoResponse, textResponse } = req.body;
+
+      if (!questionId) {
+        return res.status(400).json({ error: "Question ID is required" });
+      }
+
+      const validatedResponse = insertExecutiveInterviewResponseSchema.parse({
+        assessmentId: id,
+        questionId,
+        yesNoResponse: yesNoResponse !== undefined ? yesNoResponse : null,
+        textResponse: textResponse || null
+      });
+
+      const response = await storage.upsertExecutiveInterviewResponse(validatedResponse);
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid response data", details: error.errors });
+      }
+      console.error("Error saving executive interview response:", error);
+      res.status(500).json({ error: "Failed to save executive interview response" });
+    }
+  });
+
   // Asset Bridge route - Extract assets from facility survey for Phase 2
   app.post("/api/assessments/:id/extract-assets", verifyAssessmentOwnership, async (req, res) => {
     try {
