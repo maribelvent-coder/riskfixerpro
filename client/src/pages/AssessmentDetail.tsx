@@ -8,8 +8,9 @@ import { AssessmentForm } from "@/components/AssessmentForm";
 import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
+import ExecutiveInterview from "@/components/ExecutiveInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Assessment } from "@shared/schema";
 
@@ -34,7 +35,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   useEffect(() => {
     if (assessmentData && !hasInitializedTab.current) {
       const paradigm = assessmentData.surveyParadigm || "facility";
-      const initialTab = paradigm === "executive" ? "executive-profile" : "facility-survey";
+      const initialTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
       setActiveTab(initialTab);
       hasInitializedTab.current = true;
     }
@@ -47,6 +48,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     if (paradigm === "executive") {
       return {
         tabs: [
+          { id: "executive-interview", label: "Executive Interview", icon: MessageSquare },
           { id: "executive-profile", label: "Executive Profile & Threat Assessment", icon: User },
           { id: "digital-footprint", label: "Digital Footprint Analysis", icon: Shield },
           { id: "physical-security", label: "Physical Security Review", icon: Building },
@@ -263,11 +265,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
       {/* Main Content - Paradigm-Aware Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`w-full ${
-          workflowConfig.tabs.length === 6 
-            ? 'grid grid-cols-3 gap-2 h-auto p-2' 
-            : 'grid grid-cols-3'
-        }`}>
+        <TabsList className="w-full grid gap-2 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 h-auto p-2">
           {workflowConfig.tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -276,7 +274,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 value={tab.id}
                 data-testid={`tab-${tab.id}`}
                 disabled={!tabsAvailable[tab.id]}
-                className="flex items-center gap-2 justify-center"
+                className="flex flex-wrap items-center gap-2 justify-center text-center"
               >
                 <Icon className="h-4 w-4" />
                 <span>{tab.label}</span>
@@ -375,6 +373,25 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         </TabsContent>
 
         {/* Executive Protection Paradigm Tabs */}
+        <TabsContent value="executive-interview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Executive Interview
+              </CardTitle>
+              <p className="text-muted-foreground">
+                Conduct a comprehensive interview with the executive to gather critical security information about their daily routines, travel patterns, digital footprint, and threat awareness.
+              </p>
+            </CardHeader>
+          </Card>
+          
+          <ExecutiveInterview 
+            assessmentId={assessmentId}
+            onComplete={() => setActiveTab('executive-profile')}
+          />
+        </TabsContent>
+
         <TabsContent value="executive-profile" className="space-y-4">
           <Card>
             <CardHeader>
