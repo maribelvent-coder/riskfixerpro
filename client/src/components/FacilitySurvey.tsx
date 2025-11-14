@@ -219,10 +219,12 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   // Merge saved responses with static questions structure
   useEffect(() => {
     if (savedQuestions && savedQuestions.length > 0) {
+      const savedQuestionsMap = new Map(
+        savedQuestions.map((sq: any) => [sq.templateQuestionId || sq.question, sq])
+      );
+      
       const mergedQuestions = facilityQuestions.map(staticQ => {
-        const savedQ = savedQuestions.find((sq: any) => 
-          sq.category === staticQ.category && sq.subcategory === staticQ.subcategory
-        );
+        const savedQ = savedQuestionsMap.get(staticQ.id) || savedQuestionsMap.get(staticQ.question);
         
         if (savedQ) {
           return {
@@ -230,8 +232,8 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             id: savedQ.id,
             response: savedQ.response,
             notes: savedQ.notes,
-            evidence: savedQ.evidence,
-            recommendations: savedQ.recommendations
+            evidence: savedQ.evidence || [],
+            recommendations: savedQ.recommendations || []
           };
         }
         return staticQ;
@@ -289,6 +291,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const handleSave = () => {
     const questionsData = questions.map(q => ({
       assessmentId,
+      templateQuestionId: q.id.length < 36 ? q.id : undefined,
       category: q.category,
       subcategory: q.subcategory,
       question: q.question,

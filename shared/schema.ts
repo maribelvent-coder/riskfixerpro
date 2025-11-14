@@ -125,7 +125,7 @@ export const executiveInterviewResponses = pgTable("executive_interview_response
 export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
-  templateQuestionId: varchar("template_question_id").references(() => templateQuestions.id), // Link to master template
+  templateQuestionId: text("template_question_id"), // Custom template ID like "barriers-001"
   category: text("category").notNull(), // barriers, lighting, access-control, surveillance, etc.
   subcategory: text("subcategory"), // doors, windows, cameras, etc.
   question: text("question").notNull(),
