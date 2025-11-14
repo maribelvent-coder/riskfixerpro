@@ -309,12 +309,21 @@ async function seedInterviewQuestions() {
     console.log(`   Yes/No + Text: ${yesNoTextCount} questions`);
 
     console.log('\n✅ Executive Interview question seeding complete!');
+    return questions.length;
   } catch (error) {
     console.error('❌ Error seeding interview questions:', error);
     throw error;
-  } finally {
-    process.exit(0);
   }
 }
 
-seedInterviewQuestions();
+// Run if called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedInterviewQuestions()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}
+
+export { seedInterviewQuestions };

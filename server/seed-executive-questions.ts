@@ -134,7 +134,7 @@ function getSubcategory(questionId: string, questionText: string): string {
   return '';
 }
 
-async function seedExecutiveProtectionQuestions() {
+async function seedExecutiveSurveyQuestions() {
   console.log('🔄 Starting Executive Protection question seeding...');
   
   try {
@@ -266,6 +266,7 @@ async function seedExecutiveProtectionQuestions() {
     }
     
     console.log('\n✅ Executive Protection question seeding complete!');
+    return questionsToInsert.length;
   } catch (error) {
     console.error('❌ Error seeding executive protection questions:', error);
     throw error;
@@ -274,7 +275,7 @@ async function seedExecutiveProtectionQuestions() {
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  seedExecutiveProtectionQuestions()
+  seedExecutiveSurveyQuestions()
     .then(() => process.exit(0))
     .catch((error) => {
       console.error(error);
@@ -282,4 +283,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
 }
 
-export { seedExecutiveProtectionQuestions };
+export { seedExecutiveSurveyQuestions };

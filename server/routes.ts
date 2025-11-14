@@ -572,6 +572,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/seed-production", verifyAdminAccess, async (req, res) => {
+    try {
+      console.log('🌱 Starting production database seeding...');
+      console.log('⚠️  WARNING: This will replace existing template questions');
+      
+      const results = {
+        interviewQuestions: 0,
+        executiveSurveyQuestions: 0,
+        executiveProtectionQuestions: 0,
+        errors: [] as string[],
+        warnings: [] as string[]
+      };
+
+      // Import all seed functions
+      const { seedInterviewQuestions } = await import('./seed-interview-questions');
+      const { seedExecutiveSurveyQuestions } = await import('./seed-executive-questions');
+      const { seedExecutiveProtectionQuestions } = await import('./seed-executive-protection');
+
+      // Run each seed script and capture actual counts
+      try {
+        const count = await seedInterviewQuestions();
+        results.interviewQuestions = count;
+        console.log(`✅ Interview questions seeded: ${count}`);
+      } catch (error) {
+        const errorMsg = `Interview questions failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.error(`❌ ${errorMsg}`);
+        results.errors.push(errorMsg);
+      }
+
+      try {
+        const count = await seedExecutiveSurveyQuestions();
+        results.executiveSurveyQuestions = count;
+        console.log(`✅ Executive survey questions seeded: ${count}`);
+        results.warnings.push('Executive survey seeding may have deleted associated facility survey data');
+      } catch (error) {
+        const errorMsg = `Executive survey questions failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.error(`❌ ${errorMsg}`);
+        results.errors.push(errorMsg);
+      }
+
+      try {
+        const count = await seedExecutiveProtectionQuestions();
+        results.executiveProtectionQuestions = count;
+        console.log(`✅ Executive protection questions seeded: ${count}`);
+      } catch (error) {
+        const errorMsg = `Executive protection questions failed: ${error instanceof Error ? error.message : String(error)}`;
+        console.error(`❌ ${errorMsg}`);
+        results.errors.push(errorMsg);
+      }
+
+      const totalSuccess = results.interviewQuestions + results.executiveSurveyQuestions + results.executiveProtectionQuestions;
+      console.log(`🎉 Production database seeding complete! Total: ${totalSuccess} questions`);
+      
+      res.json({ 
+        message: results.errors.length === 0 
+          ? "Database seeded successfully"
+          : `Partial success: ${results.errors.length} error(s) occurred`,
+        results 
+      });
+    } catch (error) {
+      console.error("Error seeding production database:", error);
+      res.status(500).json({ 
+        error: "Failed to seed database",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Site routes
   app.get("/api/sites", async (req, res) => {
     try {

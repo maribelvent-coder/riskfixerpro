@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog } from "lucide-react";
+import { Shield, Key, UserCog, Database } from "lucide-react";
 
 type User = {
   id: string;
@@ -46,6 +46,7 @@ export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showSeedConfirm, setShowSeedConfirm] = useState(false);
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -98,6 +99,42 @@ export default function Admin() {
       toast({
         title: "Tier update failed",
         description: error.message || "Failed to update tier. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const seedProductionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/seed-production", {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setShowSeedConfirm(false);
+      const hasErrors = data.results.errors.length > 0;
+      const hasWarnings = data.results.warnings && data.results.warnings.length > 0;
+      
+      let description = `Loaded ${data.results.interviewQuestions} interview questions, ${data.results.executiveSurveyQuestions} survey questions, and ${data.results.executiveProtectionQuestions} executive protection questions.`;
+      
+      if (hasErrors) {
+        description += `\n\nErrors: ${data.results.errors.join(', ')}`;
+      }
+      
+      if (hasWarnings) {
+        description += `\n\nWarnings: ${data.results.warnings.join(', ')}`;
+      }
+      
+      toast({
+        title: hasErrors ? "Partial success" : "Database seeded successfully",
+        description,
+        variant: hasErrors ? "destructive" : "default",
+      });
+    },
+    onError: (error: any) => {
+      setShowSeedConfirm(false);
+      toast({
+        title: "Database seeding failed",
+        description: error.message || "Failed to seed database. Please try again.",
         variant: "destructive",
       });
     },
@@ -237,6 +274,41 @@ export default function Admin() {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Database className="h-5 w-5 text-muted-foreground" />
+            <CardTitle>Database Management</CardTitle>
+          </div>
+          <CardDescription>
+            Seed the production database with template questions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will populate the database with all template questions including:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+              <li>34 Executive Interview questions</li>
+              <li>39 Executive Survey questions</li>
+              <li>39 Executive Protection questions</li>
+            </ul>
+            <p className="text-sm text-muted-foreground font-medium">
+              Note: This will replace any existing template questions.
+            </p>
+            <Button
+              onClick={() => seedProductionMutation.mutate()}
+              disabled={seedProductionMutation.isPending}
+              data-testid="button-seed-production"
+            >
+              <Database className="h-4 w-4 mr-2" />
+              {seedProductionMutation.isPending ? "Seeding..." : "Seed Production Database"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

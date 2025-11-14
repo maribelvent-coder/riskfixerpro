@@ -88,14 +88,20 @@ async function seedExecutiveProtectionQuestions() {
   }
 
   console.log(`✅ Successfully seeded ${questionsToInsert.length} Executive Protection questions!`);
+  return questionsToInsert.length;
 }
 
-seedExecutiveProtectionQuestions()
-  .then(() => {
-    console.log('✨ Seeding complete!');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('❌ Error seeding questions:', error);
-    process.exit(1);
-  });
+// Run if called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedExecutiveProtectionQuestions()
+    .then(() => {
+      console.log('✨ Seeding complete!');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ Error seeding questions:', error);
+      process.exit(1);
+    });
+}
+
+export { seedExecutiveProtectionQuestions };
