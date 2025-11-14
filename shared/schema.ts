@@ -146,14 +146,21 @@ export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
 export const assessmentQuestions = pgTable("assessment_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  templateQuestionId: text("template_question_id"), // Custom template ID like "barriers-001" from templateQuestions
   questionId: text("question_id").notNull(),
   category: text("category").notNull(),
+  subcategory: text("subcategory"), // Secondary categorization
   question: text("question").notNull(),
+  bestPractice: text("best_practice"), // How to conduct the review
+  rationale: text("rationale"), // Risk being mitigated
+  importance: text("importance"), // Critical, High, Medium, Low
+  orderIndex: integer("order_index"), // Display order from template
   type: text("type").notNull(), // yes-no, score, text
-  weight: integer("weight").notNull(),
+  weight: integer("weight").notNull().default(1),
   response: jsonb("response"), // boolean | number | string
   notes: text("notes"),
   evidence: text("evidence").array(), // file paths/urls
+  createdAt: timestamp("created_at").default(sql`now()`),
 });
 
 // Threats identified in ASIS Step 2: Identify Risks

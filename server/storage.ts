@@ -103,6 +103,7 @@ export interface IStorage {
   getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]>;
   getAssessmentQuestion(questionId: string): Promise<AssessmentQuestion | null>;
   createAssessmentQuestion(question: InsertAssessmentQuestion): Promise<AssessmentQuestion>;
+  bulkCreateAssessmentQuestions(questions: InsertAssessmentQuestion[]): Promise<AssessmentQuestion[]>;
   updateAssessmentQuestion(id: string, question: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined>;
   bulkUpsertQuestions(assessmentId: string, questions: InsertAssessmentQuestion[]): Promise<AssessmentQuestion[]>;
   appendAssessmentQuestionEvidence(questionId: string, evidencePath: string): Promise<AssessmentQuestion | null>;
@@ -968,12 +969,22 @@ export class MemStorage implements IStorage {
     const question: AssessmentQuestion = {
       ...insertQuestion,
       id,
+      createdAt: new Date(),
       response: insertQuestion.response || null,
       notes: insertQuestion.notes || null,
       evidence: insertQuestion.evidence || null
     };
     this.assessmentQuestions.set(id, question);
     return question;
+  }
+
+  async bulkCreateAssessmentQuestions(questions: InsertAssessmentQuestion[]): Promise<AssessmentQuestion[]> {
+    const results: AssessmentQuestion[] = [];
+    for (const question of questions) {
+      const created = await this.createAssessmentQuestion(question);
+      results.push(created);
+    }
+    return results;
   }
 
   async updateAssessmentQuestion(id: string, updateData: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined> {

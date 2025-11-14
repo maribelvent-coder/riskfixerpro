@@ -17,7 +17,8 @@ import {
   insertTreatmentPlanSchema,
   insertReportSchema,
   insertUserSchema,
-  type InsertFacilitySurveyQuestion 
+  type InsertFacilitySurveyQuestion,
+  type InsertAssessmentQuestion
 } from "@shared/schema";
 import { 
   canCreateAssessment, 
@@ -804,26 +805,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const templateQuestions = await storage.getTemplateQuestions(templateId);
           
           if (templateQuestions.length > 0) {
-            const facilityQuestions: InsertFacilitySurveyQuestion[] = templateQuestions.map(tq => ({
-              assessmentId: assessment.id,
-              templateQuestionId: tq.id,
-              category: tq.category,
-              subcategory: tq.subcategory || null,
-              question: tq.question,
-              bestPractice: tq.bestPractice || null,
-              rationale: tq.rationale || null,
-              importance: tq.importance || null,
-              orderIndex: tq.orderIndex,
-              type: tq.type || "yes-no",
-              response: null,
-              notes: null,
-              evidence: null,
-              recommendations: null,
-              standard: null
-            }));
-            
-            await storage.bulkCreateFacilityQuestions(facilityQuestions);
-            console.log(`✓ Auto-populated ${facilityQuestions.length} survey questions from template: ${templateId}`);
+            // Copy template questions to the correct table based on paradigm
+            if (surveyParadigm === 'executive') {
+              // For executive paradigm, copy to assessmentQuestions table
+              const assessmentQuestions: InsertAssessmentQuestion[] = templateQuestions.map(tq => ({
+                assessmentId: assessment.id,
+                templateQuestionId: tq.id,
+                questionId: tq.questionId,
+                category: tq.category,
+                subcategory: tq.subcategory || null,
+                question: tq.question,
+                bestPractice: tq.bestPractice || null,
+                rationale: tq.rationale || null,
+                importance: tq.importance || null,
+                orderIndex: tq.orderIndex,
+                type: tq.type || "yes-no",
+                weight: 1,
+                response: null,
+                notes: null,
+                evidence: null
+              }));
+              
+              await storage.bulkCreateAssessmentQuestions(assessmentQuestions);
+              console.log(`✓ Auto-populated ${assessmentQuestions.length} assessment questions from template: ${templateId}`);
+            } else {
+              // For facility paradigm, copy to facilitySurveyQuestions table (existing behavior)
+              const facilityQuestions: InsertFacilitySurveyQuestion[] = templateQuestions.map(tq => ({
+                assessmentId: assessment.id,
+                templateQuestionId: tq.id,
+                category: tq.category,
+                subcategory: tq.subcategory || null,
+                question: tq.question,
+                bestPractice: tq.bestPractice || null,
+                rationale: tq.rationale || null,
+                importance: tq.importance || null,
+                orderIndex: tq.orderIndex,
+                type: tq.type || "yes-no",
+                response: null,
+                notes: null,
+                evidence: null,
+                recommendations: null,
+                standard: null
+              }));
+              
+              await storage.bulkCreateFacilityQuestions(facilityQuestions);
+              console.log(`✓ Auto-populated ${facilityQuestions.length} survey questions from template: ${templateId}`);
+            }
           }
         } catch (templateError) {
           console.error(`Error auto-populating template questions:`, templateError);

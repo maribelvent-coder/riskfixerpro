@@ -395,6 +395,12 @@ export class DbStorage implements IStorage {
     return results[0];
   }
 
+  async bulkCreateAssessmentQuestions(questions: InsertAssessmentQuestion[]): Promise<AssessmentQuestion[]> {
+    if (questions.length === 0) return [];
+    const results = await db.insert(schema.assessmentQuestions).values(questions).returning();
+    return results;
+  }
+
   async updateAssessmentQuestion(id: string, updateData: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined> {
     const results = await db
       .update(schema.assessmentQuestions)
