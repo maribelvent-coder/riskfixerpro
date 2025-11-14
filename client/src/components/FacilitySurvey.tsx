@@ -22,6 +22,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { FacilitySurveyQuestion } from "@shared/schema";
+import { EvidenceUploader } from "./EvidenceUploader";
 
 interface FacilitySurveyProps {
   assessmentId: string;
@@ -591,25 +592,25 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                 />
               </div>
 
-              {/* Evidence & Recommendations */}
-              <div className="flex gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => console.log("Upload evidence for", question.id)}
-                  data-testid={`button-evidence-${question.id}`}
-                >
-                  <Camera className="h-3 w-3 mr-1" />
-                  Add Photo Evidence
-                </Button>
-                
-                {question.response && ["poor", "critical", "no"].includes(question.response) && (
-                  <Badge variant="destructive" className="text-xs">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Requires Attention
-                  </Badge>
-                )}
+              {/* Photo Evidence */}
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Photo Evidence</Label>
+                <EvidenceUploader
+                  assessmentId={assessmentId}
+                  questionId={question.id}
+                  questionType="facility"
+                  evidence={question.evidence || []}
+                  onUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] })}
+                />
               </div>
+              
+              {/* Recommendations Badge */}
+              {question.response && ["poor", "critical", "no"].includes(question.response) && (
+                <Badge variant="destructive" className="text-xs">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Requires Attention
+                </Badge>
+              )}
             </CardContent>
           </Card>
         ))}

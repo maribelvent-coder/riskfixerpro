@@ -332,6 +332,12 @@ export class DbStorage implements IStorage {
       .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId));
   }
 
+  async getFacilitySurveyQuestion(questionId: string): Promise<FacilitySurveyQuestion | null> {
+    const results = await db.select().from(schema.facilitySurveyQuestions)
+      .where(eq(schema.facilitySurveyQuestions.id, questionId));
+    return results[0] || null;
+  }
+
   async createFacilitySurveyQuestion(question: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion> {
     const results = await db.insert(schema.facilitySurveyQuestions).values(question).returning();
     return results[0];
@@ -366,6 +372,12 @@ export class DbStorage implements IStorage {
   async getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]> {
     return await db.select().from(schema.assessmentQuestions)
       .where(eq(schema.assessmentQuestions.assessmentId, assessmentId));
+  }
+
+  async getAssessmentQuestion(questionId: string): Promise<AssessmentQuestion | null> {
+    const results = await db.select().from(schema.assessmentQuestions)
+      .where(eq(schema.assessmentQuestions.id, questionId));
+    return results[0] || null;
   }
 
   async createAssessmentQuestion(question: InsertAssessmentQuestion): Promise<AssessmentQuestion> {

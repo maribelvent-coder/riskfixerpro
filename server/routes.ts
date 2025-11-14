@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { openaiService } from "./openai-service";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import multer from "multer";
 import { 
   insertAssessmentSchema,
   insertSiteSchema,
@@ -28,6 +30,22 @@ import { getSurveyParadigmFromTemplate } from "@shared/templates";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Extend Express session types
 declare module "express-session" {
@@ -1759,6 +1777,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error downloading report:", error);
       res.status(500).json({ error: "Failed to download report" });
+    }
+  });
+
+  // Evidence Upload/Download/Delete routes
+  app.post("/api/assessments/:id/evidence", verifyAssessmentOwnership, upload.single('photo'), async (req, res) => {
+    try {
+      const { questionId, questionType } = req.body;
+      
+      if (!questionId || !questionType) {
+        return res.status(400).json({ error: "questionId and questionType are required" });
+      }
+
+      if (!['facility', 'assessment'].includes(questionType)) {
+        return res.status(400).json({ error: "questionType must be 'facility' or 'assessment'" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const assessmentId = req.params.id;
+      const objectStorageService = new ObjectStorageService();
+      
+      const evidencePath = await objectStorageService.uploadEvidence(
+        req.file.buffer,
+        req.file.originalname,
+        assessmentId,
+        questionId
+      );
+
+      if (questionType === 'facility') {
+        const question = await storage.getFacilitySurveyQuestion(questionId);
+        if (!question || question.assessmentId !== assessmentId) {
+          await objectStorageService.deleteEvidence(evidencePath);
+          return res.status(404).json({ error: "Question not found" });
+        }
+
+        const currentEvidence = question.evidence || [];
+        if (currentEvidence.length >= 10) {
+          await objectStorageService.deleteEvidence(evidencePath);
+          return res.status(400).json({ error: "Maximum 10 evidence photos per question" });
+        }
+
+        const updatedQuestion = await storage.updateFacilitySurveyQuestion(questionId, {
+          evidence: [...currentEvidence, evidencePath]
+        });
+        
+        if (!updatedQuestion) {
+          await objectStorageService.deleteEvidence(evidencePath);
+          return res.status(500).json({ error: "Failed to update question" });
+        }
+      } else {
+        const question = await storage.getAssessmentQuestion(questionId);
+        if (!question || question.assessmentId !== assessmentId) {
+          await objectStorageService.deleteEvidence(evidencePath);
+          return res.status(404).json({ error: "Question not found" });
+        }
+
+        const currentEvidence = question.evidence || [];
+        if (currentEvidence.length >= 10) {
+          await objectStorageService.deleteEvidence(evidencePath);
+          return res.status(400).json({ error: "Maximum 10 evidence photos per question" });
+        }
+
+        const updatedQuestion = await storage.updateAssessmentQuestion(questionId, {
+          evidence: [...currentEvidence, evidencePath]
+        });
+        
+        if (!updatedQuestion) {
+          await objectStorageService.deleteEvidence(evidencePath);
+          return res.status(500).json({ error: "Failed to update question" });
+        }
+      }
+
+      res.json({
+        success: true,
+        evidencePath,
+        filename: req.file.originalname
+      });
+    } catch (error: any) {
+      console.error("Error uploading evidence:", error);
+      if (error.message === 'Only image files are allowed') {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to upload evidence" });
+    }
+  });
+
+  app.get("/evidence/:path(*)", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const evidencePath = `/evidence/${req.params.path}`;
+      const objectStorageService = new ObjectStorageService();
+      
+      const file = await objectStorageService.getEvidenceFile(evidencePath);
+      const [metadata] = await file.getMetadata();
+      
+      const assessmentId = metadata.metadata?.assessmentId as string | undefined;
+      if (!assessmentId) {
+        return res.status(404).json({ error: "Evidence not found" });
+      }
+
+      const assessment = await storage.getAssessment(assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      await objectStorageService.downloadEvidence(file, res);
+    } catch (error) {
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ error: "Evidence not found" });
+      }
+      console.error("Error downloading evidence:", error);
+      res.status(500).json({ error: "Failed to download evidence" });
+    }
+  });
+
+  app.delete("/api/assessments/:id/evidence", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { questionId, questionType, evidencePath } = req.body;
+      
+      if (!questionId || !questionType || !evidencePath) {
+        return res.status(400).json({ error: "questionId, questionType, and evidencePath are required" });
+      }
+
+      if (!['facility', 'assessment'].includes(questionType)) {
+        return res.status(400).json({ error: "questionType must be 'facility' or 'assessment'" });
+      }
+
+      const assessmentId = req.params.id;
+
+      if (questionType === 'facility') {
+        const question = await storage.getFacilitySurveyQuestion(questionId);
+        if (!question || question.assessmentId !== assessmentId) {
+          return res.status(404).json({ error: "Question not found" });
+        }
+
+        const currentEvidence = question.evidence || [];
+        const updatedEvidence = currentEvidence.filter(e => e !== evidencePath);
+        
+        await storage.updateFacilitySurveyQuestion(questionId, {
+          evidence: updatedEvidence
+        });
+      } else {
+        const question = await storage.getAssessmentQuestion(questionId);
+        if (!question || question.assessmentId !== assessmentId) {
+          return res.status(404).json({ error: "Question not found" });
+        }
+
+        const currentEvidence = question.evidence || [];
+        const updatedEvidence = currentEvidence.filter(e => e !== evidencePath);
+        
+        await storage.updateAssessmentQuestion(questionId, {
+          evidence: updatedEvidence
+        });
+      }
+
+      const objectStorageService = new ObjectStorageService();
+      await objectStorageService.deleteEvidence(evidencePath);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting evidence:", error);
+      res.status(500).json({ error: "Failed to delete evidence" });
     }
   });
 

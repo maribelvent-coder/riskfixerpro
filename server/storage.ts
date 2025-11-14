@@ -92,6 +92,7 @@ export interface IStorage {
   
   // Facility Survey methods
   getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]>;
+  getFacilitySurveyQuestion(questionId: string): Promise<FacilitySurveyQuestion | null>;
   createFacilitySurveyQuestion(question: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion>;
   bulkCreateFacilityQuestions(questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
   updateFacilitySurveyQuestion(questionId: string, data: Partial<FacilitySurveyQuestion>): Promise<FacilitySurveyQuestion | null>;
@@ -99,6 +100,7 @@ export interface IStorage {
 
   // Assessment Questions methods
   getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]>;
+  getAssessmentQuestion(questionId: string): Promise<AssessmentQuestion | null>;
   createAssessmentQuestion(question: InsertAssessmentQuestion): Promise<AssessmentQuestion>;
   updateAssessmentQuestion(id: string, question: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined>;
   bulkUpsertQuestions(assessmentId: string, questions: InsertAssessmentQuestion[]): Promise<AssessmentQuestion[]>;
@@ -476,6 +478,8 @@ export class MemStorage implements IStorage {
       ...insertAssessment,
       id,
       siteId: insertAssessment.siteId ?? null,
+      templateId: insertAssessment.templateId ?? null,
+      surveyParadigm: insertAssessment.surveyParadigm || "facility",
       status: insertAssessment.status || "draft",
       createdAt: now,
       updatedAt: now,
@@ -510,17 +514,36 @@ export class MemStorage implements IStorage {
     return this.assessments.delete(id);
   }
 
-  // Facility Survey methods
   // Template Questions methods
   async getTemplateQuestions(templateId: string): Promise<TemplateQuestion[]> {
     // MemStorage doesn't track template questions - return empty array
     return [];
   }
 
+  // Executive Interview methods
+  async getAllExecutiveInterviewQuestions(): Promise<ExecutiveInterviewQuestion[]> {
+    // MemStorage doesn't track executive interview questions - return empty array
+    return [];
+  }
+
+  async getExecutiveInterviewResponses(assessmentId: string): Promise<ExecutiveInterviewResponse[]> {
+    // MemStorage doesn't track executive interview responses - return empty array
+    return [];
+  }
+
+  async upsertExecutiveInterviewResponse(response: InsertExecutiveInterviewResponse): Promise<ExecutiveInterviewResponse> {
+    // MemStorage doesn't support executive interview responses
+    throw new Error("Executive interview responses not supported in MemStorage");
+  }
+
   // Facility Survey methods
   async getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]> {
     return Array.from(this.facilitySurveyQuestions.values())
       .filter(q => q.assessmentId === assessmentId);
+  }
+
+  async getFacilitySurveyQuestion(questionId: string): Promise<FacilitySurveyQuestion | null> {
+    return this.facilitySurveyQuestions.get(questionId) || null;
   }
 
   async createFacilitySurveyQuestion(insertQuestion: InsertFacilitySurveyQuestion): Promise<FacilitySurveyQuestion> {
@@ -917,6 +940,10 @@ export class MemStorage implements IStorage {
   async getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]> {
     return Array.from(this.assessmentQuestions.values())
       .filter(q => q.assessmentId === assessmentId);
+  }
+
+  async getAssessmentQuestion(questionId: string): Promise<AssessmentQuestion | null> {
+    return this.assessmentQuestions.get(questionId) || null;
   }
 
   async createAssessmentQuestion(insertQuestion: InsertAssessmentQuestion): Promise<AssessmentQuestion> {
