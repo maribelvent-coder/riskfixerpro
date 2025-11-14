@@ -97,6 +97,7 @@ export interface IStorage {
   bulkCreateFacilityQuestions(questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
   updateFacilitySurveyQuestion(questionId: string, data: Partial<FacilitySurveyQuestion>): Promise<FacilitySurveyQuestion | null>;
   bulkUpsertFacilityQuestions(assessmentId: string, questions: InsertFacilitySurveyQuestion[]): Promise<FacilitySurveyQuestion[]>;
+  appendFacilityQuestionEvidence(questionId: string, evidencePath: string): Promise<FacilitySurveyQuestion | null>;
 
   // Assessment Questions methods
   getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]>;
@@ -104,6 +105,7 @@ export interface IStorage {
   createAssessmentQuestion(question: InsertAssessmentQuestion): Promise<AssessmentQuestion>;
   updateAssessmentQuestion(id: string, question: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | undefined>;
   bulkUpsertQuestions(assessmentId: string, questions: InsertAssessmentQuestion[]): Promise<AssessmentQuestion[]>;
+  appendAssessmentQuestionEvidence(questionId: string, evidencePath: string): Promise<AssessmentQuestion | null>;
 
   // Threat Identification methods
   getIdentifiedThreats(assessmentId: string): Promise<IdentifiedThreat[]>;
@@ -617,6 +619,21 @@ export class MemStorage implements IStorage {
     return results;
   }
 
+  async appendFacilityQuestionEvidence(questionId: string, evidencePath: string): Promise<FacilitySurveyQuestion | null> {
+    const existing = this.facilitySurveyQuestions.get(questionId);
+    if (!existing) {
+      return null;
+    }
+
+    const currentEvidence = existing.evidence || [];
+    const updated: FacilitySurveyQuestion = {
+      ...existing,
+      evidence: [...currentEvidence, evidencePath]
+    };
+    this.facilitySurveyQuestions.set(questionId, updated);
+    return updated;
+  }
+
   // Threat Identification methods
   async getIdentifiedThreats(assessmentId: string): Promise<IdentifiedThreat[]> {
     return Array.from(this.identifiedThreats.values())
@@ -989,6 +1006,21 @@ export class MemStorage implements IStorage {
     }
     
     return results;
+  }
+
+  async appendAssessmentQuestionEvidence(questionId: string, evidencePath: string): Promise<AssessmentQuestion | null> {
+    const existing = this.assessmentQuestions.get(questionId);
+    if (!existing) {
+      return null;
+    }
+
+    const currentEvidence = existing.evidence || [];
+    const updated: AssessmentQuestion = {
+      ...existing,
+      evidence: [...currentEvidence, evidencePath]
+    };
+    this.assessmentQuestions.set(questionId, updated);
+    return updated;
   }
 
   // Risk Insights methods

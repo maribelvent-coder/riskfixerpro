@@ -1820,9 +1820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Maximum 10 evidence photos per question" });
         }
 
-        const updatedQuestion = await storage.updateFacilitySurveyQuestion(questionId, {
-          evidence: [...currentEvidence, evidencePath]
-        });
+        const updatedQuestion = await storage.appendFacilityQuestionEvidence(questionId, evidencePath);
         
         if (!updatedQuestion) {
           await objectStorageService.deleteEvidence(evidencePath);
@@ -1841,9 +1839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Maximum 10 evidence photos per question" });
         }
 
-        const updatedQuestion = await storage.updateAssessmentQuestion(questionId, {
-          evidence: [...currentEvidence, evidencePath]
-        });
+        const updatedQuestion = await storage.appendAssessmentQuestionEvidence(questionId, evidencePath);
         
         if (!updatedQuestion) {
           await objectStorageService.deleteEvidence(evidencePath);

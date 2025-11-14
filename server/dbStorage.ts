@@ -368,6 +368,16 @@ export class DbStorage implements IStorage {
     return results;
   }
 
+  async appendFacilityQuestionEvidence(questionId: string, evidencePath: string): Promise<FacilitySurveyQuestion | null> {
+    const results = await db.update(schema.facilitySurveyQuestions)
+      .set({
+        evidence: sql`array_append(COALESCE(evidence, ARRAY[]::text[]), ${evidencePath})`
+      })
+      .where(eq(schema.facilitySurveyQuestions.id, questionId))
+      .returning();
+    return results[0] || null;
+  }
+
   // Assessment Questions methods
   async getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]> {
     return await db.select().from(schema.assessmentQuestions)
@@ -402,6 +412,16 @@ export class DbStorage implements IStorage {
     
     const results = await db.insert(schema.assessmentQuestions).values(questions).returning();
     return results;
+  }
+
+  async appendAssessmentQuestionEvidence(questionId: string, evidencePath: string): Promise<AssessmentQuestion | null> {
+    const results = await db.update(schema.assessmentQuestions)
+      .set({
+        evidence: sql`array_append(COALESCE(evidence, ARRAY[]::text[]), ${evidencePath})`
+      })
+      .where(eq(schema.assessmentQuestions.id, questionId))
+      .returning();
+    return results[0] || null;
   }
 
   // Threat Identification methods

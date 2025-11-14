@@ -21,6 +21,7 @@ import type { FacilitySurveyQuestion } from "@shared/schema";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateSurveyFindingsPDF } from "@/lib/surveyFindingsPDF";
+import { EvidenceUploader } from "./EvidenceUploader";
 
 interface ExecutiveSurveyQuestionsProps {
   assessmentId: string;
@@ -371,6 +372,18 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
                               }}
                               className="min-h-[60px]"
                               data-testid={`textarea-notes-${question.id}`}
+                            />
+                          </div>
+
+                          {/* Photo Evidence */}
+                          <div>
+                            <Label className="text-sm font-medium mb-2 block">Photo Evidence</Label>
+                            <EvidenceUploader
+                              assessmentId={assessmentId}
+                              questionId={question.id}
+                              questionType="facility"
+                              evidence={question.evidence || []}
+                              onUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] })}
                             />
                           </div>
                         </div>
