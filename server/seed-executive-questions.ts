@@ -168,7 +168,7 @@ async function seedExecutiveSurveyQuestions() {
       .where(eq(templateQuestions.templateId, 'executive-protection'));
     
     // Step 2: Read and parse CSV
-    const csvPath = path.join(__dirname, '../attached_assets/Executive Survey_1762263855489.csv');
+    const csvPath = path.join(__dirname, 'data/executive-survey-questions.csv');
     console.log(`📖 Reading CSV from: ${csvPath}`);
     
     const fileContent = fs.readFileSync(csvPath, 'utf-8');
