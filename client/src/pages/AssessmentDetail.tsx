@@ -3,6 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FacilitySurvey } from "@/components/FacilitySurvey";
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { RiskAnalysis } from "@/components/RiskAnalysis";
@@ -10,8 +20,11 @@ import { ReportGenerator } from "@/components/ReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2 } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Assessment } from "@shared/schema";
 
 interface AssessmentDetailProps {
@@ -20,12 +33,39 @@ interface AssessmentDetailProps {
 
 export default function AssessmentDetail({ assessmentId = "demo-001" }: AssessmentDetailProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const hasInitializedTab = useRef(false);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   // Fetch assessment data with proper typing
   const { data: assessmentData, isLoading, error } = useQuery<Assessment>({
     queryKey: ["/api/assessments", assessmentId],
     enabled: !!assessmentId
+  });
+
+  // Delete assessment mutation
+  const deleteAssessmentMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest(`/api/assessments/${assessmentId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Assessment Deleted",
+        description: "The assessment has been successfully deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments'] });
+      setLocation('/app/assessments');
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete assessment. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
   
   // Derive initial tab directly from assessment data (defaults to facility-survey for loading state)
@@ -260,6 +300,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                  assessmentData.status === "risk-assessment" ? "Risk Assessment" :
                  assessmentData.status === "facility-survey" ? "Facility Survey" : "Draft"}
               </Badge>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={deleteAssessmentMutation.isPending}
+                data-testid="button-delete-assessment"
+                title="Delete assessment"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
           </div>
         </div>
@@ -545,6 +595,30 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="dialog-delete-confirmation">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assessment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{assessmentData.title}"? This action cannot be undone.
+              All associated data including survey responses, risk assessments, and reports will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteAssessmentMutation.mutate()}
+              disabled={deleteAssessmentMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteAssessmentMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

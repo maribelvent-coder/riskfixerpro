@@ -992,6 +992,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assessment Questions routes (for executive paradigm objective assessment questions)
+  app.get("/api/assessments/:id/assessment-questions", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const questions = await storage.getAssessmentQuestions(id);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching assessment questions:", error);
+      res.status(500).json({ error: "Failed to fetch assessment questions" });
+    }
+  });
+
+  app.patch("/api/assessments/:id/assessment-questions/:questionId", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      
+      // Validate: Only allow updating response, notes, and evidence fields
+      const allowedUpdateSchema = z.object({
+        response: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
+        notes: z.string().nullable().optional(),
+        evidence: z.array(z.string()).nullable().optional(),
+      });
+      
+      const updateData = allowedUpdateSchema.parse(req.body);
+      
+      const updated = await storage.updateAssessmentQuestion(questionId, updateData);
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid update data", details: error.errors });
+      }
+      console.error("Error updating assessment question:", error);
+      res.status(500).json({ error: "Failed to update assessment question" });
+    }
+  });
+
   // Asset Bridge route - Extract assets from facility survey for Phase 2
   app.post("/api/assessments/:id/extract-assets", verifyAssessmentOwnership, async (req, res) => {
     try {

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import type { FacilitySurveyQuestion } from "@shared/schema";
+import type { FacilitySurveyQuestion, AssessmentQuestion, AssessmentWithQuestions } from "@shared/schema";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateSurveyFindingsPDF } from "@/lib/surveyFindingsPDF";
@@ -28,6 +28,8 @@ interface ExecutiveSurveyQuestionsProps {
   sectionCategory?: string; // Optional filter by category
   onComplete?: () => void;
 }
+
+type SurveyQuestion = FacilitySurveyQuestion | AssessmentQuestion;
 
 // Map importance to badge variant
 const getImportanceBadge = (importance: string | null) => {
@@ -73,9 +75,19 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
     }
   };
 
-  // Fetch questions
-  const { data: questions, isLoading } = useQuery<FacilitySurveyQuestion[]>({
-    queryKey: ['/api/assessments', assessmentId, 'facility-survey-questions'],
+  // Fetch assessment to determine paradigm
+  const { data: assessment } = useQuery<AssessmentWithQuestions>({
+    queryKey: ['/api/assessments', assessmentId],
+  });
+
+  const paradigm = assessment?.surveyParadigm || 'facility';
+
+  // Fetch questions based on paradigm
+  const { data: questions, isLoading } = useQuery<SurveyQuestion[]>({
+    queryKey: paradigm === 'executive' 
+      ? ['/api/assessments', assessmentId, 'assessment-questions']
+      : ['/api/assessments', assessmentId, 'facility-survey-questions'],
+    enabled: !!assessment,
   });
 
   // Filter by section category if provided
@@ -97,21 +109,37 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
     acc[category][subcategory].push(question);
     
     return acc;
-  }, {} as Record<string, Record<string, FacilitySurveyQuestion[]>>);
+  }, {} as Record<string, Record<string, SurveyQuestion[]>>);
 
   // Calculate progress
   const totalQuestions = filteredQuestions.length;
   const answeredQuestions = filteredQuestions.filter(q => q.response || q.notes).length;
   const progressPercent = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
 
+  // Determine endpoint based on paradigm
+  const questionEndpoint = paradigm === 'executive' 
+    ? `/api/assessments/${assessmentId}/assessment-questions`
+    : `/api/assessments/${assessmentId}/facility-survey-questions`;
+
+  const questionQueryKey = paradigm === 'executive'
+    ? ['/api/assessments', assessmentId, 'assessment-questions']
+    : ['/api/assessments', assessmentId, 'facility-survey-questions'];
+
   // Update question mutation
   const updateQuestionMutation = useMutation({
-    mutationFn: async ({ questionId, data }: { questionId: string; data: Partial<FacilitySurveyQuestion> }) => {
-      const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${questionId}`, {
+    mutationFn: async ({ questionId, data }: { questionId: string; data: Partial<SurveyQuestion> }) => {
+      // Only send allowed fields to match backend validation
+      const allowedFields = {
+        ...(data.response !== undefined && { response: data.response }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.evidence !== undefined && { evidence: data.evidence }),
+      };
+      
+      const response = await fetch(`${questionEndpoint}/${questionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify(allowedFields),
       });
       
       if (!response.ok) {
@@ -121,7 +149,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, 'facility-survey-questions'] });
+      queryClient.invalidateQueries({ queryKey: questionQueryKey });
       toast({
         title: "Saved",
         description: "Question response updated successfully",
@@ -137,8 +165,8 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
   });
 
   // Render input based on question type
-  const renderInput = (question: FacilitySurveyQuestion) => {
-    const handleSave = (field: keyof FacilitySurveyQuestion, value: any) => {
+  const renderInput = (question: SurveyQuestion) => {
+    const handleSave = (field: string, value: any) => {
       updateQuestionMutation.mutate({
         questionId: question.id,
         data: { [field]: value }

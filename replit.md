@@ -3,7 +3,7 @@
 ## Overview
 This enterprise-grade platform conducts professional physical security assessments in accordance with ASIS International standards and Army FM guidelines. It provides structured facility surveys, detailed risk analysis, and automated reporting. The platform is designed for security professionals to evaluate physical security controls, identify vulnerabilities, and generate compliance-ready reports, aiming to streamline the assessment process and enhance security posture.
 
-**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), route protection, production-ready session management, and self-service password reset. Site/location management system for organizing assessments by physical facilities. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports. Sessions persist across server restarts using PostgreSQL storage.
+**Current Status:** Complete marketing website with authentication, tiered access control (free/pro/enterprise), route protection, production-ready session management, and self-service password reset. Site/location management system for organizing assessments by physical facilities. Free tier accounts are limited to 1 assessment with no AI insights or PDF exports. Sessions persist across server restarts using PostgreSQL storage. **Latest (Nov 14, 2025):** Executive Protection paradigm survey questions now display correctly across all tabs; assessment deletion functionality added with confirmation dialog; backend security hardened with Zod validation on PATCH endpoints.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
