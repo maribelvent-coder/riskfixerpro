@@ -227,6 +227,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         if (savedQ) {
           return {
             ...staticQ,
+            id: savedQ.id,
             response: savedQ.response,
             notes: savedQ.notes,
             evidence: savedQ.evidence,

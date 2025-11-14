@@ -96,6 +96,26 @@ Preferred communication style: Simple, everyday language.
         -   Phase progress indicators dynamically render based on workflowConfig.phases
         -   Template selection automatically sets assessment paradigm on creation
 -   **Triple Risk Calculation Model**: Calculates Inherent, Current (after existing controls), and Residual (after proposed treatments) risks using a floating-point compound reduction system.
+-   **Photo Evidence Upload System**: Complete evidence documentation workflow:
+    -   **Backend Architecture**:
+        -   Replit Object Storage integration for file persistence
+        -   ObjectStorageService with uploadEvidence, deleteEvidence, getEvidenceFile methods
+        -   Atomic evidence array updates via storage.appendFacilityQuestionEvidence and storage.appendAssessmentQuestionEvidence methods (prevents concurrent upload race conditions using PostgreSQL array_append)
+        -   Security: Session authentication + ownership verification on all evidence routes
+        -   Evidence metadata stored in GCS custom metadata (assessmentId, questionId, questionType)
+        -   File validation: 10MB limit, image-only MIME types, max 10 photos per question
+    -   **API Endpoints**:
+        -   POST `/api/assessments/:id/evidence` - Upload with multipart/form-data (multer)
+        -   GET `/evidence/:path(*)` - Secure download with ownership verification
+        -   DELETE `/api/assessments/:id/evidence` - Remove evidence file and array entry
+    -   **Frontend Components**:
+        -   Reusable EvidenceUploader component with camera capture (`capture="environment"`)
+        -   File picker for existing photos
+        -   Preview gallery with thumbnails
+        -   Upload progress tracking via XMLHttpRequest
+        -   Delete with confirmation
+        -   Integrated into FacilitySurvey and ExecutiveSurveyQuestions components
+    -   **Database**: Evidence paths stored as text arrays in facilitySurveyQuestions.evidence and assessmentQuestions.evidence fields
 
 ### Feature Specifications
 -   **Core Entities**: Assessments, Sites/Locations, Assets (people, property, information, reputation), Risk Scenarios, Vulnerabilities, Controls (existing and proposed), Treatment Plans, Facility Survey Questions, Assessment Questions, Risk Insights, Reports, Users, Password Reset Tokens.

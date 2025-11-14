@@ -1781,7 +1781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Evidence Upload/Download/Delete routes
-  app.post("/api/assessments/:id/evidence", verifyAssessmentOwnership, upload.single('photo'), async (req, res) => {
+  app.post("/api/assessments/:id/evidence", verifyAssessmentOwnership, upload.fields([{ name: 'photo', maxCount: 1 }]), async (req, res) => {
     try {
       const { questionId, questionType } = req.body;
       
@@ -1793,16 +1793,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "questionType must be 'facility' or 'assessment'" });
       }
 
-      if (!req.file) {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      if (!files || !files.photo || files.photo.length === 0) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      const file = files.photo[0];
       const assessmentId = req.params.id;
       const objectStorageService = new ObjectStorageService();
       
       const evidencePath = await objectStorageService.uploadEvidence(
-        req.file.buffer,
-        req.file.originalname,
+        file.buffer,
+        file.originalname,
         assessmentId,
         questionId
       );
@@ -1850,7 +1852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         evidencePath,
-        filename: req.file.originalname
+        filename: file.originalname
       });
     } catch (error: any) {
       console.error("Error uploading evidence:", error);
