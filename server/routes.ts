@@ -580,15 +580,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = {
         interviewQuestions: 0,
         executiveSurveyQuestions: 0,
-        executiveProtectionQuestions: 0,
         errors: [] as string[],
         warnings: [] as string[]
       };
 
-      // Import all seed functions
+      // Import seed functions
       const { seedInterviewQuestions } = await import('./seed-interview-questions');
       const { seedExecutiveSurveyQuestions } = await import('./seed-executive-questions');
-      const { seedExecutiveProtectionQuestions } = await import('./seed-executive-protection');
 
       // Run each seed script and capture actual counts
       try {
@@ -602,27 +600,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        const count = await seedExecutiveSurveyQuestions();
-        results.executiveSurveyQuestions = count;
-        console.log(`✅ Executive survey questions seeded: ${count}`);
-        results.warnings.push('Executive survey seeding may have deleted associated facility survey data');
+        const result = await seedExecutiveSurveyQuestions();
+        results.executiveSurveyQuestions = result.count;
+        console.log(`✅ Executive survey questions seeded: ${result.count}`);
+        if (result.deletedFacilitySurveyData) {
+          results.warnings.push('Deleted associated facility survey data as part of template cleanup');
+        }
       } catch (error) {
         const errorMsg = `Executive survey questions failed: ${error instanceof Error ? error.message : String(error)}`;
         console.error(`❌ ${errorMsg}`);
         results.errors.push(errorMsg);
       }
 
-      try {
-        const count = await seedExecutiveProtectionQuestions();
-        results.executiveProtectionQuestions = count;
-        console.log(`✅ Executive protection questions seeded: ${count}`);
-      } catch (error) {
-        const errorMsg = `Executive protection questions failed: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`❌ ${errorMsg}`);
-        results.errors.push(errorMsg);
-      }
-
-      const totalSuccess = results.interviewQuestions + results.executiveSurveyQuestions + results.executiveProtectionQuestions;
+      const totalSuccess = results.interviewQuestions + results.executiveSurveyQuestions;
       console.log(`🎉 Production database seeding complete! Total: ${totalSuccess} questions`);
       
       res.json({ 

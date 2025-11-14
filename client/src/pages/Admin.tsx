@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle } from "lucide-react";
 
 type User = {
   id: string;
@@ -114,7 +114,7 @@ export default function Admin() {
       const hasErrors = data.results.errors.length > 0;
       const hasWarnings = data.results.warnings && data.results.warnings.length > 0;
       
-      let description = `Loaded ${data.results.interviewQuestions} interview questions, ${data.results.executiveSurveyQuestions} survey questions, and ${data.results.executiveProtectionQuestions} executive protection questions.`;
+      let description = `Loaded ${data.results.interviewQuestions} interview questions and ${data.results.executiveSurveyQuestions} executive survey questions.`;
       
       if (hasErrors) {
         description += `\n\nErrors: ${data.results.errors.join(', ')}`;
@@ -294,16 +294,22 @@ export default function Admin() {
             </p>
             <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
               <li>34 Executive Interview questions</li>
-              <li>39 Executive Survey questions</li>
-              <li>39 Executive Protection questions</li>
+              <li>39 Executive Survey questions (includes facility survey templates)</li>
             </ul>
-            <p className="text-sm text-muted-foreground font-medium">
-              Note: This will replace any existing template questions.
-            </p>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3">
+              <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Warning: Destructive Operation
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                This will replace all existing template questions. Any associated facility survey data may be deleted.
+              </p>
+            </div>
             <Button
-              onClick={() => seedProductionMutation.mutate()}
+              onClick={() => setShowSeedConfirm(true)}
               disabled={seedProductionMutation.isPending}
               data-testid="button-seed-production"
+              variant="destructive"
             >
               <Database className="h-4 w-4 mr-2" />
               {seedProductionMutation.isPending ? "Seeding..." : "Seed Production Database"}
@@ -355,6 +361,56 @@ export default function Admin() {
               data-testid="button-confirm-reset"
             >
               {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Seed Production Confirmation Dialog */}
+      <Dialog open={showSeedConfirm} onOpenChange={setShowSeedConfirm}>
+        <DialogContent data-testid="dialog-seed-confirm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Database className="h-5 w-5" />
+              Confirm Database Seeding
+            </DialogTitle>
+            <DialogDescription>
+              This is a destructive operation that will replace all template questions in the database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4 space-y-2">
+              <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Warning: This action will:
+              </p>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Delete all existing template questions</li>
+                <li>Potentially delete associated facility survey data</li>
+                <li>Replace with fresh template data</li>
+              </ul>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This operation is intended for initial production setup or data recovery. 
+              Are you sure you want to proceed?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSeedConfirm(false)}
+              disabled={seedProductionMutation.isPending}
+              data-testid="button-cancel-seed"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => seedProductionMutation.mutate()}
+              disabled={seedProductionMutation.isPending}
+              data-testid="button-confirm-seed"
+            >
+              {seedProductionMutation.isPending ? "Seeding..." : "Yes, Seed Database"}
             </Button>
           </DialogFooter>
         </DialogContent>

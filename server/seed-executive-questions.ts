@@ -137,6 +137,8 @@ function getSubcategory(questionId: string, questionText: string): string {
 async function seedExecutiveSurveyQuestions() {
   console.log('🔄 Starting Executive Protection question seeding...');
   
+  let deletedFacilitySurveyData = false;
+  
   try {
     // Step 1: First, get all template question IDs for executive-protection
     console.log('🔍 Finding existing executive protection template questions...');
@@ -156,6 +158,7 @@ async function seedExecutiveSurveyQuestions() {
       await db.delete(facilitySurveyQuestions)
         .where(inArray(facilitySurveyQuestions.templateQuestionId, templateQuestionIds));
       
+      deletedFacilitySurveyData = true;
       console.log('✅ Removed dependent facility survey questions');
     }
     
@@ -266,7 +269,7 @@ async function seedExecutiveSurveyQuestions() {
     }
     
     console.log('\n✅ Executive Protection question seeding complete!');
-    return questionsToInsert.length;
+    return { count: questionsToInsert.length, deletedFacilitySurveyData };
   } catch (error) {
     console.error('❌ Error seeding executive protection questions:', error);
     throw error;
