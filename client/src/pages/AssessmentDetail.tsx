@@ -47,9 +47,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   // Delete assessment mutation
   const deleteAssessmentMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest(`/api/assessments/${assessmentId}`, {
-        method: 'DELETE',
-      });
+      await apiRequest('DELETE', `/api/assessments/${assessmentId}`);
     },
     onSuccess: () => {
       toast({
