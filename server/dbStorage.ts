@@ -2,6 +2,7 @@ import { db } from "./db";
 import { eq, and, gt, sql } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import type { IStorage } from "./storage";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import type {
   Organization,
   InsertOrganization,
@@ -285,8 +286,116 @@ export class DbStorage implements IStorage {
   }
 
   async deleteAssessment(id: string): Promise<boolean> {
-    const results = await db.delete(schema.assessments).where(eq(schema.assessments.id, id)).returning();
-    return results.length > 0;
+    const objectStorage = new ObjectStorageService();
+    
+    try {
+      console.log(`[deleteAssessment] Starting deletion for assessment ${id}`);
+      
+      // Step 1: Collect evidence file paths (will delete AFTER successful transaction)
+      console.log(`[deleteAssessment] Collecting evidence files...`);
+      const facilityQuestions = await db.select()
+        .from(schema.facilitySurveyQuestions)
+        .where(eq(schema.facilitySurveyQuestions.assessmentId, id));
+      
+      const assessmentQuestions = await db.select()
+        .from(schema.assessmentQuestions)
+        .where(eq(schema.assessmentQuestions.assessmentId, id));
+      
+      const allEvidencePaths: string[] = [];
+      facilityQuestions.forEach(q => {
+        if (q.evidence && Array.isArray(q.evidence)) {
+          allEvidencePaths.push(...q.evidence);
+        }
+      });
+      assessmentQuestions.forEach(q => {
+        if (q.evidence && Array.isArray(q.evidence)) {
+          allEvidencePaths.push(...q.evidence);
+        }
+      });
+      
+      console.log(`[deleteAssessment] Found ${allEvidencePaths.length} evidence files to delete after transaction`);
+      
+      // Step 2: Delete all related database records in a transaction
+      // Order: controls → treatmentPlans → riskInsights → identifiedThreats → vulnerabilities → riskScenarios → riskAssets → remaining tables
+      console.log(`[deleteAssessment] Starting database cascade deletion...`);
+      await db.transaction(async (tx) => {
+        console.log(`[deleteAssessment] Deleting controls...`);
+        await tx.delete(schema.controls)
+          .where(eq(schema.controls.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting treatmentPlans...`);
+        await tx.delete(schema.treatmentPlans)
+          .where(eq(schema.treatmentPlans.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting riskInsights...`);
+        await tx.delete(schema.riskInsights)
+          .where(eq(schema.riskInsights.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting identifiedThreats...`);
+        await tx.delete(schema.identifiedThreats)
+          .where(eq(schema.identifiedThreats.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting vulnerabilities...`);
+        await tx.delete(schema.vulnerabilities)
+          .where(eq(schema.vulnerabilities.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting riskScenarios...`);
+        await tx.delete(schema.riskScenarios)
+          .where(eq(schema.riskScenarios.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting riskAssets...`);
+        await tx.delete(schema.riskAssets)
+          .where(eq(schema.riskAssets.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting reports...`);
+        await tx.delete(schema.reports)
+          .where(eq(schema.reports.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting facilitySurveyQuestions...`);
+        await tx.delete(schema.facilitySurveyQuestions)
+          .where(eq(schema.facilitySurveyQuestions.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting assessmentQuestions...`);
+        await tx.delete(schema.assessmentQuestions)
+          .where(eq(schema.assessmentQuestions.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting executiveInterviewResponses...`);
+        await tx.delete(schema.executiveInterviewResponses)
+          .where(eq(schema.executiveInterviewResponses.assessmentId, id));
+        
+        console.log(`[deleteAssessment] Deleting assessment...`);
+        const results = await tx.delete(schema.assessments)
+          .where(eq(schema.assessments.id, id))
+          .returning();
+        
+        if (results.length === 0) {
+          throw new Error(`Assessment ${id} not found`);
+        }
+        
+        console.log(`[deleteAssessment] Database deletion successful`);
+      });
+      
+      // Step 3: Delete evidence files AFTER successful transaction (ignore errors for missing files)
+      console.log(`[deleteAssessment] Deleting ${allEvidencePaths.length} evidence files from storage...`);
+      for (const evidencePath of allEvidencePaths) {
+        try {
+          await objectStorage.deleteEvidence(evidencePath);
+          console.log(`[deleteAssessment] Deleted evidence: ${evidencePath}`);
+        } catch (error) {
+          if (error instanceof ObjectNotFoundError) {
+            console.log(`[deleteAssessment] Evidence file not found (already deleted): ${evidencePath}`);
+          } else {
+            console.error(`[deleteAssessment] Error deleting evidence ${evidencePath}:`, error);
+          }
+        }
+      }
+      
+      console.log(`[deleteAssessment] Successfully completed deletion for assessment ${id}`);
+      return true;
+    } catch (error) {
+      console.error(`[deleteAssessment] Failed to delete assessment ${id}:`, error);
+      throw error;
+    }
   }
 
   // Facility Survey methods
