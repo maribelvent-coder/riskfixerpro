@@ -234,54 +234,56 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header with Phase Progress */}
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-2 sm:gap-4">
         <Button 
           variant="outline" 
           size="icon"
           onClick={handleBack}
           data-testid="button-back"
+          className="flex-shrink-0"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         
-        <div className="flex-1">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold" data-testid="heading-assessment-title">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="heading-assessment-title">
                 {assessmentData.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {assessmentData.location}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground">
+                <div className="flex items-center min-w-0">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">{assessmentData.location}</span>
                 </div>
                 <div className="flex items-center">
-                  <User className="h-4 w-4 mr-1" />
-                  {assessmentData.assessor}
+                  <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">{assessmentData.assessor}</span>
                 </div>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" />
+                <div className="flex items-center whitespace-nowrap">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
                   Created {new Date(assessmentData.createdAt).toLocaleDateString()}
                 </div>
               </div>
               
               {/* Phase Progress Indicator - Paradigm-Aware */}
-              <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-4 mt-3 sm:mt-4 overflow-x-auto">
+                <div className="flex items-center gap-1 sm:gap-2">
                   {workflowConfig.phases.map((phase, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                    <div key={index} className="flex items-center gap-1 sm:gap-2">
+                      <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded text-[10px] sm:text-xs whitespace-nowrap ${
                         phase.completed ? "bg-green-100 text-green-700" : 
                         currentPhase > index ? "bg-blue-100 text-blue-700" :
                         "bg-muted text-muted-foreground"
                       }`}>
-                        {phase.completed ? <CheckCircle className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-                        {phase.label}
+                        {phase.completed ? <CheckCircle className="h-3 w-3 flex-shrink-0" /> : <Shield className="h-3 w-3 flex-shrink-0" />}
+                        <span className="hidden sm:inline">{phase.label}</span>
+                        <span className="sm:hidden">{phase.label.split(':')[0]}</span>
                       </div>
                       {index < workflowConfig.phases.length - 1 && (
-                        <div className={`w-8 h-0.5 ${currentPhase > index + 1 ? "bg-green-500" : "bg-muted"}`} />
+                        <div className={`w-4 sm:w-8 h-0.5 ${currentPhase > index + 1 ? "bg-green-500" : "bg-muted"}`} />
                       )}
                     </div>
                   ))}
@@ -289,10 +291,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Badge 
                 variant={assessmentData.status === "completed" ? "default" : "secondary"}
                 data-testid="badge-status"
+                className="whitespace-nowrap"
               >
                 {assessmentData.status === "completed" ? "Completed" : 
                  assessmentData.status === "risk-assessment" ? "Risk Assessment" :
@@ -302,6 +305,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 variant="outline"
                 size="icon"
                 onClick={() => setDeleteDialogOpen(true)}
+                className="flex-shrink-0"
                 disabled={deleteAssessmentMutation.isPending}
                 data-testid="button-delete-assessment"
                 title="Delete assessment"
