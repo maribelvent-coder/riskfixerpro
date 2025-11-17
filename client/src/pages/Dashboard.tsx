@@ -177,27 +177,28 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="heading-dashboard">Physical Security Risk Assessment</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold" data-testid="heading-dashboard">Physical Security Risk Assessment</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Comprehensive facility surveys and professional risk analysis following ASIS International standards
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-stretch sm:items-end gap-2">
           <Button 
             onClick={handleCreateNew} 
             disabled={createAssessmentMutation.isPending || hasReachedLimit}
             data-testid="button-create-assessment"
+            className="w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
           </Button>
           {hasReachedLimit && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="message-upgrade-assessment">
-              <AlertCircle className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground" data-testid="message-upgrade-assessment">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span>{getUpgradeMessage(tier, "assessments")} <a href="/pricing" className="text-primary hover:underline">Upgrade now.</a></span>
             </div>
           )}
@@ -205,7 +206,7 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Assessments</CardTitle>
@@ -306,10 +307,10 @@ export default function Dashboard() {
 
       {/* Recent Assessments */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Recent Assessments</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-base sm:text-lg font-semibold">Recent Assessments</h2>
           <div className="flex items-center gap-2">
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-initial">
               <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search assessments..."
@@ -318,11 +319,11 @@ export default function Dashboard() {
                   setSearchQuery(e.target.value);
                   handleSearch(e.target.value);
                 }}
-                className="pl-9 w-64"
+                className="pl-9 w-full sm:w-64"
                 data-testid="input-search-assessments"
               />
             </div>
-            <Button variant="outline" size="sm" data-testid="button-filter">
+            <Button variant="outline" size="sm" data-testid="button-filter" className="flex-shrink-0">
               <Filter className="h-4 w-4" />
             </Button>
           </div>
