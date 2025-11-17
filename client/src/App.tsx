@@ -41,7 +41,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
           <AppSidebar />
           <div className="flex flex-col flex-1">
             <header className="flex items-center justify-between p-4 border-b bg-background">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <SidebarTrigger data-testid="button-sidebar-toggle" className="min-h-11 min-w-11 sm:min-h-9 sm:min-w-9" />
               <ThemeToggle />
             </header>
             <main className="flex-1 overflow-auto p-3 sm:p-6">

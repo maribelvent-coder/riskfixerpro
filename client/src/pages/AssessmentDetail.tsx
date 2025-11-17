@@ -242,7 +242,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           size="icon"
           onClick={handleBack}
           data-testid="button-back"
-          className="flex-shrink-0"
+          className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-9 sm:min-w-9"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -305,7 +305,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 variant="outline"
                 size="icon"
                 onClick={() => setDeleteDialogOpen(true)}
-                className="flex-shrink-0"
+                className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-9 sm:min-w-9"
                 disabled={deleteAssessmentMutation.isPending}
                 data-testid="button-delete-assessment"
                 title="Delete assessment"
@@ -328,7 +328,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 value={tab.id}
                 data-testid={`tab-${tab.id}`}
                 disabled={!tabsAvailable[tab.id]}
-                className="flex flex-wrap items-center gap-2 justify-center text-center"
+                className="flex flex-wrap items-center gap-2 justify-center text-center min-h-11"
               >
                 <Icon className="h-4 w-4" />
                 <span>{tab.label}</span>

@@ -68,7 +68,7 @@ export default function Assessments() {
         <Button 
           onClick={() => setLocation("/app/assessments/new")}
           data-testid="button-new-assessment"
-          className="gap-2 w-full sm:w-auto"
+          className="gap-2 w-full sm:w-auto min-h-11"
         >
           <Plus className="h-4 w-4" />
           New Assessment
@@ -120,7 +120,7 @@ export default function Assessments() {
                 <p className="text-sm mt-1">Create your first assessment to get started</p>
                 <Button 
                   onClick={() => setLocation("/app/assessments/new")}
-                  className="mt-4"
+                  className="mt-4 min-h-11"
                   data-testid="button-create-first"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -167,7 +167,7 @@ export default function Assessments() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="w-full"
+                  className="w-full min-h-11 sm:min-h-8"
                   onClick={(e) => {
                     e.stopPropagation();
                     setLocation(`/app/assessments/${assessment.id}`);

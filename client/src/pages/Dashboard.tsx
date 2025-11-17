@@ -191,7 +191,7 @@ export default function Dashboard() {
             onClick={handleCreateNew} 
             disabled={createAssessmentMutation.isPending || hasReachedLimit}
             data-testid="button-create-assessment"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto min-h-11"
           >
             <Plus className="h-4 w-4 mr-2" />
             {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
