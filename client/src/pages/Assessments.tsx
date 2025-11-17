@@ -55,27 +55,27 @@ export default function Assessments() {
   };
 
   return (
-    <div className="space-y-6" data-testid="page-assessments">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6" data-testid="page-assessments">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-assessments">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="heading-assessments">
             Assessments
           </h1>
-          <p className="text-muted-foreground mt-1" data-testid="text-assessments-description">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1" data-testid="text-assessments-description">
             Manage and track all your security risk assessments
           </p>
         </div>
         <Button 
           onClick={() => setLocation("/app/assessments/new")}
           data-testid="button-new-assessment"
-          className="gap-2"
+          className="gap-2 w-full sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           New Assessment
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -87,7 +87,7 @@ export default function Assessments() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]" data-testid="select-status-filter">
+          <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-status-filter">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
