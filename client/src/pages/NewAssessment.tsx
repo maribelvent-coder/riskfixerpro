@@ -25,7 +25,7 @@ const newAssessmentFormSchema = insertAssessmentSchema
   .extend({
     title: z.string().min(1, "Title is required"),
     location: z.string().optional(),
-    templateId: z.string().optional(),
+    templateId: z.string().min(1, "Please select an assessment template"),
   });
 
 type NewAssessmentForm = z.infer<typeof newAssessmentFormSchema>;
@@ -48,13 +48,11 @@ export default function NewAssessment() {
 
   const createMutation = useMutation({
     mutationFn: async (data: NewAssessmentForm) => {
-      // Handle "none" template selection
-      const templateId = data.templateId === "none" || !data.templateId ? undefined : data.templateId;
-      const selectedTemplate = ASSESSMENT_TEMPLATES.find(t => t.id === templateId);
+      const selectedTemplate = ASSESSMENT_TEMPLATES.find(t => t.id === data.templateId);
       return assessmentApi.create({
         ...data,
         location: data.location || "",
-        templateId,
+        templateId: data.templateId,
         surveyParadigm: selectedTemplate?.surveyParadigm || data.surveyParadigm
       });
     },
@@ -81,7 +79,7 @@ export default function NewAssessment() {
   };
 
   const watchedTemplateId = form.watch("templateId");
-  const selectedTemplate = watchedTemplateId && watchedTemplateId !== "none" 
+  const selectedTemplate = watchedTemplateId 
     ? ASSESSMENT_TEMPLATES.find(t => t.id === watchedTemplateId)
     : undefined;
 
@@ -155,15 +153,14 @@ export default function NewAssessment() {
                 name="templateId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assessment Template (Optional)</FormLabel>
+                    <FormLabel>Assessment Template *</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-template">
-                          <SelectValue placeholder="Select a template or start from scratch" />
+                          <SelectValue placeholder="Select an assessment template" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none" data-testid="template-option-none">No Template (Facility Assessment)</SelectItem>
                         {ASSESSMENT_TEMPLATES.map((template) => (
                           <SelectItem key={template.id} value={template.id} data-testid={`template-option-${template.id}`}>
                             {template.name}

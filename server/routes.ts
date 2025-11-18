@@ -777,7 +777,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      // Check tier assessment limit
+      // Validate input data FIRST (including required templateId)
+      // Note: We need surveyParadigm for validation, so we extract templateId just for paradigm lookup
+      // but validation will still fail if templateId is missing
+      const templateIdFromBody = req.body.templateId;
+      const surveyParadigm = getSurveyParadigmFromTemplate(templateIdFromBody) || req.body.surveyParadigm || "facility";
+
+      const validatedData = insertAssessmentSchema.parse({
+        ...req.body,
+        userId,
+        surveyParadigm
+      });
+
+      // Now use templateId from VALIDATED data (not req.body)
+      const templateId = validatedData.templateId;
+
+      // Check tier assessment limit AFTER validation succeeds
       const existingAssessments = await storage.getAllAssessments(userId);
       const tier = user.accountTier as AccountTier;
       
@@ -788,18 +803,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Set surveyParadigm from template if templateId is provided
-      const { templateId } = req.body;
-      const surveyParadigm = getSurveyParadigmFromTemplate(templateId) || req.body.surveyParadigm || "facility";
-
-      const validatedData = insertAssessmentSchema.parse({
-        ...req.body,
-        userId,
-        surveyParadigm
-      });
       const assessment = await storage.createAssessment(validatedData);
 
-      // Auto-populate template questions if templateId is provided
+      // Auto-populate template questions (templateId is guaranteed to exist here)
       if (templateId) {
         try {
           const templateQuestions = await storage.getTemplateQuestions(templateId);

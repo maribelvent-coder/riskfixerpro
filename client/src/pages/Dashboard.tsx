@@ -22,7 +22,7 @@ import { getTierLimits, getUpgradeMessage, type AccountTier } from "@shared/tier
 
 const createAssessmentFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  templateId: z.string().optional(),
+  templateId: z.string().min(1, "Please select an assessment template"),
   siteId: z.string().optional(),
   location: z.string().optional(),
   assessor: z.string().min(1, "Assessor name is required"),
@@ -79,7 +79,7 @@ export default function Dashboard() {
     resolver: zodResolver(createAssessmentFormSchema),
     defaultValues: {
       title: "New Security Assessment",
-      templateId: "none",
+      templateId: "",
       siteId: "",
       location: "",
       assessor: user?.username || "Current User",
@@ -102,7 +102,7 @@ export default function Dashboard() {
           title: data.title,
           assessor: data.assessor,
           status: "draft" as const,
-          templateId: data.templateId && data.templateId !== "none" ? data.templateId : undefined,
+          templateId: data.templateId,
           siteId: data.siteId,
           location: selectedSite 
             ? `${selectedSite.name} - ${selectedSite.city}, ${selectedSite.state}`
@@ -114,7 +114,7 @@ export default function Dashboard() {
           title: data.title,
           assessor: data.assessor,
           status: "draft" as const,
-          templateId: data.templateId && data.templateId !== "none" ? data.templateId : undefined,
+          templateId: data.templateId,
           location: data.location || "",
         };
       }
@@ -420,19 +420,18 @@ export default function Dashboard() {
                 name="templateId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assessment Template (Optional)</FormLabel>
+                    <FormLabel>Assessment Template *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={templatesLoading}>
                       <FormControl>
                         <SelectTrigger data-testid="select-template">
                           <SelectValue placeholder={
                             templatesLoading 
                               ? "Loading templates..." 
-                              : "Select a template (optional)"
+                              : "Select an assessment template"
                           } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">No template (blank assessment)</SelectItem>
                         {templates.length > 0 && templates.map((template: any) => (
                           <SelectItem key={template.id} value={template.id}>
                             {template.name}

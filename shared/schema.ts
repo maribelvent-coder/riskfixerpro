@@ -341,6 +341,8 @@ export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   createdAt: true,
   updatedAt: true,
   completedAt: true,
+}).extend({
+  templateId: z.string().min(1, "Template selection is required"),
 });
 
 // Insert schemas
