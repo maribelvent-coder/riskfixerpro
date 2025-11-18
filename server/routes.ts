@@ -777,22 +777,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not found" });
       }
 
-      // Validate input data FIRST (including required templateId)
-      // Note: We need surveyParadigm for validation, so we extract templateId just for paradigm lookup
-      // but validation will still fail if templateId is missing
-      const templateIdFromBody = req.body.templateId;
-      const surveyParadigm = getSurveyParadigmFromTemplate(templateIdFromBody) || req.body.surveyParadigm || "facility";
-
+      // STEP 1: Validate input data FIRST (including required templateId)
+      // This catches missing/invalid templates before any other logic runs
       const validatedData = insertAssessmentSchema.parse({
         ...req.body,
-        userId,
-        surveyParadigm
+        userId
       });
 
-      // Now use templateId from VALIDATED data (not req.body)
+      // STEP 2: Derive surveyParadigm from validated templateId
       const templateId = validatedData.templateId;
+      const surveyParadigm = getSurveyParadigmFromTemplate(templateId) || "facility";
+      
+      // Add paradigm to validated data
+      const dataWithParadigm = { ...validatedData, surveyParadigm };
 
-      // Check tier assessment limit AFTER validation succeeds
+      // STEP 3: Check tier limits AFTER validation
       const existingAssessments = await storage.getAllAssessments(userId);
       const tier = user.accountTier as AccountTier;
       
@@ -803,7 +802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const assessment = await storage.createAssessment(validatedData);
+      // STEP 4: Create assessment with validated + enriched data
+      const assessment = await storage.createAssessment(dataWithParadigm);
 
       // Auto-populate template questions (templateId is guaranteed to exist here)
       if (templateId) {

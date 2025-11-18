@@ -25,6 +25,7 @@ Preferred communication style: Simple, everyday language.
 -   **Admin Features**: Admin role system, admin panel for user management, and password reset functionality.
 -   **Password Reset System**: Secure self-service password reset using cryptographically strong, time-limited, one-time use tokens.
 -   **Multi-Paradigm Assessment System**: Dynamic workflows (e.g., "facility" or "executive") with distinct tab structures, phase indicators, and completion tracking. Includes an Executive Interview component with 34 pre-loaded questions across 11 categories and a standalone PDF export for survey findings.
+-   **Template Requirement System**: All assessments must be created from a template. Template selection is enforced at both frontend (form validation) and backend (Zod schema validation). Template auto-populates assessment questions, ensuring photo evidence can be linked to questions.
 -   **Triple Risk Calculation Model**: Calculates Inherent, Current, and Residual risks using a floating-point compound reduction system.
 -   **Photo Evidence Upload System**: Comprehensive workflow including Replit Object Storage integration, secure API endpoints for upload/download/delete, frontend components for capture/preview/progress, and database storage of evidence paths.
 
