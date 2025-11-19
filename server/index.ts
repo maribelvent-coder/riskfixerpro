@@ -4,6 +4,10 @@ import ConnectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { loadFlagsFromEnv } from "@shared/featureFlags";
+
+// Initialize feature flags from environment variables
+loadFlagsFromEnv();
 
 // Validate required environment variables
 if (!process.env.DATABASE_URL) {
