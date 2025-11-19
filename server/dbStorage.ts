@@ -42,7 +42,9 @@ import type {
   InsertRiskInsight,
   Report,
   InsertReport,
-  AssessmentWithQuestions
+  AssessmentWithQuestions,
+  ThreatLibrary,
+  ControlLibrary
 } from "@shared/schema";
 
 export class DbStorage implements IStorage {
@@ -846,6 +848,38 @@ export class DbStorage implements IStorage {
       .set(updateData)
       .where(eq(schema.reports.id, id))
       .returning();
+    return results[0];
+  }
+
+  // Threat Library methods
+  async getThreatLibrary(): Promise<ThreatLibrary[]> {
+    return await db.select().from(schema.threatLibrary).where(eq(schema.threatLibrary.active, true));
+  }
+
+  async getThreatLibraryByCategory(category: string): Promise<ThreatLibrary[]> {
+    return await db.select().from(schema.threatLibrary)
+      .where(and(eq(schema.threatLibrary.category, category), eq(schema.threatLibrary.active, true)));
+  }
+
+  async getThreatLibraryItem(id: string): Promise<ThreatLibrary | undefined> {
+    const results = await db.select().from(schema.threatLibrary)
+      .where(and(eq(schema.threatLibrary.id, id), eq(schema.threatLibrary.active, true)));
+    return results[0];
+  }
+
+  // Control Library methods
+  async getControlLibrary(): Promise<ControlLibrary[]> {
+    return await db.select().from(schema.controlLibrary).where(eq(schema.controlLibrary.active, true));
+  }
+
+  async getControlLibraryByCategory(category: string): Promise<ControlLibrary[]> {
+    return await db.select().from(schema.controlLibrary)
+      .where(and(eq(schema.controlLibrary.category, category), eq(schema.controlLibrary.active, true)));
+  }
+
+  async getControlLibraryItem(id: string): Promise<ControlLibrary | undefined> {
+    const results = await db.select().from(schema.controlLibrary)
+      .where(and(eq(schema.controlLibrary.id, id), eq(schema.controlLibrary.active, true)));
     return results[0];
   }
 }

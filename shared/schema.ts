@@ -337,6 +337,40 @@ export const reports = pgTable("reports", {
   generatedAt: timestamp("generated_at"),
 });
 
+// Threat Library - Master list of common security threats
+export const threatLibrary = pgTable("threat_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // "Unauthorized Access", "Active Shooter", etc.
+  category: text("category").notNull(), // "Physical Intrusion", "Theft", "Vandalism", "Workplace Violence", "Natural Disaster", "Cyber-Physical", "Espionage", "Executive Protection"
+  subcategory: text("subcategory"), // More specific categorization
+  description: text("description").notNull(), // Detailed threat description
+  typicalLikelihood: text("typical_likelihood"), // Typical likelihood level for this threat
+  typicalImpact: text("typical_impact"), // Typical impact level for this threat
+  asisCode: text("asis_code"), // ASIS International reference code
+  mitigation: text("mitigation"), // Common mitigation strategies
+  examples: text("examples").array(), // Real-world examples
+  active: boolean("active").notNull().default(true), // Can be disabled without deletion
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Control Library - Master list of security controls
+export const controlLibrary = pgTable("control_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // "CCTV System", "Access Badges", etc.
+  category: text("category").notNull(), // "Access Control", "Surveillance", "Physical Barriers", "Security Personnel", "Procedural Controls", "Environmental Design", "Cyber-Physical Security"
+  controlType: text("control_type").notNull(), // "Detective", "Preventive", "Corrective", "Deterrent"
+  description: text("description").notNull(), // Detailed control description
+  baseWeight: integer("base_weight"), // Effectiveness baseline (1-5)
+  reductionPercentage: integer("reduction_percentage"), // Typical risk reduction (0-100)
+  implementationNotes: text("implementation_notes"), // Best practices for implementation
+  estimatedCost: text("estimated_cost"), // Typical cost range
+  maintenanceLevel: text("maintenance_level"), // Low, Medium, High
+  trainingRequired: boolean("training_required").default(false),
+  maintenanceRequired: boolean("maintenance_required").default(true),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Insert schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -439,6 +473,16 @@ export const insertExecutiveInterviewResponseSchema = createInsertSchema(executi
   updatedAt: true,
 });
 
+export const insertThreatLibrarySchema = createInsertSchema(threatLibrary).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertControlLibrarySchema = createInsertSchema(controlLibrary).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -508,6 +552,12 @@ export type InsertExecutiveInterviewQuestion = z.infer<typeof insertExecutiveInt
 
 export type ExecutiveInterviewResponse = typeof executiveInterviewResponses.$inferSelect;
 export type InsertExecutiveInterviewResponse = z.infer<typeof insertExecutiveInterviewResponseSchema>;
+
+export type ThreatLibrary = typeof threatLibrary.$inferSelect;
+export type InsertThreatLibrary = z.infer<typeof insertThreatLibrarySchema>;
+
+export type ControlLibrary = typeof controlLibrary.$inferSelect;
+export type InsertControlLibrary = z.infer<typeof insertControlLibrarySchema>;
 
 // Assessment with related data
 export type AssessmentWithQuestions = Assessment & {

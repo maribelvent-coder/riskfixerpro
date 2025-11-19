@@ -38,7 +38,11 @@ import {
   type Organization,
   type InsertOrganization,
   type OrganizationInvitation,
-  type InsertOrganizationInvitation
+  type InsertOrganizationInvitation,
+  type ThreatLibrary,
+  type InsertThreatLibrary,
+  type ControlLibrary,
+  type InsertControlLibrary
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -182,6 +186,16 @@ export interface IStorage {
   getReport(id: string): Promise<Report | undefined>;
   createReport(report: InsertReport): Promise<Report>;
   updateReport(id: string, report: Partial<Report>): Promise<Report | undefined>;
+
+  // Threat Library methods
+  getThreatLibrary(): Promise<ThreatLibrary[]>;
+  getThreatLibraryByCategory(category: string): Promise<ThreatLibrary[]>;
+  getThreatLibraryItem(id: string): Promise<ThreatLibrary | undefined>;
+
+  // Control Library methods
+  getControlLibrary(): Promise<ControlLibrary[]>;
+  getControlLibraryByCategory(category: string): Promise<ControlLibrary[]>;
+  getControlLibraryItem(id: string): Promise<ControlLibrary | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -1220,6 +1234,32 @@ export class MemStorage implements IStorage {
     };
     this.reports.set(id, updated);
     return updated;
+  }
+
+  // Threat Library methods (not supported in MemStorage)
+  async getThreatLibrary(): Promise<ThreatLibrary[]> {
+    throw new Error("Threat Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getThreatLibraryByCategory(category: string): Promise<ThreatLibrary[]> {
+    throw new Error("Threat Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getThreatLibraryItem(id: string): Promise<ThreatLibrary | undefined> {
+    throw new Error("Threat Library not supported in MemStorage - use DbStorage");
+  }
+
+  // Control Library methods (not supported in MemStorage)
+  async getControlLibrary(): Promise<ControlLibrary[]> {
+    throw new Error("Control Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getControlLibraryByCategory(category: string): Promise<ControlLibrary[]> {
+    throw new Error("Control Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getControlLibraryItem(id: string): Promise<ControlLibrary | undefined> {
+    throw new Error("Control Library not supported in MemStorage - use DbStorage");
   }
 }
 
