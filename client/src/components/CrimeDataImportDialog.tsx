@@ -187,14 +187,15 @@ export function CrimeDataImportDialog({ open, onOpenChange, siteId, assessmentId
         <DialogHeader>
           <DialogTitle>Import Crime Data</DialogTitle>
           <DialogDescription>
-            Upload a CAP Index PDF or manually enter crime statistics for this location.
+            Upload a CAP Index PDF, import from FBI database, or manually enter crime statistics.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="pdf" className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="pdf" data-testid="tab-pdf-upload">PDF Upload</TabsTrigger>
             <TabsTrigger value="manual" data-testid="tab-manual-entry">Manual Entry</TabsTrigger>
+            <TabsTrigger value="fbi" data-testid="tab-fbi-data">FBI Data</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pdf" className="space-y-4">
@@ -417,8 +418,217 @@ export function CrimeDataImportDialog({ open, onOpenChange, siteId, assessmentId
               </form>
             </Form>
           </TabsContent>
+
+          <TabsContent value="fbi" className="space-y-4">
+            <FBIDataImport siteId={siteId} assessmentId={assessmentId} onSuccess={() => onOpenChange(false)} />
+          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// FBI Data Import Component
+interface FBIAgency {
+  ori: string;
+  agency_name: string;
+  state_abbr: string;
+  state_name: string;
+  county_name?: string;
+  city_name?: string;
+  agency_type_name: string;
+  population?: number;
+}
+
+function FBIDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; assessmentId?: string; onSuccess: () => void }) {
+  const { toast } = useToast();
+  const [searchState, setSearchState] = useState("");
+  const [searchCity, setSearchCity] = useState("");
+  const [searchResults, setSearchResults] = useState<FBIAgency[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedAgency, setSelectedAgency] = useState<FBIAgency | null>(null);
+
+  const searchMutation = useMutation({
+    mutationFn: async ({ state, city }: { state: string; city?: string }) => {
+      const params = new URLSearchParams();
+      if (state) params.append("state", state);
+      if (city) params.append("city", city);
+      
+      const response = await fetch(`/api/crime-data/fbi/agencies/search?${params.toString()}`, {
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Search failed" }));
+        throw new Error(error.error || "Failed to search FBI agencies");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setSearchResults(data.agencies || []);
+      if (data.agencies?.length === 0) {
+        toast({
+          title: "No results",
+          description: "No FBI agencies found for this location. Try a different search.",
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Search failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const importMutation = useMutation({
+    mutationFn: async (ori: string) => {
+      const response = await apiRequest("POST", "/api/crime-data/fbi/import", {
+        ori,
+        siteId,
+        assessmentId,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "FBI data imported",
+        description: "Crime statistics successfully imported from FBI database.",
+      });
+      // Invalidate crime sources for both site and assessment contexts
+      if (siteId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", siteId] });
+      }
+      if (assessmentId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", assessmentId] });
+      }
+      setSelectedAgency(null);
+      setSearchResults([]);
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Import failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSearch = () => {
+    if (!searchState) {
+      toast({
+        title: "State required",
+        description: "Please enter a state abbreviation (e.g., IL, TX, CA)",
+        variant: "destructive",
+      });
+      return;
+    }
+    searchMutation.mutate({ state: searchState, city: searchCity });
+  };
+
+  const handleImport = (agency: FBIAgency) => {
+    setSelectedAgency(agency);
+    importMutation.mutate(agency.ori);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
+          <Label htmlFor="fbi-state">State (Required)</Label>
+          <Input
+            id="fbi-state"
+            placeholder="e.g., IL, TX, CA"
+            value={searchState}
+            onChange={(e) => setSearchState(e.target.value.toUpperCase())}
+            data-testid="input-fbi-state"
+            maxLength={2}
+          />
+          <p className="text-xs text-muted-foreground">Enter 2-letter state code</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="fbi-city">City (Optional)</Label>
+          <Input
+            id="fbi-city"
+            placeholder="e.g., Chicago"
+            value={searchCity}
+            onChange={(e) => setSearchCity(e.target.value)}
+            data-testid="input-fbi-city"
+          />
+        </div>
+
+        <Button
+          onClick={handleSearch}
+          disabled={searchMutation.isPending || !searchState}
+          className="w-full"
+          data-testid="button-search-fbi"
+        >
+          {searchMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Searching FBI Database...
+            </>
+          ) : (
+            "Search FBI Agencies"
+          )}
+        </Button>
+      </div>
+
+      {searchResults.length > 0 && (
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          <p className="text-sm font-medium">
+            Found {searchResults.length} {searchResults.length === 1 ? "agency" : "agencies"}
+          </p>
+          {searchResults.map((agency) => (
+            <div
+              key={agency.ori}
+              className="p-3 border rounded-lg space-y-1 hover-elevate"
+              data-testid={`fbi-agency-${agency.ori}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{agency.agency_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {agency.city_name && `${agency.city_name}, `}
+                    {agency.county_name && `${agency.county_name} County, `}
+                    {agency.state_abbr}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {agency.agency_type_name}
+                    {agency.population && ` • Pop: ${agency.population.toLocaleString()}`}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleImport(agency)}
+                  disabled={importMutation.isPending}
+                  data-testid={`button-import-${agency.ori}`}
+                >
+                  {importMutation.isPending && selectedAgency?.ori === agency.ori ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    "Import"
+                  )}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {searchResults.length === 0 && !searchMutation.isPending && (
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm">Search for law enforcement agencies by state and city</p>
+          <p className="text-xs mt-1">Data from FBI Uniform Crime Reporting (UCR) Program</p>
+        </div>
+      )}
+    </div>
   );
 }
