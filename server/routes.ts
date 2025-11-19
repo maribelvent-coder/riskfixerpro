@@ -29,7 +29,7 @@ import {
   getOrganizationTierLimits,
   type AccountTier 
 } from "@shared/tierLimits";
-import { getSurveyParadigmFromTemplate } from "@shared/templates";
+import { getSurveyParadigmFromTemplate, ASSESSMENT_TEMPLATES } from "@shared/templates";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
@@ -1563,6 +1563,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (templateError) {
           console.error(`Error auto-populating template questions:`, templateError);
           // Don't fail the assessment creation if template population fails
+        }
+      }
+
+      // Auto-create facility zones from template suggestions
+      if (templateId && assessment.siteId) {
+        try {
+          const template = ASSESSMENT_TEMPLATES.find(t => t.id === templateId);
+          
+          if (template?.suggestedZones && template.suggestedZones.length > 0) {
+            // Get existing zones for this site to avoid duplicates
+            const existingZones = await storage.getFacilityZonesBySite(assessment.siteId);
+            const existingZoneNames = existingZones.map(z => z.name.toLowerCase());
+            
+            // Create zones that don't already exist
+            const zonesToCreate = template.suggestedZones.filter(
+              sz => !existingZoneNames.includes(sz.name.toLowerCase())
+            );
+            
+            for (const suggestedZone of zonesToCreate) {
+              await storage.createFacilityZone({
+                siteId: assessment.siteId,
+                name: suggestedZone.name,
+                zoneType: suggestedZone.zoneType,
+                securityLevel: suggestedZone.securityLevel,
+                description: suggestedZone.description || null,
+                floorNumber: null,
+                accessRequirements: null
+              });
+            }
+            
+            if (zonesToCreate.length > 0) {
+              console.log(`✓ Auto-created ${zonesToCreate.length} facility zones from template: ${templateId}`);
+            }
+          }
+        } catch (zoneError) {
+          console.error(`Error auto-creating facility zones:`, zoneError);
+          // Don't fail the assessment creation if zone creation fails
         }
       }
 
