@@ -77,38 +77,69 @@ function parseJsonField(field: unknown): CrimeBreakdown | null {
   return normalized;
 }
 
+const EMPTY_CRIME_DATA: CrimeBreakdown = {
+  total: 0,
+  rate_per_100k: 0,
+  breakdown: {},
+};
+
 export function CrimeDataCharts({ observations, source }: CrimeDataChartsProps) {
   if (!observations || observations.length === 0) {
-    return null;
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p className="text-sm">No crime data available for visualization.</p>
+      </div>
+    );
   }
 
   const latestObservation = observations[0];
-  const violentCrimes = parseJsonField(latestObservation.violentCrimes);
-  const propertyCrimes = parseJsonField(latestObservation.propertyCrimes);
+  const parsedViolent = parseJsonField(latestObservation.violentCrimes);
+  const parsedProperty = parseJsonField(latestObservation.propertyCrimes);
 
-  if (!violentCrimes || !propertyCrimes) {
-    return null;
+  // Show error state if neither dataset is available
+  if (!parsedViolent && !parsedProperty) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p className="text-sm">Crime data could not be parsed for visualization.</p>
+        <p className="text-xs mt-2">The crime data may be in an unsupported format.</p>
+      </div>
+    );
   }
 
-  // Violent vs Property comparison
-  const categoryData = [
-    {
+  // Track which datasets are actually available
+  const hasViolent = !!parsedViolent;
+  const hasProperty = !!parsedProperty;
+  const hasPartialData = !hasViolent || !hasProperty;
+
+  // Use parsed data or empty fallback
+  const violentCrimes = parsedViolent || EMPTY_CRIME_DATA;
+  const propertyCrimes = parsedProperty || EMPTY_CRIME_DATA;
+
+  // Violent vs Property comparison (only include available datasets)
+  const categoryData = [];
+  if (hasViolent) {
+    categoryData.push({
       name: "Violent Crimes",
       count: violentCrimes.total,
       rate: violentCrimes.rate_per_100k,
-    },
-    {
+    });
+  }
+  if (hasProperty) {
+    categoryData.push({
       name: "Property Crimes",
       count: propertyCrimes.total,
       rate: propertyCrimes.rate_per_100k,
-    },
-  ];
+    });
+  }
 
-  // Pie chart data for crime category distribution
-  const pieData = [
-    { name: "Violent", value: violentCrimes.total, color: COLORS.violent },
-    { name: "Property", value: propertyCrimes.total, color: COLORS.property },
-  ];
+  // Pie chart data for crime category distribution (only include available datasets)
+  const pieData = [];
+  if (hasViolent) {
+    pieData.push({ name: "Violent", value: violentCrimes.total, color: COLORS.violent });
+  }
+  if (hasProperty) {
+    pieData.push({ name: "Property", value: propertyCrimes.total, color: COLORS.property });
+  }
 
   // Breakdown data for violent crimes
   const violentBreakdownData = violentCrimes.breakdown
@@ -164,12 +195,20 @@ export function CrimeDataCharts({ observations, source }: CrimeDataChartsProps) 
             }
           }
           
-          return {
-            period,
-            violent: violent?.total || 0,
-            property: property?.total || 0,
-            total: (violent?.total || 0) + (property?.total || 0),
-          };
+          // Only include datasets that are actually available (don't show zeros for missing data)
+          const dataPoint: any = { period };
+          if (violent) {
+            dataPoint.violent = violent.total;
+          }
+          if (property) {
+            dataPoint.property = property.total;
+          }
+          // Only calculate total if we have both categories
+          if (violent && property) {
+            dataPoint.total = violent.total + property.total;
+          }
+          
+          return dataPoint;
         })
     : [];
 
@@ -177,74 +216,90 @@ export function CrimeDataCharts({ observations, source }: CrimeDataChartsProps) 
 
   return (
     <div className="space-y-4">
+      {hasPartialData && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            <strong>Partial Data:</strong> {hasViolent && !hasProperty && "Only violent crime data is available. Property crime data is missing."}
+            {!hasViolent && hasProperty && "Only property crime data is available. Violent crime data is missing."}
+          </p>
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Category Breakdown - Pie Chart */}
-        <Card data-testid="card-crime-category-pie">
-          <CardHeader>
-            <CardTitle>Crime Category Distribution</CardTitle>
-            <CardDescription>
-              Violent vs. property crime breakdown
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: COLORS.violent }} />
-                  <span>Violent Crimes</span>
-                </div>
-                <span className="font-medium">{violentCrimes.total.toLocaleString()}</span>
+        {pieData.length > 0 && (
+          <Card data-testid="card-crime-category-pie">
+            <CardHeader>
+              <CardTitle>Crime Category Distribution</CardTitle>
+              <CardDescription>
+                Violent vs. property crime breakdown
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-4 space-y-2 text-sm">
+                {hasViolent && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: COLORS.violent }} />
+                      <span>Violent Crimes</span>
+                    </div>
+                    <span className="font-medium">{violentCrimes.total.toLocaleString()}</span>
+                  </div>
+                )}
+                {hasProperty && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: COLORS.property }} />
+                      <span>Property Crimes</span>
+                    </div>
+                    <span className="font-medium">{propertyCrimes.total.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: COLORS.property }} />
-                  <span>Property Crimes</span>
-                </div>
-                <span className="font-medium">{propertyCrimes.total.toLocaleString()}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Total Crimes Comparison */}
-        <Card data-testid="card-crime-totals-bar">
-          <CardHeader>
-            <CardTitle>Crime Totals</CardTitle>
-            <CardDescription>
-              {hasRates ? "Total incidents and rates per 100k population" : "Total incidents"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="count" fill="hsl(var(--primary))" name="Total Incidents" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {categoryData.length > 0 && (
+          <Card data-testid="card-crime-totals-bar">
+            <CardHeader>
+              <CardTitle>Crime Totals</CardTitle>
+              <CardDescription>
+                {hasRates ? "Total incidents and rates per 100k population" : "Total incidents"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={categoryData}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" name="Total Incidents" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Crime Rates (if available) */}
@@ -333,22 +388,26 @@ export function CrimeDataCharts({ observations, source }: CrimeDataChartsProps) 
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="violent"
-                  stroke={COLORS.violent}
-                  name="Violent Crimes"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="property"
-                  stroke={COLORS.property}
-                  name="Property Crimes"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
+                {hasViolent && (
+                  <Line
+                    type="monotone"
+                    dataKey="violent"
+                    stroke={COLORS.violent}
+                    name="Violent Crimes"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                )}
+                {hasProperty && (
+                  <Line
+                    type="monotone"
+                    dataKey="property"
+                    stroke={COLORS.property}
+                    name="Property Crimes"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

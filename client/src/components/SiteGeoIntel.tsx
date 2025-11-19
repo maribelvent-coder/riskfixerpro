@@ -10,7 +10,7 @@ import { CrimeDataImportDialog } from "@/components/CrimeDataImportDialog";
 import { IncidentImportDialog } from "@/components/IncidentImportDialog";
 import { CrimeDataCharts } from "@/components/CrimeDataCharts";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download, BarChart3 } from "lucide-react";
+import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download, BarChart3, X } from "lucide-react";
 import type { Site, PointOfInterest, CrimeSource, CrimeObservation, SiteIncident } from "@shared/schema";
 
 interface SiteGeoIntelProps {
@@ -109,7 +109,9 @@ function CrimeSourceDisplay({
                 size="icon"
                 variant="ghost"
                 onClick={() => setShowCharts(!showCharts)}
+                disabled={sourceObservations.length === 0}
                 data-testid={`button-toggle-charts-${source.id}`}
+                title={sourceObservations.length === 0 ? "No crime observations available for visualization" : (showCharts ? "Hide charts" : "Show charts")}
               >
                 <BarChart3 className="h-4 w-4" />
               </Button>
@@ -257,6 +259,39 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
         variant: "destructive",
         title: "Proximity search failed",
         description: error.message || "Could not find nearby services.",
+      });
+    },
+  });
+
+  // Delete POI mutation
+  const deletePoiMutation = useMutation({
+    mutationFn: async (poiId: string) => {
+      const response = await fetch(`/api/points-of-interest/${poiId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Failed to delete point of interest" }));
+        throw new Error(error.error || "Failed to delete point of interest");
+      }
+      return response.json().catch(() => ({ success: true }));
+    },
+    onSuccess: async () => {
+      // Invalidate POI list and refetch to update both list and map
+      await queryClient.invalidateQueries({ queryKey: ["/api/points-of-interest", site.id] });
+      await queryClient.refetchQueries({ queryKey: ["/api/points-of-interest", site.id] });
+      // Also invalidate site data in case it affects map layers
+      queryClient.invalidateQueries({ queryKey: ["/api/sites", site.id] });
+      toast({
+        title: "Point removed",
+        description: "Point of interest has been removed from the map.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: error.message,
       });
     },
   });
@@ -463,6 +498,16 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
                           </p>
                         )}
                       </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => deletePoiMutation.mutate(poi.id)}
+                        disabled={deletePoiMutation.isPending}
+                        data-testid={`button-delete-poi-${poi.id}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
