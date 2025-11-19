@@ -24,9 +24,34 @@ Completed foundational infrastructure for multi-tenancy and enterprise features:
 - Feature flags default to false (safe rollout)
 - organizationId columns deferred to Phase 1
 
-**Next Phase**: Phase 1 will add organizationId to schema and implement full multi-tenancy with organization CRUD, member invitations, and RBAC enforcement.
-
 See `PHASE0-COMPLETE.md` for detailed documentation.
+
+### Phase 1: Multi-Tenancy Foundation (November 2025) - In Progress
+Building the organization and member management foundation:
+
+**Completed** ✓:
+1. **Schema Updates**: Added `organizationId` to sites and assessments tables with proper indexes and foreign keys
+2. **Organization CRUD**: Full API for creating, updating, and deleting organizations with validation
+3. **Member Invitation System**: Complete backend implementation
+   - `organizationInvitations` table with cryptographic tokens (32-byte hex)
+   - Storage layer CRUD for invitations (create, list, accept, revoke)
+   - Secure API routes with validation and expiry enforcement (7-day tokens)
+   - Email notification service with logging (upgradeable to SendGrid/AWS SES)
+   - Frontend URL construction for accept links (dev: localhost:5173, prod: Replit domain)
+   - Security: Tokens excluded from API responses, one-time use enforcement, proper status tracking
+
+**Security Hardening**:
+- Blocked tier self-upgrades (prevented privilege escalation)
+- Fixed organization deletion to remove all related records
+- Validated invitation expiry and status before acceptance
+- Filtered sensitive tokens from API responses
+
+**In Progress**:
+- Organization management UI (Tasks 7-8)
+- RBAC enforcement across all routes (Task 9)
+- Multi-tenancy testing and validation (Task 10)
+
+**Next Phase**: Phase 2 will add enhanced templates, facility zones, asset management, and threat/control libraries.
 
 ## System Architecture
 
