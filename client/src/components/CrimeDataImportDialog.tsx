@@ -192,12 +192,13 @@ export function CrimeDataImportDialog({ open, onOpenChange, siteId, assessmentId
         </DialogHeader>
 
         <Tabs defaultValue="pdf" className="mt-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="pdf" data-testid="tab-pdf-upload">PDF</TabsTrigger>
             <TabsTrigger value="manual" data-testid="tab-manual-entry">Manual</TabsTrigger>
+            <TabsTrigger value="fbi-cde" data-testid="tab-fbi-cde">FBI CDE</TabsTrigger>
             <TabsTrigger value="bjs" data-testid="tab-bjs-data">BJS</TabsTrigger>
             <TabsTrigger value="city" data-testid="tab-city-data">City</TabsTrigger>
-            <TabsTrigger value="fbi" data-testid="tab-fbi-data">FBI</TabsTrigger>
+            <TabsTrigger value="fbi" data-testid="tab-fbi-data">FBI Lookup</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pdf" className="space-y-4">
@@ -419,6 +420,10 @@ export function CrimeDataImportDialog({ open, onOpenChange, siteId, assessmentId
                 </Button>
               </form>
             </Form>
+          </TabsContent>
+
+          <TabsContent value="fbi-cde" className="space-y-4">
+            <FBICDEImport siteId={siteId} assessmentId={assessmentId} onSuccess={() => onOpenChange(false)} />
           </TabsContent>
 
           <TabsContent value="bjs" className="space-y-4">
@@ -731,6 +736,105 @@ function BJSDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; a
           <li>Estimates from Bureau of Justice Statistics</li>
           <li>National-level violent and property crime data</li>
           <li>No authentication required - free public data</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// FBI CDE Data Import Component
+function FBICDEImport({ siteId, assessmentId, onSuccess }: { siteId?: string; assessmentId?: string; onSuccess: () => void }) {
+  const { toast } = useToast();
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+  
+  const importMutation = useMutation({
+    mutationFn: async (selectedYear: number) => {
+      const response = await apiRequest("POST", "/api/crime-data/fbi-cde/import", {
+        year: selectedYear,
+        siteId,
+        assessmentId,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "FBI CDE data imported",
+        description: `National crime statistics for ${year} successfully imported from FBI Crime Data Explorer.`,
+      });
+      if (siteId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", siteId] });
+      }
+      if (assessmentId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", assessmentId] });
+      }
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Import failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleImport = () => {
+    importMutation.mutate(year);
+  };
+
+  // Generate year options from 2020 to current year
+  const yearOptions = [];
+  for (let y = currentYear; y >= 2020; y--) {
+    yearOptions.push(y);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
+          <Label htmlFor="fbi-cde-year">Year</Label>
+          <select
+            id="fbi-cde-year"
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value))}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="input-fbi-cde-year"
+          >
+            {yearOptions.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Select year for national crime statistics (2020-{currentYear} available)
+          </p>
+        </div>
+
+        <Button
+          onClick={handleImport}
+          disabled={importMutation.isPending}
+          className="w-full"
+          data-testid="button-import-fbi-cde"
+        >
+          {importMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Importing FBI CDE Data...
+            </>
+          ) : (
+            "Import National Statistics"
+          )}
+        </Button>
+      </div>
+
+      <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+        <p className="font-medium">About FBI CDE Data:</p>
+        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+          <li>FBI Crime Data Explorer (CDE) API</li>
+          <li>Monthly crime data aggregated to annual totals</li>
+          <li>Updated through current year (most recent data)</li>
+          <li>National-level violent and property crime statistics</li>
+          <li>More current than BJS NIBRS (updated monthly)</li>
         </ul>
       </div>
     </div>

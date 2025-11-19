@@ -4,6 +4,7 @@ import { geocodeAddress, findNearbyEmergencyServices } from "../services/geocodi
 import { parseCAPIndexPDF, createManualCrimeEntry } from "../services/crimeData.js";
 import { searchFBIAgencies, getFBIAgencyCrimeData, convertFBIStatsToOurFormat } from "../services/fbiCrimeData.js";
 import { getBJSCrimeStatistics } from "../services/bjsNibrsData.js";
+import { getFBICrimeStatistics } from "../services/fbiCdeData.js";
 import { getCityCrimeStatistics, getAvailableCities } from "../services/cityCrimeData.js";
 import multer from "multer";
 import { z } from "zod";
@@ -976,6 +977,112 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
         return res.status(400).json({ error: "Invalid request data", details: error.errors });
       }
       res.status(500).json({ error: error.message || "Failed to import BJS crime data" });
+    }
+  });
+
+  // Import FBI CDE national crime data
+  app.post("/api/crime-data/fbi-cde/import", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const schema = z.object({
+        siteId: z.string().optional(),
+        assessmentId: z.string().optional(),
+        year: z.number().int().min(2020).max(new Date().getFullYear()),
+      });
+
+      const validatedData = schema.parse(req.body);
+      const { siteId, assessmentId, year } = validatedData;
+
+      // Verify ownership if siteId or assessmentId is provided
+      if (siteId) {
+        const site = await storage.getSite(siteId);
+        if (!site) {
+          return res.status(404).json({ error: "Site not found" });
+        }
+
+        const user = await storage.getUser(userId);
+        const hasAccess = site.userId === userId || 
+                         (user && user.organizationId && site.organizationId === user.organizationId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+      }
+
+      if (assessmentId) {
+        const assessment = await storage.getAssessment(assessmentId);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        const user = await storage.getUser(userId);
+        const hasAccess = assessment.userId === userId || 
+                         (user && user.organizationId && assessment.organizationId === user.organizationId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+      }
+
+      // Fetch FBI CDE crime data
+      const fbiData = await getFBICrimeStatistics(year);
+
+      // Create crime data entry
+      const crimeData = createManualCrimeEntry(
+        fbiData.violentCrimeTotal,
+        fbiData.propertyCrimeTotal,
+        0, // No population data from FBI CDE
+        {
+          city: undefined,
+          county: undefined,
+          state: undefined,
+          dataTimePeriod: year.toString(),
+        }
+      );
+
+      // Create crime source
+      const crimeSource = await storage.createCrimeSource({
+        siteId: siteId || null,
+        assessmentId: assessmentId || null,
+        dataSource: "fbi_cde",
+        dataTimePeriod: year.toString(),
+        city: null,
+        county: null,
+        state: null,
+        dataQuality: "verified",
+      });
+
+      // Create crime observation
+      const observation = await storage.createCrimeObservation({
+        crimeSourceId: crimeSource.id,
+        violentCrimes: JSON.stringify(crimeData.violentCrimes),
+        propertyCrimes: JSON.stringify(crimeData.propertyCrimes),
+        overallCrimeIndex: crimeData.overallCrimeIndex || null,
+        comparisonRating: crimeData.comparisonRating || null,
+        startDate: null,
+        endDate: null,
+      });
+
+      res.status(201).json({
+        success: true,
+        crimeSource,
+        observation,
+        dataInfo: {
+          source: fbiData.dataSource,
+          year: fbiData.year,
+          totalCrimes: fbiData.totalCrimes,
+        },
+      });
+    } catch (error: any) {
+      console.error("FBI CDE crime data import error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: error.message || "Failed to import FBI CDE crime data" });
     }
   });
 
