@@ -1,3 +1,10 @@
+export interface SuggestedZone {
+  name: string;
+  zoneType: string;
+  securityLevel: string;
+  description?: string;
+}
+
 export interface TemplateDefinition {
   id: string;
   name: string;
@@ -7,6 +14,7 @@ export interface TemplateDefinition {
   assetTypes: string[];
   commonRisks: string[];
   typicalControls: string[];
+  suggestedZones?: SuggestedZone[];
 }
 
 export const ASSESSMENT_TEMPLATES: TemplateDefinition[] = [
@@ -53,6 +61,13 @@ export const ASSESSMENT_TEMPLATES: TemplateDefinition[] = [
       "Mail Screening Procedures",
       "Emergency Evacuation Plans",
       "Household Staff Vetting"
+    ],
+    suggestedZones: [
+      { name: "Residence Perimeter", zoneType: "perimeter", securityLevel: "high_security", description: "Property boundary, gates, fencing" },
+      { name: "Main Entry", zoneType: "entry", securityLevel: "high_security", description: "Primary access point with surveillance" },
+      { name: "Safe Room", zoneType: "restricted", securityLevel: "high_security", description: "Secure panic room for emergencies" },
+      { name: "Garage / Vehicle Storage", zoneType: "parking", securityLevel: "controlled", description: "Secure vehicle storage area" },
+      { name: "Executive Office Suite", zoneType: "office", securityLevel: "controlled", description: "Private workspace within corporate office" }
     ]
   },
   {
@@ -96,6 +111,13 @@ export const ASSESSMENT_TEMPLATES: TemplateDefinition[] = [
       "Duress Alarms",
       "Key Control & Management",
       "Security Awareness Training"
+    ],
+    suggestedZones: [
+      { name: "Main Entrance", zoneType: "entry", securityLevel: "controlled", description: "Primary building access point" },
+      { name: "Lobby / Reception", zoneType: "lobby", securityLevel: "public", description: "Visitor reception and waiting area" },
+      { name: "Office Areas", zoneType: "office", securityLevel: "restricted", description: "General office workspace" },
+      { name: "Server Room", zoneType: "server_room", securityLevel: "high_security", description: "IT infrastructure and data center" },
+      { name: "Parking Lot", zoneType: "parking", securityLevel: "public", description: "Employee and visitor parking" }
     ]
   },
   {
@@ -139,6 +161,13 @@ export const ASSESSMENT_TEMPLATES: TemplateDefinition[] = [
       "Perimeter Alarm System",
       "Loading Dock Access Control",
       "Customer Service Training (Awareness)"
+    ],
+    suggestedZones: [
+      { name: "Sales Floor", zoneType: "office", securityLevel: "public", description: "Customer shopping area" },
+      { name: "Stockroom", zoneType: "storage", securityLevel: "restricted", description: "Inventory storage area" },
+      { name: "Loading Dock", zoneType: "loading_dock", securityLevel: "controlled", description: "Receiving and shipping area" },
+      { name: "Cash Handling Area", zoneType: "restricted", securityLevel: "high_security", description: "Safe room and cash office" },
+      { name: "Parking Lot", zoneType: "parking", securityLevel: "public", description: "Customer parking area" }
     ]
   },
   {
@@ -182,6 +211,13 @@ export const ASSESSMENT_TEMPLATES: TemplateDefinition[] = [
       "Intrusion Detection System",
       "Fire Detection & Suppression",
       "Lighting (Perimeter & Parking)"
+    ],
+    suggestedZones: [
+      { name: "Perimeter Fence & Gate", zoneType: "perimeter", securityLevel: "controlled", description: "Property boundary with vehicle access" },
+      { name: "Loading Docks", zoneType: "loading_dock", securityLevel: "controlled", description: "Cargo receiving and shipping area" },
+      { name: "Storage / Warehouse Floor", zoneType: "storage", securityLevel: "restricted", description: "Main inventory storage area" },
+      { name: "Administrative Office", zoneType: "office", securityLevel: "restricted", description: "Office workspace and management" },
+      { name: "Yard / Trailer Parking", zoneType: "parking", securityLevel: "controlled", description: "Vehicle and trailer staging area" }
     ]
   },
   {
@@ -225,6 +261,13 @@ export const ASSESSMENT_TEMPLATES: TemplateDefinition[] = [
       "Visitor Escort Policy",
       "Physical Security Audits (Regular)",
       "Disaster Recovery Plan (DRP)"
+    ],
+    suggestedZones: [
+      { name: "Main Entry / Security Vestibule", zoneType: "entry", securityLevel: "high_security", description: "Man-trap entry with biometric access" },
+      { name: "Server Hall / Hot Aisle", zoneType: "server_room", securityLevel: "high_security", description: "Primary server equipment area" },
+      { name: "Power Systems Room", zoneType: "restricted", securityLevel: "high_security", description: "UPS, generators, and electrical distribution" },
+      { name: "Cooling Systems", zoneType: "restricted", securityLevel: "controlled", description: "HVAC and environmental control equipment" },
+      { name: "Administrative / NOC", zoneType: "office", securityLevel: "restricted", description: "Network operations center and office space" }
     ]
   },
   {
