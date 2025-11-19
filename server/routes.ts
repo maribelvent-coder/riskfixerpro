@@ -457,6 +457,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Organization CRUD routes
+  app.post("/api/organizations", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Only free tier users can create organizations
+      if (user.organizationId) {
+        return res.status(400).json({ error: "You are already in an organization" });
+      }
+
+      const { name, accountTier } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: "Organization name is required" });
+      }
+
+      // Create organization
+      const organization = await storage.createOrganization({
+        name,
+        ownerId: user.id,
+        accountTier: accountTier || 'basic',
+      });
+
+      // Add user to organization as owner
+      await storage.addUserToOrganization(user.id, organization.id, 'owner');
+
+      res.status(201).json(organization);
+    } catch (error) {
+      console.error("Error creating organization:", error);
+      res.status(500).json({ error: "Failed to create organization" });
+    }
+  });
+
+  app.patch("/api/organizations/:id", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.organizationId !== req.params.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Only owners can update organization
+      if (user.organizationRole !== 'owner') {
+        return res.status(403).json({ error: "Only organization owners can update settings" });
+      }
+
+      // Validate and whitelist allowed fields (only safe fields - tier changes require admin/payment)
+      const updateSchema = z.object({
+        name: z.string().min(1).optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+      
+      // Note: accountTier changes must be done through admin panel or payment flow
+
+      const updated = await storage.updateOrganization(req.params.id, validatedData);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid update data", details: error.errors });
+      }
+      console.error("Error updating organization:", error);
+      res.status(500).json({ error: "Failed to update organization" });
+    }
+  });
+
+  app.delete("/api/organizations/:id", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.organizationId !== req.params.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Only owners can delete organization
+      if (user.organizationRole !== 'owner') {
+        return res.status(403).json({ error: "Only organization owners can delete the organization" });
+      }
+
+      // Remove all members from organization first
+      const members = await storage.getOrganizationMembers(req.params.id);
+      for (const member of members) {
+        await storage.removeUserFromOrganization(member.id);
+      }
+
+      // Actually delete the organization record
+      const deleted = await storage.deleteOrganization(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      res.status(500).json({ error: "Failed to delete organization" });
+    }
+  });
+
   app.get("/api/team/members", async (req, res) => {
     try {
       if (!req.session.userId) {

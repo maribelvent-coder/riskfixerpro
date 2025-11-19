@@ -44,6 +44,7 @@ export interface IStorage {
   getOrganizationByOwnerId(ownerId: string): Promise<Organization | undefined>;
   createOrganization(organization: InsertOrganization): Promise<Organization>;
   updateOrganization(id: string, organization: Partial<Organization>): Promise<Organization | undefined>;
+  deleteOrganization(id: string): Promise<boolean>;
   getOrganizationMembers(organizationId: string): Promise<User[]>;
   addUserToOrganization(userId: string, organizationId: string, role: string): Promise<void>;
   removeUserFromOrganization(userId: string): Promise<void>;
@@ -233,6 +234,10 @@ export class MemStorage implements IStorage {
     const updated = { ...organization, ...partialOrganization };
     this.organizations.set(id, updated);
     return updated;
+  }
+
+  async deleteOrganization(id: string): Promise<boolean> {
+    return this.organizations.delete(id);
   }
 
   async getOrganizationMembers(organizationId: string): Promise<User[]> {

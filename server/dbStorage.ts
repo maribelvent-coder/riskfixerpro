@@ -66,6 +66,13 @@ export class DbStorage implements IStorage {
     return results[0];
   }
 
+  async deleteOrganization(id: string): Promise<boolean> {
+    const results = await db.delete(schema.organizations)
+      .where(eq(schema.organizations.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
   async getOrganizationMembers(organizationId: string): Promise<User[]> {
     const results = await db.select().from(schema.users)
       .where(eq(schema.users.organizationId, organizationId));
