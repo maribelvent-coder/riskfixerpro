@@ -78,14 +78,11 @@ export async function searchFBIAgencies(params: {
     queryParams.append("per_page", "50");
   }
 
+  queryParams.append("api_key", API_KEY);
   const url = `${FBI_API_BASE}/api/agencies?${queryParams.toString()}`;
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'X-Api-Key': API_KEY,
-      },
-    });
+    const response = await fetch(url);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -115,12 +112,8 @@ export async function getFBIAgencyCrimeData(ori: string): Promise<FBICrimeDataRe
 
   try {
     // First, get agency details
-    const agencyUrl = `${FBI_API_BASE}/api/agencies/${ori}`;
-    const agencyResponse = await fetch(agencyUrl, {
-      headers: {
-        'X-Api-Key': API_KEY,
-      },
-    });
+    const agencyUrl = `${FBI_API_BASE}/api/agencies/${ori}?api_key=${API_KEY}`;
+    const agencyResponse = await fetch(agencyUrl);
     
     if (!agencyResponse.ok) {
       const errorText = await agencyResponse.text();
@@ -150,13 +143,9 @@ export async function getFBIAgencyCrimeData(ori: string): Promise<FBICrimeDataRe
     ];
 
     const statsPromises = offenseTypes.map(async (offense) => {
-      const url = `${FBI_API_BASE}/api/summarized/agencies/${ori}/${offense}/${fromYear}/${toYear}`;
+      const url = `${FBI_API_BASE}/api/summarized/agencies/${ori}/${offense}/${fromYear}/${toYear}?api_key=${API_KEY}`;
       try {
-        const response = await fetch(url, {
-          headers: {
-            'X-Api-Key': API_KEY,
-          },
-        });
+        const response = await fetch(url);
         if (!response.ok) return null;
         const data: any = await response.json();
         return { offense, data: data.results || [] };
