@@ -26,8 +26,8 @@ Completed foundational infrastructure for multi-tenancy and enterprise features:
 
 See `PHASE0-COMPLETE.md` for detailed documentation.
 
-### Phase 1: Multi-Tenancy Foundation (November 2025) - In Progress
-Building the organization and member management foundation:
+### Phase 1: Multi-Tenancy Foundation (November 2025) ✓
+Built complete organization and member management system with enterprise-grade security:
 
 **Completed** ✓:
 1. **Schema Updates**: Added `organizationId` to sites and assessments tables with proper indexes and foreign keys
@@ -40,12 +40,6 @@ Building the organization and member management foundation:
    - Frontend URL construction for accept links (dev: localhost:5173, prod: Replit domain)
    - Security: Tokens excluded from API responses, one-time use enforcement, proper status tracking
 
-**Security Hardening**:
-- Blocked tier self-upgrades (prevented privilege escalation)
-- Fixed organization deletion to remove all related records
-- Validated invitation expiry and status before acceptance
-- Filtered sensitive tokens from API responses
-
 4. **Organization Management UI**: Complete frontend implementation
    - Enhanced TeamMembers page with invite dialog and form validation
    - Pending invitations table with revoke capability  
@@ -53,9 +47,27 @@ Building the organization and member management foundation:
    - Toast notifications for all actions (invite, revoke, accept)
    - Route integration at `/accept-invitation/:token`
 
-**In Progress**:
-- RBAC enforcement across all routes (Task 9)
-- Multi-tenancy testing and validation (Task 10)
+5. **RBAC Enforcement**: Production-ready multi-tenant isolation
+   - Organization-scoped middleware for sites and assessments
+   - Payload sanitization prevents cross-tenant tampering (userId/organizationId stripped from updates)
+   - POST routes force server-side organizationId assignment
+   - GET routes aggregate user + organization member data
+   - All write operations verify organization membership
+   - Architect-reviewed security model prevents privilege escalation
+
+**Security Hardening**:
+- Blocked tier self-upgrades (prevented privilege escalation)
+- Fixed organization deletion to remove all related records
+- Validated invitation expiry and status before acceptance
+- Filtered sensitive tokens from API responses
+- **Critical**: Sanitized all update/create payloads to prevent organizationId tampering
+- **Critical**: Added middleware enforcement to all PUT/DELETE routes
+
+**Multi-Tenancy Model**:
+- Organization members can view/edit each other's sites and assessments
+- Individual users (no organization) only access their own data
+- All resources tagged with organizationId on creation
+- Cross-organization access attempts blocked at middleware level
 
 **Next Phase**: Phase 2 will add enhanced templates, facility zones, asset management, and threat/control libraries.
 
