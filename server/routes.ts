@@ -66,7 +66,7 @@ declare global {
   }
 }
 
-// Middleware to verify assessment ownership
+// Middleware to verify assessment ownership or organization access
 async function verifyAssessmentOwnership(req: any, res: any, next: any) {
   try {
     const userId = req.session.userId;
@@ -81,13 +81,20 @@ async function verifyAssessmentOwnership(req: any, res: any, next: any) {
       return res.status(404).json({ error: "Assessment not found" });
     }
 
-    if (assessment.userId !== userId) {
-      return res.status(403).json({ error: "Access denied" });
+    // Allow access if user owns the assessment
+    if (assessment.userId === userId) {
+      req.assessment = assessment;
+      return next();
     }
 
-    // Store assessment in request for reuse
-    req.assessment = assessment;
-    next();
+    // Allow access if user is in the same organization (multi-tenancy)
+    const user = await storage.getUser(userId);
+    if (user && user.organizationId && assessment.organizationId === user.organizationId) {
+      req.assessment = assessment;
+      return next();
+    }
+
+    return res.status(403).json({ error: "Access denied" });
   } catch (error) {
     console.error("Error verifying assessment ownership:", error);
     res.status(500).json({ error: "Failed to verify access" });
@@ -118,7 +125,7 @@ async function verifyAdminAccess(req: any, res: any, next: any) {
   }
 }
 
-// Middleware to verify site ownership
+// Middleware to verify site ownership or organization access
 async function verifySiteOwnership(req: any, res: any, next: any) {
   try {
     const userId = req.session.userId;
@@ -133,13 +140,20 @@ async function verifySiteOwnership(req: any, res: any, next: any) {
       return res.status(404).json({ error: "Site not found" });
     }
 
-    if (site.userId !== userId) {
-      return res.status(403).json({ error: "Access denied" });
+    // Allow access if user owns the site
+    if (site.userId === userId) {
+      req.site = site;
+      return next();
     }
 
-    // Store site in request for reuse
-    req.site = site;
-    next();
+    // Allow access if user is in the same organization (multi-tenancy)
+    const user = await storage.getUser(userId);
+    if (user && user.organizationId && site.organizationId === user.organizationId) {
+      req.site = site;
+      return next();
+    }
+
+    return res.status(403).json({ error: "Access denied" });
   } catch (error) {
     console.error("Error verifying site ownership:", error);
     res.status(500).json({ error: "Failed to verify access" });
@@ -972,7 +986,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const sites = await storage.getAllSites(userId);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      let sites = await storage.getAllSites(userId);
+
+      // If user is in an organization, include sites from organization members
+      if (user.organizationId) {
+        const members = await storage.getOrganizationMembers(user.organizationId);
+        const memberIds = members.map(m => m.id).filter(id => id !== userId);
+        
+        for (const memberId of memberIds) {
+          const memberSites = await storage.getAllSites(memberId);
+          // Only include sites that have the organization ID
+          const orgSites = memberSites.filter(s => s.organizationId === user.organizationId);
+          sites = [...sites, ...orgSites];
+        }
+      }
+
       res.json(sites);
     } catch (error) {
       console.error("Error fetching sites:", error);
@@ -1013,9 +1046,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Sanitize: Remove organizationId from request body to prevent tampering
+      const { organizationId: _, ...bodyData } = req.body;
+      
       const validatedData = insertSiteSchema.parse({
-        ...req.body,
-        userId
+        ...bodyData,
+        userId,
+        organizationId: user.organizationId || null
       });
 
       const site = await storage.createSite(validatedData);
@@ -1032,8 +1069,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/sites/:id", verifySiteOwnership, async (req, res) => {
     try {
       const { id } = req.params;
-      // Sanitize: Remove ownership fields from update payload
-      const { userId, ...updateData } = req.body;
+      // Sanitize: Remove ownership fields from update payload to prevent tampering
+      const { userId, organizationId, ...updateData } = req.body;
       const updated = await storage.updateSite(id, updateData);
       
       res.json(updated);
@@ -1062,7 +1099,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const assessments = await storage.getAllAssessments(userId);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      let assessments = await storage.getAllAssessments(userId);
+
+      // If user is in an organization, include assessments from organization members
+      if (user.organizationId) {
+        const members = await storage.getOrganizationMembers(user.organizationId);
+        const memberIds = members.map(m => m.id).filter(id => id !== userId);
+        
+        for (const memberId of memberIds) {
+          const memberAssessments = await storage.getAllAssessments(memberId);
+          // Only include assessments that have the organization ID
+          const orgAssessments = memberAssessments.filter(a => a.organizationId === user.organizationId);
+          assessments = [...assessments, ...orgAssessments];
+        }
+      }
+
       res.json(assessments);
     } catch (error) {
       console.error("Error fetching assessments:", error);
@@ -1094,9 +1150,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // STEP 1: Validate input data FIRST (including required templateId)
       // This catches missing/invalid templates before any other logic runs
+      // Sanitize: Remove organizationId from request body to prevent tampering
+      const { organizationId: _, ...bodyData } = req.body;
+      
       const validatedData = insertAssessmentSchema.parse({
-        ...req.body,
-        userId
+        ...bodyData,
+        userId,
+        organizationId: user.organizationId || null
       });
 
       // STEP 2: Derive surveyParadigm from validated templateId
@@ -1192,8 +1252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/assessments/:id", verifyAssessmentOwnership, async (req, res) => {
     try {
       const { id } = req.params;
-      // Sanitize: Remove ownership fields from update payload
-      const { userId, ...updateData } = req.body;
+      // Sanitize: Remove ownership fields from update payload to prevent tampering
+      const { userId, organizationId, ...updateData } = req.body;
       const updated = await storage.updateAssessment(id, updateData);
       
       res.json(updated);
