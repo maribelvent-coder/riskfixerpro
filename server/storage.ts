@@ -190,6 +190,7 @@ export class MemStorage implements IStorage {
   private passwordResetTokens: Map<string, PasswordResetToken>;
   private organizationInvitations: Map<string, OrganizationInvitation>;
   private sites: Map<string, Site>;
+  private facilityZones: Map<string, FacilityZone>;
   private assessments: Map<string, Assessment>;
   private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
   private assessmentQuestions: Map<string, AssessmentQuestion>;
@@ -208,6 +209,7 @@ export class MemStorage implements IStorage {
     this.passwordResetTokens = new Map();
     this.organizationInvitations = new Map();
     this.sites = new Map();
+    this.facilityZones = new Map();
     this.assessments = new Map();
     this.facilitySurveyQuestions = new Map();
     this.assessmentQuestions = new Map();
@@ -503,6 +505,37 @@ export class MemStorage implements IStorage {
 
   async deleteSite(id: string): Promise<boolean> {
     return this.sites.delete(id);
+  }
+
+  // Facility Zone methods
+  async getFacilityZone(id: string): Promise<FacilityZone | undefined> {
+    return this.facilityZones.get(id);
+  }
+
+  async getFacilityZonesBySite(siteId: string): Promise<FacilityZone[]> {
+    return Array.from(this.facilityZones.values()).filter(zone => zone.siteId === siteId);
+  }
+
+  async createFacilityZone(zone: InsertFacilityZone): Promise<FacilityZone> {
+    const newZone: FacilityZone = {
+      id: randomUUID(),
+      ...zone,
+      createdAt: new Date(),
+    };
+    this.facilityZones.set(newZone.id, newZone);
+    return newZone;
+  }
+
+  async updateFacilityZone(id: string, zone: Partial<FacilityZone>): Promise<FacilityZone | undefined> {
+    const existing = this.facilityZones.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...zone };
+    this.facilityZones.set(id, updated);
+    return updated;
+  }
+
+  async deleteFacilityZone(id: string): Promise<boolean> {
+    return this.facilityZones.delete(id);
   }
 
   // Assessment methods

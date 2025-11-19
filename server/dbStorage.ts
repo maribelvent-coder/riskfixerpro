@@ -6,12 +6,16 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import type {
   Organization,
   InsertOrganization,
+  OrganizationInvitation,
+  InsertOrganizationInvitation,
   User,
   InsertUser,
   PasswordResetToken,
   InsertPasswordResetToken,
   Site,
   InsertSite,
+  FacilityZone,
+  InsertFacilityZone,
   Assessment,
   InsertAssessment,
   TemplateQuestion,
@@ -265,6 +269,36 @@ export class DbStorage implements IStorage {
   async deleteSite(id: string): Promise<boolean> {
     const results = await db.delete(schema.sites)
       .where(eq(schema.sites.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  // Facility Zone methods
+  async getFacilityZone(id: string): Promise<FacilityZone | undefined> {
+    const results = await db.select().from(schema.facilityZones).where(eq(schema.facilityZones.id, id));
+    return results[0];
+  }
+
+  async getFacilityZonesBySite(siteId: string): Promise<FacilityZone[]> {
+    return await db.select().from(schema.facilityZones).where(eq(schema.facilityZones.siteId, siteId));
+  }
+
+  async createFacilityZone(zone: InsertFacilityZone): Promise<FacilityZone> {
+    const results = await db.insert(schema.facilityZones).values(zone).returning();
+    return results[0];
+  }
+
+  async updateFacilityZone(id: string, zone: Partial<FacilityZone>): Promise<FacilityZone | undefined> {
+    const results = await db.update(schema.facilityZones)
+      .set(zone)
+      .where(eq(schema.facilityZones.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteFacilityZone(id: string): Promise<boolean> {
+    const results = await db.delete(schema.facilityZones)
+      .where(eq(schema.facilityZones.id, id))
       .returning();
     return results.length > 0;
   }

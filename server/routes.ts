@@ -7,6 +7,7 @@ import multer from "multer";
 import { 
   insertAssessmentSchema,
   insertSiteSchema,
+  insertFacilityZoneSchema,
   insertFacilitySurveyQuestionSchema,
   insertExecutiveInterviewResponseSchema,
   insertAssessmentQuestionSchema,
@@ -134,7 +135,8 @@ async function verifySiteOwnership(req: any, res: any, next: any) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const siteId = req.params.id;
+    // Support both :id and :siteId parameter names
+    const siteId = req.params.id || req.params.siteId;
     const site = await storage.getSite(siteId);
     
     if (!site) {
@@ -1151,6 +1153,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting site:", error);
       res.status(500).json({ error: "Failed to delete site" });
+    }
+  });
+
+  // Facility Zone routes
+  app.get("/api/sites/:siteId/zones", verifySiteOwnership, async (req, res) => {
+    try {
+      const { siteId } = req.params;
+      const zones = await storage.getFacilityZonesBySite(siteId);
+      res.json(zones);
+    } catch (error) {
+      console.error("Error fetching facility zones:", error);
+      res.status(500).json({ error: "Failed to fetch facility zones" });
+    }
+  });
+
+  app.get("/api/zones/:id", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      const zone = await storage.getFacilityZone(id);
+      
+      if (!zone) {
+        return res.status(404).json({ error: "Zone not found" });
+      }
+
+      // Verify user owns the site that this zone belongs to
+      const site = await storage.getSite(zone.siteId);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Check if user owns the site or is in the same organization
+      const isOwner = site.userId === userId;
+      const isSameOrg = user.organizationId && site.organizationId === user.organizationId;
+
+      if (!isOwner && !isSameOrg) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json(zone);
+    } catch (error) {
+      console.error("Error fetching zone:", error);
+      res.status(500).json({ error: "Failed to fetch zone" });
+    }
+  });
+
+  app.post("/api/sites/:siteId/zones", verifySiteOwnership, async (req, res) => {
+    try {
+      const { siteId } = req.params;
+
+      const validatedData = insertFacilityZoneSchema.parse({
+        ...req.body,
+        siteId
+      });
+
+      const zone = await storage.createFacilityZone(validatedData);
+      res.status(201).json(zone);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating facility zone:", error);
+      res.status(500).json({ error: "Failed to create facility zone" });
+    }
+  });
+
+  app.put("/api/zones/:id", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      const zone = await storage.getFacilityZone(id);
+      
+      if (!zone) {
+        return res.status(404).json({ error: "Zone not found" });
+      }
+
+      // Verify user owns the site that this zone belongs to
+      const site = await storage.getSite(zone.siteId);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Check if user owns the site or is in the same organization
+      const isOwner = site.userId === userId;
+      const isSameOrg = user.organizationId && site.organizationId === user.organizationId;
+
+      if (!isOwner && !isSameOrg) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Sanitize: Remove siteId from update payload to prevent tampering
+      const { siteId: _, ...updateData } = req.body;
+      const updated = await storage.updateFacilityZone(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating zone:", error);
+      res.status(500).json({ error: "Failed to update zone" });
+    }
+  });
+
+  app.delete("/api/zones/:id", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      const zone = await storage.getFacilityZone(id);
+      
+      if (!zone) {
+        return res.status(404).json({ error: "Zone not found" });
+      }
+
+      // Verify user owns the site that this zone belongs to
+      const site = await storage.getSite(zone.siteId);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Check if user owns the site or is in the same organization
+      const isOwner = site.userId === userId;
+      const isSameOrg = user.organizationId && site.organizationId === user.organizationId;
+
+      if (!isOwner && !isSameOrg) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      await storage.deleteFacilityZone(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting zone:", error);
+      res.status(500).json({ error: "Failed to delete zone" });
     }
   });
 
