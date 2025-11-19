@@ -88,10 +88,19 @@ const inviteFormSchema = z.object({
   }),
 });
 
+const createOrgFormSchema = z.object({
+  name: z.string().min(2, "Organization name must be at least 2 characters"),
+});
+
 export default function TeamMembers() {
   const [selectedMemberId, setSelectedMemberId] = useState<string>("all");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [createOrgDialogOpen, setCreateOrgDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ["/api/auth/me"],
+  });
 
   const { data: organization } = useQuery<Organization | null>({
     queryKey: ["/api/team/organization"],
@@ -123,6 +132,36 @@ export default function TeamMembers() {
     defaultValues: {
       email: "",
       role: "member",
+    },
+  });
+
+  const createOrgForm = useForm<z.infer<typeof createOrgFormSchema>>({
+    resolver: zodResolver(createOrgFormSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const createOrgMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof createOrgFormSchema>) => {
+      return apiRequest("POST", "/api/organizations", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team/organization"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      setCreateOrgDialogOpen(false);
+      createOrgForm.reset();
+      toast({
+        title: "Organization created",
+        description: "Your organization has been created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create organization",
+        description: error.message || "An error occurred while creating the organization.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -184,6 +223,9 @@ export default function TeamMembers() {
   };
 
   if (!organization) {
+    const hasQualifyingTier = currentUser?.accountTier && 
+      ["basic", "pro", "enterprise"].includes(currentUser.accountTier.toLowerCase());
+
     return (
       <div className="p-8">
         <Card>
@@ -192,17 +234,78 @@ export default function TeamMembers() {
               <Users className="h-6 w-6 text-muted-foreground" />
               <div>
                 <CardTitle>Team Members</CardTitle>
-                <CardDescription>No organization found</CardDescription>
+                <CardDescription>
+                  {hasQualifyingTier ? "Create your organization" : "No organization found"}
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
-              You need to upgrade to a Basic, Pro, or Enterprise plan to access team collaboration features.
-            </p>
-            <Button className="mt-4" onClick={() => window.location.href = "/pricing"}>
-              View Pricing
-            </Button>
+            {hasQualifyingTier ? (
+              <>
+                <p className="text-muted-foreground mb-4">
+                  You have a {currentUser?.accountTier} plan. Create an organization to start collaborating with your team.
+                </p>
+                <Dialog open={createOrgDialogOpen} onOpenChange={setCreateOrgDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-create-organization">
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Create Organization
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create Organization</DialogTitle>
+                      <DialogDescription>
+                        Set up your organization to collaborate with team members and share resources.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...createOrgForm}>
+                      <form onSubmit={createOrgForm.handleSubmit((data) => createOrgMutation.mutate(data))} className="space-y-4">
+                        <FormField
+                          control={createOrgForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Organization Name</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Acme Security Consultants" 
+                                  data-testid="input-org-name"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                The name of your company or team
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <DialogFooter>
+                          <Button 
+                            type="submit" 
+                            disabled={createOrgMutation.isPending}
+                            data-testid="button-submit-create-org"
+                          >
+                            {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">
+                  You need to upgrade to a Basic, Pro, or Enterprise plan to access team collaboration features.
+                </p>
+                <Button className="mt-4" onClick={() => window.location.href = "/pricing"}>
+                  View Pricing
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
