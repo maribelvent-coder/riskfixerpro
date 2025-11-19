@@ -868,14 +868,20 @@ function CityDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; 
       <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
         <p className="font-medium">Available Cities:</p>
         <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-          <li>Los Angeles (LAPD - 2020-present)</li>
-          <li>Chicago (CPD - 2001-present)</li>
-          <li>New York City (NYPD - current year)</li>
-          <li>Seattle (SPD - 2008-present)</li>
+          <li>Seattle (SPD - 2008-present) - High accuracy</li>
+          <li>Chicago (CPD - 2001-present) - High accuracy</li>
+          <li>Los Angeles (LAPD - 2020-present) - Keyword estimation</li>
+          <li>New York City (NYPD - current year) - Keyword estimation</li>
         </ul>
         <p className="text-xs text-muted-foreground mt-2">
           Data from city open data portals via Socrata APIs
         </p>
+        <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-xs">
+          <p className="font-medium text-yellow-700 dark:text-yellow-400 mb-1">Note on LA/NYC Data:</p>
+          <p className="text-muted-foreground">
+            Los Angeles and New York City use keyword-based classification which may include some overlap between violent and property crime categories. Use these estimates as approximate indicators. Seattle and Chicago provide exact categorization.
+          </p>
+        </div>
       </div>
     </div>
   );
