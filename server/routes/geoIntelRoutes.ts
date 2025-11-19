@@ -2,6 +2,7 @@ import express from "express";
 import type { IStorage } from "../storage.js";
 import { geocodeAddress, findNearbyEmergencyServices } from "../services/geocoding.js";
 import { parseCAPIndexPDF, createManualCrimeEntry } from "../services/crimeData.js";
+import { searchFBIAgencies, getFBIAgencyCrimeData, convertFBIStatsToOurFormat } from "../services/fbiCrimeData.js";
 import multer from "multer";
 import { z } from "zod";
 
@@ -713,6 +714,155 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
         return res.status(400).json({ error: "Invalid request data", details: error.errors });
       }
       res.status(500).json({ error: error.message || "Failed to create manual crime entry" });
+    }
+  });
+
+  // ===================================================================
+  // FBI CRIME DATA ROUTES
+  // ===================================================================
+
+  // Search FBI agencies by location
+  app.get("/api/crime-data/fbi/agencies/search", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { state, city, county, limit } = req.query;
+
+      const results = await searchFBIAgencies({
+        state: state as string | undefined,
+        city: city as string | undefined,
+        county: county as string | undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+      });
+
+      res.json(results);
+    } catch (error: any) {
+      console.error("FBI agency search error:", error);
+      res.status(500).json({ error: error.message || "Failed to search FBI agencies" });
+    }
+  });
+
+  // Import crime data from FBI for a specific agency
+  app.post("/api/crime-data/fbi/import", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const importSchema = z.object({
+        ori: z.string(),
+        siteId: z.string().optional(),
+        assessmentId: z.string().optional(),
+        year: z.number().optional(),
+      });
+
+      const validatedData = importSchema.parse(req.body);
+      const { ori, siteId, assessmentId, year } = validatedData;
+
+      // Verify ownership if siteId or assessmentId is provided
+      if (siteId) {
+        const site = await storage.getSite(siteId);
+        if (!site) {
+          return res.status(404).json({ error: "Site not found" });
+        }
+
+        const user = await storage.getUser(userId);
+        const hasAccess = site.userId === userId || 
+                         (user && user.organizationId && site.organizationId === user.organizationId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+      }
+
+      if (assessmentId) {
+        const assessment = await storage.getAssessment(assessmentId);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        const user = await storage.getUser(userId);
+        const hasAccess = assessment.userId === userId || 
+                         (user && user.organizationId && assessment.organizationId === user.organizationId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+      }
+
+      // Fetch FBI crime data
+      const fbiData = await getFBIAgencyCrimeData(ori);
+
+      // Get the specified year or most recent
+      const targetYear = year || fbiData.mostRecentYear;
+      const yearStats = fbiData.stats.find(s => s.year === targetYear);
+
+      if (!yearStats) {
+        return res.status(404).json({ 
+          error: `No crime data available for year ${targetYear}` 
+        });
+      }
+
+      // Convert to our format
+      const { violentTotal, propertyTotal, population, overallCrimeIndex } = 
+        convertFBIStatsToOurFormat(yearStats, fbiData.agency);
+
+      // Create crime data entry
+      const crimeData = createManualCrimeEntry(
+        violentTotal,
+        propertyTotal,
+        population,
+        {
+          city: fbiData.location.city,
+          county: fbiData.location.county,
+          state: fbiData.location.state,
+          dataTimePeriod: targetYear.toString(),
+        }
+      );
+
+      // Create crime source
+      const crimeSource = await storage.createCrimeSource({
+        siteId: siteId || null,
+        assessmentId: assessmentId || null,
+        dataSource: "fbi_ucr",
+        dataTimePeriod: targetYear.toString(),
+        city: fbiData.location.city || null,
+        county: fbiData.location.county || null,
+        state: fbiData.location.state || null,
+        dataQuality: "verified",
+      });
+
+      // Create crime observation
+      const observation = await storage.createCrimeObservation({
+        crimeSourceId: crimeSource.id,
+        violentCrimes: JSON.stringify(crimeData.violentCrimes),
+        propertyCrimes: JSON.stringify(crimeData.propertyCrimes),
+        overallCrimeIndex: crimeData.overallCrimeIndex || null,
+        comparisonRating: crimeData.comparisonRating || null,
+        startDate: null,
+        endDate: null,
+      });
+
+      res.status(201).json({
+        success: true,
+        crimeSource,
+        observation,
+        agencyInfo: {
+          name: fbiData.agency.agency_name,
+          ori: fbiData.agency.ori,
+          year: targetYear,
+        },
+      });
+    } catch (error: any) {
+      console.error("FBI crime data import error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: error.message || "Failed to import FBI crime data" });
     }
   });
 
