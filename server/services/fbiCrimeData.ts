@@ -121,6 +121,11 @@ export async function getFBIAgencyCrimeData(ori: string): Promise<FBICrimeDataRe
     const agency: FBIAgency = await agencyResponse.json();
 
     // Get summarized crime data for multiple offense types
+    // Fetch last 5 years of data
+    const currentYear = new Date().getFullYear();
+    const fromYear = currentYear - 5;
+    const toYear = currentYear - 1; // Most recent complete year
+
     const offenseTypes = [
       "violent-crime",
       "homicide",
@@ -135,7 +140,7 @@ export async function getFBIAgencyCrimeData(ori: string): Promise<FBICrimeDataRe
     ];
 
     const statsPromises = offenseTypes.map(async (offense) => {
-      const url = `${FBI_API_BASE}/api/summarized/agencies/${ori}/${offense}?api_key=${API_KEY}`;
+      const url = `${FBI_API_BASE}/api/summarized/agencies/${ori}/${offense}/${fromYear}/${toYear}?api_key=${API_KEY}`;
       try {
         const response = await fetch(url);
         if (!response.ok) return null;
