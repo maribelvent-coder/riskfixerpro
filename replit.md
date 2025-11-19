@@ -69,6 +69,19 @@ Built complete organization and member management system with enterprise-grade s
 - All resources tagged with organizationId on creation
 - Cross-organization access attempts blocked at middleware level
 
+**Tier-Based Organization Limits** (November 2025) ✓:
+- Organizations inherit creator's account tier (Basic/Pro/Enterprise)
+- Tier-based limits applied automatically:
+  - Basic: 5 assessments, 2 sites, 2 members
+  - Pro: 50 assessments, 10 sites, 10 members
+  - Enterprise: Unlimited (-1) for all by default
+- Admin panel features:
+  - View all organizations with their limits
+  - Customize limits for any organization tier
+  - Edit limits for enterprise organizations with custom values
+- Limits stored in shared/tierLimits.ts with getOrganizationTierLimits() helper
+- Only paid tier users (basic/pro/enterprise) can create organizations
+
 **Next Phase**: Phase 2 will add enhanced templates, facility zones, asset management, and threat/control libraries.
 
 ## System Architecture

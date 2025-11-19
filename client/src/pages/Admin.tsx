@@ -346,7 +346,7 @@ export default function Admin() {
             <CardTitle>Organization Management</CardTitle>
           </div>
           <CardDescription>
-            Manage enterprise organization limits
+            Customize organization limits for any tier
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -394,17 +394,15 @@ export default function Admin() {
                         {new Date(org.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        {org.accountTier === 'enterprise' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditOrgLimits(org)}
-                            data-testid={`button-edit-limits-${org.id}`}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Limits
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditOrgLimits(org)}
+                          data-testid={`button-edit-limits-${org.id}`}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Limits
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -958,13 +958,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Organization not found" });
       }
 
-      // Only allow editing limits for enterprise organizations
-      if (organization.accountTier !== 'enterprise') {
-        return res.status(400).json({ 
-          error: "Only enterprise organizations can have custom limits. Basic and Pro tiers have fixed limits." 
-        });
-      }
-
       // Validate inputs
       if (maxMembers !== undefined && (typeof maxMembers !== 'number' || maxMembers < -1)) {
         return res.status(400).json({ error: "maxMembers must be a number >= -1" });
