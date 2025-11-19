@@ -311,6 +311,13 @@ export const ASSESSMENT_TEMPLATES: TemplateDefinition[] = [
       "Visitor Management & Escort Policy",
       "Background Checks for Critical Roles",
       "Emergency Response Plan (ERP)"
+    ],
+    suggestedZones: [
+      { name: "Perimeter Fence & Gates", zoneType: "perimeter", securityLevel: "controlled", description: "Exterior property boundary with vehicle gates" },
+      { name: "Production Floor", zoneType: "office", securityLevel: "restricted", description: "Main manufacturing and assembly area" },
+      { name: "Loading Dock", zoneType: "loading_dock", securityLevel: "controlled", description: "Shipping and receiving area" },
+      { name: "Hazmat Storage", zoneType: "storage", securityLevel: "high_security", description: "Controlled storage for hazardous materials" },
+      { name: "Administrative Office", zoneType: "office", securityLevel: "restricted", description: "Office space and management area" }
     ]
   }
 ];
