@@ -233,8 +233,10 @@ export function createManualCrimeEntry(
     dataTimePeriod?: string;
   }
 ): CrimeStatistics {
-  const violentRate = (violentTotal / population) * 100000;
-  const propertyRate = (propertyTotal / population) * 100000;
+  // Only calculate rates if we have valid population data
+  const hasPopulation = population > 0;
+  const violentRate = hasPopulation ? (violentTotal / population) * 100000 : 0;
+  const propertyRate = hasPopulation ? (propertyTotal / population) * 100000 : 0;
   
   const stats: CrimeStatistics = {
     violentCrimes: {
@@ -253,8 +255,15 @@ export function createManualCrimeEntry(
     dataTimePeriod: options?.dataTimePeriod,
   };
   
-  stats.overallCrimeIndex = calculateCrimeIndexFromStats(stats);
-  stats.comparisonRating = determineComparisonRating(stats.overallCrimeIndex);
+  // Only calculate crime index if we have population data to calculate rates
+  if (hasPopulation) {
+    stats.overallCrimeIndex = calculateCrimeIndexFromStats(stats);
+    stats.comparisonRating = determineComparisonRating(stats.overallCrimeIndex);
+  } else {
+    // For national-level or aggregate data without population context
+    stats.overallCrimeIndex = undefined;
+    stats.comparisonRating = undefined;
+  }
   
   return stats;
 }
