@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, MapPin, Building } from "lucide-react";
-import type { Site } from "@shared/schema";
+import { Plus, Pencil, Trash2, MapPin, Building, Layers } from "lucide-react";
+import type { Site, FacilityZone } from "@shared/schema";
 
 const siteSchema = z.object({
   name: z.string().min(1, "Site name is required"),
@@ -32,11 +32,33 @@ const siteSchema = z.object({
 
 type SiteFormData = z.infer<typeof siteSchema>;
 
+const zoneSchema = z.object({
+  name: z.string().min(1, "Zone name is required"),
+  zoneType: z.string().optional().or(z.literal("")),
+  floorNumber: z.preprocess(
+    (val) => {
+      // Allow empty/null/undefined to become undefined (valid for optional field)
+      if (val === "" || val === null || val === undefined) return undefined;
+      // Convert to number - let Zod validate if it's NaN
+      return Number(val);
+    },
+    z.number().int("Floor number must be a whole number").optional()
+  ),
+  securityLevel: z.enum(["public", "restricted", "controlled", "high_security"]).optional(),
+  description: z.string().optional().or(z.literal("")),
+  accessRequirements: z.string().optional().or(z.literal("")),
+});
+
+type ZoneFormData = z.infer<typeof zoneSchema>;
+
 export default function Sites() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [deletingSite, setDeletingSite] = useState<Site | null>(null);
+  const [managingZonesSite, setManagingZonesSite] = useState<Site | null>(null);
+  const [editingZone, setEditingZone] = useState<FacilityZone | null>(null);
+  const [deletingZone, setDeletingZone] = useState<FacilityZone | null>(null);
 
   const { data: sites = [], isLoading } = useQuery<Site[]>({
     queryKey: ["/api/sites"],
@@ -105,6 +127,106 @@ export default function Sites() {
     },
   });
 
+  // Facility Zones queries and mutations
+  const { data: zones = [], isLoading: zonesLoading } = useQuery<FacilityZone[]>({
+    queryKey: ["/api/sites", managingZonesSite?.id, "zones"],
+    enabled: !!managingZonesSite,
+    queryFn: async () => {
+      if (!managingZonesSite) return [];
+      const response = await fetch(`/api/sites/${managingZonesSite.id}/zones`);
+      if (!response.ok) throw new Error("Failed to fetch zones");
+      return response.json();
+    },
+  });
+
+  const createZoneMutation = useMutation({
+    mutationFn: async (data: ZoneFormData) => {
+      if (!managingZonesSite) throw new Error("No site selected");
+      return apiRequest("POST", `/api/sites/${managingZonesSite.id}/zones`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sites", managingZonesSite?.id, "zones"] });
+      zoneForm.reset();
+      toast({
+        title: "Zone created",
+        description: "The facility zone has been created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to create zone",
+        description: error.message || "Something went wrong.",
+      });
+    },
+  });
+
+  const updateZoneMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: ZoneFormData }) => {
+      return apiRequest("PUT", `/api/zones/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sites", managingZonesSite?.id, "zones"] });
+      setEditingZone(null);
+      toast({
+        title: "Zone updated",
+        description: "The facility zone has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to update zone",
+        description: error.message || "Something went wrong.",
+      });
+    },
+  });
+
+  const deleteZoneMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/zones/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sites", managingZonesSite?.id, "zones"] });
+      setDeletingZone(null);
+      toast({
+        title: "Zone deleted",
+        description: "The facility zone has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to delete zone",
+        description: error.message || "Something went wrong.",
+      });
+    },
+  });
+
+  const zoneForm = useForm<ZoneFormData>({
+    resolver: zodResolver(zoneSchema),
+    defaultValues: {
+      name: "",
+      zoneType: "",
+      floorNumber: undefined,
+      securityLevel: undefined,
+      description: "",
+      accessRequirements: "",
+    },
+  });
+
+  const editZoneForm = useForm<ZoneFormData>({
+    resolver: zodResolver(zoneSchema),
+    defaultValues: {
+      name: "",
+      zoneType: "",
+      floorNumber: undefined,
+      securityLevel: undefined,
+      description: "",
+      accessRequirements: "",
+    },
+  });
+
   const createForm = useForm<SiteFormData>({
     resolver: zodResolver(siteSchema),
     defaultValues: {
@@ -163,6 +285,28 @@ export default function Sites() {
   const onEditSubmit = (data: SiteFormData) => {
     if (editingSite) {
       updateMutation.mutate({ id: editingSite.id, data });
+    }
+  };
+
+  const handleEditZone = (zone: FacilityZone) => {
+    setEditingZone(zone);
+    editZoneForm.reset({
+      name: zone.name,
+      zoneType: zone.zoneType ?? "",
+      floorNumber: zone.floorNumber ?? undefined,
+      securityLevel: (zone.securityLevel as "public" | "restricted" | "controlled" | "high_security" | undefined) ?? undefined,
+      description: zone.description ?? "",
+      accessRequirements: zone.accessRequirements ?? "",
+    });
+  };
+
+  const onCreateZoneSubmit = (data: ZoneFormData) => {
+    createZoneMutation.mutate(data);
+  };
+
+  const onEditZoneSubmit = (data: ZoneFormData) => {
+    if (editingZone) {
+      updateZoneMutation.mutate({ id: editingZone.id, data });
     }
   };
 
@@ -235,6 +379,15 @@ export default function Sites() {
                     )}
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setManagingZonesSite(site)}
+                      data-testid={`button-manage-zones-${site.id}`}
+                      title="Manage Zones"
+                    >
+                      <Layers className="w-4 h-4" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -708,6 +861,345 @@ export default function Sites() {
               data-testid="button-confirm-delete"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Facility Zones Management Dialog */}
+      <Dialog open={!!managingZonesSite} onOpenChange={(open) => {
+        if (!open) {
+          setManagingZonesSite(null);
+          setEditingZone(null);
+          zoneForm.reset();
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Facility Zones - {managingZonesSite?.name}</DialogTitle>
+            <DialogDescription>
+              Define and manage security zones within this facility
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Add New Zone Form */}
+            <div>
+              <h3 className="font-semibold mb-3">Add New Zone</h3>
+              <Form {...zoneForm}>
+                <form onSubmit={zoneForm.handleSubmit(onCreateZoneSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={zoneForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Zone Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Main Lobby, Server Room" {...field} data-testid="input-zone-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={zoneForm.control}
+                      name="zoneType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Zone Type</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Perimeter, Interior" {...field} data-testid="input-zone-type" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={zoneForm.control}
+                      name="floorNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Floor Number</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="e.g., 1, 2, 3" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              value={field.value ?? ""}
+                              data-testid="input-zone-floor"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={zoneForm.control}
+                      name="securityLevel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Security Level</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-zone-security-level">
+                                <SelectValue placeholder="Select level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="public">Public</SelectItem>
+                              <SelectItem value="restricted">Restricted</SelectItem>
+                              <SelectItem value="controlled">Controlled</SelectItem>
+                              <SelectItem value="high_security">High Security</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={zoneForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe this zone..." {...field} data-testid="textarea-zone-description" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={zoneForm.control}
+                    name="accessRequirements"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Access Requirements</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Badge required, Manager approval" {...field} data-testid="input-zone-access" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" disabled={createZoneMutation.isPending} data-testid="button-create-zone">
+                    {createZoneMutation.isPending ? "Creating..." : "Add Zone"}
+                  </Button>
+                </form>
+              </Form>
+            </div>
+
+            {/* Existing Zones List */}
+            <div>
+              <h3 className="font-semibold mb-3">Existing Zones ({zones.length})</h3>
+              {zonesLoading ? (
+                <div className="text-sm text-muted-foreground">Loading zones...</div>
+              ) : zones.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No zones defined yet. Add your first zone above.</div>
+              ) : (
+                <div className="space-y-2">
+                  {zones.map((zone) => (
+                    <Card key={zone.id} data-testid={`card-zone-${zone.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium" data-testid={`text-zone-name-${zone.id}`}>{zone.name}</div>
+                            <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                              {zone.zoneType && <div>Type: {zone.zoneType}</div>}
+                              {zone.floorNumber !== null && zone.floorNumber !== undefined && <div>Floor: {zone.floorNumber}</div>}
+                              {zone.securityLevel && (
+                                <div className="capitalize">Security: {zone.securityLevel.replace(/_/g, " ")}</div>
+                              )}
+                              {zone.description && <div className="mt-2">{zone.description}</div>}
+                              {zone.accessRequirements && <div className="italic">Access: {zone.accessRequirements}</div>}
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleEditZone(zone)}
+                              data-testid={`button-edit-zone-${zone.id}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setDeletingZone(zone)}
+                              data-testid={`button-delete-zone-${zone.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManagingZonesSite(null)} data-testid="button-close-zones">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Zone Dialog */}
+      <Dialog open={!!editingZone} onOpenChange={(open) => !open && setEditingZone(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Zone</DialogTitle>
+            <DialogDescription>Update the zone information.</DialogDescription>
+          </DialogHeader>
+          <Form {...editZoneForm}>
+            <form onSubmit={editZoneForm.handleSubmit(onEditZoneSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editZoneForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zone Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Main Lobby" {...field} data-testid="input-edit-zone-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editZoneForm.control}
+                  name="zoneType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zone Type</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Perimeter" {...field} data-testid="input-edit-zone-type" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editZoneForm.control}
+                  name="floorNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Floor Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="e.g., 1" 
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          value={field.value ?? ""}
+                          data-testid="input-edit-zone-floor"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editZoneForm.control}
+                  name="securityLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Security Level</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-zone-security-level">
+                            <SelectValue placeholder="Select level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="public">Public</SelectItem>
+                          <SelectItem value="restricted">Restricted</SelectItem>
+                          <SelectItem value="controlled">Controlled</SelectItem>
+                          <SelectItem value="high_security">High Security</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={editZoneForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe this zone..." {...field} data-testid="textarea-edit-zone-description" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editZoneForm.control}
+                name="accessRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Access Requirements</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Badge required" {...field} data-testid="input-edit-zone-access" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingZone(null)} data-testid="button-cancel-edit-zone">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateZoneMutation.isPending} data-testid="button-submit-edit-zone">
+                  {updateZoneMutation.isPending ? "Updating..." : "Update Zone"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Zone Confirmation Dialog */}
+      <AlertDialog open={!!deletingZone} onOpenChange={(open) => !open && setDeletingZone(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Zone</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the zone "{deletingZone?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-zone">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingZone && deleteZoneMutation.mutate(deletingZone.id)}
+              disabled={deleteZoneMutation.isPending}
+              data-testid="button-confirm-delete-zone"
+            >
+              {deleteZoneMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
