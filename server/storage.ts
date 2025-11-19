@@ -398,6 +398,7 @@ export class MemStorage implements IStorage {
     const site: Site = {
       ...insertSite,
       id,
+      organizationId: insertSite.organizationId ?? null,
       address: insertSite.address ?? null,
       city: insertSite.city ?? null,
       state: insertSite.state ?? null,
@@ -480,6 +481,7 @@ export class MemStorage implements IStorage {
     const assessment: Assessment = {
       ...insertAssessment,
       id,
+      organizationId: insertAssessment.organizationId ?? null,
       siteId: insertAssessment.siteId ?? null,
       templateId: insertAssessment.templateId ?? null,
       surveyParadigm: insertAssessment.surveyParadigm || "facility",
