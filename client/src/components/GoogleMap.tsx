@@ -7,7 +7,7 @@ interface Marker {
   id: string;
   position: { lat: number; lng: number };
   title: string;
-  type?: "site" | "poi" | "emergency";
+  type?: string; // Accept any POI type from backend (police_station, fire_station, hospital, etc.)
 }
 
 interface GoogleMapProps {

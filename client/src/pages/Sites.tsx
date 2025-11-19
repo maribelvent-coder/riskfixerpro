@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, MapPin, Building, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Building, Layers, Navigation } from "lucide-react";
 import type { Site, FacilityZone } from "@shared/schema";
+import { SiteGeoIntel } from "@/components/SiteGeoIntel";
 
 const siteSchema = z.object({
   name: z.string().min(1, "Site name is required"),
@@ -57,6 +58,7 @@ export default function Sites() {
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [deletingSite, setDeletingSite] = useState<Site | null>(null);
   const [managingZonesSite, setManagingZonesSite] = useState<Site | null>(null);
+  const [geoIntelSite, setGeoIntelSite] = useState<Site | null>(null);
   const [editingZone, setEditingZone] = useState<FacilityZone | null>(null);
   const [deletingZone, setDeletingZone] = useState<FacilityZone | null>(null);
 
@@ -379,6 +381,15 @@ export default function Sites() {
                     )}
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setGeoIntelSite(site)}
+                      data-testid={`button-geo-intel-${site.id}`}
+                      title="Geographic Intelligence"
+                    >
+                      <Navigation className="w-4 h-4" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -1204,6 +1215,19 @@ export default function Sites() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Geographic Intelligence Dialog */}
+      <Dialog open={!!geoIntelSite} onOpenChange={(open) => !open && setGeoIntelSite(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Geographic Intelligence - {geoIntelSite?.name}</DialogTitle>
+            <DialogDescription>
+              Location data, proximity analysis, and crime statistics for this site
+            </DialogDescription>
+          </DialogHeader>
+          {geoIntelSite && <SiteGeoIntel site={geoIntelSite} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
