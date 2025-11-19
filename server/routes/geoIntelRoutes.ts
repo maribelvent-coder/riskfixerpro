@@ -1500,4 +1500,89 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
       res.status(500).json({ error: error.message || "Failed to delete incident" });
     }
   });
+
+  // ===================================================================
+  // RISK INTELLIGENCE ROUTES
+  // ===================================================================
+
+  // Get risk intelligence report for a site (crime-informed threat analysis)
+  app.get("/api/sites/:siteId/risk-intelligence", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { siteId } = req.params;
+      const site = await storage.getSite(siteId);
+
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      // Verify ownership
+      const user = await storage.getUser(userId);
+      const hasAccess = site.userId === userId || 
+                       (user && user.organizationId && site.organizationId === user.organizationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Import the risk intelligence service
+      const { generateRiskIntelligenceReport } = await import("../services/riskIntelligence.js");
+      const report = await generateRiskIntelligenceReport(siteId);
+
+      res.json({
+        success: true,
+        data: report,
+      });
+    } catch (error: any) {
+      console.error("Risk intelligence error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate risk intelligence" });
+    }
+  });
+
+  // Get threat-specific intelligence (for risk scenario creation)
+  app.post("/api/sites/:siteId/threat-intelligence", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { siteId } = req.params;
+      const { threatNames } = req.body;
+
+      if (!Array.isArray(threatNames) || threatNames.length === 0) {
+        return res.status(400).json({ error: "threatNames array is required" });
+      }
+
+      const site = await storage.getSite(siteId);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      // Verify ownership
+      const user = await storage.getUser(userId);
+      const hasAccess = site.userId === userId || 
+                       (user && user.organizationId && site.organizationId === user.organizationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Import the risk intelligence service
+      const { getThreatIntelligence } = await import("../services/riskIntelligence.js");
+      const intelligence = await getThreatIntelligence(siteId, threatNames);
+
+      res.json({
+        success: true,
+        data: intelligence,
+      });
+    } catch (error: any) {
+      console.error("Threat intelligence error:", error);
+      res.status(500).json({ error: error.message || "Failed to get threat intelligence" });
+    }
+  });
 }
