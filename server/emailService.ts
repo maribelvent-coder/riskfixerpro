@@ -46,11 +46,14 @@ export class EmailService {
   }): Promise<void> {
     const { email, organizationName, inviterName, role, token, expiresAt } = params;
     
-    // Construct base URL - matches password reset pattern
-    const baseUrl = process.env.REPL_SLUG 
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` 
-      : 'http://localhost:5000';
-    const acceptUrl = `${baseUrl}/accept-invitation/${token}`;
+    // Construct frontend base URL
+    // In dev: Vite serves frontend on 5173, in production: same domain as backend
+    const frontendUrl = process.env.FRONTEND_URL || (
+      process.env.REPL_SLUG 
+        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` 
+        : 'http://localhost:5173'
+    );
+    const acceptUrl = `${frontendUrl}/accept-invitation/${token}`;
     const expiryDate = new Date(expiresAt).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
