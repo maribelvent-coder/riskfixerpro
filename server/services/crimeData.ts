@@ -50,60 +50,90 @@ export interface CrimeStatistics {
 
 export async function parseCAPIndexPDF(pdfBuffer: Buffer): Promise<CrimeStatistics> {
   try {
-    // Convert PDF buffer to base64
-    const base64PDF = pdfBuffer.toString('base64');
-    
-    // Use GPT-4o to extract crime data from PDF
     const openai = getOpenAIClient();
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are extracting crime statistics from a CAP Index report PDF or similar crime report. 
-          Extract the following data in JSON format:
-          {
-            "violentCrimes": {"total": number, "rate_per_100k": number, "breakdown": {"murder": number, "assault": number, "robbery": number, "rape": number}},
-            "propertyCrimes": {"total": number, "rate_per_100k": number, "breakdown": {"burglary": number, "theft": number, "auto_theft": number}},
-            "overallCrimeIndex": number (0-100, where 100 = highest crime),
-            "comparisonRating": "very_high" | "high" | "average" | "low" | "very_low",
-            "dataTimePeriod": "e.g., 2024 Annual or Q3 2024",
-            "city": string,
-            "county": string,
-            "state": string,
-            "zipCodes": [string array]
-          }
-          
-          If any data is not available in the document, use null for that field.
-          Return ONLY valid JSON, no additional text.`,
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Extract crime statistics from this CAP Index report or crime data PDF:',
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:application/pdf;base64,${base64PDF}`,
-              },
-            },
-          ],
-        },
-      ],
-      temperature: 0,
-      max_tokens: 2000,
+    
+    // Upload PDF file to OpenAI
+    const file = await openai.files.create({
+      file: new File([pdfBuffer], 'crime_report.pdf', { type: 'application/pdf' }),
+      purpose: 'assistants',
     });
 
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error('No response from AI');
+    // Create an assistant to parse the PDF
+    const assistant = await openai.beta.assistants.create({
+      name: 'Crime Data Extractor',
+      instructions: `You are extracting crime statistics from a CAP Index report PDF or similar crime report. 
+Extract the following data in JSON format:
+{
+  "violentCrimes": {"total": number, "rate_per_100k": number, "breakdown": {"murder": number, "assault": number, "robbery": number, "rape": number}},
+  "propertyCrimes": {"total": number, "rate_per_100k": number, "breakdown": {"burglary": number, "theft": number, "auto_theft": number}},
+  "overallCrimeIndex": number (0-200 scale, where 100 = national average, higher is more crime),
+  "comparisonRating": "very_high" | "high" | "average" | "low" | "very_low",
+  "dataTimePeriod": "e.g., 2025 or 2024 Annual",
+  "city": string,
+  "county": string,
+  "state": string,
+  "zipCodes": [string array]
+}
+
+For CAP Index reports:
+- Extract the CAP Index Score (usually shown prominently, e.g., "131") as the overallCrimeIndex
+- Look for "Crimes Against Persons" scores for violent crimes
+- Look for "Crimes Against Property" scores for property crimes
+- Extract specific crime type scores: Homicide, Sexual Assault, Robbery, Assault for violent
+- Extract: Breaking & Entering, Theft, Motor Vehicle Theft for property
+- The CAP Score scale ranges from 0-2000, with 100 being the national average
+
+If any data is not available in the document, use null for that field.
+Return ONLY valid JSON, no additional text.`,
+      model: 'gpt-4o',
+      tools: [{ type: 'file_search' }],
+    });
+
+    // Create a thread with the file
+    const thread = await openai.beta.threads.create({
+      messages: [
+        {
+          role: 'user',
+          content: 'Extract crime statistics from this CAP Index report or crime data PDF.',
+          attachments: [{ file_id: file.id, tools: [{ type: 'file_search' }] }],
+        },
+      ],
+    });
+
+    // Run the assistant
+    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: assistant.id,
+    });
+
+    if (run.status !== 'completed') {
+      throw new Error(`Assistant run failed with status: ${run.status}`);
+    }
+
+    // Get the assistant's response
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const assistantMessage = messages.data.find((msg) => msg.role === 'assistant');
+    
+    if (!assistantMessage || assistantMessage.content[0].type !== 'text') {
+      throw new Error('No valid response from AI assistant');
+    }
+
+    const content = assistantMessage.content[0].text.value;
+
+    // Clean up resources
+    await openai.files.delete(file.id).catch(() => {/* ignore cleanup errors */});
+    await openai.beta.assistants.delete(assistant.id).catch(() => {/* ignore cleanup errors */});
+
+    // Extract JSON from the response (handle markdown code blocks)
+    let jsonContent = content.trim();
+    if (jsonContent.startsWith('```')) {
+      const jsonMatch = jsonContent.match(/```(?:json)?\s*\n([\s\S]+?)\n```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1];
+      }
     }
 
     // Parse JSON response
-    const crimeData = JSON.parse(content) as CrimeStatistics;
+    const crimeData = JSON.parse(jsonContent) as CrimeStatistics;
     
     // Validate required fields
     if (!crimeData.violentCrimes || !crimeData.propertyCrimes) {
