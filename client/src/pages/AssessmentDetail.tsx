@@ -35,7 +35,6 @@ interface AssessmentDetailProps {
 export default function AssessmentDetail({ assessmentId = "demo-001" }: AssessmentDetailProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const hasInitializedTab = useRef(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -68,46 +67,59 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     },
   });
 
-  // Generate comprehensive report
-  const handleGenerateComprehensiveReport = async () => {
-    if (!assessmentData) return;
-    
-    setIsGeneratingReport(true);
-    
-    try {
-      // Fetch comprehensive report data from API
-      const response = await fetch(`/api/assessments/${assessmentId}/comprehensive-report-data`, {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch report data');
+  // Generate comprehensive report mutation
+  const generateReportMutation = useMutation({
+    mutationFn: async () => {
+      if (!assessmentData) {
+        throw new Error('Assessment data not available');
       }
-      
+
+      // Fetch comprehensive report data using apiRequest
+      const response = await apiRequest('GET', `/api/assessments/${assessmentId}/comprehensive-report-data`);
       const reportData = await response.json();
       
+      // Validate the response payload shape before passing to generator
+      if (!reportData || typeof reportData !== 'object') {
+        throw new Error('Invalid report data received from server');
+      }
+      
+      // Validate critical fields exist (minimal validation)
+      if (!reportData.assessment) {
+        console.warn('Report data missing assessment object - using defaults');
+      }
+      
+      if (!reportData.riskSummary) {
+        console.warn('Report data missing risk summary - report will have limited content');
+      }
+      
       // Generate PDF using the comprehensive report generator
+      // The generator will normalize and provide defaults for missing data
       const pdf = await generateComprehensiveReport(reportData);
       
+      // Generate filename using normalized assessment title
+      const reportTitle = reportData.assessment?.title || assessmentData.title || 'Assessment_Report';
+      const fileName = `${reportTitle.replace(/[^a-z0-9]/gi, '_')}_Comprehensive_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      
       // Download the PDF
-      const fileName = `${assessmentData.title.replace(/[^a-z0-9]/gi, '_')}_Comprehensive_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
       
+      return { fileName };
+    },
+    onSuccess: () => {
       toast({
         title: "Report Generated",
         description: "Your comprehensive security assessment report has been downloaded.",
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Error generating report:", error);
       toast({
         title: "Report Generation Failed",
         description: "Failed to generate comprehensive report. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
+    },
+  });
   
   // Derive initial tab directly from assessment data (defaults to facility-survey for loading state)
   const paradigm = assessmentData?.surveyParadigm || "facility";
@@ -307,7 +319,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 </div>
                 <div className="flex items-center whitespace-nowrap">
                   <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
-                  Created {new Date(assessmentData.createdAt).toLocaleDateString()}
+                  Created {assessmentData.createdAt ? new Date(assessmentData.createdAt).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
               
@@ -347,9 +359,9 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               <Button
                 variant="outline"
                 size="icon"
-                onClick={handleGenerateComprehensiveReport}
+                onClick={() => generateReportMutation.mutate()}
                 className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-9 sm:min-w-9"
-                disabled={isGeneratingReport}
+                disabled={generateReportMutation.isPending}
                 data-testid="button-generate-report"
                 title="Generate comprehensive report"
               >
@@ -381,7 +393,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 key={tab.id}
                 value={tab.id}
                 data-testid={`tab-${tab.id}`}
-                disabled={!tabsAvailable[tab.id]}
+                disabled={!(tabsAvailable as Record<string, boolean>)[tab.id]}
                 className="flex flex-wrap items-center gap-2 justify-center text-center min-h-11"
               >
                 <Icon className="h-4 w-4" />
@@ -646,7 +658,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               </div>
             </div>
             <Badge variant="default" className="bg-green-600">
-              Completed {new Date(assessmentData.completedAt).toLocaleDateString()}
+              Completed {assessmentData.completedAt ? new Date(assessmentData.completedAt).toLocaleDateString() : 'N/A'}
             </Badge>
           </CardContent>
         </Card>

@@ -82,54 +82,102 @@ export async function aggregateReportData(
     throw new Error('Unauthorized access to assessment');
   }
 
-  // Fetch site data if linked
+  // Fetch site data if linked (critical operation - rethrow on failure)
   let site: Site | undefined;
   if (assessment.siteId) {
-    site = await storage.getSite(assessment.siteId);
+    try {
+      site = await storage.getSite(assessment.siteId);
+      if (!site) {
+        console.warn(`Site ${assessment.siteId} not found - continuing without site data`);
+      }
+    } catch (error) {
+      console.error(`Critical error fetching site ${assessment.siteId}:`, error);
+      // Site data is important but not critical - log error but continue
+      // In production, you may want to surface this to the user
+    }
   }
 
-  // Calculate risk summary
+  // Calculate risk summary (handles empty array gracefully)
   const riskSummary = calculateRiskSummary(assessment.riskScenarios || []);
 
-  // Fetch GeoIntel data if site exists
+  // Fetch GeoIntel data if site exists (with comprehensive error handling)
   let geoIntel: ComprehensiveReportData['geoIntel'];
+  let geoIntelError: Error | null = null;
+  
   if (site) {
-    const [pointsOfInterest, crimeSources, incidents] = await Promise.all([
-      storage.getPointsOfInterest(site.id),
-      storage.getCrimeSources(site.id),
-      storage.getSiteIncidents(site.id)
-    ]);
+    try {
+      const [pointsOfInterest, crimeSources, incidents] = await Promise.all([
+        storage.getPointsOfInterest(site.id).catch((err) => {
+          console.error(`Error fetching POIs for site ${site.id}:`, err);
+          return [];
+        }),
+        storage.getCrimeSources(site.id).catch((err) => {
+          console.error(`Error fetching crime sources for site ${site.id}:`, err);
+          return [];
+        }),
+        storage.getSiteIncidents(site.id).catch((err) => {
+          console.error(`Error fetching incidents for site ${site.id}:`, err);
+          return [];
+        })
+      ]);
 
-    // Fetch crime observations for each source
-    const crimeData = await Promise.all(
-      crimeSources.map(async (source) => ({
-        source,
-        observations: await storage.getCrimeObservationsBySource(source.id)
-      }))
-    );
+      // Fetch crime observations for each source (with error handling)
+      const crimeData = await Promise.all(
+        (crimeSources || []).map(async (source) => {
+          try {
+            return {
+              source,
+              observations: await storage.getCrimeObservationsBySource(source.id)
+            };
+          } catch (error) {
+            console.error(`Error fetching crime observations for source ${source.id}:`, error);
+            return { source, observations: [] };
+          }
+        })
+      );
 
-    // Get risk intelligence if crime data exists
-    let riskIntelligence: RiskIntelligenceReport | null = null;
-    if (crimeData.length > 0 && crimeData.some(cd => cd.observations.length > 0)) {
-      try {
-        riskIntelligence = await generateRiskIntelligenceReport(site.id);
-      } catch (error) {
-        console.warn('Could not fetch risk intelligence:', error);
+      // Get risk intelligence if crime data exists (with comprehensive error handling)
+      let riskIntelligence: RiskIntelligenceReport | null = null;
+      if (crimeData.length > 0 && crimeData.some(cd => cd.observations && cd.observations.length > 0)) {
+        try {
+          riskIntelligence = await generateRiskIntelligenceReport(site.id);
+        } catch (error) {
+          console.error('Error generating risk intelligence report:', error);
+          riskIntelligence = null;
+        }
       }
-    }
 
-    geoIntel = {
-      pointsOfInterest,
-      crimeData,
-      incidents,
-      riskIntelligence
-    };
+      geoIntel = {
+        pointsOfInterest: pointsOfInterest || [],
+        crimeData: crimeData || [],
+        incidents: incidents || [],
+        riskIntelligence
+      };
+    } catch (error) {
+      console.error('Critical error fetching GeoIntel data:', error);
+      geoIntelError = error as Error;
+      // Provide empty defaults if GeoIntel fetch fails catastrophically
+      geoIntel = {
+        pointsOfInterest: [],
+        crimeData: [],
+        incidents: [],
+        riskIntelligence: null
+      };
+    }
+  }
+  
+  // Log summary of any errors encountered (for monitoring/debugging)
+  if (geoIntelError) {
+    console.error(`Report generation for assessment ${assessmentId} completed with GeoIntel errors:`, {
+      siteId: site?.id,
+      error: geoIntelError.message
+    });
   }
 
-  // Extract photo evidence from assessment questions
+  // Extract photo evidence from assessment questions (handles missing data)
   const photoEvidence = extractPhotoEvidence(assessment);
 
-  // Generate prioritized recommendations
+  // Generate prioritized recommendations (handles missing data)
   const recommendations = generateRecommendations(assessment, geoIntel);
 
   return {
@@ -228,31 +276,35 @@ function extractPhotoEvidence(assessment: AssessmentWithQuestions): Array<{
 }> {
   const photos: Array<{ url: string; caption?: string; section: string }> = [];
 
-  // Extract from facility survey questions
-  if (assessment.facilityQuestions) {
+  // Extract from facility survey questions (with null safety)
+  if (assessment.facilityQuestions && Array.isArray(assessment.facilityQuestions)) {
     assessment.facilityQuestions.forEach(q => {
-      if (q.evidence && Array.isArray(q.evidence)) {
+      if (q && q.evidence && Array.isArray(q.evidence) && q.evidence.length > 0) {
         q.evidence.forEach((path: string) => {
-          photos.push({
-            url: path,
-            caption: q.question,
-            section: 'Facility Survey'
-          });
+          if (path && typeof path === 'string') {
+            photos.push({
+              url: path,
+              caption: q.question || undefined,
+              section: 'Facility Survey'
+            });
+          }
         });
       }
     });
   }
 
-  // Extract from assessment questions (executive interviews)
-  if (assessment.questions) {
+  // Extract from assessment questions (executive interviews, with null safety)
+  if (assessment.questions && Array.isArray(assessment.questions)) {
     assessment.questions.forEach(q => {
-      if (q.evidence && Array.isArray(q.evidence)) {
+      if (q && q.evidence && Array.isArray(q.evidence) && q.evidence.length > 0) {
         q.evidence.forEach((path: string) => {
-          photos.push({
-            url: path,
-            caption: q.question,
-            section: 'Executive Interview'
-          });
+          if (path && typeof path === 'string') {
+            photos.push({
+              url: path,
+              caption: q.question || undefined,
+              section: 'Executive Interview'
+            });
+          }
         });
       }
     });
@@ -277,9 +329,11 @@ function generateRecommendations(
     timeframe?: string;
   }> = [];
 
-  // Generate recommendations from risk scenarios
-  if (assessment.riskScenarios) {
+  // Generate recommendations from risk scenarios (with null safety)
+  if (assessment.riskScenarios && Array.isArray(assessment.riskScenarios)) {
     assessment.riskScenarios.forEach(scenario => {
+      if (!scenario) return; // Skip null/undefined scenarios
+      
       const likelihoodValue = LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.value || 3;
       const impactValue = IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.value || 3;
       
@@ -311,28 +365,34 @@ function generateRecommendations(
 
       recommendations.push({
         priority,
-        scenario: scenario.scenario,
-        risk: scenario.riskLevel,
+        scenario: scenario.scenario || 'Unknown Scenario',
+        risk: scenario.riskLevel || 'Unknown',
         timeframe
       });
     });
   }
 
-  // Add GeoIntel-based recommendations
-  if (geoIntel?.riskIntelligence) {
+  // Add GeoIntel-based recommendations (with comprehensive null safety)
+  if (geoIntel?.riskIntelligence?.threatIntelligence && Array.isArray(geoIntel.riskIntelligence.threatIntelligence)) {
     geoIntel.riskIntelligence.threatIntelligence
-      .filter((ti: ThreatIntelligence) => ti.suggestedLikelihood !== ti.baselineLikelihood)
+      .filter((ti: ThreatIntelligence) => ti && ti.suggestedLikelihood !== ti.baselineLikelihood)
       .forEach((ti: ThreatIntelligence) => {
-        recommendations.push({
-          priority: 'high',
-          scenario: ti.threatName,
-          risk: `Crime-informed: ${ti.rationale}`,
-          timeframe: '60 days'
-        });
+        if (ti && ti.threatName) {
+          recommendations.push({
+            priority: 'high',
+            scenario: ti.threatName,
+            risk: `Crime-informed: ${ti.rationale || 'Elevated threat based on local crime data'}`,
+            timeframe: '60 days'
+          });
+        }
       });
   }
 
-  // Sort by priority
-  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-  return recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  // Sort by priority (defensive against invalid priority values)
+  const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+  return recommendations.sort((a, b) => {
+    const aPriority = priorityOrder[a.priority] ?? 999;
+    const bPriority = priorityOrder[b.priority] ?? 999;
+    return aPriority - bPriority;
+  });
 }

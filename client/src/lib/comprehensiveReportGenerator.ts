@@ -94,46 +94,144 @@ export async function generateComprehensiveReport(
   data: ComprehensiveReportData,
   organizationName?: string
 ): Promise<jsPDF> {
+  // Validate and normalize data to prevent crashes from malformed payloads
+  const normalizedData = normalizeReportData(data);
+  
   const doc = createPDF();
   
   let yPos = SPACING.margin;
   
-  // Cover Page
-  yPos = addCoverPage(doc, data, organizationName);
+  // Cover Page (always included)
+  yPos = addCoverPage(doc, normalizedData, organizationName);
   
-  // Executive Summary
-  doc.addPage();
-  yPos = SPACING.margin;
-  yPos = addExecutiveSummary(doc, data, yPos);
-  
-  // Risk Analysis Section
-  doc.addPage();
-  yPos = SPACING.margin;
-  yPos = addRiskAnalysis(doc, data, yPos);
-  
-  // Site Information & GeoIntel
-  if (data.site || data.geoIntel) {
+  // Executive Summary (skip if no risk data)
+  if (normalizedData.riskSummary && normalizedData.riskSummary.totalScenarios > 0) {
     doc.addPage();
     yPos = SPACING.margin;
-    yPos = addSiteInformation(doc, data, yPos);
+    yPos = addExecutiveSummary(doc, normalizedData, yPos);
   }
   
-  // Recommendations
-  doc.addPage();
-  yPos = SPACING.margin;
-  yPos = addRecommendations(doc, data, yPos);
-  
-  // Appendix - Photo Evidence
-  if (data.photoEvidence.length > 0) {
+  // Risk Analysis Section (skip if no risk data)
+  if (normalizedData.riskSummary && normalizedData.riskSummary.totalScenarios > 0) {
     doc.addPage();
     yPos = SPACING.margin;
-    yPos = addPhotoEvidenceSection(doc, data, yPos);
+    yPos = addRiskAnalysis(doc, normalizedData, yPos);
+  }
+  
+  // Site Information & GeoIntel (skip if no site or geointel data)
+  if (normalizedData.site || (normalizedData.geoIntel && hasGeoIntelData(normalizedData.geoIntel))) {
+    doc.addPage();
+    yPos = SPACING.margin;
+    yPos = addSiteInformation(doc, normalizedData, yPos);
+  }
+  
+  // Recommendations (skip if no recommendations)
+  if (normalizedData.recommendations && normalizedData.recommendations.length > 0) {
+    doc.addPage();
+    yPos = SPACING.margin;
+    yPos = addRecommendations(doc, normalizedData, yPos);
+  }
+  
+  // Appendix - Photo Evidence (skip if no photos)
+  if (normalizedData.photoEvidence && normalizedData.photoEvidence.length > 0) {
+    doc.addPage();
+    yPos = SPACING.margin;
+    yPos = addPhotoEvidenceSection(doc, normalizedData, yPos);
   }
   
   // Add page numbers to all pages
   addPageNumbers(doc);
   
   return doc;
+}
+
+// Normalize and validate report data to ensure all required fields exist with deep sanitization
+function normalizeReportData(data: any): ComprehensiveReportData {
+  // Ensure assessment object exists with required fields
+  const assessment = {
+    id: data?.assessment?.id || 'unknown',
+    title: data?.assessment?.title || 'Untitled Assessment',
+    description: data?.assessment?.description,
+    assessor: data?.assessment?.assessor,
+    status: data?.assessment?.status,
+    createdAt: data?.assessment?.createdAt || new Date().toISOString(),
+  };
+  
+  // Normalize date fields (handle both Date objects and ISO strings)
+  if (assessment.createdAt && typeof assessment.createdAt === 'object') {
+    assessment.createdAt = (assessment.createdAt as Date).toISOString();
+  }
+  
+  // Ensure risk summary exists with safe numeric defaults
+  const rawRiskSummary = data?.riskSummary || {};
+  const riskSummary = {
+    totalScenarios: Number(rawRiskSummary.totalScenarios) || 0,
+    averageInherentRisk: Number(rawRiskSummary.averageInherentRisk) || 0,
+    averageCurrentRisk: Number(rawRiskSummary.averageCurrentRisk) || 0,
+    averageResidualRisk: Number(rawRiskSummary.averageResidualRisk) || 0,
+    highRiskCount: Number(rawRiskSummary.highRiskCount) || 0,
+    mediumRiskCount: Number(rawRiskSummary.mediumRiskCount) || 0,
+    lowRiskCount: Number(rawRiskSummary.lowRiskCount) || 0,
+    topThreats: Array.isArray(rawRiskSummary.topThreats) 
+      ? rawRiskSummary.topThreats.filter((t: any) => t && typeof t === 'object')
+      : []
+  };
+  
+  // Deeply sanitize geoIntel structure
+  let geoIntel: ComprehensiveReportData['geoIntel'];
+  if (data?.geoIntel && typeof data.geoIntel === 'object') {
+    geoIntel = {
+      crimeData: Array.isArray(data.geoIntel.crimeData)
+        ? data.geoIntel.crimeData.filter((c: any) => c && typeof c === 'object')
+        : [],
+      incidents: Array.isArray(data.geoIntel.incidents)
+        ? data.geoIntel.incidents.filter((i: any) => i && typeof i === 'object')
+        : [],
+      riskIntelligence: data.geoIntel.riskIntelligence && typeof data.geoIntel.riskIntelligence === 'object'
+        ? {
+            overallRiskLevel: data.geoIntel.riskIntelligence.overallRiskLevel || 'Unknown',
+            keyInsights: Array.isArray(data.geoIntel.riskIntelligence.keyInsights)
+              ? data.geoIntel.riskIntelligence.keyInsights.filter((k: any) => typeof k === 'string')
+              : [],
+            recommendedControls: Array.isArray(data.geoIntel.riskIntelligence.recommendedControls)
+              ? data.geoIntel.riskIntelligence.recommendedControls.filter((r: any) => typeof r === 'string')
+              : [],
+            threatIntelligence: Array.isArray(data.geoIntel.riskIntelligence.threatIntelligence)
+              ? data.geoIntel.riskIntelligence.threatIntelligence.filter((t: any) => t && typeof t === 'object')
+              : []
+          }
+        : null
+    };
+  }
+  
+  // Sanitize photo evidence (ensure valid entries with URLs)
+  const photoEvidence = Array.isArray(data?.photoEvidence)
+    ? data.photoEvidence.filter((p: any) => p && typeof p === 'object' && p.url && typeof p.url === 'string')
+    : [];
+  
+  // Sanitize recommendations
+  const recommendations = Array.isArray(data?.recommendations)
+    ? data.recommendations.filter((r: any) => r && typeof r === 'object')
+    : [];
+  
+  return {
+    assessment,
+    site: data?.site && typeof data.site === 'object' ? data.site : undefined,
+    riskSummary,
+    geoIntel,
+    photoEvidence,
+    recommendations
+  };
+}
+
+// Helper function to check if GeoIntel has meaningful data
+function hasGeoIntelData(geoIntel: ComprehensiveReportData['geoIntel']): boolean {
+  if (!geoIntel) return false;
+  return (
+    (geoIntel.crimeData && geoIntel.crimeData.length > 0) ||
+    (geoIntel.incidents && geoIntel.incidents.length > 0) ||
+    (geoIntel.riskIntelligence !== null && geoIntel.riskIntelligence !== undefined)
+  );
 }
 
 function addCoverPage(
@@ -235,60 +333,67 @@ function addExecutiveSummary(
   doc.setFont(FONTS.body.family, FONTS.body.style);
   doc.setFontSize(FONT_SIZES.body);
   
-  const summary = `This assessment identified ${data.riskSummary.totalScenarios} risk scenarios across the facility. ` +
-    `The analysis reveals ${data.riskSummary.highRiskCount} high-risk areas requiring immediate attention, ` +
-    `${data.riskSummary.mediumRiskCount} medium-risk areas requiring planned mitigation, and ` +
-    `${data.riskSummary.lowRiskCount} low-risk areas for ongoing monitoring.`;
+  const summary = `This assessment identified ${data.riskSummary?.totalScenarios || 0} risk scenarios across the facility. ` +
+    `The analysis reveals ${data.riskSummary?.highRiskCount || 0} high-risk areas requiring immediate attention, ` +
+    `${data.riskSummary?.mediumRiskCount || 0} medium-risk areas requiring planned mitigation, and ` +
+    `${data.riskSummary?.lowRiskCount || 0} low-risk areas for ongoing monitoring.`;
   
   yPos = addText(doc, summary, SPACING.margin, yPos);
   yPos += SPACING.smallGap;
   
-  // Risk Metrics
-  yPos = checkPageBreak(doc, yPos, 50);
-  yPos += SPACING.smallGap;
-  
-  doc.setFont(FONTS.header.family, FONTS.header.style);
-  doc.setFontSize(FONT_SIZES.subheading);
-  doc.text('Risk Metrics', SPACING.margin, yPos);
-  yPos += SPACING.lineHeight;
-  
-  const metrics = [
-    ['Metric', 'Score'],
-    ['Average Inherent Risk', data.riskSummary.averageInherentRisk.toFixed(1)],
-    ['Average Current Risk', data.riskSummary.averageCurrentRisk.toFixed(1)],
-    ['Average Residual Risk', data.riskSummary.averageResidualRisk.toFixed(1)],
-  ];
-  
-  yPos = drawTable(doc, metrics[0], metrics.slice(1), yPos);
-  yPos += SPACING.sectionGap;
-  
-  // Top Threats
-  yPos = checkPageBreak(doc, yPos, 60);
-  
-  doc.setFont(FONTS.header.family, FONTS.header.style);
-  doc.setFontSize(FONT_SIZES.subheading);
-  doc.text('Top Threats', SPACING.margin, yPos);
-  yPos += SPACING.lineHeight;
-  
-  doc.setFont(FONTS.body.family, FONTS.body.style);
-  doc.setFontSize(FONT_SIZES.body);
-  
-  data.riskSummary.topThreats.slice(0, 5).forEach((threat, index) => {
-    yPos = checkPageBreak(doc, yPos, 15);
-    doc.text(`${index + 1}. ${threat.scenario}`, SPACING.margin + 5, yPos);
+  // Risk Metrics (with null safety)
+  if (data.riskSummary) {
+    yPos = checkPageBreak(doc, yPos, 50);
+    yPos += SPACING.smallGap;
+    
+    doc.setFont(FONTS.header.family, FONTS.header.style);
+    doc.setFontSize(FONT_SIZES.subheading);
+    doc.text('Risk Metrics', SPACING.margin, yPos);
     yPos += SPACING.lineHeight;
-    doc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
-    doc.setFontSize(FONT_SIZES.small);
-    doc.text(`   Risk Score: ${threat.riskScore} | Likelihood: ${threat.likelihood} | Impact: ${threat.impact}`, SPACING.margin + 5, yPos);
+    
+    const metrics = [
+      ['Metric', 'Score'],
+      ['Average Inherent Risk', (data.riskSummary.averageInherentRisk || 0).toFixed(1)],
+      ['Average Current Risk', (data.riskSummary.averageCurrentRisk || 0).toFixed(1)],
+      ['Average Residual Risk', (data.riskSummary.averageResidualRisk || 0).toFixed(1)],
+    ];
+    
+    yPos = drawTable(doc, metrics[0], metrics.slice(1), yPos);
+    yPos += SPACING.sectionGap;
+  }
+  
+  // Top Threats (with null safety)
+  if (data.riskSummary?.topThreats && data.riskSummary.topThreats.length > 0) {
+    yPos = checkPageBreak(doc, yPos, 60);
+    
+    doc.setFont(FONTS.header.family, FONTS.header.style);
+    doc.setFontSize(FONT_SIZES.subheading);
+    doc.text('Top Threats', SPACING.margin, yPos);
     yPos += SPACING.lineHeight;
-    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    
+    doc.setFont(FONTS.body.family, FONTS.body.style);
     doc.setFontSize(FONT_SIZES.body);
-  });
+    
+    data.riskSummary.topThreats.slice(0, 5).forEach((threat, index) => {
+      if (!threat) return; // Skip null threats
+      
+      yPos = checkPageBreak(doc, yPos, 15);
+      doc.text(`${index + 1}. ${threat.scenario || 'Unknown threat'}`, SPACING.margin + 5, yPos);
+      yPos += SPACING.lineHeight;
+      doc.setTextColor(COLORS.textLight[0], COLORS.textLight[1], COLORS.textLight[2]);
+      doc.setFontSize(FONT_SIZES.small);
+      doc.text(`   Risk Score: ${threat.riskScore || 0} | Likelihood: ${threat.likelihood || 'N/A'} | Impact: ${threat.impact || 'N/A'}`, SPACING.margin + 5, yPos);
+      yPos += SPACING.lineHeight;
+      doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+      doc.setFontSize(FONT_SIZES.body);
+    });
+    
+    yPos += SPACING.sectionGap;
+  }
   
-  yPos += SPACING.sectionGap;
-  
-  // Key Findings from GeoIntel
-  if (data.geoIntel?.riskIntelligence?.keyInsights && data.geoIntel.riskIntelligence.keyInsights.length > 0) {
+  // Key Findings from GeoIntel (with comprehensive null safety)
+  const keyInsights = data.geoIntel?.riskIntelligence?.keyInsights;
+  if (keyInsights && Array.isArray(keyInsights) && keyInsights.length > 0) {
     yPos = checkPageBreak(doc, yPos, 40);
     
     doc.setFont(FONTS.header.family, FONTS.header.style);
@@ -299,7 +404,9 @@ function addExecutiveSummary(
     doc.setFont(FONTS.body.family, FONTS.body.style);
     doc.setFontSize(FONT_SIZES.body);
     
-    data.geoIntel.riskIntelligence.keyInsights.forEach((insight) => {
+    keyInsights.forEach((insight) => {
+      if (!insight || typeof insight !== 'string') return; // Skip invalid insights
+      
       yPos = checkPageBreak(doc, yPos, 12);
       doc.text('•', SPACING.margin + 2, yPos);
       yPos = addText(doc, insight, SPACING.margin + 7, yPos, { maxWidth: 160 });
@@ -320,17 +427,17 @@ function addRiskAnalysis(
   yPos = addSection(doc, 'Risk Analysis', yPos);
   yPos += SPACING.smallGap;
   
-  // Risk Distribution
+  // Risk Distribution (with null safety)
   doc.setFont(FONTS.header.family, FONTS.header.style);
   doc.setFontSize(FONT_SIZES.subheading);
   doc.text('Risk Distribution', SPACING.margin, yPos);
   yPos += SPACING.lineHeight + SPACING.smallGap;
   
-  // Draw risk distribution bars
+  // Draw risk distribution bars (with safe defaults)
   const riskCounts = [
-    { level: 'High Risk', count: data.riskSummary.highRiskCount, color: COLORS.high },
-    { level: 'Medium Risk', count: data.riskSummary.mediumRiskCount, color: COLORS.medium },
-    { level: 'Low Risk', count: data.riskSummary.lowRiskCount, color: COLORS.low },
+    { level: 'High Risk', count: data.riskSummary?.highRiskCount || 0, color: COLORS.high },
+    { level: 'Medium Risk', count: data.riskSummary?.mediumRiskCount || 0, color: COLORS.medium },
+    { level: 'Low Risk', count: data.riskSummary?.lowRiskCount || 0, color: COLORS.low },
   ];
   
   riskCounts.forEach(({ level, count, color }) => {
@@ -340,8 +447,9 @@ function addRiskAnalysis(
     
     const barX = SPACING.margin + 40;
     const maxBarWidth = 100;
-    const barWidth = data.riskSummary.totalScenarios > 0 
-      ? (count / data.riskSummary.totalScenarios) * maxBarWidth 
+    const totalScenarios = data.riskSummary?.totalScenarios || 0;
+    const barWidth = totalScenarios > 0 
+      ? (count / totalScenarios) * maxBarWidth 
       : 0;
     
     doc.setFillColor(color[0], color[1], color[2]);
@@ -357,8 +465,9 @@ function addRiskAnalysis(
   
   yPos += SPACING.sectionGap;
   
-  // Risk Matrix (if we have scenarios with likelihood and impact)
-  const hasRiskMatrix = data.riskSummary.topThreats.some(t => t.likelihood && t.impact);
+  // Risk Matrix (if we have scenarios with likelihood and impact - with null safety)
+  const topThreats = data.riskSummary?.topThreats || [];
+  const hasRiskMatrix = Array.isArray(topThreats) && topThreats.some(t => t && t.likelihood && t.impact);
   if (hasRiskMatrix) {
     yPos = checkPageBreak(doc, yPos, 80);
     
@@ -367,38 +476,42 @@ function addRiskAnalysis(
     doc.text('Risk Matrix', SPACING.margin, yPos);
     yPos += SPACING.lineHeight;
     
-    // Convert top threats to PDFRiskScenario format for the matrix
-    const matrixScenarios: PDFRiskScenario[] = data.riskSummary.topThreats.map((threat, idx) => {
-      // Map likelihood and impact strings to numeric values (1-5)
-      const likelihoodMap: Record<string, number> = {
-        'very-low': 1, 'low': 2, 'medium': 3, 'high': 4, 'very-high': 5
-      };
-      const impactMap: Record<string, number> = {
-        'negligible': 1, 'minor': 2, 'moderate': 3, 'major': 4, 'catastrophic': 5
-      };
-      
-      const likelihood = likelihoodMap[threat.likelihood] || 3;
-      const impact = impactMap[threat.impact] || 3;
-      const riskScore = likelihood * impact;
-      
-      let riskLevel = 'Medium';
-      if (riskScore >= 20) riskLevel = 'Critical';
-      else if (riskScore >= 15) riskLevel = 'High';
-      else if (riskScore >= 10) riskLevel = 'Medium';
-      else if (riskScore >= 5) riskLevel = 'Low';
-      else riskLevel = 'Very Low';
-      
-      return {
-        id: idx.toString(),
-        title: threat.scenario,
-        likelihood,
-        impact,
-        riskLevel,
-        riskScore
-      };
-    });
+    // Convert top threats to PDFRiskScenario format for the matrix (with null safety)
+    const matrixScenarios: PDFRiskScenario[] = topThreats
+      .filter(threat => threat && threat.scenario) // Filter out null/undefined threats
+      .map((threat, idx) => {
+        // Map likelihood and impact strings to numeric values (1-5)
+        const likelihoodMap: Record<string, number> = {
+          'very-low': 1, 'low': 2, 'medium': 3, 'high': 4, 'very-high': 5
+        };
+        const impactMap: Record<string, number> = {
+          'negligible': 1, 'minor': 2, 'moderate': 3, 'major': 4, 'catastrophic': 5
+        };
+        
+        const likelihood = likelihoodMap[threat.likelihood || ''] || 3;
+        const impact = impactMap[threat.impact || ''] || 3;
+        const riskScore = likelihood * impact;
+        
+        let riskLevel = 'Medium';
+        if (riskScore >= 20) riskLevel = 'Critical';
+        else if (riskScore >= 15) riskLevel = 'High';
+        else if (riskScore >= 10) riskLevel = 'Medium';
+        else if (riskScore >= 5) riskLevel = 'Low';
+        else riskLevel = 'Very Low';
+        
+        return {
+          id: idx.toString(),
+          title: threat.scenario || 'Unknown',
+          likelihood,
+          impact,
+          riskLevel,
+          riskScore
+        };
+      });
     
-    yPos = drawRiskMatrix(doc, SPACING.margin + 20, yPos, matrixScenarios);
+    if (matrixScenarios.length > 0) {
+      yPos = drawRiskMatrix(doc, SPACING.margin + 20, yPos, matrixScenarios);
+    }
   }
   
   return yPos;
