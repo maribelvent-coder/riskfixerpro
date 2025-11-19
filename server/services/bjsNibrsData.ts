@@ -8,7 +8,8 @@
  * API Documentation: https://bjs.ojp.gov/national-incident-based-reporting-system-nibrs-national-estimates-api
  */
 
-const BJS_NIBRS_ENDPOINT = "https://api.ojp.gov/bjsdataset/v1/iv7i-eah6.json";
+const BJS_VIOLENT_INCIDENTS = "https://api.ojp.gov/bjsdataset/v1/r32q-bdaw.json";
+const BJS_PROPERTY_INCIDENTS = "https://api.ojp.gov/bjsdataset/v1/iv7i-eah6.json";
 
 export interface BJSCrimeData {
   indicator_name: string;
@@ -42,24 +43,24 @@ export async function getBJSCrimeStatistics(year: number): Promise<BJSCrimeDataR
   }
 
   try {
-    // Query for violent crimes (Total) - NIBRS crimes against persons
+    // Query for violent incidents (Total)
     const violentQuery = new URLSearchParams({
-      $where: `indicator_name like '%crimes against persons (Total)%' AND estimate_domain_1='Incident count' AND time_series_start_year='${year}'`,
+      $where: `indicator_name like '%NIBRS crimes against persons (Total)%' AND estimate_domain_1='Incident count' AND time_series_start_year='${year}'`,
       $limit: "100",
     });
 
-    // Query for property crimes (Total) - NIBRS crimes against property
+    // Query for property incidents (Total)
     const propertyQuery = new URLSearchParams({
-      $where: `indicator_name like '%crimes against property (Total)%' AND estimate_domain_1='Incident count' AND time_series_start_year='${year}'`,
+      $where: `indicator_name like '%NIBRS crimes against property (Total)%' AND estimate_domain_1='Incident count' AND time_series_start_year='${year}'`,
       $limit: "100",
     });
 
     console.log(`Fetching BJS NIBRS data for year ${year}...`);
     
-    // Fetch both datasets in parallel
+    // Fetch both datasets in parallel from their respective endpoints
     const [violentResponse, propertyResponse] = await Promise.all([
-      fetch(`${BJS_NIBRS_ENDPOINT}?${violentQuery.toString()}`),
-      fetch(`${BJS_NIBRS_ENDPOINT}?${propertyQuery.toString()}`),
+      fetch(`${BJS_VIOLENT_INCIDENTS}?${violentQuery.toString()}`),
+      fetch(`${BJS_PROPERTY_INCIDENTS}?${propertyQuery.toString()}`),
     ]);
 
     if (!violentResponse.ok || !propertyResponse.ok) {
