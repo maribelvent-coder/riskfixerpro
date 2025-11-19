@@ -1312,6 +1312,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Threat Library routes
+  app.get("/api/libraries/threats", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const threats = await storage.getThreatLibrary();
+      res.json(threats);
+    } catch (error) {
+      console.error("Error fetching threat library:", error);
+      res.status(500).json({ error: "Failed to fetch threat library" });
+    }
+  });
+
+  app.get("/api/libraries/threats/category/:category", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { category } = req.params;
+      const threats = await storage.getThreatLibraryByCategory(category);
+      res.json(threats);
+    } catch (error) {
+      console.error("Error fetching threats by category:", error);
+      res.status(500).json({ error: "Failed to fetch threats by category" });
+    }
+  });
+
+  app.get("/api/libraries/threats/:id", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      const threat = await storage.getThreatLibraryItem(id);
+      
+      if (!threat) {
+        return res.status(404).json({ error: "Threat not found" });
+      }
+
+      res.json(threat);
+    } catch (error) {
+      console.error("Error fetching threat:", error);
+      res.status(500).json({ error: "Failed to fetch threat" });
+    }
+  });
+
+  // Control Library routes
+  app.get("/api/libraries/controls", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const controls = await storage.getControlLibrary();
+      res.json(controls);
+    } catch (error) {
+      console.error("Error fetching control library:", error);
+      res.status(500).json({ error: "Failed to fetch control library" });
+    }
+  });
+
+  app.get("/api/libraries/controls/category/:category", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { category } = req.params;
+      const controls = await storage.getControlLibraryByCategory(category);
+      res.json(controls);
+    } catch (error) {
+      console.error("Error fetching controls by category:", error);
+      res.status(500).json({ error: "Failed to fetch controls by category" });
+    }
+  });
+
+  app.get("/api/libraries/controls/:id", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      const control = await storage.getControlLibraryItem(id);
+      
+      if (!control) {
+        return res.status(404).json({ error: "Control not found" });
+      }
+
+      res.json(control);
+    } catch (error) {
+      console.error("Error fetching control:", error);
+      res.status(500).json({ error: "Failed to fetch control" });
+    }
+  });
+
   // Assessment routes
   app.get("/api/assessments", async (req, res) => {
     try {

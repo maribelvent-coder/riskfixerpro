@@ -14,6 +14,8 @@ import Analytics from "@/pages/Analytics";
 import Templates from "@/pages/Templates";
 import AssessmentDetail from "@/pages/AssessmentDetail";
 import Sites from "@/pages/Sites";
+import ThreatLibrary from "@/pages/ThreatLibrary";
+import ControlLibrary from "@/pages/ControlLibrary";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
 import TeamMembers from "@/pages/TeamMembers";
@@ -122,6 +124,18 @@ function App() {
           <Route path="/app/sites">
             <ProtectedAppLayout>
               <Sites />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/libraries/threats">
+            <ProtectedAppLayout>
+              <ThreatLibrary />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/libraries/controls">
+            <ProtectedAppLayout>
+              <ControlLibrary />
             </ProtectedAppLayout>
           </Route>
           
