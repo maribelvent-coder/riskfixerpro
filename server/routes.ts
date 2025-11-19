@@ -31,6 +31,7 @@ import { getSurveyParadigmFromTemplate } from "@shared/templates";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
+import { emailService } from "./emailService";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -627,7 +628,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt,
       });
 
-      res.status(201).json(invitation);
+      // Send invitation email
+      const organization = await storage.getOrganization(req.params.id);
+      if (organization) {
+        await emailService.sendInvitationEmail({
+          email,
+          organizationName: organization.name,
+          inviterName: user.username,
+          role: invitation.role,
+          token,
+          expiresAt,
+        }).catch(err => {
+          console.error("Failed to send invitation email:", err);
+          // Don't fail the request if email fails - invitation was still created
+        });
+      }
+
+      // Return invitation without token for security
+      const { token: _token, ...safeInvitation } = invitation;
+      res.status(201).json(safeInvitation);
     } catch (error) {
       console.error("Error creating invitation:", error);
       res.status(500).json({ error: "Failed to create invitation" });
