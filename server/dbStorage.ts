@@ -44,7 +44,13 @@ import type {
   InsertReport,
   AssessmentWithQuestions,
   ThreatLibrary,
-  ControlLibrary
+  ControlLibrary,
+  PointOfInterest,
+  InsertPointOfInterest,
+  CrimeSource,
+  InsertCrimeSource,
+  CrimeObservation,
+  InsertCrimeObservation
 } from "@shared/schema";
 
 export class DbStorage implements IStorage {
@@ -880,6 +886,113 @@ export class DbStorage implements IStorage {
   async getControlLibraryItem(id: string): Promise<ControlLibrary | undefined> {
     const results = await db.select().from(schema.controlLibrary)
       .where(and(eq(schema.controlLibrary.id, id), eq(schema.controlLibrary.active, true)));
+    return results[0];
+  }
+
+  // Geographic Intelligence - Points of Interest methods
+  async getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]> {
+    const conditions = [];
+    
+    if (siteId !== undefined) {
+      conditions.push(eq(schema.pointsOfInterest.siteId, siteId));
+    }
+    
+    if (assessmentId !== undefined) {
+      conditions.push(eq(schema.pointsOfInterest.assessmentId, assessmentId));
+    }
+    
+    if (conditions.length === 0) {
+      return await db.select().from(schema.pointsOfInterest);
+    }
+    
+    if (conditions.length === 1) {
+      return await db.select().from(schema.pointsOfInterest).where(conditions[0]);
+    }
+    
+    return await db.select().from(schema.pointsOfInterest).where(and(...conditions));
+  }
+
+  async getPointOfInterest(id: string): Promise<PointOfInterest | undefined> {
+    const results = await db.select().from(schema.pointsOfInterest)
+      .where(eq(schema.pointsOfInterest.id, id));
+    return results[0];
+  }
+
+  async createPointOfInterest(poi: InsertPointOfInterest): Promise<PointOfInterest> {
+    const results = await db.insert(schema.pointsOfInterest).values(poi).returning();
+    return results[0];
+  }
+
+  async updatePointOfInterest(id: string, poi: Partial<PointOfInterest>): Promise<PointOfInterest | undefined> {
+    const results = await db.update(schema.pointsOfInterest)
+      .set({ ...poi, updatedAt: new Date() })
+      .where(eq(schema.pointsOfInterest.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deletePointOfInterest(id: string): Promise<boolean> {
+    const results = await db.update(schema.pointsOfInterest)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(schema.pointsOfInterest.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  // Geographic Intelligence - Crime Data methods
+  async getCrimeSource(id: string): Promise<CrimeSource | undefined> {
+    const results = await db.select().from(schema.crimeSources)
+      .where(eq(schema.crimeSources.id, id));
+    return results[0];
+  }
+
+  async getCrimeSources(siteId?: string, assessmentId?: string): Promise<CrimeSource[]> {
+    const conditions = [];
+    
+    if (siteId !== undefined) {
+      conditions.push(eq(schema.crimeSources.siteId, siteId));
+    }
+    
+    if (assessmentId !== undefined) {
+      conditions.push(eq(schema.crimeSources.assessmentId, assessmentId));
+    }
+    
+    if (conditions.length === 0) {
+      return await db.select().from(schema.crimeSources);
+    }
+    
+    if (conditions.length === 1) {
+      return await db.select().from(schema.crimeSources).where(conditions[0]);
+    }
+    
+    return await db.select().from(schema.crimeSources).where(and(...conditions));
+  }
+
+  async createCrimeSource(source: InsertCrimeSource): Promise<CrimeSource> {
+    const results = await db.insert(schema.crimeSources).values(source).returning();
+    return results[0];
+  }
+
+  async deleteCrimeSource(id: string): Promise<boolean> {
+    const results = await db.delete(schema.crimeSources)
+      .where(eq(schema.crimeSources.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  async getCrimeObservation(id: string): Promise<CrimeObservation | undefined> {
+    const results = await db.select().from(schema.crimeObservations)
+      .where(eq(schema.crimeObservations.id, id));
+    return results[0];
+  }
+
+  async getCrimeObservationsBySource(crimeSourceId: string): Promise<CrimeObservation[]> {
+    return await db.select().from(schema.crimeObservations)
+      .where(eq(schema.crimeObservations.crimeSourceId, crimeSourceId));
+  }
+
+  async createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation> {
+    const results = await db.insert(schema.crimeObservations).values(observation).returning();
     return results[0];
   }
 }

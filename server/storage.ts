@@ -42,7 +42,13 @@ import {
   type ThreatLibrary,
   type InsertThreatLibrary,
   type ControlLibrary,
-  type InsertControlLibrary
+  type InsertControlLibrary,
+  type PointOfInterest,
+  type InsertPointOfInterest,
+  type CrimeSource,
+  type InsertCrimeSource,
+  type CrimeObservation,
+  type InsertCrimeObservation
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -196,6 +202,23 @@ export interface IStorage {
   getControlLibrary(): Promise<ControlLibrary[]>;
   getControlLibraryByCategory(category: string): Promise<ControlLibrary[]>;
   getControlLibraryItem(id: string): Promise<ControlLibrary | undefined>;
+
+  // Geographic Intelligence - Points of Interest methods
+  getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]>;
+  getPointOfInterest(id: string): Promise<PointOfInterest | undefined>;
+  createPointOfInterest(poi: InsertPointOfInterest): Promise<PointOfInterest>;
+  updatePointOfInterest(id: string, poi: Partial<PointOfInterest>): Promise<PointOfInterest | undefined>;
+  deletePointOfInterest(id: string): Promise<boolean>;
+
+  // Geographic Intelligence - Crime Data methods
+  getCrimeSource(id: string): Promise<CrimeSource | undefined>;
+  getCrimeSources(siteId?: string, assessmentId?: string): Promise<CrimeSource[]>;
+  createCrimeSource(source: InsertCrimeSource): Promise<CrimeSource>;
+  deleteCrimeSource(id: string): Promise<boolean>;
+
+  getCrimeObservation(id: string): Promise<CrimeObservation | undefined>;
+  getCrimeObservationsBySource(crimeSourceId: string): Promise<CrimeObservation[]>;
+  createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation>;
 }
 
 export class MemStorage implements IStorage {
@@ -1260,6 +1283,57 @@ export class MemStorage implements IStorage {
 
   async getControlLibraryItem(id: string): Promise<ControlLibrary | undefined> {
     throw new Error("Control Library not supported in MemStorage - use DbStorage");
+  }
+
+  // Geographic Intelligence - Points of Interest methods
+  async getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]> {
+    // MemStorage is only used for testing, return empty array
+    return [];
+  }
+
+  async getPointOfInterest(id: string): Promise<PointOfInterest | undefined> {
+    return undefined;
+  }
+
+  async createPointOfInterest(poi: InsertPointOfInterest): Promise<PointOfInterest> {
+    throw new Error("MemStorage not fully implemented for GeoIntel features");
+  }
+
+  async updatePointOfInterest(id: string, poi: Partial<PointOfInterest>): Promise<PointOfInterest | undefined> {
+    return undefined;
+  }
+
+  async deletePointOfInterest(id: string): Promise<boolean> {
+    return false;
+  }
+
+  // Geographic Intelligence - Crime Data methods
+  async getCrimeSource(id: string): Promise<CrimeSource | undefined> {
+    return undefined;
+  }
+
+  async getCrimeSources(siteId?: string, assessmentId?: string): Promise<CrimeSource[]> {
+    return [];
+  }
+
+  async createCrimeSource(source: InsertCrimeSource): Promise<CrimeSource> {
+    throw new Error("MemStorage not fully implemented for GeoIntel features");
+  }
+
+  async deleteCrimeSource(id: string): Promise<boolean> {
+    return false;
+  }
+
+  async getCrimeObservation(id: string): Promise<CrimeObservation | undefined> {
+    return undefined;
+  }
+
+  async getCrimeObservationsBySource(crimeSourceId: string): Promise<CrimeObservation[]> {
+    return [];
+  }
+
+  async createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation> {
+    throw new Error("MemStorage not fully implemented for GeoIntel features");
   }
 }
 

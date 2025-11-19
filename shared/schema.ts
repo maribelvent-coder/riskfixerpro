@@ -63,7 +63,19 @@ export const sites = pgTable("sites", {
   contactPhone: text("contact_phone"),
   contactEmail: text("contact_email"),
   notes: text("notes"),
+  
+  // Geographic Intelligence Fields
+  latitude: text("latitude"), // Stored as text for precision
+  longitude: text("longitude"), // Stored as text for precision
+  geocodeProvider: text("geocode_provider"), // google_maps, manual, mapbox
+  geocodeStatus: text("geocode_status").default("pending"), // pending, success, failed, manual
+  geocodeTimestamp: timestamp("geocode_timestamp"),
+  normalizedAddress: text("normalized_address"), // Provider-normalized full address
+  county: text("county"), // County/region
+  timezone: text("timezone"), // IANA timezone (e.g., America/New_York)
+  
   createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
 });
 
 export const facilityZones = pgTable("facility_zones", {
@@ -75,6 +87,100 @@ export const facilityZones = pgTable("facility_zones", {
   securityLevel: text("security_level").notNull().default("public"), // public, restricted, controlled, high_security
   description: text("description"), // Additional details about the zone
   accessRequirements: text("access_requirements"), // Badge level, escort required, etc.
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Points of Interest - Emergency services, threats, custom locations
+export const pointsOfInterest = pgTable("points_of_interest", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: varchar("site_id").references(() => sites.id), // null for assessment-specific POIs
+  assessmentId: varchar("assessment_id").references(() => assessments.id), // null for site-level POIs
+  
+  poiType: text("poi_type").notNull(), // police_station, fire_station, hospital, er, threat, custom
+  name: text("name").notNull(),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  
+  latitude: text("latitude").notNull(),
+  longitude: text("longitude").notNull(),
+  
+  // Distance and Response Time
+  distanceToSite: text("distance_to_site"), // Miles from site, stored as text for precision
+  estimatedResponseTime: integer("estimated_response_time"), // Minutes
+  
+  // POI Details
+  phoneNumber: text("phone_number"),
+  hours: text("hours"),
+  capabilities: jsonb("capabilities"), // For hospitals: {trauma_level, specialties}, For police: {jurisdiction}
+  
+  // Threat Assessment (for threat-type POIs)
+  threatLevel: text("threat_level"), // low, medium, high, critical
+  threatNotes: text("threat_notes"),
+  
+  // Custom Fields
+  customCategory: text("custom_category"),
+  icon: text("icon"), // Icon name for map display
+  color: text("color"), // Hex color for map display
+  
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+// Crime Data Sources - Tracks where crime data came from
+export const crimeSources = pgTable("crime_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: varchar("site_id").references(() => sites.id), // null for assessment-specific sources
+  assessmentId: varchar("assessment_id").references(() => assessments.id), // null for site-level sources
+  
+  dataSource: text("data_source").notNull(), // cap_index, fbi_ucr, local_pd, manual_entry, pdf_import
+  importDate: timestamp("import_date").default(sql`now()`).notNull(),
+  dataTimePeriod: text("data_time_period"), // e.g., "2024 Annual", "Q3 2024"
+  
+  // Geographic Coverage
+  coverageArea: jsonb("coverage_area"), // GeoJSON Polygon (optional)
+  city: text("city"),
+  county: text("county"),
+  state: text("state"),
+  zipCodes: jsonb("zip_codes"), // JSON array of zip codes
+  
+  // Original Files (for PDF imports)
+  originalFileUrl: text("original_file_url"),
+  originalFileName: text("original_file_name"),
+  
+  // Metadata
+  dataQuality: text("data_quality"), // verified, estimated, preliminary, unverified
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Crime Observations - Actual crime statistics data
+export const crimeObservations = pgTable("crime_observations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  crimeSourceId: varchar("crime_source_id").notNull().references(() => crimeSources.id),
+  
+  // Crime Statistics (JSON format with standardized structure)
+  violentCrimes: jsonb("violent_crimes"), // {total, rate_per_100k, breakdown: {murder, assault, robbery, rape}}
+  propertyCrimes: jsonb("property_crimes"), // {total, rate_per_100k, breakdown: {burglary, theft, auto_theft}}
+  otherCrimes: jsonb("other_crimes"), // {drug_offenses, dui, vandalism, etc.}
+  
+  // Overall Index (0-100 scale, 100 = highest crime)
+  overallCrimeIndex: integer("overall_crime_index"), // CAP Index style rating
+  
+  // Comparative Data
+  nationalAverage: jsonb("national_average"), // Comparison metrics
+  stateAverage: jsonb("state_average"), // Comparison metrics
+  comparisonRating: text("comparison_rating"), // very_high, high, average, low, very_low
+  
+  // Time Period
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -483,6 +589,22 @@ export const insertControlLibrarySchema = createInsertSchema(controlLibrary).omi
   createdAt: true,
 });
 
+export const insertPointOfInterestSchema = createInsertSchema(pointsOfInterest).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCrimeSourceSchema = createInsertSchema(crimeSources).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCrimeObservationSchema = createInsertSchema(crimeObservations).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -558,6 +680,15 @@ export type InsertThreatLibrary = z.infer<typeof insertThreatLibrarySchema>;
 
 export type ControlLibrary = typeof controlLibrary.$inferSelect;
 export type InsertControlLibrary = z.infer<typeof insertControlLibrarySchema>;
+
+export type PointOfInterest = typeof pointsOfInterest.$inferSelect;
+export type InsertPointOfInterest = z.infer<typeof insertPointOfInterestSchema>;
+
+export type CrimeSource = typeof crimeSources.$inferSelect;
+export type InsertCrimeSource = z.infer<typeof insertCrimeSourceSchema>;
+
+export type CrimeObservation = typeof crimeObservations.$inferSelect;
+export type InsertCrimeObservation = z.infer<typeof insertCrimeObservationSchema>;
 
 // Assessment with related data
 export type AssessmentWithQuestions = Assessment & {

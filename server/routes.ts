@@ -34,6 +34,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { emailService } from "./emailService";
+import { registerGeoIntelRoutes } from "./routes/geoIntelRoutes.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -164,6 +165,9 @@ async function verifySiteOwnership(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register Geographic Intelligence routes
+  registerGeoIntelRoutes(app, storage);
+
   // Authentication routes
   app.post("/api/auth/signup", async (req, res) => {
     try {
