@@ -21,6 +21,7 @@ import Signup from "@/pages/Signup";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import AcceptInvitation from "@/pages/AcceptInvitation";
 import Landing from "@/pages/Landing";
 import Pricing from "@/pages/Pricing";
 import Classes from "@/pages/Classes";
@@ -65,6 +66,9 @@ function App() {
           <Route path="/login" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/accept-invitation/:token">
+            {(params) => <AcceptInvitation token={params.token} />}
+          </Route>
           <Route path="/pricing" component={Pricing} />
           <Route path="/classes" component={Classes} />
           <Route path="/consulting" component={Consulting} />
