@@ -6,6 +6,28 @@ This enterprise-grade platform conducts professional physical security assessmen
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Phase 0: Architectural Hardening (November 2025) ✓
+Completed foundational infrastructure for multi-tenancy and enterprise features:
+
+**Infrastructure Added**:
+- Feature flag system (`shared/featureFlags.ts`) for gradual rollout
+- Tenant context types and middleware (`shared/tenantContext.ts`, `server/tenantMiddleware.ts`)
+- Dual risk calculation support - compound + T×V×I models (`shared/riskCalculationConfig.ts`)
+- Storage factory pattern for tenant-aware data access (`server/tenantStorage.ts`, `server/storageFactory.ts`)
+- OpenAI service lazy-loading fix (prevents startup crashes)
+
+**Architectural Decisions**:
+- Retained Express/Vite stack (better for AI jobs, PDFs, offline work)
+- No database changes in Phase 0 (purely additive infrastructure)
+- Feature flags default to false (safe rollout)
+- organizationId columns deferred to Phase 1
+
+**Next Phase**: Phase 1 will add organizationId to schema and implement full multi-tenancy with organization CRUD, member invitations, and RBAC enforcement.
+
+See `PHASE0-COMPLETE.md` for detailed documentation.
+
 ## System Architecture
 
 ### UI/UX Decisions
