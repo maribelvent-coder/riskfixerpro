@@ -9,8 +9,9 @@ import { GoogleMap } from "@/components/GoogleMap";
 import { CrimeDataImportDialog } from "@/components/CrimeDataImportDialog";
 import { IncidentImportDialog } from "@/components/IncidentImportDialog";
 import { CrimeDataCharts } from "@/components/CrimeDataCharts";
+import { RiskIntelligencePanel } from "@/components/RiskIntelligencePanel";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download, BarChart3, X } from "lucide-react";
+import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download, BarChart3, X, Target } from "lucide-react";
 import type { Site, PointOfInterest, CrimeSource, CrimeObservation, SiteIncident } from "@shared/schema";
 
 interface SiteGeoIntelProps {
@@ -380,7 +381,7 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="map" data-testid="tab-map">
             <MapPin className="h-4 w-4 mr-2" />
             Map
@@ -392,6 +393,10 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
           <TabsTrigger value="crime" data-testid="tab-crime">
             <AlertTriangle className="h-4 w-4 mr-2" />
             Crime Data
+          </TabsTrigger>
+          <TabsTrigger value="risk-intelligence" data-testid="tab-risk-intelligence">
+            <Target className="h-4 w-4 mr-2" />
+            Risk Intelligence
           </TabsTrigger>
           <TabsTrigger value="incidents" data-testid="tab-incidents">
             <Shield className="h-4 w-4 mr-2" />
@@ -575,6 +580,20 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="risk-intelligence" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Crime-Informed Risk Intelligence</CardTitle>
+              <CardDescription>
+                Threat likelihood recommendations based on local crime data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RiskIntelligencePanel siteId={site.id} />
             </CardContent>
           </Card>
         </TabsContent>
