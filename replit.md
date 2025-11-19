@@ -82,7 +82,51 @@ Built complete organization and member management system with enterprise-grade s
 - Limits stored in shared/tierLimits.ts with getOrganizationTierLimits() helper
 - Only paid tier users (basic/pro/enterprise) can create organizations
 
-**Next Phase**: Phase 2 will add enhanced templates, facility zones, asset management, and threat/control libraries.
+### Phase 2: Reference Libraries & Template Enhancement (November 2025) ✓
+Expanded the platform with professional reference libraries and enhanced template system:
+
+**Completed** ✓:
+1. **Threat Library**: 38 professionally cataloged physical security threats across 8 categories
+   - Database table: `threat_library` with comprehensive threat metadata
+   - Categories: Physical Access, Theft & Crime, Environmental, Violence, Electronic, Supply Chain, Insider, Social Engineering
+   - Fields: name, category, description, severity (low/medium/high/critical), likelihood, typical targets, indicators
+   - Seed script: `server/seed-threat-library.ts` with all 38 threats
+   - Frontend: `/reference/threats` with search, category filtering, severity badges, and statistics dashboard
+
+2. **Control Library**: 49 security controls across 9 categories aligned with CPTED and ASIS standards
+   - Database table: `control_library` with detailed control specifications
+   - Categories: Access Control, Surveillance, Barriers, Lighting, Intrusion Detection, Personnel, Policy, Response, Environmental
+   - Fields: name, category, description, controlType (physical/electronic/procedural), effectiveness (low/medium/high/very-high), cost level, implementation complexity, maintenance requirements
+   - Seed script: `server/seed-control-library.ts` with all 49 controls
+   - Frontend: `/reference/controls` with search, dual filters (category + type), effectiveness badges, and statistics
+
+3. **Facility Zones**: Site zoning system for granular security assessment
+   - Database table: `facility_zones` with zone metadata
+   - Fields: siteId, name, zoneType, securityLevel, description, floorNumber, accessRequirements
+   - Full CRUD API endpoints: GET/POST/PUT/DELETE `/api/sites/:siteId/zones`
+   - Storage layer: Complete DbStorage implementation with zone management methods
+
+4. **Template-Zone Integration**: Auto-creation of facility zones from template suggestions
+   - All 5 templates include `suggestedZones` arrays with appropriate zones:
+     - Corporate Headquarters: 5 zones (Main Entry, Lobby, Executive Wing, Server Room, Parking)
+     - Office Building: 5 zones (Main Entrance, Lobby, Office Areas, Server Room, Parking)
+     - Retail Store: 5 zones (Sales Floor, Stockroom, Loading Dock, Cash Handling, Parking)
+     - Warehouse & Distribution: 5 zones (Perimeter, Loading Docks, Storage Floor, Admin Office, Yard)
+     - Data Center: 5 zones (Security Vestibule, Server Hall, Power Systems, Cooling, NOC)
+     - Manufacturing Facility: 5 zones (Perimeter, Production Floor, Loading Dock, Hazmat Storage, Admin)
+   - Zones auto-create when assessment is created (POST /api/assessments)
+   - Duplicate detection: Case-insensitive name matching prevents duplicates
+   - Resilient error handling: Zone creation failures don't block assessment creation
+
+5. **Enhanced Navigation**: "Reference" section in sidebar linking to both libraries
+
+**Technical Decisions**:
+- Badge variant="outline" with explicit Tailwind colors (blue/green/yellow/orange/red) for visual severity/effectiveness distinction
+- Runtime validation: Exhaustive switches with console.warn for invalid enum values
+- Database deployment: Tables created via SQL, seed scripts run manually (tsx server/seed-*.ts)
+- Zone auto-creation: Non-blocking try-catch ensures assessment creation always succeeds
+
+**Next Phase**: Phase 3 will add advanced reporting, AI-powered insights, and offline field support.
 
 ## System Architecture
 
