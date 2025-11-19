@@ -34,7 +34,9 @@ import {
   type InsertReport,
   type AssessmentWithQuestions,
   type Organization,
-  type InsertOrganization
+  type InsertOrganization,
+  type OrganizationInvitation,
+  type InsertOrganizationInvitation
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -48,6 +50,14 @@ export interface IStorage {
   getOrganizationMembers(organizationId: string): Promise<User[]>;
   addUserToOrganization(userId: string, organizationId: string, role: string): Promise<void>;
   removeUserFromOrganization(userId: string): Promise<void>;
+
+  // Organization Invitation methods
+  createInvitation(invitation: InsertOrganizationInvitation): Promise<OrganizationInvitation>;
+  getInvitation(id: string): Promise<OrganizationInvitation | undefined>;
+  getInvitationByToken(token: string): Promise<OrganizationInvitation | undefined>;
+  listOrganizationInvitations(organizationId: string): Promise<OrganizationInvitation[]>;
+  updateInvitation(id: string, updates: Partial<OrganizationInvitation>): Promise<OrganizationInvitation | undefined>;
+  deleteInvitation(id: string): Promise<boolean>;
 
   // User methods
   getUser(id: string): Promise<User | undefined>;
@@ -168,6 +178,7 @@ export class MemStorage implements IStorage {
   private organizations: Map<string, Organization>;
   private users: Map<string, User>;
   private passwordResetTokens: Map<string, PasswordResetToken>;
+  private organizationInvitations: Map<string, OrganizationInvitation>;
   private sites: Map<string, Site>;
   private assessments: Map<string, Assessment>;
   private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
@@ -185,6 +196,7 @@ export class MemStorage implements IStorage {
     this.organizations = new Map();
     this.users = new Map();
     this.passwordResetTokens = new Map();
+    this.organizationInvitations = new Map();
     this.sites = new Map();
     this.assessments = new Map();
     this.facilitySurveyQuestions = new Map();
@@ -262,6 +274,49 @@ export class MemStorage implements IStorage {
       user.organizationRole = 'member';
       this.users.set(userId, user);
     }
+  }
+
+  // Organization Invitation methods
+  async createInvitation(insertInvitation: InsertOrganizationInvitation): Promise<OrganizationInvitation> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const invitation: OrganizationInvitation = {
+      ...insertInvitation,
+      id,
+      createdAt,
+      acceptedAt: null,
+    };
+    this.organizationInvitations.set(id, invitation);
+    return invitation;
+  }
+
+  async getInvitation(id: string): Promise<OrganizationInvitation | undefined> {
+    return this.organizationInvitations.get(id);
+  }
+
+  async getInvitationByToken(token: string): Promise<OrganizationInvitation | undefined> {
+    return Array.from(this.organizationInvitations.values()).find(
+      (inv) => inv.token === token
+    );
+  }
+
+  async listOrganizationInvitations(organizationId: string): Promise<OrganizationInvitation[]> {
+    return Array.from(this.organizationInvitations.values()).filter(
+      (inv) => inv.organizationId === organizationId
+    );
+  }
+
+  async updateInvitation(id: string, updates: Partial<OrganizationInvitation>): Promise<OrganizationInvitation | undefined> {
+    const invitation = this.organizationInvitations.get(id);
+    if (!invitation) return undefined;
+    
+    const updated = { ...invitation, ...updates };
+    this.organizationInvitations.set(id, updated);
+    return updated;
+  }
+
+  async deleteInvitation(id: string): Promise<boolean> {
+    return this.organizationInvitations.delete(id);
   }
 
   // User methods

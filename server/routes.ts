@@ -567,6 +567,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Organization Invitation Routes
+  app.post("/api/organizations/:id/invitations", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.organizationId !== req.params.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Only owners and admins can invite
+      if (user.organizationRole !== 'owner' && user.organizationRole !== 'admin') {
+        return res.status(403).json({ error: "Only owners and admins can invite members" });
+      }
+
+      const { email, role } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      // Cannot invite owners
+      if (role === 'owner') {
+        return res.status(400).json({ error: "Cannot invite users as owners" });
+      }
+
+      // Check if user already exists in this organization
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser && existingUser.organizationId === req.params.id) {
+        return res.status(400).json({ error: "User is already a member of this organization" });
+      }
+
+      // Check for existing pending invitation
+      const existingInvitations = await storage.listOrganizationInvitations(req.params.id);
+      const pendingInvite = existingInvitations.find(
+        inv => inv.email === email && inv.status === 'pending'
+      );
+      if (pendingInvite) {
+        return res.status(400).json({ error: "Invitation already sent to this email" });
+      }
+
+      // Generate cryptographically strong token
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(32).toString('hex');
+      
+      // Set expiration to 7 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const invitation = await storage.createInvitation({
+        organizationId: req.params.id,
+        email,
+        role: role || 'member',
+        invitedBy: user.id,
+        status: 'pending',
+        token,
+        expiresAt,
+      });
+
+      res.status(201).json(invitation);
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ error: "Failed to create invitation" });
+    }
+  });
+
+  app.get("/api/organizations/:id/invitations", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.organizationId !== req.params.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Only owners and admins can view invitations
+      if (user.organizationRole !== 'owner' && user.organizationRole !== 'admin') {
+        return res.status(403).json({ error: "Only owners and admins can view invitations" });
+      }
+
+      const invitations = await storage.listOrganizationInvitations(req.params.id);
+      
+      // Filter out sensitive token data from response
+      const safeInvitations = invitations.map(inv => ({
+        id: inv.id,
+        email: inv.email,
+        role: inv.role,
+        status: inv.status,
+        invitedBy: inv.invitedBy,
+        createdAt: inv.createdAt,
+        acceptedAt: inv.acceptedAt,
+        expiresAt: inv.expiresAt,
+      }));
+      
+      res.json(safeInvitations);
+    } catch (error) {
+      console.error("Error listing invitations:", error);
+      res.status(500).json({ error: "Failed to list invitations" });
+    }
+  });
+
+  app.post("/api/invitations/:token/accept", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // User must not already be in an organization
+      if (user.organizationId) {
+        return res.status(400).json({ error: "You are already in an organization" });
+      }
+
+      const invitation = await storage.getInvitationByToken(req.params.token);
+      if (!invitation) {
+        return res.status(404).json({ error: "Invitation not found" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ error: "Invitation is no longer valid" });
+      }
+
+      if (new Date() > new Date(invitation.expiresAt)) {
+        return res.status(400).json({ error: "Invitation has expired" });
+      }
+
+      // Verify email matches (if user has email set)
+      if (user.email && user.email !== invitation.email) {
+        return res.status(403).json({ error: "This invitation was sent to a different email address" });
+      }
+
+      // Add user to organization
+      await storage.addUserToOrganization(user.id, invitation.organizationId, invitation.role);
+
+      // Mark invitation as accepted
+      await storage.updateInvitation(invitation.id, {
+        status: 'accepted',
+        acceptedAt: new Date(),
+      });
+
+      const organization = await storage.getOrganization(invitation.organizationId);
+      res.json({ success: true, organization });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ error: "Failed to accept invitation" });
+    }
+  });
+
+  app.delete("/api/invitations/:id", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const invitation = await storage.getInvitation(req.params.id);
+      if (!invitation) {
+        return res.status(404).json({ error: "Invitation not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.organizationId !== invitation.organizationId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Only owners and admins can revoke invitations
+      if (user.organizationRole !== 'owner' && user.organizationRole !== 'admin') {
+        return res.status(403).json({ error: "Only owners and admins can revoke invitations" });
+      }
+
+      // Mark as revoked instead of deleting (for audit trail)
+      await storage.updateInvitation(req.params.id, { status: 'revoked' });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error revoking invitation:", error);
+      res.status(500).json({ error: "Failed to revoke invitation" });
+    }
+  });
+
   app.get("/api/team/members", async (req, res) => {
     try {
       if (!req.session.userId) {
