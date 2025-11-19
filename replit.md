@@ -31,10 +31,10 @@ Preferred communication style: Simple, everyday language.
 - **Multi-Tenancy Foundation**: Complete organization and member management with schema updates (organizationId), CRUD operations for organizations, a secure member invitation system, and robust RBAC enforcement. Organizations inherit creator's account tier with configurable limits.
 - **Reference Libraries**: Integrated Threat Library (38 threats across 8 categories) and Control Library (49 controls across 9 categories aligned with CPTED and ASIS standards), both with database storage, seed scripts, and frontend browsing capabilities.
 - **Facility Zones**: Granular site zoning system for security assessments with full CRUD API and auto-creation from assessment templates.
-- **Geographic Intelligence (GeoIntel) System**: Extends sites schema with geographic data, new tables for Points of Interest (POIs) and crime data. Includes geocoding services (Google Maps), crime data services (GPT-4o Vision for PDF extraction, FBI UCR integration), and secure API routes for geographic data management.
+- **Geographic Intelligence (GeoIntel) System**: Extends sites schema with geographic data, new tables for Points of Interest (POIs), crime data, and site incidents. Includes geocoding services (Google Maps), crime data services (GPT-4o Vision for PDF extraction, FBI UCR integration), site incident tracking via CSV upload, and secure API routes for geographic data management.
 
 ### Feature Specifications
-- **Core Entities**: Assessments, Sites/Locations, Assets, Risk Scenarios, Vulnerabilities, Controls, Treatment Plans, Survey Questions, Risk Insights, Reports, Users, Password Reset Tokens, Organizations, Threats, Security Controls, Facility Zones, Points of Interest, Crime Data.
+- **Core Entities**: Assessments, Sites/Locations, Assets, Risk Scenarios, Vulnerabilities, Controls, Treatment Plans, Survey Questions, Risk Insights, Reports, Users, Password Reset Tokens, Organizations, Threats, Security Controls, Facility Zones, Points of Interest, Crime Data, Site Incidents.
 - **Sites Management**: CRUD operations for physical sites, linking assessments to locations, with integrated geocoding.
 - **Reporting**: Generates reports in multiple formats (PDF, DOCX, HTML) with visualizations and action items.
 - **Account Tiers**: Free (limited), Pro (unlimited, full AI/exports), Enterprise (custom limits, priority support).
