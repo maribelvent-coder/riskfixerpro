@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database, AlertTriangle } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit } from "lucide-react";
 
 type User = {
   id: string;
@@ -41,15 +41,32 @@ type User = {
   createdAt: string;
 };
 
+type Organization = {
+  id: string;
+  name: string;
+  accountTier: string;
+  maxMembers: number;
+  maxSites: number;
+  maxAssessments: number;
+  createdAt: string;
+};
+
 export default function Admin() {
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showSeedConfirm, setShowSeedConfirm] = useState(false);
+  const [showOrgLimitsDialog, setShowOrgLimitsDialog] = useState(false);
+  const [orgLimits, setOrgLimits] = useState({ maxMembers: 0, maxSites: 0, maxAssessments: 0 });
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+  });
+
+  const { data: organizations, isLoading: orgsLoading } = useQuery<Organization[]>({
+    queryKey: ["/api/admin/organizations"],
   });
 
   const resetPasswordMutation = useMutation({
@@ -99,6 +116,33 @@ export default function Admin() {
       toast({
         title: "Tier update failed",
         description: error.message || "Failed to update tier. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateOrgLimitsMutation = useMutation({
+    mutationFn: async ({ orgId, limits }: { orgId: string; limits: { maxMembers: number; maxSites: number; maxAssessments: number } }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/admin/organizations/${orgId}/limits`,
+        limits
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Organization limits updated",
+        description: "The organization limits have been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      setShowOrgLimitsDialog(false);
+      setSelectedOrg(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update limits",
+        description: error.message || "Failed to update organization limits. Please try again.",
         variant: "destructive",
       });
     },
@@ -176,6 +220,24 @@ export default function Admin() {
 
   const handleChangeTier = (userId: string, tier: string) => {
     changeTierMutation.mutate({ userId, tier });
+  };
+
+  const handleEditOrgLimits = (org: Organization) => {
+    setSelectedOrg(org);
+    setOrgLimits({
+      maxMembers: org.maxMembers,
+      maxSites: org.maxSites,
+      maxAssessments: org.maxAssessments,
+    });
+    setShowOrgLimitsDialog(true);
+  };
+
+  const handleUpdateLimits = () => {
+    if (!selectedOrg) return;
+    updateOrgLimitsMutation.mutate({
+      orgId: selectedOrg.id,
+      limits: orgLimits,
+    });
   };
 
   return (
@@ -280,6 +342,82 @@ export default function Admin() {
       <Card className="mt-8">
         <CardHeader>
           <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-muted-foreground" />
+            <CardTitle>Organization Management</CardTitle>
+          </div>
+          <CardDescription>
+            Manage enterprise organization limits
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {orgsLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading organizations...
+            </div>
+          ) : !organizations || organizations.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No organizations found
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Tier</TableHead>
+                    <TableHead className="text-center">Members</TableHead>
+                    <TableHead className="text-center">Sites</TableHead>
+                    <TableHead className="text-center">Assessments</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {organizations.map((org) => (
+                    <TableRow key={org.id} data-testid={`row-org-${org.id}`}>
+                      <TableCell className="font-medium">{org.name}</TableCell>
+                      <TableCell>
+                        <Badge className={org.accountTier === 'enterprise' ? 'bg-purple-500' : org.accountTier === 'pro' ? 'bg-blue-500' : 'bg-green-500'}>
+                          {org.accountTier}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {org.maxMembers === -1 ? '∞' : org.maxMembers}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {org.maxSites === -1 ? '∞' : org.maxSites}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {org.maxAssessments === -1 ? '∞' : org.maxAssessments}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(org.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {org.accountTier === 'enterprise' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditOrgLimits(org)}
+                            data-testid={`button-edit-limits-${org.id}`}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Limits
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8">
+        <CardHeader>
+          <div className="flex items-center gap-2">
             <Database className="h-5 w-5 text-muted-foreground" />
             <CardTitle>Database Management</CardTitle>
           </div>
@@ -361,6 +499,84 @@ export default function Admin() {
               data-testid="button-confirm-reset"
             >
               {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Organization Limits Dialog */}
+      <Dialog open={showOrgLimitsDialog} onOpenChange={setShowOrgLimitsDialog}>
+        <DialogContent data-testid="dialog-edit-org-limits">
+          <DialogHeader>
+            <DialogTitle>Edit Organization Limits</DialogTitle>
+            <DialogDescription>
+              Customize limits for: <strong>{selectedOrg?.name}</strong> (Enterprise)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="max-members">Max Members</Label>
+              <Input
+                id="max-members"
+                type="number"
+                min="-1"
+                placeholder="Enter max members (-1 for unlimited)"
+                value={orgLimits.maxMembers}
+                onChange={(e) => setOrgLimits({ ...orgLimits, maxMembers: parseInt(e.target.value) || 0 })}
+                data-testid="input-max-members"
+              />
+              <p className="text-sm text-muted-foreground">
+                Use -1 for unlimited members
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max-sites">Max Sites</Label>
+              <Input
+                id="max-sites"
+                type="number"
+                min="-1"
+                placeholder="Enter max sites (-1 for unlimited)"
+                value={orgLimits.maxSites}
+                onChange={(e) => setOrgLimits({ ...orgLimits, maxSites: parseInt(e.target.value) || 0 })}
+                data-testid="input-max-sites"
+              />
+              <p className="text-sm text-muted-foreground">
+                Use -1 for unlimited sites
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max-assessments">Max Assessments</Label>
+              <Input
+                id="max-assessments"
+                type="number"
+                min="-1"
+                placeholder="Enter max assessments (-1 for unlimited)"
+                value={orgLimits.maxAssessments}
+                onChange={(e) => setOrgLimits({ ...orgLimits, maxAssessments: parseInt(e.target.value) || 0 })}
+                data-testid="input-max-assessments"
+              />
+              <p className="text-sm text-muted-foreground">
+                Use -1 for unlimited assessments
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowOrgLimitsDialog(false);
+                setSelectedOrg(null);
+              }}
+              data-testid="button-cancel-limits"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateLimits}
+              disabled={updateOrgLimitsMutation.isPending}
+              data-testid="button-save-limits"
+            >
+              {updateOrgLimitsMutation.isPending ? "Saving..." : "Save Limits"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -44,6 +44,7 @@ export interface IStorage {
   // Organization methods
   getOrganization(id: string): Promise<Organization | undefined>;
   getOrganizationByOwnerId(ownerId: string): Promise<Organization | undefined>;
+  getAllOrganizations(): Promise<Organization[]>;
   createOrganization(organization: InsertOrganization): Promise<Organization>;
   updateOrganization(id: string, organization: Partial<Organization>): Promise<Organization | undefined>;
   deleteOrganization(id: string): Promise<boolean>;
@@ -220,6 +221,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.organizations.values()).find(
       (org) => org.ownerId === ownerId,
     );
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    return Array.from(this.organizations.values());
   }
 
   async createOrganization(insertOrganization: InsertOrganization): Promise<Organization> {

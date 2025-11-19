@@ -53,6 +53,10 @@ export class DbStorage implements IStorage {
     return results[0];
   }
 
+  async getAllOrganizations(): Promise<Organization[]> {
+    return await db.select().from(schema.organizations);
+  }
+
   async createOrganization(insertOrganization: InsertOrganization): Promise<Organization> {
     const results = await db.insert(schema.organizations).values(insertOrganization).returning();
     return results[0];

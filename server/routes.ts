@@ -25,6 +25,7 @@ import {
   canCreateSite, 
   canUseAIAnalysis,
   getUpgradeMessage,
+  getOrganizationTierLimits,
   type AccountTier 
 } from "@shared/tierLimits";
 import { getSurveyParadigmFromTemplate } from "@shared/templates";
@@ -484,21 +485,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Only free tier users can create organizations
+      // Users must not already be in an organization
       if (user.organizationId) {
         return res.status(400).json({ error: "You are already in an organization" });
       }
 
-      const { name, accountTier } = req.body;
+      // Only paid tier users (basic, pro, enterprise) can create organizations
+      const validTiers = ['basic', 'pro', 'enterprise'];
+      if (!validTiers.includes(user.accountTier)) {
+        return res.status(403).json({ 
+          error: "You need a Basic, Pro, or Enterprise account to create an organization",
+          needsUpgrade: true 
+        });
+      }
+
+      const { name } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Organization name is required" });
       }
 
-      // Create organization
+      // Inherit organization tier from user's account tier
+      // Apply tier-based limits from pricing page
+      const orgTier = user.accountTier as 'basic' | 'pro' | 'enterprise';
+      const tierLimits = getOrganizationTierLimits(orgTier);
+
+      // Create organization with tier-based limits
       const organization = await storage.createOrganization({
         name,
         ownerId: user.id,
-        accountTier: accountTier || 'basic',
+        accountTier: orgTier,
+        maxMembers: tierLimits.maxMembers,
+        maxSites: tierLimits.maxSites,
+        maxAssessments: tierLimits.maxAssessments,
       });
 
       // Add user to organization as owner
@@ -917,6 +935,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating account tier:", error);
       res.status(500).json({ error: "Failed to update account tier" });
+    }
+  });
+
+  app.get("/api/admin/organizations", verifyAdminAccess, async (req, res) => {
+    try {
+      const organizations = await storage.getAllOrganizations();
+      res.json(organizations);
+    } catch (error) {
+      console.error("Error fetching all organizations:", error);
+      res.status(500).json({ error: "Failed to fetch organizations" });
+    }
+  });
+
+  app.patch("/api/admin/organizations/:id/limits", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { maxMembers, maxSites, maxAssessments } = req.body;
+
+      const organization = await storage.getOrganization(id);
+      if (!organization) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      // Only allow editing limits for enterprise organizations
+      if (organization.accountTier !== 'enterprise') {
+        return res.status(400).json({ 
+          error: "Only enterprise organizations can have custom limits. Basic and Pro tiers have fixed limits." 
+        });
+      }
+
+      // Validate inputs
+      if (maxMembers !== undefined && (typeof maxMembers !== 'number' || maxMembers < -1)) {
+        return res.status(400).json({ error: "maxMembers must be a number >= -1" });
+      }
+      if (maxSites !== undefined && (typeof maxSites !== 'number' || maxSites < -1)) {
+        return res.status(400).json({ error: "maxSites must be a number >= -1" });
+      }
+      if (maxAssessments !== undefined && (typeof maxAssessments !== 'number' || maxAssessments < -1)) {
+        return res.status(400).json({ error: "maxAssessments must be a number >= -1" });
+      }
+
+      // Update organization limits
+      const updateData: Partial<typeof organization> = {};
+      if (maxMembers !== undefined) updateData.maxMembers = maxMembers;
+      if (maxSites !== undefined) updateData.maxSites = maxSites;
+      if (maxAssessments !== undefined) updateData.maxAssessments = maxAssessments;
+
+      const updated = await storage.updateOrganization(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating organization limits:", error);
+      res.status(500).json({ error: "Failed to update organization limits" });
     }
   });
 
