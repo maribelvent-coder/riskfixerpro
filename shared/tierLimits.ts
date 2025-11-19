@@ -8,6 +8,12 @@ export interface TierLimits {
   advancedRiskModeling: boolean;
 }
 
+export interface OrganizationTierLimits {
+  maxAssessments: number; // -1 for unlimited
+  maxSites: number; // -1 for unlimited
+  maxMembers: number; // -1 for unlimited
+}
+
 export const TIER_LIMITS: Record<AccountTier, TierLimits> = {
   free: {
     assessments: 1,
@@ -39,8 +45,30 @@ export const TIER_LIMITS: Record<AccountTier, TierLimits> = {
   },
 };
 
+export const ORGANIZATION_TIER_LIMITS: Record<Exclude<AccountTier, "free">, OrganizationTierLimits> = {
+  basic: {
+    maxAssessments: 5,
+    maxSites: 2,
+    maxMembers: 2,
+  },
+  pro: {
+    maxAssessments: 50,
+    maxSites: 10,
+    maxMembers: 10,
+  },
+  enterprise: {
+    maxAssessments: -1, // unlimited
+    maxSites: -1, // unlimited
+    maxMembers: -1, // unlimited
+  },
+};
+
 export function getTierLimits(tier: AccountTier): TierLimits {
   return TIER_LIMITS[tier];
+}
+
+export function getOrganizationTierLimits(tier: Exclude<AccountTier, "free">): OrganizationTierLimits {
+  return ORGANIZATION_TIER_LIMITS[tier];
 }
 
 export function canCreateAssessment(tier: AccountTier, currentCount: number): boolean {
