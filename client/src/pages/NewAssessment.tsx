@@ -20,8 +20,6 @@ import { assessmentApi } from "@/lib/api";
 import { ASSESSMENT_TEMPLATES } from "@shared/templates";
 import { insertAssessmentSchema } from "@shared/schema";
 
-console.log("Templates loaded:", ASSESSMENT_TEMPLATES.length, ASSESSMENT_TEMPLATES);
-
 const newAssessmentFormSchema = insertAssessmentSchema
   .omit({ userId: true })
   .extend({

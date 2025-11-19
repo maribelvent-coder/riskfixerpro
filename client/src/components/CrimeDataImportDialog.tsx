@@ -475,9 +475,12 @@ function FBIDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; a
       }
     },
     onError: (error: Error) => {
+      const isForbidden = error.message.includes("403") || error.message.toLowerCase().includes("forbidden");
       toast({
         title: "Search failed",
-        description: error.message,
+        description: isForbidden 
+          ? "FBI API error: 403 Forbidden. The API key needs to be registered at https://crime-data-explorer.fr.cloud.gov/pages/docApi"
+          : error.message,
         variant: "destructive",
       });
     },
