@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { GoogleMap } from "@/components/GoogleMap";
+import { CrimeDataImportDialog } from "@/components/CrimeDataImportDialog";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Navigation, AlertTriangle, Building2, Loader2 } from "lucide-react";
+import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus } from "lucide-react";
 import type { Site, PointOfInterest, CrimeSource, CrimeObservation } from "@shared/schema";
 
 interface SiteGeoIntelProps {
@@ -24,7 +25,15 @@ function getCrimeCount(crimeData: unknown): string {
 }
 
 // Component to display a crime source with its observations
-function CrimeSourceDisplay({ source, observations }: { source: CrimeSource; observations: CrimeObservation[] }) {
+function CrimeSourceDisplay({ 
+  source, 
+  observations,
+  onDelete,
+}: { 
+  source: CrimeSource; 
+  observations: CrimeObservation[];
+  onDelete: (sourceId: string) => void;
+}) {
   const sourceObservations = observations.filter(obs => obs.crimeSourceId === source.id);
   const latestObservation = sourceObservations[0]; // Most recent observation
 
@@ -61,12 +70,22 @@ function CrimeSourceDisplay({ source, observations }: { source: CrimeSource; obs
             </p>
           )}
         </div>
-        {latestObservation?.overallCrimeIndex !== null && latestObservation?.overallCrimeIndex !== undefined && (
-          <div className="text-center">
-            <div className="text-3xl font-bold">{latestObservation.overallCrimeIndex}</div>
-            <div className="text-xs text-muted-foreground">Crime Index</div>
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-2">
+          {latestObservation?.overallCrimeIndex !== null && latestObservation?.overallCrimeIndex !== undefined && (
+            <div className="text-center">
+              <div className="text-3xl font-bold">{latestObservation.overallCrimeIndex}</div>
+              <div className="text-xs text-muted-foreground">Crime Index</div>
+            </div>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => onDelete(source.id)}
+            data-testid={`button-delete-source-${source.id}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {latestObservation ? (
@@ -102,6 +121,7 @@ function CrimeSourceDisplay({ source, observations }: { source: CrimeSource; obs
 export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("map");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Fetch POIs for this site
   const { data: pois = [], isLoading: poisLoading } = useQuery<PointOfInterest[]>({
@@ -184,6 +204,35 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
         variant: "destructive",
         title: "Proximity search failed",
         description: error.message || "Could not find nearby services.",
+      });
+    },
+  });
+
+  // Delete crime source mutation
+  const deleteCrimeSourceMutation = useMutation({
+    mutationFn: async (sourceId: string) => {
+      const response = await fetch(`/api/crime-sources/${sourceId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Failed to delete crime source" }));
+        throw new Error(error.error || "Failed to delete crime source");
+      }
+      return response.json().catch(() => ({ success: true }));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", site.id] });
+      toast({
+        title: "Crime source deleted",
+        description: "Crime data source has been removed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: error.message,
       });
     },
   });
@@ -360,20 +409,51 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
                 </div>
               ) : crimeSources.length > 0 ? (
                 <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => setImportDialogOpen(true)}
+                      size="sm"
+                      data-testid="button-import-crime-data"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Import Crime Data
+                    </Button>
+                  </div>
                   {crimeSources.map((source) => (
-                    <CrimeSourceDisplay key={source.id} source={source} observations={allObservations} />
+                    <CrimeSourceDisplay
+                      key={source.id}
+                      source={source}
+                      observations={allObservations}
+                      onDelete={(id) => deleteCrimeSourceMutation.mutate(id)}
+                    />
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">No crime data available for this site.</p>
-                  <p className="text-xs mt-2">Import crime data to view statistics.</p>
+                <div className="text-center py-8 space-y-4">
+                  <div className="text-muted-foreground">
+                    <p className="text-sm">No crime data available for this site.</p>
+                    <p className="text-xs mt-2">Import crime data to view statistics.</p>
+                  </div>
+                  <Button
+                    onClick={() => setImportDialogOpen(true)}
+                    size="sm"
+                    data-testid="button-import-crime-data-empty"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Import Crime Data
+                  </Button>
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <CrimeDataImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        siteId={site.id}
+      />
     </div>
   );
 }

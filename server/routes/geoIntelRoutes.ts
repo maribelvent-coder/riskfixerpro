@@ -772,4 +772,60 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
       res.status(500).json({ error: error.message || "Failed to fetch crime observations" });
     }
   });
+
+  // Delete crime source
+  app.delete("/api/crime-sources/:sourceId", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { sourceId } = req.params;
+
+      // Get crime source directly to verify ownership
+      const source = await storage.getCrimeSource(sourceId);
+
+      if (!source) {
+        return res.status(404).json({ error: "Crime source not found" });
+      }
+
+      // Verify ownership via site or assessment
+      if (source.siteId) {
+        const site = await storage.getSite(source.siteId);
+        if (!site) {
+          return res.status(404).json({ error: "Site not found" });
+        }
+
+        const user = await storage.getUser(userId);
+        const hasAccess = site.userId === userId || 
+                         (user && user.organizationId && site.organizationId === user.organizationId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+      }
+
+      if (source.assessmentId) {
+        const assessment = await storage.getAssessment(source.assessmentId);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        const user = await storage.getUser(userId);
+        const hasAccess = assessment.userId === userId || 
+                         (user && user.organizationId && assessment.organizationId === user.organizationId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+      }
+
+      await storage.deleteCrimeSource(sourceId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete crime source error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete crime source" });
+    }
+  });
 }
