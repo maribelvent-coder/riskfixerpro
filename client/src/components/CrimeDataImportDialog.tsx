@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -187,15 +187,17 @@ export function CrimeDataImportDialog({ open, onOpenChange, siteId, assessmentId
         <DialogHeader>
           <DialogTitle>Import Crime Data</DialogTitle>
           <DialogDescription>
-            Upload a CAP Index PDF, import from FBI database, or manually enter crime statistics.
+            Upload a CAP Index PDF, import from national/city APIs, or manually enter crime statistics.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="pdf" className="mt-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pdf" data-testid="tab-pdf-upload">PDF Upload</TabsTrigger>
-            <TabsTrigger value="manual" data-testid="tab-manual-entry">Manual Entry</TabsTrigger>
-            <TabsTrigger value="fbi" data-testid="tab-fbi-data">FBI Data</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="pdf" data-testid="tab-pdf-upload">PDF</TabsTrigger>
+            <TabsTrigger value="manual" data-testid="tab-manual-entry">Manual</TabsTrigger>
+            <TabsTrigger value="bjs" data-testid="tab-bjs-data">BJS</TabsTrigger>
+            <TabsTrigger value="city" data-testid="tab-city-data">City</TabsTrigger>
+            <TabsTrigger value="fbi" data-testid="tab-fbi-data">FBI</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pdf" className="space-y-4">
@@ -419,6 +421,14 @@ export function CrimeDataImportDialog({ open, onOpenChange, siteId, assessmentId
             </Form>
           </TabsContent>
 
+          <TabsContent value="bjs" className="space-y-4">
+            <BJSDataImport siteId={siteId} assessmentId={assessmentId} onSuccess={() => onOpenChange(false)} />
+          </TabsContent>
+
+          <TabsContent value="city" className="space-y-4">
+            <CityDataImport siteId={siteId} assessmentId={assessmentId} onSuccess={() => onOpenChange(false)} />
+          </TabsContent>
+
           <TabsContent value="fbi" className="space-y-4">
             <FBIDataImport siteId={siteId} assessmentId={assessmentId} onSuccess={() => onOpenChange(false)} />
           </TabsContent>
@@ -632,6 +642,241 @@ function FBIDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; a
           <p className="text-xs mt-1">Data from FBI Uniform Crime Reporting (UCR) Program</p>
         </div>
       )}
+    </div>
+  );
+}
+
+// BJS NIBRS Data Import Component
+function BJSDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; assessmentId?: string; onSuccess: () => void }) {
+  const { toast } = useToast();
+  const [year, setYear] = useState(new Date().getFullYear() - 1); // Default to previous year
+  
+  const importMutation = useMutation({
+    mutationFn: async (selectedYear: number) => {
+      const response = await apiRequest("POST", "/api/crime-data/bjs/import", {
+        year: selectedYear,
+        siteId,
+        assessmentId,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "BJS data imported",
+        description: `National crime statistics for ${year} successfully imported from Bureau of Justice Statistics.`,
+      });
+      if (siteId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", siteId] });
+      }
+      if (assessmentId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", assessmentId] });
+      }
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Import failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleImport = () => {
+    importMutation.mutate(year);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
+          <Label htmlFor="bjs-year">Year</Label>
+          <Input
+            id="bjs-year"
+            type="number"
+            min={2019}
+            max={new Date().getFullYear()}
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value))}
+            data-testid="input-bjs-year"
+          />
+          <p className="text-xs text-muted-foreground">
+            Select year for national crime statistics (2019-{new Date().getFullYear()})
+          </p>
+        </div>
+
+        <Button
+          onClick={handleImport}
+          disabled={importMutation.isPending}
+          className="w-full"
+          data-testid="button-import-bjs"
+        >
+          {importMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Importing BJS Data...
+            </>
+          ) : (
+            "Import National Statistics"
+          )}
+        </Button>
+      </div>
+
+      <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+        <p className="font-medium">About BJS NIBRS Data:</p>
+        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+          <li>National Incident-Based Reporting System (NIBRS)</li>
+          <li>Estimates from Bureau of Justice Statistics</li>
+          <li>National-level violent and property crime data</li>
+          <li>No authentication required - free public data</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// City Crime Data Import Component
+interface CityOption {
+  key: string;
+  name: string;
+}
+
+function CityDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; assessmentId?: string; onSuccess: () => void }) {
+  const { toast } = useToast();
+  const [selectedCity, setSelectedCity] = useState("");
+  const [year, setYear] = useState(new Date().getFullYear() - 1);
+  const [cities, setCities] = useState<CityOption[]>([]);
+
+  // Fetch available cities on mount
+  const citiesQuery = useQuery({
+    queryKey: ["/api/crime-data/cities"],
+    queryFn: async () => {
+      const response = await fetch("/api/crime-data/cities", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch cities");
+      }
+      const data = await response.json();
+      return data.cities as CityOption[];
+    },
+  });
+
+  const importMutation = useMutation({
+    mutationFn: async ({ cityKey, selectedYear }: { cityKey: string; selectedYear: number }) => {
+      const response = await apiRequest("POST", "/api/crime-data/city/import", {
+        cityKey,
+        year: selectedYear,
+        siteId,
+        assessmentId,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const cityName = cities.find(c => c.key === selectedCity)?.name || selectedCity;
+      toast({
+        title: "City data imported",
+        description: `Crime statistics for ${cityName} (${year}) successfully imported.`,
+      });
+      if (siteId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", siteId] });
+      }
+      if (assessmentId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", assessmentId] });
+      }
+      setSelectedCity("");
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Import failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleImport = () => {
+    if (!selectedCity) {
+      toast({
+        title: "City required",
+        description: "Please select a city",
+        variant: "destructive",
+      });
+      return;
+    }
+    importMutation.mutate({ cityKey: selectedCity, selectedYear: year });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
+          <Label htmlFor="city-select">City</Label>
+          <select
+            id="city-select"
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="select-city"
+          >
+            <option value="">Select a city...</option>
+            {citiesQuery.data?.map((city) => (
+              <option key={city.key} value={city.key}>
+                {city.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Select major US city for local crime statistics
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="city-year">Year</Label>
+          <Input
+            id="city-year"
+            type="number"
+            min={2010}
+            max={new Date().getFullYear()}
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value))}
+            data-testid="input-city-year"
+          />
+          <p className="text-xs text-muted-foreground">
+            Select year (2010-{new Date().getFullYear()})
+          </p>
+        </div>
+
+        <Button
+          onClick={handleImport}
+          disabled={importMutation.isPending || !selectedCity}
+          className="w-full"
+          data-testid="button-import-city"
+        >
+          {importMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Importing City Data...
+            </>
+          ) : (
+            "Import City Statistics"
+          )}
+        </Button>
+      </div>
+
+      <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+        <p className="font-medium">Available Cities:</p>
+        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+          <li>Los Angeles (LAPD - 2020-present)</li>
+          <li>Chicago (CPD - 2001-present)</li>
+          <li>New York City (NYPD - current year)</li>
+          <li>Seattle (SPD - 2008-present)</li>
+        </ul>
+        <p className="text-xs text-muted-foreground mt-2">
+          Data from city open data portals via Socrata APIs
+        </p>
+      </div>
     </div>
   );
 }
