@@ -20,13 +20,22 @@ import { ReportGenerator } from "@/components/ReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Assessment } from "@shared/schema";
 import { generateComprehensiveReport } from "@/lib/comprehensiveReportGenerator";
+import { generateDOCXReport } from "@/lib/docxReportGenerator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AssessmentDetailProps {
   assessmentId?: string;
@@ -69,7 +78,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
   // Generate comprehensive report mutation
   const generateReportMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (format: 'pdf' | 'docx' = 'pdf') => {
       if (!assessmentData) {
         throw new Error('Assessment data not available');
       }
@@ -92,23 +101,36 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         console.warn('Report data missing risk summary - report will have limited content');
       }
       
-      // Generate PDF using the comprehensive report generator
-      // The generator will normalize and provide defaults for missing data
-      const pdf = await generateComprehensiveReport(reportData);
-      
       // Generate filename using normalized assessment title
       const reportTitle = reportData.assessment?.title || assessmentData.title || 'Assessment_Report';
-      const fileName = `${reportTitle.replace(/[^a-z0-9]/gi, '_')}_Comprehensive_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      const baseFileName = `${reportTitle.replace(/[^a-z0-9]/gi, '_')}_Comprehensive_Report_${new Date().toISOString().split('T')[0]}`;
       
-      // Download the PDF
-      pdf.save(fileName);
-      
-      return { fileName };
+      if (format === 'pdf') {
+        // Generate PDF using the comprehensive report generator
+        const pdf = await generateComprehensiveReport(reportData);
+        pdf.save(`${baseFileName}.pdf`);
+        return { fileName: `${baseFileName}.pdf`, format: 'PDF' };
+      } else {
+        // Generate DOCX using the DOCX report generator
+        const docxBlob = await generateDOCXReport(reportData);
+        
+        // Create download link
+        const url = window.URL.createObjectURL(docxBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${baseFileName}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        return { fileName: `${baseFileName}.docx`, format: 'DOCX' };
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Report Generated",
-        description: "Your comprehensive security assessment report has been downloaded.",
+        description: `Your comprehensive security assessment report (${data.format}) has been downloaded.`,
       });
     },
     onError: (error) => {
@@ -356,17 +378,41 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                  assessmentData.status === "risk-assessment" ? "Risk Assessment" :
                  assessmentData.status === "facility-survey" ? "Facility Survey" : "Draft"}
               </Badge>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => generateReportMutation.mutate()}
-                className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-9 sm:min-w-9"
-                disabled={generateReportMutation.isPending}
-                data-testid="button-generate-report"
-                title="Generate comprehensive report"
-              >
-                <FileDown className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-shrink-0 gap-2"
+                    disabled={generateReportMutation.isPending}
+                    data-testid="button-generate-report"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    <span className="hidden sm:inline">Export</span>
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Export Format</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => generateReportMutation.mutate('pdf')}
+                    disabled={generateReportMutation.isPending}
+                    data-testid="menu-item-export-pdf"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => generateReportMutation.mutate('docx')}
+                    disabled={generateReportMutation.isPending}
+                    data-testid="menu-item-export-docx"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export as DOCX
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
                 size="icon"
