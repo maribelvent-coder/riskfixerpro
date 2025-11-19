@@ -1,21 +1,26 @@
 /**
- * BJS NIBRS National Estimates API Service
- * Bureau of Justice Statistics - National Incident-Based Reporting System
- * Documentation: https://bjs.ojp.gov/national-incident-based-reporting-system-nibrs-national-estimates-api
+ * Bureau of Justice Statistics (BJS) NIBRS National Estimates API Service
  * 
- * No authentication required - completely open API
+ * BJS provides national crime estimates from the National Incident-Based Reporting System.
+ * Available years: 2021, 2022, 2023
+ * No authentication required - public API
+ * 
+ * API Documentation: https://bjs.ojp.gov/national-incident-based-reporting-system-nibrs-national-estimates-api
  */
 
-const BJS_API_BASE = "https://api.ojp.gov/bjsdataset/v1";
+const BJS_NIBRS_ENDPOINT = "https://api.ojp.gov/bjsdataset/v1/iv7i-eah6.json";
 
 export interface BJSCrimeData {
   indicator_name: string;
-  estimate_type: string; // 'count', 'percentage', 'rate'
-  estimate_domain_1?: string;
+  estimate: string | number;
+  estimate_unweighted: string;
+  estimate_geographic_location: string;
+  estimate_type: string;
+  estimate_domain_1: string;
   estimate_domain_2?: string;
-  estimate?: string | number; // API returns as string
-  estimate_geographic_location?: string;
-  time_series_start_year?: string;
+  estimate_standard_error?: string;
+  time_series_start_year: string;
+  [key: string]: any;
 }
 
 export interface BJSCrimeDataResult {
@@ -27,94 +32,94 @@ export interface BJSCrimeDataResult {
 }
 
 /**
- * Get national violent crime estimates from BJS NIBRS
- */
-export async function getBJSViolentCrimeData(year?: number): Promise<BJSCrimeData[]> {
-  try {
-    // Endpoint: Violent Offenses - get counts
-    const url = `${BJS_API_BASE}/x3sz-eb6y.json`;
-    const params = new URLSearchParams({
-      $limit: "50000",
-      $where: `estimate_type = 'count' and estimate_domain_1 = 'Offense count'${year ? ` and time_series_start_year = '${year}'` : ''}`,
-    });
-
-    const response = await fetch(`${url}?${params.toString()}`);
-    
-    if (!response.ok) {
-      throw new Error(`BJS API error: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error: any) {
-    console.error("BJS violent crime data fetch error:", error);
-    throw new Error(`Failed to fetch BJS violent crime data: ${error.message}`);
-  }
-}
-
-/**
- * Get national property crime estimates from BJS NIBRS
- */
-export async function getBJSPropertyCrimeData(year?: number): Promise<BJSCrimeData[]> {
-  try {
-    // Endpoint: Property Offenses - get counts
-    const url = `${BJS_API_BASE}/kj7p-vx4s.json`;
-    const params = new URLSearchParams({
-      $limit: "50000",
-      $where: `estimate_type = 'count' and estimate_domain_1 = 'Offense count'${year ? ` and time_series_start_year = '${year}'` : ''}`,
-    });
-
-    const response = await fetch(`${url}?${params.toString()}`);
-    
-    if (!response.ok) {
-      throw new Error(`BJS API error: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error: any) {
-    console.error("BJS property crime data fetch error:", error);
-    throw new Error(`Failed to fetch BJS property crime data: ${error.message}`);
-  }
-}
-
-/**
- * Get aggregated crime statistics from BJS for a specific year
+ * Fetch BJS NIBRS crime statistics for a specific year
+ * Available years: 2021, 2022, 2023
  */
 export async function getBJSCrimeStatistics(year: number): Promise<BJSCrimeDataResult> {
+  // Validate year
+  if (year < 2021 || year > 2023) {
+    throw new Error(`BJS NIBRS data is only available for years 2021-2023. Requested year: ${year}`);
+  }
+
   try {
-    const [violentData, propertyData] = await Promise.all([
-      getBJSViolentCrimeData(year),
-      getBJSPropertyCrimeData(year),
+    // Query for violent crimes (Total) - NIBRS crimes against persons
+    const violentQuery = new URLSearchParams({
+      $where: `indicator_name like '%crimes against persons (Total)%' AND estimate_domain_1='Incident count' AND time_series_start_year='${year}'`,
+      $limit: "100",
+    });
+
+    // Query for property crimes (Total) - NIBRS crimes against property
+    const propertyQuery = new URLSearchParams({
+      $where: `indicator_name like '%crimes against property (Total)%' AND estimate_domain_1='Incident count' AND time_series_start_year='${year}'`,
+      $limit: "100",
+    });
+
+    console.log(`Fetching BJS NIBRS data for year ${year}...`);
+    
+    // Fetch both datasets in parallel
+    const [violentResponse, propertyResponse] = await Promise.all([
+      fetch(`${BJS_NIBRS_ENDPOINT}?${violentQuery.toString()}`),
+      fetch(`${BJS_NIBRS_ENDPOINT}?${propertyQuery.toString()}`),
     ]);
 
-    // Only use the "Total" indicator to avoid double-counting
-    // The dataset contains both overall totals and subcategory breakdowns
-    const violentTotalRow = violentData.find(d => 
-      d.estimate_type === 'count' && 
-      d.indicator_name && 
-      d.indicator_name.toLowerCase().includes('total') &&
-      d.estimate
-    );
-
-    const propertyTotalRow = propertyData.find(d => 
-      d.estimate_type === 'count' && 
-      d.indicator_name && 
-      d.indicator_name.toLowerCase().includes('total') &&
-      d.estimate
-    );
-
-    if (!violentTotalRow || !propertyTotalRow) {
-      throw new Error("Could not find total crime indicators in BJS data");
+    if (!violentResponse.ok || !propertyResponse.ok) {
+      throw new Error(`BJS API returned error status: ${violentResponse.status} / ${propertyResponse.status}`);
     }
 
+    const violentData: BJSCrimeData[] = await violentResponse.json();
+    const propertyData: BJSCrimeData[] = await propertyResponse.json();
+
+    console.log(`BJS ${year} - Found ${violentData.length} violent and ${propertyData.length} property indicators`);
+
+    // Find the main "Total" indicator for each category
+    // We want the one with just "Incident count" as the only domain (no additional filters like "Multiple victims")
+    const violentTotal = violentData.find(d => 
+      d.indicator_name.includes("crimes against persons (Total)") &&
+      d.estimate_domain_1 === "Incident count" &&
+      !d.estimate_domain_2 // No additional filtering - this is the overall total
+    );
+
+    const propertyTotal = propertyData.find(d => 
+      d.indicator_name.includes("crimes against property (Total)") &&
+      d.estimate_domain_1 === "Incident count" &&
+      !d.estimate_domain_2 // No additional filtering - this is the overall total
+    );
+
+    if (!violentTotal || !propertyTotal) {
+      console.error('BJS data structure:', { 
+        violentSample: violentData[0], 
+        propertySample: propertyData[0],
+        violentCount: violentData.length,
+        propertyCount: propertyData.length
+      });
+      throw new Error(`Could not find total crime indicators in BJS data for year ${year}`);
+    }
+
+    // Parse estimates (they can be strings or numbers)
+    const violentCrimeTotal = Math.round(parseFloat(String(violentTotal.estimate)));
+    const propertyCrimeTotal = Math.round(parseFloat(String(propertyTotal.estimate)));
+
+    console.log(`BJS ${year} statistics:`, {
+      violent: violentCrimeTotal.toLocaleString(),
+      property: propertyCrimeTotal.toLocaleString(),
+    });
+
     return {
-      violentCrimeTotal: Math.round(parseFloat(violentTotalRow.estimate)),
-      propertyCrimeTotal: Math.round(parseFloat(propertyTotalRow.estimate)),
+      violentCrimeTotal,
+      propertyCrimeTotal,
       year,
-      dataSource: "Bureau of Justice Statistics NIBRS",
+      dataSource: "Bureau of Justice Statistics NIBRS National Estimates",
       location: "United States (National)",
     };
   } catch (error: any) {
-    console.error("BJS crime statistics fetch error:", error);
+    console.error(`BJS NIBRS API error for year ${year}:`, error);
     throw new Error(`Failed to fetch BJS crime statistics: ${error.message}`);
   }
+}
+
+/**
+ * Get available years for BJS NIBRS data
+ */
+export function getAvailableBJSYears(): number[] {
+  return [2021, 2022, 2023];
 }

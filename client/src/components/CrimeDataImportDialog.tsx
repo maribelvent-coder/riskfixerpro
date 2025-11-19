@@ -649,7 +649,7 @@ function FBIDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; a
 // BJS NIBRS Data Import Component
 function BJSDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; assessmentId?: string; onSuccess: () => void }) {
   const { toast } = useToast();
-  const [year, setYear] = useState(new Date().getFullYear() - 1); // Default to previous year
+  const [year, setYear] = useState(2023); // Default to 2023 (most recent available)
   
   const importMutation = useMutation({
     mutationFn: async (selectedYear: number) => {
@@ -691,17 +691,19 @@ function BJSDataImport({ siteId, assessmentId, onSuccess }: { siteId?: string; a
       <div className="space-y-4 p-4 border rounded-lg">
         <div className="space-y-2">
           <Label htmlFor="bjs-year">Year</Label>
-          <Input
+          <select
             id="bjs-year"
-            type="number"
-            min={2019}
-            max={new Date().getFullYear()}
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             data-testid="input-bjs-year"
-          />
+          >
+            <option value={2023}>2023</option>
+            <option value={2022}>2022</option>
+            <option value={2021}>2021</option>
+          </select>
           <p className="text-xs text-muted-foreground">
-            Select year for national crime statistics (2019-{new Date().getFullYear()})
+            Select year for national crime statistics (2021-2023 available)
           </p>
         </div>
 

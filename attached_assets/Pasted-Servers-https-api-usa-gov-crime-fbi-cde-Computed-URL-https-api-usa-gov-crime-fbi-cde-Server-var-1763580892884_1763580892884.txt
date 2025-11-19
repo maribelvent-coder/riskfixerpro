@@ -1,0 +1,125 @@
+Servers
+
+https://api.usa.gov/crime/fbi/cde
+Computed URL:https://api.usa.gov/crime/fbi/cde
+Server variables
+basePath
+/LATEST
+Agency
+Provides agencies that have provided data to the UCR Program and are displayed on the CDE.
+
+
+
+GET
+/agency/{query}/{value}
+Arrest
+Provides details of the number of arrests, citations, or summons for an offense. View arrest information on the national and regional level along with federal, state, and local agencies.
+
+
+
+GET
+/arrest/agency/{ori}/{offense}
+
+GET
+/arrest/national/{offense}
+
+GET
+/arrest/state/{state}/{offense}
+Expanded Homicide
+Expanded Homicide Data for the nation are derived from Summary Reporting System (SRS) and National Incident-Based Reporting System (NIBRS) reports voluntarily submitted to the FBI.
+
+
+
+GET
+/shr/agency/{ori}
+
+GET
+/shr/national
+
+GET
+/shr/state/{state}
+Expanded Property
+Provides additional details for summarized UCR data beyond the count of reported crimes. Details include type of weapon used, value of items, etc.
+
+
+
+GET
+/supplemental/agency/{ori}/{offense}
+
+GET
+/supplemental/national/{offense}
+
+GET
+/supplemental/state/{state}/{offense}
+Hate Crime
+Hate Crime data for the nation are derived from National Incident-Based Reporting System (NIBRS) and Summary Reporting System (SRS) reports voluntarily submitted to the FBI.
+
+
+
+GET
+/hate-crime/agency/{ori}
+
+GET
+/hate-crime/agency/{ori}/{bias}
+
+GET
+/hate-crime/national
+
+GET
+/hate-crime/national/{bias}
+
+GET
+/hate-crime/state/{state}
+
+GET
+/hate-crime/state/{state}/{bias}
+Law Enforcement Employees
+Law Enforcement Employees data for the nation are derived from Summary Reporting System (SRS) and National Incident-Based Reporting System (NIBRS) reports voluntarily submitted to the FBI.
+
+
+
+GET
+/pe
+
+GET
+/pe/{state}
+
+GET
+/pe/{state}/{ori}
+LESDC
+The Law Enforcement Suicide Data Collection's intent and benefit is to better understand the factors related to law enforcement officer suicides and provides information designed to assist in the development of programs, and potential resources, to help prevent suicides.
+
+
+
+GET
+/lesdc
+NIBRS
+Provides details regarding the National Incident Based Reporting System. Provides offender data for an offense in instances when some aspect about the offender was known, e.g., age, sex, race, ethnicity. In cases involving multiple-offense incidents, each offender is counted more than once.
+
+
+
+GET
+/nibrs/agency/{ori}/{offense}
+
+GET
+/nibrs/national/{offense}
+
+GET
+/nibrs/state/{state}/{offense}
+NIBRS Estimations
+Provides details regarding the National Incident Based Reporting System. Provides offender data for an offense in instances when some aspect about the offender was known, e.g., age, sex, race, ethnicity. In cases involving multiple-offense incidents, each offender is counted more than once.
+
+
+Summarized
+Provides details regarding reported and converted summary data. Estimated data is available for All Violent Crimes, Homicide, Rape, Robbery, Aggravated Assault, All Property Crimes, Arson, Burglary, Larceny-theft, and Motor Vehicle Theft. Data is available on the national and regional level along with federal, state, and local agencies.
+
+
+
+GET
+/summarized/agency/{ori}/{offense}
+
+GET
+/summarized/national/{offense}
+
+GET
+/summarized/state/{state}/{offense}
