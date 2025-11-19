@@ -162,7 +162,7 @@ function normalizeReportData(data: any): ComprehensiveReportData {
     assessment.createdAt = (assessment.createdAt as Date).toISOString();
   }
   
-  // Ensure risk summary exists with safe numeric defaults
+  // Ensure risk summary exists with safe numeric defaults and validated topThreats
   const rawRiskSummary = data?.riskSummary || {};
   const riskSummary = {
     totalScenarios: Number(rawRiskSummary.totalScenarios) || 0,
@@ -173,7 +173,14 @@ function normalizeReportData(data: any): ComprehensiveReportData {
     mediumRiskCount: Number(rawRiskSummary.mediumRiskCount) || 0,
     lowRiskCount: Number(rawRiskSummary.lowRiskCount) || 0,
     topThreats: Array.isArray(rawRiskSummary.topThreats) 
-      ? rawRiskSummary.topThreats.filter((t: any) => t && typeof t === 'object')
+      ? rawRiskSummary.topThreats
+          .filter((t: any) => t && typeof t === 'object')
+          .map((t: any) => ({
+            scenario: typeof t.scenario === 'string' ? t.scenario : 'Unknown Scenario',
+            likelihood: typeof t.likelihood === 'string' ? t.likelihood : 'Unknown',
+            impact: typeof t.impact === 'string' ? t.impact : 'Unknown',
+            riskScore: Number(t.riskScore) || 0
+          }))
       : []
   };
   
@@ -204,9 +211,15 @@ function normalizeReportData(data: any): ComprehensiveReportData {
     };
   }
   
-  // Sanitize photo evidence (ensure valid entries with URLs)
+  // Sanitize photo evidence (ensure valid entries with URLs and safe captions)
   const photoEvidence = Array.isArray(data?.photoEvidence)
-    ? data.photoEvidence.filter((p: any) => p && typeof p === 'object' && p.url && typeof p.url === 'string')
+    ? data.photoEvidence
+        .filter((p: any) => p && typeof p === 'object' && p.url && typeof p.url === 'string')
+        .map((p: any) => ({
+          url: p.url,
+          caption: typeof p.caption === 'string' ? p.caption : undefined,
+          section: typeof p.section === 'string' ? p.section : 'General'
+        }))
     : [];
   
   // Sanitize recommendations
