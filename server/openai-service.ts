@@ -2,7 +2,17 @@ import OpenAI from "openai";
 import type { AssessmentWithQuestions, InsertRiskInsight } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key is not configured. Please set the OPENAI_API_KEY environment variable.");
+  }
+  if (!openai) {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openai;
+}
 
 interface RiskAnalysisResult {
   overallRiskScore: number;
@@ -13,6 +23,7 @@ interface RiskAnalysisResult {
 export class OpenAIService {
   async analyzeSecurityRisks(assessment: AssessmentWithQuestions): Promise<RiskAnalysisResult> {
     try {
+      const client = getOpenAIClient();
       const assessmentData = this.prepareAssessmentData(assessment);
       
       const prompt = `You are a Certified Protection Professional (CPP) with expertise in ASIS International standards and physical security design principles. Analyze the security assessment data following professional standards.
@@ -78,7 +89,7 @@ Analyze using professional standards and respond with JSON containing:
 
 Apply technical standards, reference specific metrics where applicable, and provide actionable professional recommendations.`;
 
-      const response = await openai.chat.completions.create({
+      const response = await client.chat.completions.create({
         model: "gpt-5",
         messages: [
           {
@@ -121,6 +132,7 @@ Apply technical standards, reference specific metrics where applicable, and prov
 
   async generateReportContent(assessment: AssessmentWithQuestions, reportType: string): Promise<string> {
     try {
+      const client = getOpenAIClient();
       const assessmentData = this.prepareAssessmentData(assessment);
       const riskInsights = assessment.riskInsights || [];
 
@@ -173,7 +185,7 @@ ${riskInsights.map(insight =>
 
 Please provide a professional, well-structured report in markdown format.`;
 
-      const response = await openai.chat.completions.create({
+      const response = await client.chat.completions.create({
         model: "gpt-5",
         messages: [
           {
