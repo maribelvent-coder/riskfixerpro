@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { GoogleMap } from "@/components/GoogleMap";
 import { CrimeDataImportDialog } from "@/components/CrimeDataImportDialog";
+import { IncidentImportDialog } from "@/components/IncidentImportDialog";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus } from "lucide-react";
-import type { Site, PointOfInterest, CrimeSource, CrimeObservation } from "@shared/schema";
+import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download } from "lucide-react";
+import type { Site, PointOfInterest, CrimeSource, CrimeObservation, SiteIncident } from "@shared/schema";
 
 interface SiteGeoIntelProps {
   site: Site;
@@ -122,6 +123,7 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("map");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [incidentUploadOpen, setIncidentUploadOpen] = useState(false);
 
   // Fetch POIs for this site
   const { data: pois = [], isLoading: poisLoading } = useQuery<PointOfInterest[]>({
@@ -160,6 +162,16 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
       return results.flat();
     },
     enabled: crimeSources.length > 0, // Only fetch if we have crime sources
+  });
+
+  // Fetch site incidents
+  const { data: incidents = [], isLoading: incidentsLoading } = useQuery<SiteIncident[]>({
+    queryKey: ["/api/sites", site.id, "incidents"],
+    queryFn: async () => {
+      const response = await fetch(`/api/sites/${site.id}/incidents`);
+      if (!response.ok) throw new Error("Failed to fetch incidents");
+      return response.json();
+    },
   });
 
   // Geocode mutation
@@ -237,6 +249,35 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
     },
   });
 
+  // Delete incident mutation
+  const deleteIncidentMutation = useMutation({
+    mutationFn: async (incidentId: string) => {
+      const response = await fetch(`/api/sites/incidents/${incidentId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Failed to delete incident" }));
+        throw new Error(error.error || "Failed to delete incident");
+      }
+      return response.json().catch(() => ({ success: true }));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sites", site.id, "incidents"] });
+      toast({
+        title: "Incident deleted",
+        description: "Site incident has been removed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: error.message,
+      });
+    },
+  });
+
   const hasCoordinates = site.latitude && site.longitude;
   const center = hasCoordinates
     ? { lat: parseFloat(site.latitude!), lng: parseFloat(site.longitude!) }
@@ -263,7 +304,7 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="map" data-testid="tab-map">
             <MapPin className="h-4 w-4 mr-2" />
             Map
@@ -275,6 +316,10 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
           <TabsTrigger value="crime" data-testid="tab-crime">
             <AlertTriangle className="h-4 w-4 mr-2" />
             Crime Data
+          </TabsTrigger>
+          <TabsTrigger value="incidents" data-testid="tab-incidents">
+            <Shield className="h-4 w-4 mr-2" />
+            Incidents
           </TabsTrigger>
         </TabsList>
 
@@ -447,11 +492,193 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="incidents" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Site Incident Tracking</CardTitle>
+              <CardDescription>
+                Track security incidents, break-ins, thefts, and other events at this facility
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {incidentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : incidents.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="text-sm text-muted-foreground">
+                      {incidents.length} incident{incidents.length !== 1 ? 's' : ''} recorded
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          // Generate and download CSV template
+                          const csvContent = `Date,Type,Description,Severity,Location,Police Notified,Police Report #,Estimated Cost,Notes
+2024-01-15,theft,Equipment stolen from storage room,high,Building A - Storage,yes,2024-001,5000,Multiple items missing
+2024-02-20,vandalism,Graffiti on exterior wall,medium,North Entrance,yes,2024-002,800,Cleaned same day`;
+                          const blob = new Blob([csvContent], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'site-incidents-template.csv';
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        size="sm"
+                        variant="outline"
+                        data-testid="button-download-template"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        CSV Template
+                      </Button>
+                      <Button
+                        onClick={() => setIncidentUploadOpen(true)}
+                        size="sm"
+                        data-testid="button-upload-incidents"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import CSV
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="text-left p-3 font-medium">Date</th>
+                          <th className="text-left p-3 font-medium">Type</th>
+                          <th className="text-left p-3 font-medium">Description</th>
+                          <th className="text-left p-3 font-medium">Severity</th>
+                          <th className="text-left p-3 font-medium">Location</th>
+                          <th className="text-center p-3 font-medium">Police</th>
+                          <th className="text-right p-3 font-medium">Cost</th>
+                          <th className="text-right p-3 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incidents.map((incident) => (
+                          <tr
+                            key={incident.id}
+                            className="border-t hover-elevate"
+                            data-testid={`incident-row-${incident.id}`}
+                          >
+                            <td className="p-3 text-muted-foreground">
+                              {new Date(incident.incidentDate).toLocaleDateString()}
+                            </td>
+                            <td className="p-3">
+                              <Badge variant="outline" className="capitalize">
+                                {incident.incidentType.replace(/_/g, ' ')}
+                              </Badge>
+                            </td>
+                            <td className="p-3">{incident.description}</td>
+                            <td className="p-3">
+                              <Badge
+                                variant={
+                                  incident.severity === 'critical' || incident.severity === 'high'
+                                    ? 'destructive'
+                                    : incident.severity === 'medium'
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                              >
+                                {incident.severity}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-muted-foreground text-xs">
+                              {incident.locationWithinSite || '-'}
+                            </td>
+                            <td className="p-3 text-center">
+                              {incident.policeNotified ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <Badge variant="outline" className="text-xs">Yes</Badge>
+                                  {incident.policeReportNumber && (
+                                    <span className="text-xs text-muted-foreground">
+                                      #{incident.policeReportNumber}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">No</Badge>
+                              )}
+                            </td>
+                            <td className="p-3 text-right text-muted-foreground">
+                              {incident.estimatedCost
+                                ? `$${incident.estimatedCost.toLocaleString()}`
+                                : '-'}
+                            </td>
+                            <td className="p-3 text-right">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => deleteIncidentMutation.mutate(incident.id)}
+                                data-testid={`button-delete-incident-${incident.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 space-y-4">
+                  <div className="text-muted-foreground">
+                    <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm">No incidents recorded for this site.</p>
+                    <p className="text-xs mt-2">Import incident data from CSV to begin tracking.</p>
+                  </div>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      onClick={() => {
+                        // Generate and download CSV template
+                        const csvContent = `Date,Type,Description,Severity,Location,Police Notified,Police Report #,Estimated Cost,Notes
+2024-01-15,theft,Equipment stolen from storage room,high,Building A - Storage,yes,2024-001,5000,Multiple items missing
+2024-02-20,vandalism,Graffiti on exterior wall,medium,North Entrance,yes,2024-002,800,Cleaned same day`;
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'site-incidents-template.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      size="sm"
+                      variant="outline"
+                      data-testid="button-download-template-empty"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download CSV Template
+                    </Button>
+                    <Button
+                      onClick={() => setIncidentUploadOpen(true)}
+                      size="sm"
+                      data-testid="button-upload-incidents-empty"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import CSV
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <CrimeDataImportDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
+        siteId={site.id}
+      />
+      <IncidentImportDialog
+        open={incidentUploadOpen}
+        onOpenChange={setIncidentUploadOpen}
         siteId={site.id}
       />
     </div>
