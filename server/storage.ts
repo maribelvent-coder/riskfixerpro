@@ -5,6 +5,8 @@ import {
   type InsertPasswordResetToken,
   type Site,
   type InsertSite,
+  type FacilityZone,
+  type InsertFacilityZone,
   type Assessment,
   type InsertAssessment,
   type TemplateQuestion,
@@ -85,6 +87,13 @@ export interface IStorage {
   createSite(site: InsertSite): Promise<Site>;
   updateSite(id: string, site: Partial<Site>): Promise<Site | undefined>;
   deleteSite(id: string): Promise<boolean>;
+
+  // Facility Zone methods
+  getFacilityZone(id: string): Promise<FacilityZone | undefined>;
+  getFacilityZonesBySite(siteId: string): Promise<FacilityZone[]>;
+  createFacilityZone(zone: InsertFacilityZone): Promise<FacilityZone>;
+  updateFacilityZone(id: string, zone: Partial<FacilityZone>): Promise<FacilityZone | undefined>;
+  deleteFacilityZone(id: string): Promise<boolean>;
 
   // Assessment methods
   getAssessment(id: string): Promise<Assessment | undefined>;

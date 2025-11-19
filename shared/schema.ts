@@ -66,6 +66,18 @@ export const sites = pgTable("sites", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+export const facilityZones = pgTable("facility_zones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: varchar("site_id").notNull().references(() => sites.id),
+  name: text("name").notNull(), // e.g., "Main Entrance", "Server Room", "Parking Lot A"
+  zoneType: text("zone_type").notNull(), // perimeter, entry, lobby, office, server_room, storage, parking, loading_dock, production, restricted
+  floorNumber: integer("floor_number"), // For multi-story buildings
+  securityLevel: text("security_level").notNull().default("public"), // public, restricted, controlled, high_security
+  description: text("description"), // Additional details about the zone
+  accessRequirements: text("access_requirements"), // Badge level, escort required, etc.
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 export const assessments = pgTable("assessments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -447,6 +459,13 @@ export type InsertOrganizationInvitation = z.infer<typeof insertOrganizationInvi
 
 export type Site = typeof sites.$inferSelect;
 export type InsertSite = z.infer<typeof insertSiteSchema>;
+
+export const insertFacilityZoneSchema = createInsertSchema(facilityZones).omit({
+  id: true,
+  createdAt: true,
+});
+export type FacilityZone = typeof facilityZones.$inferSelect;
+export type InsertFacilityZone = z.infer<typeof insertFacilityZoneSchema>;
 
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
