@@ -20,12 +20,13 @@ import { ReportGenerator } from "@/components/ReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Assessment } from "@shared/schema";
+import { generateComprehensiveReport } from "@/lib/comprehensiveReportGenerator";
 
 interface AssessmentDetailProps {
   assessmentId?: string;
@@ -34,6 +35,7 @@ interface AssessmentDetailProps {
 export default function AssessmentDetail({ assessmentId = "demo-001" }: AssessmentDetailProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const hasInitializedTab = useRef(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -65,6 +67,47 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       });
     },
   });
+
+  // Generate comprehensive report
+  const handleGenerateComprehensiveReport = async () => {
+    if (!assessmentData) return;
+    
+    setIsGeneratingReport(true);
+    
+    try {
+      // Fetch comprehensive report data from API
+      const response = await fetch(`/api/assessments/${assessmentId}/comprehensive-report-data`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch report data');
+      }
+      
+      const reportData = await response.json();
+      
+      // Generate PDF using the comprehensive report generator
+      const pdf = await generateComprehensiveReport(reportData);
+      
+      // Download the PDF
+      const fileName = `${assessmentData.title.replace(/[^a-z0-9]/gi, '_')}_Comprehensive_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
+      toast({
+        title: "Report Generated",
+        description: "Your comprehensive security assessment report has been downloaded.",
+      });
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Report Generation Failed",
+        description: "Failed to generate comprehensive report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
   
   // Derive initial tab directly from assessment data (defaults to facility-survey for loading state)
   const paradigm = assessmentData?.surveyParadigm || "facility";
@@ -301,6 +344,17 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                  assessmentData.status === "risk-assessment" ? "Risk Assessment" :
                  assessmentData.status === "facility-survey" ? "Facility Survey" : "Draft"}
               </Badge>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleGenerateComprehensiveReport}
+                className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-9 sm:min-w-9"
+                disabled={isGeneratingReport}
+                data-testid="button-generate-report"
+                title="Generate comprehensive report"
+              >
+                <FileDown className="h-4 w-4" />
+              </Button>
               <Button
                 variant="outline"
                 size="icon"

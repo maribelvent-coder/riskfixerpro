@@ -1467,6 +1467,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get comprehensive report data for an assessment
+  app.get("/api/assessments/:id/comprehensive-report-data", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const assessmentId = req.params.id;
+      
+      // Import the report data aggregator
+      const { aggregateReportData } = await import("./services/reportDataAggregator");
+      
+      // Get comprehensive data
+      const reportData = await aggregateReportData(assessmentId, storage, userId);
+      
+      res.json(reportData);
+    } catch (error) {
+      console.error("Error generating comprehensive report data:", error);
+      res.status(500).json({ error: "Failed to generate comprehensive report data" });
+    }
+  });
+
   app.post("/api/assessments", async (req, res) => {
     try {
       const userId = req.session.userId;

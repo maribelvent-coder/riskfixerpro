@@ -112,7 +112,7 @@ const SEVERITY_THRESHOLDS = {
   },
 } as const;
 
-interface CrimeDataSummary {
+export interface CrimeDataSummary {
   violentTotal: number;
   propertyTotal: number;
   violentRate?: number; // Per 100k
@@ -122,7 +122,7 @@ interface CrimeDataSummary {
   source: string;
 }
 
-interface ThreatIntelligence {
+export interface ThreatIntelligence {
   threatName: string;
   category: string;
   suggestedLikelihood: string; // "very-low" | "low" | "medium" | "high" | "very-high"
@@ -135,7 +135,7 @@ interface ThreatIntelligence {
   };
 }
 
-interface RiskIntelligenceReport {
+export interface RiskIntelligenceReport {
   siteId: string;
   siteName: string;
   crimeDataAvailable: boolean;
