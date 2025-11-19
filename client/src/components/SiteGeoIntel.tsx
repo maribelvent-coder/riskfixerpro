@@ -8,20 +8,44 @@ import { Badge } from "@/components/ui/badge";
 import { GoogleMap } from "@/components/GoogleMap";
 import { CrimeDataImportDialog } from "@/components/CrimeDataImportDialog";
 import { IncidentImportDialog } from "@/components/IncidentImportDialog";
+import { CrimeDataCharts } from "@/components/CrimeDataCharts";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download } from "lucide-react";
+import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download, BarChart3 } from "lucide-react";
 import type { Site, PointOfInterest, CrimeSource, CrimeObservation, SiteIncident } from "@shared/schema";
 
 interface SiteGeoIntelProps {
   site: Site;
 }
 
-// Helper function to safely extract crime count from JSONB field
+// Helper function to safely parse and extract crime count from JSONB field
 function getCrimeCount(crimeData: unknown): string {
-  if (typeof crimeData === 'object' && crimeData !== null) {
-    const total = (crimeData as any).total;
-    return total !== undefined ? String(total) : 'N/A';
+  try {
+    let parsed = crimeData;
+    
+    // Parse JSON string if needed
+    if (typeof crimeData === 'string') {
+      parsed = JSON.parse(crimeData);
+    }
+    
+    // Extract total from parsed object
+    if (typeof parsed === 'object' && parsed !== null) {
+      const total = (parsed as any).total;
+      
+      // Handle numeric values (including strings that are numbers)
+      if (typeof total === 'number') {
+        return total.toLocaleString();
+      }
+      if (typeof total === 'string') {
+        const num = Number(total);
+        if (!isNaN(num)) {
+          return num.toLocaleString();
+        }
+      }
+    }
+  } catch (error) {
+    // Failed to parse or extract
   }
+  
   return 'N/A';
 }
 
@@ -35,85 +59,102 @@ function CrimeSourceDisplay({
   observations: CrimeObservation[];
   onDelete: (sourceId: string) => void;
 }) {
+  const [showCharts, setShowCharts] = useState(false);
   const sourceObservations = observations.filter(obs => obs.crimeSourceId === source.id);
   const latestObservation = sourceObservations[0]; // Most recent observation
 
   return (
-    <div className="p-4 rounded-lg border" data-testid={`crime-source-${source.id}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="font-medium capitalize">{source.dataSource.replace(/_/g, ' ')}</h4>
-            <Badge variant="outline" className="text-xs">
-              {source.dataTimePeriod || 'N/A'}
-            </Badge>
-            {latestObservation?.comparisonRating && (
-              <Badge
-                variant="outline"
-                className={
-                  latestObservation.comparisonRating === "very_high" || latestObservation.comparisonRating === "high"
-                    ? "border-red-500 text-red-700"
-                    : latestObservation.comparisonRating === "average"
-                    ? "border-yellow-500 text-yellow-700"
-                    : "border-green-500 text-green-700"
-                }
-              >
-                {latestObservation.comparisonRating.replace(/_/g, ' ').toUpperCase()}
+    <div className="space-y-4" data-testid={`crime-source-${source.id}`}>
+      <div className="p-4 rounded-lg border">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-medium capitalize">{source.dataSource.replace(/_/g, ' ')}</h4>
+              <Badge variant="outline" className="text-xs">
+                {source.dataTimePeriod || 'N/A'}
               </Badge>
+              {latestObservation?.comparisonRating && (
+                <Badge
+                  variant="outline"
+                  className={
+                    latestObservation.comparisonRating === "very_high" || latestObservation.comparisonRating === "high"
+                      ? "border-red-500 text-red-700"
+                      : latestObservation.comparisonRating === "average"
+                      ? "border-yellow-500 text-yellow-700"
+                      : "border-green-500 text-green-700"
+                  }
+                >
+                  {latestObservation.comparisonRating.replace(/_/g, ' ').toUpperCase()}
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Imported: {source.importDate ? new Date(source.importDate).toLocaleDateString() : 'N/A'}
+            </p>
+            {(source.city || source.county || source.state) && (
+              <p className="text-sm text-muted-foreground">
+                Coverage: {[source.city, source.county, source.state].filter(Boolean).join(', ')}
+              </p>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Imported: {source.importDate ? new Date(source.importDate).toLocaleDateString() : 'N/A'}
-          </p>
-          {(source.city || source.county || source.state) && (
-            <p className="text-sm text-muted-foreground">
-              Coverage: {[source.city, source.county, source.state].filter(Boolean).join(', ')}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          {latestObservation?.overallCrimeIndex !== null && latestObservation?.overallCrimeIndex !== undefined && (
-            <div className="text-center">
-              <div className="text-3xl font-bold">{latestObservation.overallCrimeIndex}</div>
-              <div className="text-xs text-muted-foreground">Crime Index</div>
+          <div className="flex flex-col items-end gap-2">
+            {latestObservation?.overallCrimeIndex !== null && latestObservation?.overallCrimeIndex !== undefined && (
+              <div className="text-center">
+                <div className="text-3xl font-bold">{latestObservation.overallCrimeIndex}</div>
+                <div className="text-xs text-muted-foreground">Crime Index</div>
+              </div>
+            )}
+            <div className="flex gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setShowCharts(!showCharts)}
+                data-testid={`button-toggle-charts-${source.id}`}
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => onDelete(source.id)}
+                data-testid={`button-delete-source-${source.id}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => onDelete(source.id)}
-            data-testid={`button-delete-source-${source.id}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          </div>
         </div>
+
+        {latestObservation ? (
+          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+            {latestObservation.violentCrimes ? (
+              <div className="p-2 rounded bg-muted/50">
+                <div className="font-medium">Violent Crimes</div>
+                <div className="text-muted-foreground">
+                  {getCrimeCount(latestObservation.violentCrimes)}
+                </div>
+              </div>
+            ) : null}
+            {latestObservation.propertyCrimes ? (
+              <div className="p-2 rounded bg-muted/50">
+                <div className="font-medium">Property Crimes</div>
+                <div className="text-muted-foreground">
+                  {getCrimeCount(latestObservation.propertyCrimes)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="mt-3 text-muted-foreground">No observations available</div>
+        )}
+
+        {source.notes && (
+          <p className="text-sm mt-3 text-muted-foreground italic">{source.notes}</p>
+        )}
       </div>
 
-      {latestObservation ? (
-        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-          {latestObservation.violentCrimes ? (
-            <div className="p-2 rounded bg-muted/50">
-              <div className="font-medium">Violent Crimes</div>
-              <div className="text-muted-foreground">
-                {getCrimeCount(latestObservation.violentCrimes)}
-              </div>
-            </div>
-          ) : null}
-          {latestObservation.propertyCrimes ? (
-            <div className="p-2 rounded bg-muted/50">
-              <div className="font-medium">Property Crimes</div>
-              <div className="text-muted-foreground">
-                {getCrimeCount(latestObservation.propertyCrimes)}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div className="mt-3 text-muted-foreground">No observations available</div>
-      )}
-
-      {source.notes && (
-        <p className="text-sm mt-3 text-muted-foreground italic">{source.notes}</p>
+      {showCharts && sourceObservations.length > 0 && (
+        <CrimeDataCharts observations={sourceObservations} source={source} />
       )}
     </div>
   );

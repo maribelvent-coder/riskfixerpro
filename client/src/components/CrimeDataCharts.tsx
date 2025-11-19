@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import type { CrimeObservation, CrimeSource } from "@shared/schema";
 
 interface CrimeBreakdown {
   total: number;
@@ -7,23 +8,6 @@ interface CrimeBreakdown {
   breakdown?: {
     [key: string]: number;
   };
-}
-
-interface CrimeObservation {
-  id: string;
-  violentCrimes: string | CrimeBreakdown;
-  propertyCrimes: string | CrimeBreakdown;
-  overallCrimeIndex: number | null;
-  comparisonRating: string | null;
-}
-
-interface CrimeSource {
-  id: string;
-  dataSource: string;
-  dataTimePeriod: string;
-  city: string | null;
-  county: string | null;
-  state: string | null;
 }
 
 interface CrimeDataChartsProps {
@@ -43,15 +27,54 @@ const COLORS = {
   ],
 };
 
-function parseJsonField(field: string | CrimeBreakdown): CrimeBreakdown | null {
-  if (typeof field === 'string') {
+function parseJsonField(field: unknown): CrimeBreakdown | null {
+  let obj: any = null;
+  
+  // Handle already-parsed objects
+  if (typeof field === 'object' && field !== null && 'total' in field) {
+    obj = field;
+  }
+  // Parse JSON strings
+  else if (typeof field === 'string') {
     try {
-      return JSON.parse(field);
+      const parsed = JSON.parse(field);
+      if (parsed && typeof parsed === 'object' && 'total' in parsed) {
+        obj = parsed;
+      }
     } catch {
+      // Invalid JSON
       return null;
     }
   }
-  return field;
+  
+  if (!obj) {
+    return null;
+  }
+  
+  // Normalize numeric fields (handle legacy string numbers)
+  const coerceToNumber = (value: any): number => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const num = Number(value);
+      return isNaN(num) ? 0 : num;
+    }
+    return 0;
+  };
+  
+  const normalized: CrimeBreakdown = {
+    total: coerceToNumber(obj.total),
+    rate_per_100k: coerceToNumber(obj.rate_per_100k),
+    breakdown: {},
+  };
+  
+  // Normalize breakdown fields if present
+  if (obj.breakdown && typeof obj.breakdown === 'object') {
+    for (const [key, value] of Object.entries(obj.breakdown)) {
+      normalized.breakdown![key] = coerceToNumber(value);
+    }
+  }
+  
+  return normalized;
 }
 
 export function CrimeDataCharts({ observations, source }: CrimeDataChartsProps) {
@@ -113,11 +136,36 @@ export function CrimeDataCharts({ observations, source }: CrimeDataChartsProps) 
     ? observations
         .slice()
         .reverse()
-        .map((obs) => {
+        .map((obs, index) => {
           const violent = parseJsonField(obs.violentCrimes);
           const property = parseJsonField(obs.propertyCrimes);
+          
+          // Derive period from observation dates or fall back to source period or index
+          let period = source?.dataTimePeriod || `Period ${index + 1}`;
+          
+          // Try to extract year from dates (handle both Date objects and ISO strings)
+          if (obs.startDate) {
+            try {
+              const date = typeof obs.startDate === 'string' ? new Date(obs.startDate) : obs.startDate;
+              if (!isNaN(date.getTime())) {
+                period = date.getFullYear().toString();
+              }
+            } catch {
+              // Invalid date, use fallback
+            }
+          } else if (obs.createdAt) {
+            try {
+              const date = typeof obs.createdAt === 'string' ? new Date(obs.createdAt) : obs.createdAt;
+              if (!isNaN(date.getTime())) {
+                period = date.getFullYear().toString();
+              }
+            } catch {
+              // Invalid date, use fallback
+            }
+          }
+          
           return {
-            period: source?.dataTimePeriod || "Unknown",
+            period,
             violent: violent?.total || 0,
             property: property?.total || 0,
             total: (violent?.total || 0) + (property?.total || 0),
