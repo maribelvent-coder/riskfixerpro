@@ -5,6 +5,7 @@ import { parseCAPIndexPDF, createManualCrimeEntry } from "../services/crimeData.
 import { searchFBIAgencies, getFBIAgencyCrimeData, convertFBIStatsToOurFormat } from "../services/fbiCrimeData.js";
 import multer from "multer";
 import { z } from "zod";
+import { parse } from "csv-parse/sync";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -976,6 +977,180 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
     } catch (error: any) {
       console.error("Delete crime source error:", error);
       res.status(500).json({ error: error.message || "Failed to delete crime source" });
+    }
+  });
+
+  // ===================================================================
+  // SITE INCIDENTS ROUTES
+  // ===================================================================
+
+  // Get all incidents for a site
+  app.get("/api/sites/:siteId/incidents", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { siteId } = req.params;
+      const site = await storage.getSite(siteId);
+
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      // Verify ownership
+      const user = await storage.getUser(userId);
+      const hasAccess = site.userId === userId || 
+                       (user && user.organizationId && site.organizationId === user.organizationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const incidents = await storage.getSiteIncidents(siteId);
+      res.json(incidents);
+    } catch (error: any) {
+      console.error("Get incidents error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch incidents" });
+    }
+  });
+
+  // Import site incidents from CSV
+  app.post("/api/sites/:siteId/incidents/import-csv", upload.single("file"), async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { siteId } = req.params;
+      const site = await storage.getSite(siteId);
+
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      // Verify ownership
+      const user = await storage.getUser(userId);
+      const hasAccess = site.userId === userId || 
+                       (user && user.organizationId && site.organizationId === user.organizationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Parse CSV
+      const csvContent = req.file.buffer.toString('utf-8');
+      const records = parse(csvContent, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+      });
+
+      if (records.length === 0) {
+        return res.status(400).json({ error: "CSV file is empty" });
+      }
+
+      // Validate and transform records
+      const incidents = [];
+      const errors = [];
+
+      for (let i = 0; i < records.length; i++) {
+        const record = records[i];
+        try {
+          // Expected columns: Date, Type, Description, Severity, Location, Police Notified, Police Report #, Estimated Cost, Notes
+          const incident = {
+            siteId,
+            incidentDate: new Date(record.Date || record.date),
+            incidentType: (record.Type || record.type || 'other').toLowerCase(),
+            description: record.Description || record.description || '',
+            severity: (record.Severity || record.severity || 'medium').toLowerCase(),
+            locationWithinSite: record.Location || record.location || null,
+            policeNotified: (record['Police Notified'] || record.police_notified || 'no').toLowerCase() === 'yes',
+            policeReportNumber: record['Police Report #'] || record.police_report_number || null,
+            estimatedCost: record['Estimated Cost'] || record.estimated_cost 
+              ? parseInt(String(record['Estimated Cost'] || record.estimated_cost).replace(/[^0-9]/g, '')) 
+              : null,
+            notes: record.Notes || record.notes || null,
+          };
+
+          // Validate required fields
+          if (!incident.description) {
+            errors.push(`Row ${i + 2}: Description is required`);
+            continue;
+          }
+
+          if (isNaN(incident.incidentDate.getTime())) {
+            errors.push(`Row ${i + 2}: Invalid date format`);
+            continue;
+          }
+
+          incidents.push(incident);
+        } catch (error: any) {
+          errors.push(`Row ${i + 2}: ${error.message}`);
+        }
+      }
+
+      if (errors.length > 0 && incidents.length === 0) {
+        return res.status(400).json({ 
+          error: "No valid incidents found", 
+          details: errors 
+        });
+      }
+
+      // Bulk insert incidents
+      const created = await storage.bulkCreateSiteIncidents(incidents);
+
+      res.json({
+        success: true,
+        imported: created.length,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      console.error("Import incidents error:", error);
+      res.status(500).json({ error: error.message || "Failed to import incidents" });
+    }
+  });
+
+  // Delete a site incident
+  app.delete("/api/sites/incidents/:id", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      const incident = await storage.getSiteIncident(id);
+
+      if (!incident) {
+        return res.status(404).json({ error: "Incident not found" });
+      }
+
+      // Verify ownership via site
+      const site = await storage.getSite(incident.siteId);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      const hasAccess = site.userId === userId || 
+                       (user && user.organizationId && site.organizationId === user.organizationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      await storage.deleteSiteIncident(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete incident error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete incident" });
     }
   });
 }

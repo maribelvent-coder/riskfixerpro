@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, gt, sql } from "drizzle-orm";
+import { eq, and, gt, sql, desc } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import type { IStorage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -50,7 +50,9 @@ import type {
   CrimeSource,
   InsertCrimeSource,
   CrimeObservation,
-  InsertCrimeObservation
+  InsertCrimeObservation,
+  SiteIncident,
+  InsertSiteIncident
 } from "@shared/schema";
 
 export class DbStorage implements IStorage {
@@ -994,5 +996,35 @@ export class DbStorage implements IStorage {
   async createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation> {
     const results = await db.insert(schema.crimeObservations).values(observation).returning();
     return results[0];
+  }
+
+  // Site Incidents methods
+  async getSiteIncidents(siteId: string): Promise<SiteIncident[]> {
+    return await db.select().from(schema.siteIncidents)
+      .where(eq(schema.siteIncidents.siteId, siteId))
+      .orderBy(desc(schema.siteIncidents.incidentDate));
+  }
+
+  async getSiteIncident(id: string): Promise<SiteIncident | undefined> {
+    const results = await db.select().from(schema.siteIncidents)
+      .where(eq(schema.siteIncidents.id, id));
+    return results[0];
+  }
+
+  async createSiteIncident(incident: InsertSiteIncident): Promise<SiteIncident> {
+    const results = await db.insert(schema.siteIncidents).values(incident).returning();
+    return results[0];
+  }
+
+  async bulkCreateSiteIncidents(incidents: InsertSiteIncident[]): Promise<SiteIncident[]> {
+    if (incidents.length === 0) return [];
+    return await db.insert(schema.siteIncidents).values(incidents).returning();
+  }
+
+  async deleteSiteIncident(id: string): Promise<boolean> {
+    const results = await db.delete(schema.siteIncidents)
+      .where(eq(schema.siteIncidents.id, id))
+      .returning();
+    return results.length > 0;
   }
 }

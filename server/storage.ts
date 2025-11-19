@@ -48,7 +48,9 @@ import {
   type CrimeSource,
   type InsertCrimeSource,
   type CrimeObservation,
-  type InsertCrimeObservation
+  type InsertCrimeObservation,
+  type SiteIncident,
+  type InsertSiteIncident
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -219,6 +221,13 @@ export interface IStorage {
   getCrimeObservation(id: string): Promise<CrimeObservation | undefined>;
   getCrimeObservationsBySource(crimeSourceId: string): Promise<CrimeObservation[]>;
   createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation>;
+
+  // Site Incidents methods
+  getSiteIncidents(siteId: string): Promise<SiteIncident[]>;
+  getSiteIncident(id: string): Promise<SiteIncident | undefined>;
+  createSiteIncident(incident: InsertSiteIncident): Promise<SiteIncident>;
+  bulkCreateSiteIncidents(incidents: InsertSiteIncident[]): Promise<SiteIncident[]>;
+  deleteSiteIncident(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -1334,6 +1343,27 @@ export class MemStorage implements IStorage {
 
   async createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation> {
     throw new Error("MemStorage not fully implemented for GeoIntel features");
+  }
+
+  // Site Incidents methods
+  async getSiteIncidents(siteId: string): Promise<SiteIncident[]> {
+    return [];
+  }
+
+  async getSiteIncident(id: string): Promise<SiteIncident | undefined> {
+    return undefined;
+  }
+
+  async createSiteIncident(incident: InsertSiteIncident): Promise<SiteIncident> {
+    throw new Error("MemStorage not fully implemented for site incidents");
+  }
+
+  async bulkCreateSiteIncidents(incidents: InsertSiteIncident[]): Promise<SiteIncident[]> {
+    throw new Error("MemStorage not fully implemented for site incidents");
+  }
+
+  async deleteSiteIncident(id: string): Promise<boolean> {
+    return false;
   }
 }
 
