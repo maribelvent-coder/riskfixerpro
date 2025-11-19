@@ -184,6 +184,35 @@ export const crimeObservations = pgTable("crime_observations", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Site Incidents - Actual security events that occurred at a specific site
+export const siteIncidents = pgTable("site_incidents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: varchar("site_id").notNull().references(() => sites.id),
+  
+  // When and what
+  incidentDate: timestamp("incident_date").notNull(),
+  incidentType: text("incident_type").notNull(), // break-in, theft, vandalism, trespassing, assault, robbery, fire, flood, other
+  severity: text("severity").notNull().default("medium"), // low, medium, high, critical
+  
+  // Details
+  description: text("description").notNull(), // What happened
+  locationWithinSite: text("location_within_site"), // Specific area/zone (e.g., "Parking Lot A", "Server Room")
+  
+  // Outcome and Response
+  outcome: text("outcome").default("unresolved"), // resolved, unresolved, ongoing, under_investigation
+  policeNotified: boolean("police_notified").default(false),
+  policeReportNumber: text("police_report_number"),
+  
+  // Financial Impact
+  estimatedCost: integer("estimated_cost"), // Damage/loss in dollars
+  
+  // Additional Information
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 export const assessments = pgTable("assessments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -605,6 +634,12 @@ export const insertCrimeObservationSchema = createInsertSchema(crimeObservations
   createdAt: true,
 });
 
+export const insertSiteIncidentSchema = createInsertSchema(siteIncidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -689,6 +724,9 @@ export type InsertCrimeSource = z.infer<typeof insertCrimeSourceSchema>;
 
 export type CrimeObservation = typeof crimeObservations.$inferSelect;
 export type InsertCrimeObservation = z.infer<typeof insertCrimeObservationSchema>;
+
+export type SiteIncident = typeof siteIncidents.$inferSelect;
+export type InsertSiteIncident = z.infer<typeof insertSiteIncidentSchema>;
 
 // Assessment with related data
 export type AssessmentWithQuestions = Assessment & {
