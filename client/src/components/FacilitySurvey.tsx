@@ -106,7 +106,25 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   }, [currentCategory]);
 
   const categories = Array.from(new Set(questions.map(q => q.category)));
-  const currentCategoryQuestions = questions.filter(q => q.category === categories[currentCategory]);
+  
+  // Helper function to check if a question should be shown based on conditional logic
+  const shouldShowQuestion = (q: SurveyQuestion): boolean => {
+    // If no conditional logic, always show the question
+    if (!q.conditionalOnQuestionId || !q.showWhenAnswer) {
+      return true;
+    }
+    
+    // Find the prerequisite question
+    const prereqQuestion = questions.find(pq => pq.templateId === q.conditionalOnQuestionId);
+    
+    // Only show if prerequisite answer matches showWhenAnswer
+    return prereqQuestion?.response === q.showWhenAnswer;
+  };
+  
+  // Filter questions for current category AND apply conditional rendering
+  const currentCategoryQuestions = questions
+    .filter(q => q.category === categories[currentCategory])
+    .filter(shouldShowQuestion);
   
   // Helper function to check if a question is completed
   const isQuestionCompleted = (q: SurveyQuestion): boolean => {
@@ -518,6 +536,53 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               <SelectItem value="5">5 - Excellent</SelectItem>
             </SelectContent>
           </Select>
+        );
+
+      case "text":
+        return (
+          <div className="space-y-2.5 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor={`${question.templateId}-text`} className="text-xs sm:text-sm">
+                Detailed Response
+              </Label>
+              <Textarea
+                id={`${question.templateId}-text`}
+                value={question.response?.textResponse || ""}
+                onChange={(e) => updateQuestion(question.templateId, "response", { 
+                  ...question.response, 
+                  textResponse: e.target.value 
+                })}
+                placeholder="Enter detailed description (e.g., specific locations, types, conditions...)"
+                rows={3}
+                className="text-xs sm:text-sm"
+                data-testid={`textarea-${question.templateId}-text`}
+              />
+            </div>
+            
+            {/* Assessment dropdown required for completion */}
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor={`${question.templateId}-assessment`} className="text-xs sm:text-sm">Assessment Response</Label>
+              <Select 
+                value={question.response?.assessment || ""} 
+                onValueChange={(value) => updateQuestion(question.templateId, "response", { 
+                  ...question.response, 
+                  assessment: value 
+                })}
+              >
+                <SelectTrigger data-testid={`select-${question.templateId}-assessment`} className="text-xs sm:text-sm">
+                  <SelectValue placeholder="Select assessment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="n/a">N/A - Not installed or not applicable</SelectItem>
+                  <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>
+                  <SelectItem value="good">Good - Meets standards well</SelectItem>
+                  <SelectItem value="adequate">Adequate - Meets minimum standards</SelectItem>
+                  <SelectItem value="poor">Poor - Below standards</SelectItem>
+                  <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         );
 
       default:
