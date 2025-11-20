@@ -28,6 +28,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Assessment } from "@shared/schema";
 import { generateComprehensiveReport } from "@/lib/comprehensiveReportGenerator";
 import { generateDOCXReport } from "@/lib/docxReportGenerator";
+import { exportHTMLReport } from "@/lib/htmlReportGenerator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +79,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
   // Generate comprehensive report mutation
   const generateReportMutation = useMutation({
-    mutationFn: async (format: 'pdf' | 'docx' = 'pdf') => {
+    mutationFn: async (format: 'pdf' | 'docx' | 'html' = 'pdf') => {
       if (!assessmentData) {
         throw new Error('Assessment data not available');
       }
@@ -110,7 +111,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         const pdf = await generateComprehensiveReport(reportData);
         pdf.save(`${baseFileName}.pdf`);
         return { fileName: `${baseFileName}.pdf`, format: 'PDF' };
-      } else {
+      } else if (format === 'docx') {
         // Generate DOCX using the DOCX report generator
         const docxBlob = await generateDOCXReport(reportData);
         
@@ -125,6 +126,10 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         window.URL.revokeObjectURL(url);
         
         return { fileName: `${baseFileName}.docx`, format: 'DOCX' };
+      } else {
+        // Generate HTML and open in new tab
+        await exportHTMLReport(reportData, reportTitle);
+        return { fileName: `${baseFileName}.html`, format: 'HTML' };
       }
     },
     onSuccess: (data) => {
@@ -410,6 +415,14 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Export as DOCX
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => generateReportMutation.mutate('html')}
+                    disabled={generateReportMutation.isPending}
+                    data-testid="menu-item-export-html"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export as HTML
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

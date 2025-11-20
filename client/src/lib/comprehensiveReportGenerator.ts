@@ -16,7 +16,7 @@ import {
 
 const { COLORS, SPACING, FONT_SIZES, FONTS } = PDF_CONFIG;
 
-interface ComprehensiveReportData {
+export interface ComprehensiveReportData {
   assessment: {
     id: string;
     title: string;
