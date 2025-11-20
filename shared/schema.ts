@@ -257,6 +257,8 @@ export const templateQuestions = pgTable("template_questions", {
   type: text("type").notNull().default("yes-no"), // yes-no, rating, text, checklist
   orderIndex: integer("order_index").notNull(), // Display order
   controlLibraryId: varchar("control_library_id").references(() => controlLibrary.id), // Link to control_library for risk calculation
+  conditionalOnQuestionId: text("conditional_on_question_id"), // The questionId this question depends on (e.g., "1.1")
+  showWhenAnswer: text("show_when_answer"), // The answer value that triggers showing this question (e.g., "yes")
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -306,11 +308,14 @@ export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
   importance: text("importance"), // Critical, High, Medium, Low
   orderIndex: integer("order_index"), // Display order from template
   standard: text("standard"), // Reference to CPP/Army FM standard
-  type: text("type").notNull(), // condition, measurement, yes-no, rating
+  type: text("type").notNull(), // condition, measurement, yes-no, rating, text
   response: jsonb("response"), // Condition, measurements, ratings
   notes: text("notes"),
   evidence: text("evidence").array(), // Photo evidence
   recommendations: text("recommendations").array(), // Immediate fixes needed
+  controlLibraryId: varchar("control_library_id").references(() => controlLibrary.id), // Link to control_library for risk calculation
+  conditionalOnQuestionId: text("conditional_on_question_id"), // The questionId this question depends on (e.g., "1.1")
+  showWhenAnswer: text("show_when_answer"), // The answer value that triggers showing this question (e.g., "yes")
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
