@@ -1040,6 +1040,51 @@ export const insertSiteIncidentSchema = createInsertSchema(siteIncidents).omit({
   updatedAt: true,
 });
 
+// Phase 2: Executive Protection Insert Schemas
+export const insertExecutiveProfileSchema = createInsertSchema(executiveProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExecutiveInterviewSchema = createInsertSchema(executiveInterviews).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertExecutiveLocationSchema = createInsertSchema(executiveLocations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExecutiveTravelRouteSchema = createInsertSchema(executiveTravelRoutes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCrimeDataImportSchema = createInsertSchema(crimeDataImports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCrimeIncidentSchema = createInsertSchema(crimeIncidents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertExecutivePointOfInterestSchema = createInsertSchema(executivePointsOfInterest).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOsintFindingSchema = createInsertSchema(osintFindings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -1127,6 +1172,31 @@ export type InsertCrimeObservation = z.infer<typeof insertCrimeObservationSchema
 
 export type SiteIncident = typeof siteIncidents.$inferSelect;
 export type InsertSiteIncident = z.infer<typeof insertSiteIncidentSchema>;
+
+// Phase 2: Executive Protection Types
+export type ExecutiveProfile = typeof executiveProfiles.$inferSelect;
+export type InsertExecutiveProfile = z.infer<typeof insertExecutiveProfileSchema>;
+
+export type ExecutiveInterview = typeof executiveInterviews.$inferSelect;
+export type InsertExecutiveInterview = z.infer<typeof insertExecutiveInterviewSchema>;
+
+export type ExecutiveLocation = typeof executiveLocations.$inferSelect;
+export type InsertExecutiveLocation = z.infer<typeof insertExecutiveLocationSchema>;
+
+export type ExecutiveTravelRoute = typeof executiveTravelRoutes.$inferSelect;
+export type InsertExecutiveTravelRoute = z.infer<typeof insertExecutiveTravelRouteSchema>;
+
+export type CrimeDataImport = typeof crimeDataImports.$inferSelect;
+export type InsertCrimeDataImport = z.infer<typeof insertCrimeDataImportSchema>;
+
+export type CrimeIncident = typeof crimeIncidents.$inferSelect;
+export type InsertCrimeIncident = z.infer<typeof insertCrimeIncidentSchema>;
+
+export type ExecutivePointOfInterest = typeof executivePointsOfInterest.$inferSelect;
+export type InsertExecutivePointOfInterest = z.infer<typeof insertExecutivePointOfInterestSchema>;
+
+export type OsintFinding = typeof osintFindings.$inferSelect;
+export type InsertOsintFinding = z.infer<typeof insertOsintFindingSchema>;
 
 // Assessment with related data
 export type AssessmentWithQuestions = Assessment & {
