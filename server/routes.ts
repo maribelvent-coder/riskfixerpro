@@ -1047,6 +1047,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Template routes
+  app.get("/api/templates", async (req, res) => {
+    try {
+      // Return the assessment templates defined in shared/templates.ts
+      res.json(ASSESSMENT_TEMPLATES);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
   // Site routes
   app.get("/api/sites", async (req, res) => {
     try {
