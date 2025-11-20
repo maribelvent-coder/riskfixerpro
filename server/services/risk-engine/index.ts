@@ -160,7 +160,15 @@ function calculateControlEffectiveness(
   let remainingRisk = 1.0; // Start at 100%
   
   for (const control of controls) {
-    const effectiveness = control.effectiveness || 0;
+    // Validate and clamp effectiveness to 0-5 range
+    let effectiveness = control.effectiveness || 0;
+    
+    // Guard against invalid values
+    if (isNaN(effectiveness) || effectiveness < 0) {
+      effectiveness = 0;
+    } else if (effectiveness > 5) {
+      effectiveness = 5;
+    }
     
     // Apply 10% reduction 'effectiveness' times (1-5)
     for (let i = 0; i < effectiveness; i++) {

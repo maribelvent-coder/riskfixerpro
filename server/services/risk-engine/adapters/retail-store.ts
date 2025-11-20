@@ -87,17 +87,44 @@ export class RetailStoreAdapter implements RiskEngineAdapter {
     // Shrinkage rates directly correlate with theft likelihood
     const shrinkageRateResponse = responses.get('shrinkage_rate');
     if (shrinkageRateResponse?.answer) {
-      const answer = shrinkageRateResponse.answer.toString().toLowerCase();
+      let shrinkageValue: number | null = null;
       
+      // Try to parse as numeric value first
+      if (typeof shrinkageRateResponse.answer === 'number') {
+        shrinkageValue = shrinkageRateResponse.answer;
+      } else {
+        const answerStr = shrinkageRateResponse.answer.toString();
+        // Remove % symbol and parse
+        const numericMatch = answerStr.match(/(\d+\.?\d*)/);
+        if (numericMatch) {
+          shrinkageValue = parseFloat(numericMatch[1]);
+        }
+      }
+      
+      // Apply likelihood adjustments based on shrinkage rate
       // Industry average is 1.4% - 1.6%
-      if (answer.includes('less than 1%') || answer.includes('<1%')) {
-        likelihood += 0; // Below average = no increase
-      } else if (answer.includes('1-2%') || answer.includes('average')) {
-        likelihood += 1; // Average = slight increase
-      } else if (answer.includes('2-3%') || answer.includes('above average')) {
-        likelihood += 2; // Above average = significant increase
-      } else if (answer.includes('3%+') || answer.includes('>3%') || answer.includes('high')) {
-        likelihood += 3; // High shrinkage = major increase
+      if (shrinkageValue !== null && !isNaN(shrinkageValue)) {
+        if (shrinkageValue < 1.0) {
+          likelihood += 0; // Below average = no increase
+        } else if (shrinkageValue >= 1.0 && shrinkageValue < 2.0) {
+          likelihood += 1; // Average = slight increase
+        } else if (shrinkageValue >= 2.0 && shrinkageValue < 3.0) {
+          likelihood += 2; // Above average = significant increase
+        } else if (shrinkageValue >= 3.0) {
+          likelihood += 3; // High shrinkage = major increase
+        }
+      } else {
+        // Fallback to string parsing if numeric parsing fails
+        const answer = shrinkageRateResponse.answer.toString().toLowerCase();
+        if (answer.includes('less than 1%') || answer.includes('<1%') || answer.includes('low')) {
+          likelihood += 0;
+        } else if (answer.includes('1-2%') || answer.includes('average') || answer.includes('normal')) {
+          likelihood += 1;
+        } else if (answer.includes('2-3%') || answer.includes('above average')) {
+          likelihood += 2;
+        } else if (answer.includes('3%+') || answer.includes('>3%') || answer.includes('high')) {
+          likelihood += 3;
+        }
       }
     }
 

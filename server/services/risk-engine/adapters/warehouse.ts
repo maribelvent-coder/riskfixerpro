@@ -198,27 +198,77 @@ export class WarehouseAdapter implements RiskEngineAdapter {
     const typicalImpact = threat.typicalImpact;
     let impact = IMPACT_VALUES[typicalImpact as keyof typeof IMPACT_VALUES]?.value || 3;
 
-    // Adjust based on cargo value and volume
-    const averageCargoValueResponse = responses.get('average_cargo_value');
-    if (averageCargoValueResponse?.answer) {
-      const answer = averageCargoValueResponse.answer.toString().toLowerCase();
-      if (answer.includes('very high') || answer.includes('>$1m')) {
-        impact = Math.min(5, impact + 2);
-      } else if (answer.includes('high') || answer.includes('>$500k')) {
+    // CARGO-SPECIFIC IMPACT AMPLIFICATION
+    // For cargo theft threats, significantly increase impact based on cargo characteristics
+    if (threatId.includes('cargo_theft') || threat.name.toLowerCase().includes('cargo')) {
+      
+      // Factor 1: Cargo Value
+      const averageCargoValueResponse = responses.get('average_cargo_value');
+      if (averageCargoValueResponse?.answer) {
+        const answer = averageCargoValueResponse.answer.toString().toLowerCase();
+        if (answer.includes('very high') || answer.includes('>$1m')) {
+          impact = Math.min(5, impact + 2); // Major financial impact
+        } else if (answer.includes('high') || answer.includes('>$500k')) {
+          impact = Math.min(5, impact + 1.5);
+        } else if (answer.includes('medium') || answer.includes('>$250k')) {
+          impact = Math.min(5, impact + 0.5);
+        }
+      }
+
+      // Factor 2: Cargo Type - High-risk commodities
+      const cargoTypeResponse = responses.get('cargo_type');
+      if (cargoTypeResponse?.answer) {
+        const answer = cargoTypeResponse.answer.toString().toLowerCase();
+        // Highest-risk cargo types (organized crime targets)
+        if (answer.includes('pharmaceuticals') || answer.includes('electronics')) {
+          impact = Math.min(5, impact + 1); // High resale value
+        } else if (answer.includes('tobacco') || answer.includes('alcohol')) {
+          impact = Math.min(5, impact + 0.5); // Moderate resale value
+        }
+      }
+
+      // Factor 3: High-value cargo flag
+      const highValueCargoResponse = responses.get('high_value_cargo');
+      if (highValueCargoResponse?.answer === 'yes' || highValueCargoResponse?.answer === true) {
+        impact = Math.min(5, impact + 0.5); // Additional amplification
+      }
+
+      // Factor 4: Business criticality
+      const businessCriticalCargoResponse = responses.get('business_critical_cargo');
+      if (businessCriticalCargoResponse?.answer === 'yes' || businessCriticalCargoResponse?.answer === true) {
+        impact = Math.min(5, impact + 1); // Loss disrupts operations
+      }
+
+      // Factor 5: Client relationships and contracts
+      const clientContractsResponse = responses.get('client_contracts_at_risk');
+      if (clientContractsResponse?.answer === 'yes' || clientContractsResponse?.answer === true) {
+        impact = Math.min(5, impact + 1); // Reputational and contractual damage
+      }
+
+      // Factor 6: Volume/throughput
+      const cargoVolumeResponse = responses.get('cargo_volume');
+      if (cargoVolumeResponse?.answer) {
+        const answer = cargoVolumeResponse.answer.toString().toLowerCase();
+        if (answer.includes('high') || answer.includes('very high')) {
+          impact = Math.min(5, impact + 0.5); // High volume = larger potential losses
+        }
+      }
+    } else {
+      // Non-cargo theft threats - standard adjustments
+      const averageCargoValueResponse = responses.get('average_cargo_value');
+      if (averageCargoValueResponse?.answer) {
+        const answer = averageCargoValueResponse.answer.toString().toLowerCase();
+        if (answer.includes('very high') || answer.includes('>$1m')) {
+          impact = Math.min(5, impact + 1);
+        } else if (answer.includes('high') || answer.includes('>$500k')) {
+          impact = Math.min(5, impact + 0.5);
+        }
+      }
+
+      const businessCriticalCargoResponse = responses.get('business_critical_cargo');
+      if (businessCriticalCargoResponse?.answer === 'yes' || businessCriticalCargoResponse?.answer === true) {
         impact = Math.min(5, impact + 1);
       }
-    }
-
-    // Business criticality
-    const businessCriticalCargoResponse = responses.get('business_critical_cargo');
-    if (businessCriticalCargoResponse?.answer === 'yes' || businessCriticalCargoResponse?.answer === true) {
-      impact = Math.min(5, impact + 1); // Loss disrupts operations
-    }
-
-    // Client relationships
-    const clientContractsResponse = responses.get('client_contracts_at_risk');
-    if (clientContractsResponse?.answer === 'yes' || clientContractsResponse?.answer === true) {
-      impact = Math.min(5, impact + 1); // Loss could mean lost contracts
     }
 
     return Math.round(impact);

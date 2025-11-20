@@ -103,7 +103,7 @@ export class ExecutiveProtectionAdapter implements RiskEngineAdapter {
       }
     }
 
-    // Calculate weighted Exposure score
+    // Calculate weighted Exposure score (return exact decimal, no rounding)
     const exposure = (
       publicProfile * 0.4 +
       patternPredictability * 0.3 +
@@ -111,7 +111,9 @@ export class ExecutiveProtectionAdapter implements RiskEngineAdapter {
       geographicRisk * 0.1
     );
 
-    return Math.min(5, Math.max(1, Math.round(exposure)));
+    // Return exact weighted value for use in Risk_EP formula
+    // Clamp to 1-5 range but preserve decimal precision
+    return Math.min(5, Math.max(1, exposure));
   }
 
   async calculateVulnerability(
