@@ -519,7 +519,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                 const Icon = getCategoryIcon(category);
                 const categoryQuestions = questions.filter(q => q.category === category);
                 const categoryCompleted = categoryQuestions.filter(q => q.response !== undefined).length;
-                const isComplete = categoryCompleted === categoryQuestions.length;
+                const isComplete = categoryQuestions.length > 0 && categoryCompleted === categoryQuestions.length;
                 
                 return (
                   <Button
