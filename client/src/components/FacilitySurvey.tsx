@@ -596,10 +596,12 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             </CardHeader>
             <CardContent className="p-2.5 sm:p-4 space-y-2.5 sm:space-y-4">
               {/* Standard Reference */}
-              <div className="bg-muted/50 p-2 sm:p-3 rounded-md">
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">Professional Standard:</p>
-                <p className="text-xs sm:text-sm">{question.standard}</p>
-              </div>
+              {question.standard && (
+                <div className="bg-muted/50 p-2 sm:p-3 rounded-md">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">Professional Standard:</p>
+                  <p className="text-xs sm:text-sm">{question.standard}</p>
+                </div>
+              )}
 
               {/* Response Input */}
               <div>
