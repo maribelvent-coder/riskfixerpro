@@ -30,8 +30,8 @@ interface FacilitySurveyProps {
 }
 
 interface SurveyQuestion {
-  id: string; // Database UUID (after save) or template ID (before save)
-  templateId?: string; // Stable template ID for lookups - never changes
+  templateId: string; // Stable template ID - primary identifier for UI lookups
+  dbId?: string; // Optional database UUID - populated after first save
   category: string;
   subcategory: string;
   question: string;
@@ -43,166 +43,12 @@ interface SurveyQuestion {
   recommendations?: string[];
 }
 
-// Professional facility survey questions based on CPP presentation and Army FM standards
-const facilityQuestions: SurveyQuestion[] = [
-  // BARRIERS & PERIMETER
-  {
-    id: "barriers-004",
-    category: "barriers", 
-    subcategory: "perimeter-fencing",
-    question: "Describe the current fencing and barriers around the facility",
-    standard: "Perimeter protection and barrier effectiveness assessment",
-    type: "condition",
-  },
-  {
-    id: "barriers-001",
-    category: "barriers",
-    subcategory: "perimeter-fencing",
-    question: "What is the height and condition of perimeter fencing?",
-    standard: "ASIS Standard: Minimum 7-foot chain link with 3-strand barbed wire topping",
-    type: "measurement",
-  },
-  {
-    id: "barriers-002", 
-    category: "barriers",
-    subcategory: "gates-access",
-    question: "Are vehicle and pedestrian gates properly secured with adequate locking mechanisms?",
-    standard: "Access control performance standards - balanced design principle",
-    type: "condition",
-  },
-  {
-    id: "barriers-003",
-    category: "barriers", 
-    subcategory: "walls-structure",
-    question: "What is the condition of building walls, windows, and structural barriers?",
-    standard: "Physical protection system structural integrity requirements",
-    type: "condition",
-  },
-
-  // LIGHTING SYSTEMS
-  {
-    id: "lighting-001",
-    category: "lighting",
-    subcategory: "perimeter",
-    question: "Measure lighting levels at critical perimeter areas (foot-candles)",
-    standard: "CPP Standard: Detection 0.5fc, Recognition 1.0fc, Identification 2.0fc",
-    type: "measurement",
-  },
-  {
-    id: "lighting-002",
-    category: "lighting", 
-    subcategory: "parking",
-    question: "What are the lighting levels in parking areas?",
-    standard: "5 fc with uniformity ratio of 4:1 maximum for parking structures",
-    type: "measurement",
-  },
-  {
-    id: "lighting-003",
-    category: "lighting",
-    subcategory: "emergency",
-    question: "Are emergency lighting systems operational and properly maintained?",
-    standard: "Life safety codes and backup power requirements",
-    type: "condition",
-  },
-  {
-    id: "lighting-004",
-    category: "lighting",
-    subcategory: "perimeter",
-    question: "Are perimeter lighting systems adequate for night-time security?",
-    standard: "Perimeter lighting coverage and illumination standards",
-    type: "condition",
-  },
-
-  // SURVEILLANCE SYSTEMS
-  {
-    id: "surveillance-001",
-    category: "surveillance",
-    subcategory: "camera-coverage",
-    question: "Assess camera field of view and coverage gaps",
-    standard: "Identify blind spots and coverage gaps in surveillance system",
-    type: "condition",
-  },
-  {
-    id: "surveillance-002",
-    category: "surveillance",
-    subcategory: "camera-resolution",
-    question: "What is the camera resolution at critical detection points (Pixels per foot)?",
-    standard: "CPP Standards: 35 Px/ft for recognition, 46 Px/ft for identification, 70 Px/ft for license plates",
-    type: "measurement",
-  },
-  {
-    id: "surveillance-003",
-    category: "surveillance",
-    subcategory: "monitoring",
-    question: "Is there 24/7 monitoring capability and recording retention?",
-    standard: "Continuous monitoring and adequate storage capacity requirements",
-    type: "yes-no",
-  },
-
-  // ACCESS CONTROL
-  {
-    id: "access-001",
-    category: "access-control",
-    subcategory: "entry-points",
-    question: "What types of access control systems are installed at entry points?", 
-    standard: "Entry control performance and redundancy requirements",
-    type: "condition",
-  },
-  {
-    id: "access-002",
-    category: "access-control",
-    subcategory: "doors-locks",
-    question: "Assess the condition and security rating of doors and locking mechanisms",
-    standard: "Balanced design: each barrier element should provide equal delay",
-    type: "condition",
-  },
-  {
-    id: "access-004",
-    category: "access-control",
-    subcategory: "entry-points", 
-    question: "Are all entry points secured with appropriate locking mechanisms?",
-    standard: "Entry point security and redundant locking systems",
-    type: "condition",
-  },
-  {
-    id: "access-003",
-    category: "access-control",
-    subcategory: "visitor-management", 
-    question: "What visitor screening and management processes are in place?",
-    standard: "Identity verification and background screening capabilities",
-    type: "condition",
-  },
-  {
-    id: "access-005",
-    category: "access-control",
-    subcategory: "visitor-management", 
-    question: "Rate the effectiveness of visitor management systems",
-    standard: "Visitor tracking, identification, and escort procedures",
-    type: "rating",
-  },
-
-  // INTRUSION DETECTION
-  {
-    id: "intrusion-001",
-    category: "intrusion-detection",
-    subcategory: "sensors",
-    question: "What types of intrusion detection sensors are deployed and their coverage?",
-    standard: "Sensor types: passive/active, covert/visible, line-of-sight/volumetric",
-    type: "condition",
-  },
-  {
-    id: "intrusion-002",
-    category: "intrusion-detection", 
-    subcategory: "alarm-communication",
-    question: "How are alarms communicated and displayed to operators?",
-    standard: "AC&D system - alarm information to central monitoring point",
-    type: "condition",
-  }
-];
+// NOTE: Hardcoded questions removed - now using template questions from database
 
 export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps) {
-  const [questions, setQuestions] = useState<SurveyQuestion[]>(facilityQuestions);
+  const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [currentCategory, setCurrentCategory] = useState(0);
+  const [isPersisting, setIsPersisting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -210,8 +56,8 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   // Map template IDs to database UUIDs - preserves stable lookups while tracking database records
   const templateToDbIdMap = useRef<Map<string, string>>(new Map());
 
-  // Load existing facility survey data
-  const { data: savedQuestions } = useQuery({
+  // Load template questions from database (no hardcoded fallback)
+  const { data: savedQuestions, isLoading: questionsLoading } = useQuery({
     queryKey: ["/api/assessments", assessmentId, "facility-survey"],
     queryFn: async () => {
       const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`);
@@ -220,13 +66,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     }
   });
 
-  // Merge saved responses with static questions structure
+  // Load template questions directly from database - no merging needed
   useEffect(() => {
     if (savedQuestions && savedQuestions.length > 0) {
-      const savedQuestionsMap = new Map(
-        savedQuestions.map((sq: any) => [sq.templateQuestionId || sq.question, sq])
-      );
-      
       // Populate the template-to-database ID mapping
       savedQuestions.forEach((sq: any) => {
         const templateId = sq.templateQuestionId;
@@ -235,25 +77,22 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         }
       });
       
-      const mergedQuestions = facilityQuestions.map(staticQ => {
-        const savedQ = savedQuestionsMap.get(staticQ.id) || savedQuestionsMap.get(staticQ.question);
-        
-        if (savedQ) {
-          return {
-            ...staticQ,
-            templateId: staticQ.id, // Preserve template ID for stable lookups
-            response: savedQ.response,
-            notes: savedQ.notes,
-            evidence: savedQ.evidence || [],
-            recommendations: savedQ.recommendations || []
-          };
-        }
-        return { ...staticQ, templateId: staticQ.id }; // Set templateId even for unsaved questions
-      });
-      setQuestions(mergedQuestions);
-    } else {
-      // No saved questions - ensure all static questions have templateId
-      setQuestions(facilityQuestions.map(q => ({ ...q, templateId: q.id })));
+      // Map database questions to template-centric model
+      const formattedQuestions: SurveyQuestion[] = savedQuestions.map((sq: any) => ({
+        templateId: sq.templateQuestionId,
+        dbId: sq.id,
+        category: sq.category,
+        subcategory: sq.subcategory,
+        question: sq.question,
+        standard: sq.standard,
+        type: sq.type,
+        response: sq.response,
+        notes: sq.notes,
+        evidence: sq.evidence || [],
+        recommendations: sq.recommendations || []
+      }));
+      
+      setQuestions(formattedQuestions);
     }
   }, [savedQuestions]);
 
@@ -274,7 +113,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const autosaveQuestionMutation = useMutation({
     mutationFn: async ({ question, updateData }: { question: SurveyQuestion; updateData: any }) => {
       // Use templateId for stable identification
-      const templateId = question.templateId || question.id;
+      const templateId = question.templateId;
       const dbId = templateToDbIdMap.current.get(templateId);
       
       if (dbId) {
@@ -285,7 +124,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
           body: JSON.stringify(updateData),
         });
         if (!response.ok) throw new Error('Failed to update question');
-        return await response.json();
+        return { savedQuestion: await response.json(), templateId };
       } else {
         // Question doesn't exist yet - use POST to create it
         // Include all current field values to prevent data loss
@@ -313,16 +152,25 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         const result = await response.json();
         const savedQuestion = result[0];
         
-        // Store the new database ID in the mapping
-        if (savedQuestion && savedQuestion.id) {
-          templateToDbIdMap.current.set(templateId, savedQuestion.id);
-        }
-        
-        return savedQuestion;
+        return { savedQuestion, templateId, isNew: true };
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey-questions"] });
+    onSuccess: (data) => {
+      const { savedQuestion, templateId, isNew } = data;
+      
+      if (isNew && savedQuestion && savedQuestion.id) {
+        // Store the new database ID in the mapping
+        templateToDbIdMap.current.set(templateId, savedQuestion.id);
+        
+        // Update local state immediately with the new database ID
+        setQuestions(prev => prev.map(q => 
+          q.templateId === templateId 
+            ? { ...q, dbId: savedQuestion.id }
+            : q
+        ));
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] });
     },
     onError: (error) => {
       console.error("Autosave failed:", error);
@@ -333,6 +181,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   // Save facility survey mutation (for manual save/complete actions)
   const saveSurveyMutation = useMutation({
     mutationFn: async (questionsData: any[]) => {
+      setIsPersisting(true);
       const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -341,14 +190,40 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       if (!response.ok) throw new Error('Failed to save facility survey');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (savedQuestions: any[]) => {
+      setIsPersisting(false);
+      // Eagerly update local state with new database IDs to prevent race condition
+      // This ensures autosave uses correct IDs even if user starts typing immediately
+      templateToDbIdMap.current.clear();
+      const updatedQuestions: SurveyQuestion[] = savedQuestions.map((sq: any) => {
+        const templateId = sq.templateQuestionId;
+        if (templateId && sq.id) {
+          templateToDbIdMap.current.set(templateId, sq.id);
+        }
+        return {
+          templateId: templateId,
+          dbId: sq.id,
+          category: sq.category,
+          subcategory: sq.subcategory,
+          question: sq.question,
+          standard: sq.standard,
+          type: sq.type,
+          response: sq.response,
+          notes: sq.notes,
+          evidence: sq.evidence || [],
+          recommendations: sq.recommendations || []
+        };
+      });
+      setQuestions(updatedQuestions);
+      
       toast({
         title: "Survey Saved",
         description: "Your facility survey progress has been saved.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] });
     },
     onError: (error) => {
+      setIsPersisting(false);
       toast({
         title: "Save Failed",
         description: `Failed to save survey: ${error.message}`,
@@ -368,14 +243,14 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     }, 1500); // Autosave after 1.5 seconds of inactivity
   }, [autosaveQuestionMutation]);
 
-  const updateQuestion = (id: string, field: string, value: any) => {
+  const updateQuestion = (templateId: string, field: string, value: any) => {
     setQuestions(prev => {
       const updated = prev.map(q => 
-        q.id === id ? { ...q, [field]: value } : q
+        q.templateId === templateId ? { ...q, [field]: value } : q
       );
       
       // Find the updated question to trigger autosave
-      const updatedQuestion = updated.find(q => q.id === id);
+      const updatedQuestion = updated.find(q => q.templateId === templateId);
       if (updatedQuestion) {
         triggerAutosave(updatedQuestion, { [field]: value });
       }
@@ -387,7 +262,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const handleSave = () => {
     const questionsData = questions.map(q => ({
       assessmentId,
-      templateQuestionId: q.id.length < 36 ? q.id : undefined,
+      templateQuestionId: q.templateId, // Use the stable templateId field
       category: q.category,
       subcategory: q.subcategory,
       question: q.question,
@@ -402,16 +277,34 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     saveSurveyMutation.mutate(questionsData);
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (progress >= 80) {
-      handleSave();
-      setTimeout(() => {
+      const questionsData = questions.map(q => ({
+        assessmentId,
+        templateQuestionId: q.templateId,
+        category: q.category,
+        subcategory: q.subcategory,
+        question: q.question,
+        standard: q.standard,
+        type: q.type,
+        response: q.response,
+        notes: q.notes,
+        evidence: q.evidence || [],
+        recommendations: q.recommendations || []
+      }));
+
+      try {
+        // Wait for save to complete before advancing workflow
+        await saveSurveyMutation.mutateAsync(questionsData);
         onComplete?.();
         toast({
           title: "Facility Survey Complete",
           description: "Ready to proceed to ASIS Risk Assessment phase.",
         });
-      }, 1000);
+      } catch (error) {
+        // Error toast already shown by mutation's onError handler
+        console.error("Failed to complete survey:", error);
+      }
     }
   };
 
@@ -432,42 +325,42 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor={`${question.id}-value`}>Measurement Value</Label>
+              <Label htmlFor={`${question.templateId}-value`}>Measurement Value</Label>
               <Input
-                id={`${question.id}-value`}
+                id={`${question.templateId}-value`}
                 type="number"
                 step="0.1"
                 value={question.response?.value || ""}
-                onChange={(e) => updateQuestion(question.id, "response", { 
+                onChange={(e) => updateQuestion(question.templateId, "response", { 
                   ...question.response, 
                   value: e.target.value,
                   unit: question.response?.unit || "fc" 
                 })}
                 placeholder="Enter measurement"
-                data-testid={`input-${question.id}-value`}
+                data-testid={`input-${question.templateId}-value`}
               />
               <Input
                 placeholder="Unit (fc, Px/ft, feet, etc.)"
                 value={question.response?.unit || ""}
-                onChange={(e) => updateQuestion(question.id, "response", { 
+                onChange={(e) => updateQuestion(question.templateId, "response", { 
                   ...question.response, 
                   unit: e.target.value 
                 })}
-                data-testid={`input-${question.id}-unit`}
+                data-testid={`input-${question.templateId}-unit`}
               />
             </div>
             
             {/* Add Assessment Response for measurement questions, especially lighting */}
             <div className="space-y-2">
-              <Label htmlFor={`${question.id}-assessment`}>Assessment Response</Label>
+              <Label htmlFor={`${question.templateId}-assessment`}>Assessment Response</Label>
               <Select 
                 value={question.response?.assessment || ""} 
-                onValueChange={(value) => updateQuestion(question.id, "response", { 
+                onValueChange={(value) => updateQuestion(question.templateId, "response", { 
                   ...question.response, 
                   assessment: value 
                 })}
               >
-                <SelectTrigger data-testid={`select-${question.id}-assessment`}>
+                <SelectTrigger data-testid={`select-${question.templateId}-assessment`}>
                   <SelectValue placeholder="Select assessment" />
                 </SelectTrigger>
                 <SelectContent>
@@ -495,9 +388,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         return (
           <Select 
             value={question.response || ""} 
-            onValueChange={(value) => updateQuestion(question.id, "response", value)}
+            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
-            <SelectTrigger data-testid={`select-${question.id}`}>
+            <SelectTrigger data-testid={`select-${question.templateId}`}>
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
             <SelectContent>
@@ -523,9 +416,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         return (
           <Select 
             value={question.response || ""} 
-            onValueChange={(value) => updateQuestion(question.id, "response", value)}
+            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
-            <SelectTrigger data-testid={`select-${question.id}`}>
+            <SelectTrigger data-testid={`select-${question.templateId}`}>
               <SelectValue placeholder="Select response" />
             </SelectTrigger>
             <SelectContent>
@@ -541,9 +434,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         return (
           <Select 
             value={question.response || ""} 
-            onValueChange={(value) => updateQuestion(question.id, "response", value)}
+            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
-            <SelectTrigger data-testid={`select-${question.id}`}>
+            <SelectTrigger data-testid={`select-${question.templateId}`}>
               <SelectValue placeholder="Select rating" />
             </SelectTrigger>
             <SelectContent>
@@ -560,6 +453,33 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         return null;
     }
   };
+
+  // Show loading state while template questions are being fetched
+  if (questionsLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
+          <p className="text-muted-foreground">Loading survey questions from template...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no questions are available (shouldn't happen with proper templates)
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">No survey questions available.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            This assessment may not have been created from a template with questions.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -637,7 +557,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               const categoryQuestions = questions.filter(q => q.category === categories[currentCategory]);
               categoryQuestions.forEach(q => {
                 if (!q.notes) {
-                  updateQuestion(q.id, "notes", "[Section Skipped]");
+                  updateQuestion(q.templateId, "notes", "[Section Skipped]");
                 }
               });
               // Move to next category or complete
@@ -654,7 +574,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         </div>
 
         {currentCategoryQuestions.map((question) => (
-          <Card key={question.id}>
+          <Card key={question.templateId}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -681,14 +601,14 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
 
               {/* Notes */}
               <div>
-                <Label htmlFor={`${question.id}-notes`}>Observations & Notes</Label>
+                <Label htmlFor={`${question.templateId}-notes`}>Observations & Notes</Label>
                 <Textarea
-                  id={`${question.id}-notes`}
+                  id={`${question.templateId}-notes`}
                   value={question.notes || ""}
-                  onChange={(e) => updateQuestion(question.id, "notes", e.target.value)}
+                  onChange={(e) => updateQuestion(question.templateId, "notes", e.target.value)}
                   placeholder="Document specific observations, conditions, or concerns..."
                   rows={2}
-                  data-testid={`textarea-${question.id}-notes`}
+                  data-testid={`textarea-${question.templateId}-notes`}
                 />
               </div>
 
@@ -697,7 +617,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                 <Label className="text-sm font-medium mb-2 block">Photo Evidence</Label>
                 <EvidenceUploader
                   assessmentId={assessmentId}
-                  questionId={question.id}
+                  questionId={question.dbId || ""}
                   questionType="facility"
                   evidence={question.evidence || []}
                   onUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] })}
@@ -721,11 +641,11 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         <Button 
           variant="outline"
           onClick={handleSave}
-          disabled={saveSurveyMutation.isPending}
+          disabled={isPersisting}
           data-testid="button-save-survey"
         >
           <Save className="h-4 w-4 mr-2" />
-          {saveSurveyMutation.isPending ? "Saving..." : "Save Progress"}
+          {isPersisting ? "Saving..." : "Save Progress"}
         </Button>
         
         <div className="flex gap-2">
@@ -749,6 +669,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
           ) : (
             <Button 
               onClick={handleComplete}
+              disabled={isPersisting}
               data-testid="button-complete-survey"
             >
               Complete Survey & Start Risk Assessment
