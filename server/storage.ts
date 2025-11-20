@@ -204,6 +204,9 @@ export interface IStorage {
   getControlLibrary(): Promise<ControlLibrary[]>;
   getControlLibraryByCategory(category: string): Promise<ControlLibrary[]>;
   getControlLibraryItem(id: string): Promise<ControlLibrary | undefined>;
+  
+  // Risk Calculation methods
+  getSurveyResponsesWithControlWeights(assessmentId: string, threatId: string): Promise<{answer: any, controlWeight: number}[]>;
 
   // Geographic Intelligence - Points of Interest methods
   getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]>;
@@ -1292,6 +1295,10 @@ export class MemStorage implements IStorage {
 
   async getControlLibraryItem(id: string): Promise<ControlLibrary | undefined> {
     throw new Error("Control Library not supported in MemStorage - use DbStorage");
+  }
+  
+  async getSurveyResponsesWithControlWeights(assessmentId: string, threatId: string): Promise<{answer: any, controlWeight: number}[]> {
+    throw new Error("Risk calculation not supported in MemStorage - use DbStorage");
   }
 
   // Geographic Intelligence - Points of Interest methods

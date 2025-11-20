@@ -890,6 +890,41 @@ export class DbStorage implements IStorage {
       .where(and(eq(schema.controlLibrary.id, id), eq(schema.controlLibrary.active, true)));
     return results[0];
   }
+  
+  // Risk Calculation methods
+  async getSurveyResponsesWithControlWeights(assessmentId: string, threatId: string): Promise<{answer: any, controlWeight: number}[]> {
+    // Query: Get survey responses with their linked control weights for a specific threat
+    // This joins facility_survey_questions → template_questions → question_threat_map → control_library
+    const results = await db
+      .select({
+        answer: schema.facilitySurveyQuestions.response,
+        controlWeight: schema.controlLibrary.weight,
+      })
+      .from(schema.facilitySurveyQuestions)
+      .innerJoin(
+        schema.templateQuestions,
+        eq(schema.facilitySurveyQuestions.templateQuestionId, schema.templateQuestions.id)
+      )
+      .innerJoin(
+        schema.questionThreatMap,
+        eq(schema.templateQuestions.id, schema.questionThreatMap.questionId)
+      )
+      .innerJoin(
+        schema.controlLibrary,
+        eq(schema.templateQuestions.controlLibraryId, schema.controlLibrary.id)
+      )
+      .where(
+        and(
+          eq(schema.facilitySurveyQuestions.assessmentId, assessmentId),
+          eq(schema.questionThreatMap.threatId, threatId)
+        )
+      );
+    
+    return results.map(row => ({
+      answer: row.answer,
+      controlWeight: row.controlWeight || 0,
+    }));
+  }
 
   // Geographic Intelligence - Points of Interest methods
   async getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]> {
