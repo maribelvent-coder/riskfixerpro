@@ -147,19 +147,58 @@ export interface RiskIntelligenceReport {
 }
 
 /**
- * Determine crime severity level based on rate per 100k
+ * Absolute count thresholds for when population data is unavailable
+ * Based on typical jurisdiction sizes and crime patterns
+ */
+const ABSOLUTE_COUNT_THRESHOLDS = {
+  violent: {
+    veryLow: 50,    // < 50 violent crimes = very low
+    low: 200,       // 50-200 = low
+    medium: 500,    // 200-500 = medium
+    high: 1000,     // 500-1000 = high
+    // > 1000 = very high
+  },
+  property: {
+    veryLow: 200,   // < 200 property crimes = very low
+    low: 1000,      // 200-1000 = low
+    medium: 2500,   // 1000-2500 = medium
+    high: 5000,     // 2500-5000 = high
+    // > 5000 = very high
+  }
+};
+
+/**
+ * Determine crime severity level based on rate per 100k or absolute counts (fallback)
  */
 function getCrimeSeverity(
   crimeType: "violent" | "property",
-  rate: number
+  rate: number,
+  total?: number
 ): "very-low" | "low" | "medium" | "high" | "very-high" {
-  const thresholds = SEVERITY_THRESHOLDS[crimeType];
+  // If rate is available, use rate-based thresholds
+  if (rate && rate > 0) {
+    const thresholds = SEVERITY_THRESHOLDS[crimeType];
+    
+    if (rate < thresholds.veryLow) return "very-low";
+    if (rate < thresholds.low) return "low";
+    if (rate < thresholds.medium) return "medium";
+    if (rate < thresholds.high) return "high";
+    return "very-high";
+  }
   
-  if (rate < thresholds.veryLow) return "very-low";
-  if (rate < thresholds.low) return "low";
-  if (rate < thresholds.medium) return "medium";
-  if (rate < thresholds.high) return "high";
-  return "very-high";
+  // Fallback to absolute count thresholds if rate unavailable
+  if (total !== undefined && total >= 0) {
+    const thresholds = ABSOLUTE_COUNT_THRESHOLDS[crimeType];
+    
+    if (total < thresholds.veryLow) return "very-low";
+    if (total < thresholds.low) return "low";
+    if (total < thresholds.medium) return "medium";
+    if (total < thresholds.high) return "high";
+    return "very-high";
+  }
+  
+  // No data available
+  return "very-low";
 }
 
 /**
@@ -336,21 +375,43 @@ function generateKeyInsights(crimeSummary: CrimeDataSummary): string[] {
   
   const violentRate = crimeSummary.violentRate || 0;
   const propertyRate = crimeSummary.propertyRate || 0;
+  const hasRateData = violentRate > 0 || propertyRate > 0;
+  const hasPopulation = crimeSummary.population && crimeSummary.population > 0;
   
   // Violent crime insights
-  const violentSeverity = getCrimeSeverity("violent", violentRate);
+  const violentSeverity = getCrimeSeverity("violent", violentRate, crimeSummary.violentTotal);
   if (violentSeverity === "very-high" || violentSeverity === "high") {
-    insights.push(`⚠️ High violent crime area - ${violentRate.toFixed(1)} incidents per 100k (${violentSeverity.replace('-', ' ')} risk)`);
+    if (violentRate > 0) {
+      insights.push(`⚠️ High violent crime area - ${violentRate.toFixed(1)} incidents per 100k (${violentSeverity.replace('-', ' ')} risk)`);
+    } else {
+      // Using absolute counts as fallback
+      insights.push(`⚠️ High violent crime area - ${crimeSummary.violentTotal.toLocaleString()} reported incidents (${violentSeverity.replace('-', ' ')} risk)`);
+    }
   } else if (violentSeverity === "very-low") {
-    insights.push(`✓ Low violent crime area - ${violentRate.toFixed(1)} incidents per 100k`);
+    if (violentRate > 0) {
+      insights.push(`✓ Low violent crime area - ${violentRate.toFixed(1)} incidents per 100k`);
+    } else if (crimeSummary.violentTotal >= 0) {
+      // Using absolute counts as fallback
+      insights.push(`✓ Low violent crime area - ${crimeSummary.violentTotal.toLocaleString()} reported incidents`);
+    }
   }
   
   // Property crime insights
-  const propertySeverity = getCrimeSeverity("property", propertyRate);
+  const propertySeverity = getCrimeSeverity("property", propertyRate, crimeSummary.propertyTotal);
   if (propertySeverity === "very-high" || propertySeverity === "high") {
-    insights.push(`⚠️ High property crime area - ${propertyRate.toFixed(1)} incidents per 100k (${propertySeverity.replace('-', ' ')} risk)`);
+    if (propertyRate > 0) {
+      insights.push(`⚠️ High property crime area - ${propertyRate.toFixed(1)} incidents per 100k (${propertySeverity.replace('-', ' ')} risk)`);
+    } else {
+      // Using absolute counts as fallback
+      insights.push(`⚠️ High property crime area - ${crimeSummary.propertyTotal.toLocaleString()} reported incidents (${propertySeverity.replace('-', ' ')} risk)`);
+    }
   } else if (propertySeverity === "very-low") {
-    insights.push(`✓ Low property crime area - ${propertyRate.toFixed(1)} incidents per 100k`);
+    if (propertyRate > 0) {
+      insights.push(`✓ Low property crime area - ${propertyRate.toFixed(1)} incidents per 100k`);
+    } else if (crimeSummary.propertyTotal >= 0) {
+      // Using absolute counts as fallback
+      insights.push(`✓ Low property crime area - ${crimeSummary.propertyTotal.toLocaleString()} reported incidents`);
+    }
   }
   
   // Ratio insights - only show if crime rates are meaningful (not both very-low)
@@ -382,8 +443,8 @@ function calculateOverallRiskLevel(crimeSummary: CrimeDataSummary): "low" | "mod
   const violentRate = crimeSummary.violentRate || 0;
   const propertyRate = crimeSummary.propertyRate || 0;
   
-  const violentSeverity = getCrimeSeverity("violent", violentRate);
-  const propertySeverity = getCrimeSeverity("property", propertyRate);
+  const violentSeverity = getCrimeSeverity("violent", violentRate, crimeSummary.violentTotal);
+  const propertySeverity = getCrimeSeverity("property", propertyRate, crimeSummary.propertyTotal);
   
   // Critical: Very high in either category
   if (violentSeverity === "very-high") return "critical";
@@ -435,15 +496,41 @@ async function getSiteCrimeData(siteId: string): Promise<CrimeDataSummary | null
   
   const violentTotal = violentData?.total || 0;
   const propertyTotal = propertyData?.total || 0;
-  const violentRate = violentData?.rate_per_100k;
-  const propertyRate = propertyData?.rate_per_100k;
+  let violentRate = violentData?.rate_per_100k;
+  let propertyRate = propertyData?.rate_per_100k;
   
-  // Try to infer population from rate and total
+  // Try to infer population from rate and total (if one category has rate)
   let population: number | undefined;
-  if (violentRate && violentTotal > 0) {
+  if (violentRate && violentRate > 0 && violentTotal > 0) {
     population = Math.round((violentTotal / violentRate) * 100000);
-  } else if (propertyRate && propertyTotal > 0) {
+  } else if (propertyRate && propertyRate > 0 && propertyTotal > 0) {
     population = Math.round((propertyTotal / propertyRate) * 100000);
+  }
+  
+  // If we derived population from one category's rate, use it to calculate the other category's rate
+  if (population && population > 0) {
+    if ((!violentRate || violentRate === 0) && violentTotal > 0) {
+      violentRate = (violentTotal / population) * 100000;
+    }
+    if ((!propertyRate || propertyRate === 0) && propertyTotal > 0) {
+      propertyRate = (propertyTotal / population) * 100000;
+    }
+  }
+  
+  // If both rates are still missing, try jurisdiction population estimate
+  if ((!violentRate || violentRate === 0) && (!propertyRate || propertyRate === 0) && (violentTotal > 0 || propertyTotal > 0)) {
+    const jurisdictionPop = estimateJurisdictionPopulation(bestSource);
+    
+    if (jurisdictionPop && jurisdictionPop > 0) {
+      population = jurisdictionPop;
+      // Calculate rates using jurisdiction population
+      if (violentTotal > 0) {
+        violentRate = (violentTotal / population) * 100000;
+      }
+      if (propertyTotal > 0) {
+        propertyRate = (propertyTotal / population) * 100000;
+      }
+    }
   }
   
   const year = bestObservation.startDate 
@@ -459,6 +546,74 @@ async function getSiteCrimeData(siteId: string): Promise<CrimeDataSummary | null
     year,
     source: bestSource.dataSource,
   };
+}
+
+/**
+ * Estimate jurisdiction population from crime source metadata
+ * Returns estimated population or undefined if unavailable
+ */
+function estimateJurisdictionPopulation(source: typeof schema.crimeSources.$inferSelect): number | undefined {
+  // If we have coverage area metadata with population, use it
+  const coverageData = source.coverageArea as any;
+  if (coverageData?.population) {
+    return coverageData.population;
+  }
+  
+  // Common jurisdiction population estimates (2023 Census data)
+  // This helps when crime data lacks population context
+  const jurisdictionEstimates: Record<string, number> = {
+    // Major cities
+    'seattle': 749256,
+    'chicago': 2746388,
+    'los angeles': 3898747,
+    'new york': 8335897,
+    'houston': 2314157,
+    'phoenix': 1650070,
+    'philadelphia': 1584064,
+    'san antonio': 1495295,
+    'san diego': 1386932,
+    'dallas': 1304379,
+    'austin': 974447,
+    'jacksonville': 954614,
+    'fort worth': 956709,
+    'columbus': 906528,
+    'charlotte': 912096,
+    'san francisco': 873965,
+    'indianapolis': 882039,
+    'denver': 711463,
+    'washington': 712816,
+    'boston': 675647,
+    'nashville': 689447,
+    'detroit': 639111,
+    'portland': 652503,
+    'memphis': 633104,
+    'baltimore': 576498,
+    'milwaukee': 569330,
+    'albuquerque': 564559,
+    'tucson': 548073,
+    'fresno': 545567,
+    'mesa': 511648,
+    'atlanta': 510823,
+    'omaha': 483335,
+    'miami': 449514,
+    'oakland': 440646,
+    'tulsa': 411401,
+    'minneapolis': 429954,
+    'wichita': 396119,
+    'new orleans': 364877,
+  };
+  
+  // Check city match
+  if (source.city) {
+    const cityKey = source.city.toLowerCase().trim();
+    if (jurisdictionEstimates[cityKey]) {
+      return jurisdictionEstimates[cityKey];
+    }
+  }
+  
+  // If no specific match found, return undefined
+  // This will trigger absolute count fallback
+  return undefined;
 }
 
 /**
