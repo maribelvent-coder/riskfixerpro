@@ -104,9 +104,23 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const categories = Array.from(new Set(questions.map(q => q.category)));
   const currentCategoryQuestions = questions.filter(q => q.category === categories[currentCategory]);
   
-  const completedQuestions = questions.filter(q => 
-    q.response !== undefined && q.response !== null && q.response !== ""
-  ).length;
+  // Helper function to check if a question is completed
+  const isQuestionCompleted = (q: SurveyQuestion): boolean => {
+    if (!q.response) return false;
+    
+    // For measurement questions, both value and assessment must be filled
+    if (q.type === "measurement") {
+      if (typeof q.response === 'object') {
+        return !!(q.response.value && q.response.assessment);
+      }
+      return false;
+    }
+    
+    // For yes-no, condition, and rating questions, response must be a non-empty string
+    return typeof q.response === 'string' && q.response !== "";
+  };
+  
+  const completedQuestions = questions.filter(isQuestionCompleted).length;
   const progress = questions.length > 0 ? (completedQuestions / questions.length) * 100 : 0;
 
   // Autosave mutation for individual questions
@@ -548,9 +562,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               {categories.map((category, index) => {
                 const Icon = getCategoryIcon(category);
                 const categoryQuestions = questions.filter(q => q.category === category);
-                const categoryCompleted = categoryQuestions.filter(q => 
-                  q.response !== undefined && q.response !== null && q.response !== ""
-                ).length;
+                const categoryCompleted = categoryQuestions.filter(isQuestionCompleted).length;
                 const isComplete = categoryQuestions.length > 0 && categoryCompleted === categoryQuestions.length;
                 
                 return (
@@ -617,7 +629,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                   <CardTitle className="text-sm sm:text-base leading-tight">{question.question}</CardTitle>
                   <Badge variant="secondary" className="text-[10px] sm:text-xs">{question.subcategory}</Badge>
                 </div>
-                {question.response && (
+                {isQuestionCompleted(question) && (
                   <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 mt-0.5 sm:mt-1 shrink-0" />
                 )}
               </div>
