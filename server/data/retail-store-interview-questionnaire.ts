@@ -1303,7 +1303,7 @@ export const RETAIL_STORE_INTERVIEW_QUESTIONS: RetailInterviewQuestion[] = [
   ...section4_cctv,
   ...section5_cash,
   ...section6_physical,
-  ...section7_lpStaff,
+  ...section7_lp_staff,
   ...section8_employee,
   ...section9_merchandise,
   ...section10_refunds,
