@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { FileText, Download, Eye, Share, Mail, AlertCircle } from "lucide-react";
+import { FileText, Download, Eye, Share, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { generateExecutiveSummaryPDF } from "@/lib/executiveSummaryPDF";
 import { generateTechnicalReportPDF } from "@/lib/technicalReportPDF";
 import { canExportPDF, getUpgradeMessage, type AccountTier } from "@shared/tierLimits";
+import { generateHTMLReport } from "@/lib/htmlReportGenerator";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ReportConfig {
   id: string;
@@ -63,6 +65,9 @@ export function ReportGenerator({
   const { user } = useAuth();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewReport, setPreviewReport] = useState<ReportConfig | null>(null);
+  const [previewHTML, setPreviewHTML] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
   
   const tier = (user?.accountTier || "free") as AccountTier;
@@ -73,9 +78,45 @@ export function ReportGenerator({
     onGenerate?.(reportId);
   };
 
-  const handlePreview = (report: ReportConfig) => {
+  const handlePreview = async (report: ReportConfig) => {
     setPreviewReport(report);
     setPreviewOpen(true);
+    setLoadingPreview(true);
+    setPreviewHTML(null);
+    setPreviewError(null);
+    
+    try {
+      // Fetch comprehensive report data
+      const response = await apiRequest('GET', `/api/assessments/${assessmentId}/comprehensive-report-data`);
+      const reportData = await response.json();
+      
+      // Basic validation before passing to generator
+      // Note: generateHTMLReport has defensive normalization for malformed data
+      if (!reportData || typeof reportData !== 'object') {
+        throw new Error('Invalid report data received from server');
+      }
+      
+      // Generate HTML report (generator handles missing fields via normalizeReportData)
+      const htmlContent = await generateHTMLReport(reportData);
+      
+      if (!htmlContent || typeof htmlContent !== 'string') {
+        throw new Error('HTML generation failed - no content produced');
+      }
+      
+      setPreviewHTML(htmlContent);
+      setPreviewError(null);
+    } catch (error) {
+      const errorMessage = `Failed to generate preview: ${(error as Error).message}`;
+      setPreviewError(errorMessage);
+      toast({
+        title: "Preview Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      // Keep dialog open to show error state
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   const handleDownload = async (reportId: string) => {
@@ -265,90 +306,45 @@ export function ReportGenerator({
       </Card>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" data-testid="dialog-report-preview">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-report-preview">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              {previewReport?.title}
+              {previewReport?.title} - Preview
             </DialogTitle>
           </DialogHeader>
           
-          {previewReport && (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    {previewReport.format.toUpperCase()}
-                  </Badge>
-                  <Badge 
-                    variant="secondary"
-                    className={
-                      previewReport.status === "ready" ? "bg-chart-2 text-chart-2-foreground" :
-                      previewReport.status === "generating" ? "bg-chart-3 text-chart-3-foreground" :
-                      "bg-destructive text-destructive-foreground"
-                    }
-                  >
-                    {previewReport.status.charAt(0).toUpperCase() + previewReport.status.slice(1)}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {previewReport.description}
-                </p>
+          {loadingPreview ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Generating preview...</p>
               </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">Report Metadata</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Assessment ID:</span>
-                    <span className="ml-2 font-mono">{assessmentId}</span>
-                  </div>
-                  {previewReport.lastGenerated && (
-                    <div>
-                      <span className="text-muted-foreground">Last Generated:</span>
-                      <span className="ml-2">{previewReport.lastGenerated}</span>
-                    </div>
-                  )}
-                  {previewReport.size && (
-                    <div>
-                      <span className="text-muted-foreground">File Size:</span>
-                      <span className="ml-2">{previewReport.size}</span>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-muted-foreground">Report ID:</span>
-                    <span className="ml-2 font-mono">{previewReport.id}</span>
-                  </div>
-                </div>
+            </div>
+          ) : previewError ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+                <p className="text-sm text-destructive">{previewError}</p>
+                <Button
+                  variant="outline"
+                  onClick={() => setPreviewOpen(false)}
+                  data-testid="button-close-preview-error"
+                >
+                  Close
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">Report Sections</h3>
-                <div className="space-y-2">
-                  {previewReport.sections.map((section, idx) => (
-                    <div key={section} className="flex items-start gap-2 text-sm">
-                      <span className="text-muted-foreground font-mono">{idx + 1}.</span>
-                      <span>{section}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <p className="text-xs text-muted-foreground">
-                  {previewReport.format === 'pdf' && 
-                    'This preview shows the report structure. The actual PDF will include formatted content, charts, and images.'
-                  }
-                  {previewReport.format === 'docx' && 
-                    'This preview shows the report structure. The actual DOCX will include formatted content with proper styling.'
-                  }
-                  {previewReport.format === 'html' && 
-                    'This preview shows the report structure. The actual HTML will include interactive elements and embedded charts.'
-                  }
-                </p>
-              </div>
-
-              <div className="flex gap-2 justify-end">
+            </div>
+          ) : previewHTML ? (
+            <div className="flex-1 overflow-hidden flex flex-col gap-4">
+              <iframe
+                srcDoc={previewHTML}
+                className="w-full flex-1 border rounded-md"
+                title="Report Preview"
+                sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+                data-testid="iframe-report-preview"
+              />
+              <div className="flex gap-2 justify-end border-t pt-4">
                 <Button
                   variant="outline"
                   onClick={() => setPreviewOpen(false)}
@@ -358,14 +354,27 @@ export function ReportGenerator({
                 </Button>
                 <Button
                   onClick={() => {
-                    handleDownload(previewReport.id);
-                    setPreviewOpen(false);
+                    handleDownload(previewReport!.id);
                   }}
-                  disabled={generatingPDF === previewReport.id}
+                  disabled={generatingPDF === previewReport?.id || !canExport}
                   data-testid="button-download-from-preview"
                 >
                   <Download className="h-3 w-3 mr-1" />
-                  {generatingPDF === previewReport.id ? "Generating..." : "Download Report"}
+                  {generatingPDF === previewReport?.id ? "Generating..." : "Download PDF"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">No preview available</p>
+                <Button
+                  variant="outline"
+                  onClick={() => setPreviewOpen(false)}
+                  data-testid="button-close-preview-empty"
+                >
+                  Close
                 </Button>
               </div>
             </div>
