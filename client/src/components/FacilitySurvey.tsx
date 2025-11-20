@@ -170,7 +170,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         ));
       }
       
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] });
+      // No query invalidation here - autosave should be silent and non-disruptive
+      // Local state is already updated optimistically above
+      // Manual save/complete actions will trigger full refresh when needed
     },
     onError: (error) => {
       console.error("Autosave failed:", error);
