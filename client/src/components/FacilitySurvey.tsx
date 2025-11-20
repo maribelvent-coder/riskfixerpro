@@ -36,11 +36,13 @@ interface SurveyQuestion {
   subcategory: string;
   question: string;
   standard: string;
-  type: "condition" | "measurement" | "yes-no" | "rating";
+  type: "condition" | "measurement" | "yes-no" | "rating" | "text";
   response?: any;
   notes?: string;
   evidence?: string[];
   recommendations?: string[];
+  conditionalOnQuestionId?: string; // The templateId of the prerequisite question
+  showWhenAnswer?: string; // The answer value that triggers showing this question (e.g., "yes")
 }
 
 // NOTE: Hardcoded questions removed - now using template questions from database
@@ -89,7 +91,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         response: sq.response,
         notes: sq.notes,
         evidence: sq.evidence || [],
-        recommendations: sq.recommendations || []
+        recommendations: sq.recommendations || [],
+        conditionalOnQuestionId: sq.conditionalOnQuestionId,
+        showWhenAnswer: sq.showWhenAnswer
       }));
       
       setQuestions(formattedQuestions);
@@ -106,12 +110,33 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   
   // Helper function to check if a question is completed
   const isQuestionCompleted = (q: SurveyQuestion): boolean => {
+    // Check if this is a conditional question
+    if (q.conditionalOnQuestionId && q.showWhenAnswer) {
+      // Find the prerequisite question
+      const prereqQuestion = questions.find(pq => pq.templateId === q.conditionalOnQuestionId);
+      
+      // If prerequisite answer doesn't match showWhenAnswer, this question is auto-completed (hidden)
+      if (prereqQuestion && prereqQuestion.response !== q.showWhenAnswer) {
+        return true; // Auto-complete hidden conditional questions
+      }
+      
+      // If prerequisite matches, fall through to normal validation
+    }
+    
     if (!q.response) return false;
     
     // For measurement questions, both value and assessment must be filled
     if (q.type === "measurement") {
       if (typeof q.response === 'object') {
         return !!(q.response.value && q.response.assessment);
+      }
+      return false;
+    }
+    
+    // For text questions, both textResponse and assessment must be filled
+    if (q.type === "text") {
+      if (typeof q.response === 'object') {
+        return !!(q.response.textResponse && q.response.assessment);
       }
       return false;
     }
