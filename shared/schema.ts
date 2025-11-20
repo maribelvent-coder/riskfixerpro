@@ -540,6 +540,372 @@ export const controlLibrary = pgTable("control_library", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// ===================================================================
+// PHASE 2: EXECUTIVE PROTECTION MODULE
+// ===================================================================
+
+// Executive Profiles - Core executive/HNW individual information
+export const executiveProfiles = pgTable("executive_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id")
+    .references(() => assessments.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  // Personal Information
+  fullName: text("full_name").notNull(),
+  title: text("title"),
+  companyRole: text("company_role"),
+  
+  // Contact Information
+  primaryPhone: text("primary_phone"),
+  secondaryPhone: text("secondary_phone"),
+  emergencyContact: text("emergency_contact"),
+  emergencyPhone: text("emergency_phone"),
+  
+  // Public Profile
+  publicProfile: text("public_profile").notNull().default("medium"),
+  // Values: very_high, high, medium, low, private
+  netWorthRange: text("net_worth_range"),
+  // Values: <1M, 1-10M, 10-50M, 50-100M, 100M+
+  industryCategory: text("industry_category"),
+  mediaExposure: text("media_exposure"),
+  // Values: frequent, occasional, rare, none
+  
+  // Family Information
+  familyMembers: text("family_members"), // JSON array
+  // [{name, relationship, age, school?, workplace?}]
+  
+  // Security Posture
+  currentSecurityLevel: text("current_security_level")
+    .notNull()
+    .default("minimal"),
+  // Values: none, minimal, moderate, comprehensive, 24_7_detail
+  hasPersonalProtection: boolean("has_personal_protection").default(false),
+  hasPanicRoom: boolean("has_panic_room").default(false),
+  hasArmoredVehicle: boolean("has_armored_vehicle").default(false),
+  
+  // Threat Intelligence
+  knownThreats: text("known_threats"), // JSON array
+  previousIncidents: text("previous_incidents"), // JSON array
+  restrainingOrders: text("restraining_orders"), // JSON array
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+// Executive Interview Responses - Structured interview data
+export const executiveInterviews = pgTable("executive_interviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  executiveProfileId: varchar("executive_profile_id")
+    .references(() => executiveProfiles.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  interviewDate: timestamp("interview_date").notNull(),
+  interviewerUserId: varchar("interviewer_user_id")
+    .references(() => users.id, { onDelete: "set null" }),
+  interviewDuration: integer("interview_duration"), // minutes
+  
+  // Interview Responses (JSON format)
+  responses: text("responses").notNull(),
+  // Structured questionnaire responses
+  
+  // Subjective Assessments
+  perceivedThreatLevel: integer("perceived_threat_level"), // 1-5
+  cooperationLevel: text("cooperation_level"),
+  // Values: excellent, good, fair, poor, resistant
+  
+  notes: text("notes"),
+  concernsRaised: text("concerns_raised"), // JSON array
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Executive Locations - Residences, offices, regular venues
+export const executiveLocations = pgTable("executive_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  executiveProfileId: varchar("executive_profile_id")
+    .references(() => executiveProfiles.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  locationType: text("location_type").notNull(),
+  // Types: primary_residence, secondary_residence, office, gym, 
+  //        restaurant, club, school, frequent_destination
+  
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zipCode: text("zip_code").notNull(),
+  country: text("country").notNull().default("USA"),
+  
+  // Geographic Coordinates (stored as text for precision)
+  latitude: text("latitude").notNull(),
+  longitude: text("longitude").notNull(),
+  
+  // Frequency & Patterns
+  visitFrequency: text("visit_frequency"),
+  // Values: daily, weekly, monthly, occasional, seasonal
+  typicalVisitTime: text("typical_visit_time"),
+  // Values: morning, afternoon, evening, night, varies
+  predictable: boolean("predictable").default(true),
+  // Is the schedule predictable?
+  
+  // Security Assessment
+  securityRating: integer("security_rating"), // 1-5
+  privateProperty: boolean("private_property").default(true),
+  gatedCommunity: boolean("gated_community").default(false),
+  hasOnSiteSecurity: boolean("has_on_site_security").default(false),
+  
+  // Public Exposure
+  publiclyKnownAddress: boolean("publicly_known_address").default(false),
+  mediaPhotographed: boolean("media_photographed").default(false),
+  
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+// Travel Routes - Common paths between locations
+export const executiveTravelRoutes = pgTable("executive_travel_routes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  executiveProfileId: varchar("executive_profile_id")
+    .references(() => executiveProfiles.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  originLocationId: varchar("origin_location_id")
+    .references(() => executiveLocations.id, { onDelete: "cascade" })
+    .notNull(),
+  destLocationId: varchar("dest_location_id")
+    .references(() => executiveLocations.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  routeName: text("route_name"),
+  // e.g., "Home to Office - Route A"
+  
+  frequency: text("frequency"),
+  // Values: daily, weekly, monthly, occasional
+  typicalTime: text("typical_time"),
+  // Values: morning_commute, evening_commute, midday, varies
+  
+  // Route Characteristics
+  distanceMiles: real("distance_miles"),
+  estimatedDuration: integer("estimated_duration"), // minutes
+  routeVariation: text("route_variation"),
+  // Values: fixed_route, varies_route, randomized
+  
+  // Transportation
+  transportMode: text("transport_mode"),
+  // Values: personal_vehicle, driver, rideshare, public_transit, walk
+  vehicleType: text("vehicle_type"),
+  
+  // Route Security
+  riskLevel: text("risk_level"),
+  // Values: low, medium, high, critical
+  chokePoints: text("choke_points"), // JSON array of lat/lng
+  // Traffic lights, narrow streets, predictable stops
+  vulnerableSegments: text("vulnerable_segments"), // JSON array
+  
+  // Route Data (GeoJSON)
+  routeGeometry: text("route_geometry"), // GeoJSON LineString
+  
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Crime Data Imports - CAP Index & other crime data sources
+export const crimeDataImports = pgTable("crime_data_imports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id")
+    .references(() => assessments.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  dataSource: text("data_source").notNull(),
+  // Sources: cap_index, fbi_ucr, local_pd, manual_entry, pdf_import
+  
+  importDate: timestamp("import_date").default(sql`now()`).notNull(),
+  dataTimePeriod: text("data_time_period"),
+  // e.g., "2024 Annual", "Q3 2024", "Jan-Dec 2024"
+  
+  // Geographic Coverage
+  coverageArea: text("coverage_area"), // GeoJSON Polygon
+  city: text("city"),
+  county: text("county"),
+  state: text("state"),
+  zipCodes: text("zip_codes"), // JSON array
+  
+  // Crime Statistics (JSON format)
+  crimeStatistics: text("crime_statistics").notNull(),
+  // {
+  //   violent_crimes: {total, rate_per_100k, breakdown: {murder, assault, robbery, rape}},
+  //   property_crimes: {total, rate_per_100k, breakdown: {burglary, theft, auto_theft}},
+  //   other_crimes: {...}
+  // }
+  
+  // Comparative Data
+  nationalAverage: text("national_average"), // JSON
+  stateAverage: text("state_average"), // JSON
+  comparisonRating: text("comparison_rating"),
+  // Values: very_high, high, average, low, very_low
+  
+  // Original Files
+  originalFileUrl: text("original_file_url"),
+  originalFileName: text("original_file_name"),
+  
+  // Metadata
+  dataQuality: text("data_quality"),
+  // Values: verified, estimated, preliminary, unverified
+  
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Crime Incidents - Individual crime reports/pins
+export const crimeIncidents = pgTable("crime_incidents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  crimeDataImportId: varchar("crime_data_import_id")
+    .references(() => crimeDataImports.id, { onDelete: "cascade" }),
+  assessmentId: varchar("assessment_id")
+    .references(() => assessments.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  // Crime Details
+  incidentType: text("incident_type").notNull(),
+  // Types: murder, assault, robbery, burglary, theft, vandalism, etc.
+  incidentCategory: text("incident_category"),
+  // Categories: violent, property, drug, quality_of_life, other
+  
+  incidentDate: timestamp("incident_date"),
+  incidentTime: text("incident_time"),
+  
+  // Location (stored as text for precision)
+  latitude: text("latitude").notNull(),
+  longitude: text("longitude").notNull(),
+  address: text("address"),
+  
+  // Distance Analysis
+  distanceToExecutiveLocation: real("distance_to_executive_location"),
+  // Miles from primary residence or selected location
+  nearestExecutiveLocationId: varchar("nearest_executive_location_id")
+    .references(() => executiveLocations.id, { onDelete: "set null" }),
+  
+  // Incident Details
+  description: text("description"),
+  severity: text("severity"),
+  // Values: minor, moderate, serious, critical
+  
+  // Source
+  sourceAgency: text("source_agency"),
+  caseNumber: text("case_number"),
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Executive Points of Interest - Emergency services, threats, etc.
+export const executivePointsOfInterest = pgTable("executive_points_of_interest", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id")
+    .references(() => assessments.id, { onDelete: "cascade" })
+    .notNull(),
+  executiveLocationId: varchar("executive_location_id")
+    .references(() => executiveLocations.id, { onDelete: "set null" }),
+  // If POI is associated with specific executive location
+  
+  poiType: text("poi_type").notNull(),
+  // Types: police_station, fire_station, hospital, er, security_company,
+  //        private_security, known_threat, gang_territory, protest_location,
+  //        paparazzi_hotspot, competitor_office, custom
+  
+  name: text("name").notNull(),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  
+  // Geographic Coordinates (stored as text for precision)
+  latitude: text("latitude").notNull(),
+  longitude: text("longitude").notNull(),
+  
+  // Distance Analysis
+  distanceToLocation: real("distance_to_location"),
+  // Miles from associated executive location
+  estimatedResponseTime: integer("estimated_response_time"),
+  // Minutes (for emergency services)
+  
+  // POI Details
+  phoneNumber: text("phone_number"),
+  hours: text("hours"),
+  capabilities: text("capabilities"), // JSON array
+  // For hospitals: trauma_level, specialties
+  // For police: jurisdiction, dispatch_number
+  
+  // Threat Assessment (for threat-type POIs)
+  threatLevel: text("threat_level"),
+  // Values: low, medium, high, critical
+  threatNotes: text("threat_notes"),
+  
+  // Custom Fields
+  customCategory: text("custom_category"),
+  icon: text("icon"), // For map display
+  color: text("color"), // For map display
+  
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+// OSINT Findings - Open Source Intelligence research
+export const osintFindings = pgTable("osint_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  executiveProfileId: varchar("executive_profile_id")
+    .references(() => executiveProfiles.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  findingType: text("finding_type").notNull(),
+  // Types: social_media, news_article, public_record, property_record,
+  //        business_filing, court_record, address_leak, photo_location
+  
+  source: text("source").notNull(),
+  // e.g., "LinkedIn", "Facebook", "News Article", "Property Records"
+  
+  sourceUrl: text("source_url"),
+  discoveryDate: timestamp("discovery_date").notNull(),
+  publicationDate: timestamp("publication_date"),
+  
+  // Finding Details
+  title: text("title"),
+  summary: text("summary"),
+  fullContent: text("full_content"),
+  
+  // Risk Assessment
+  exposureLevel: text("exposure_level"),
+  // Values: critical, high, medium, low, informational
+  exposureType: text("exposure_type"),
+  // Types: location_disclosure, schedule_disclosure, family_info,
+  //        financial_info, security_gap, personal_habits
+  
+  // Metadata
+  tags: text("tags"), // JSON array
+  sentiment: text("sentiment"),
+  // Values: positive, neutral, negative, threatening
+  
+  // Mitigation
+  mitigationRequired: boolean("mitigation_required").default(false),
+  mitigationAction: text("mitigation_action"),
+  mitigationStatus: text("mitigation_status"),
+  // Values: pending, in_progress, completed, no_action
+  
+  attachments: text("attachments"), // JSON array of file URLs
+  
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 // Insert schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
