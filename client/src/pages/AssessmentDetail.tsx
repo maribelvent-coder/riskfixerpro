@@ -19,6 +19,7 @@ import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
+import OfficeBuildingInterview from "@/components/OfficeBuildingInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
 import { RiskAssessmentNBS } from "@/components/RiskAssessmentNBS";
 import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown } from "lucide-react";
@@ -591,22 +592,33 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         {/* Executive Protection Paradigm Tabs */}
         <TabsContent value="executive-interview" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
-                Executive Interview
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Conduct a comprehensive interview with the executive to gather critical security information about their daily routines, travel patterns, digital footprint, and threat awareness.
-              </p>
-            </CardHeader>
-          </Card>
-          
-          <ExecutiveInterview 
-            assessmentId={assessmentId}
-            onComplete={() => setActiveTab('executive-profile')}
-          />
+          {assessmentData?.templateId === 'office-building' ? (
+            // Office Building Security Interview (91 questions, 13 sections)
+            <OfficeBuildingInterview 
+              assessmentId={assessmentId}
+              onComplete={() => setActiveTab('executive-profile')}
+            />
+          ) : (
+            // Standard Executive Protection Interview
+            <>
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Executive Interview
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Conduct a comprehensive interview with the executive to gather critical security information about their daily routines, travel patterns, digital footprint, and threat awareness.
+                  </p>
+                </CardHeader>
+              </Card>
+              
+              <ExecutiveInterview 
+                assessmentId={assessmentId}
+                onComplete={() => setActiveTab('executive-profile')}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="executive-profile" className="space-y-4">
