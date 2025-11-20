@@ -15,6 +15,13 @@
       "when": 1763524752925,
       "tag": "0001_optimal_young_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763672017795,
+      "tag": "0002_square_johnny_storm",
+      "breakpoints": true
     }
   ]
 }
