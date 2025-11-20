@@ -1,9 +1,14 @@
 import { db } from './db';
-import { templateQuestions } from '../shared/schema';
+import { templateQuestions, controlLibrary } from '../shared/schema';
+import { RETAIL_STORE_QUESTIONS } from './question-configs/retail-store-questions';
+import { WAREHOUSE_QUESTIONS } from './question-configs/warehouse-questions';
+import { DATA_CENTER_QUESTIONS } from './question-configs/data-center-questions';
+import { MANUFACTURING_QUESTIONS } from './question-configs/manufacturing-questions';
+import type { QuestionConfig } from './question-configs/retail-store-questions';
 import { eq } from 'drizzle-orm';
 
-// ASIS International facility security questions for office buildings
-const OFFICE_BUILDING_QUESTIONS = [
+// DEPRECATED: Old office-building questions for reference
+const OFFICE_BUILDING_QUESTIONS_DEPRECATED = [
   {
     templateId: 'office-building',
     questionId: '1.1',
@@ -203,24 +208,124 @@ const OFFICE_BUILDING_QUESTIONS = [
 
 async function seedFacilityQuestions() {
   try {
-    console.log('Starting facility template questions seed...');
+    console.log('🌱 Seeding facility survey questions for all templates...\n');
     
-    // Delete existing questions for office-building template
-    await db.delete(templateQuestions)
-      .where(eq(templateQuestions.templateId, 'office-building'));
+    // Step 1: Clean up deprecated office-building questions (if not referenced)
+    console.log('🧹 Attempting to clean up legacy office-building questions...');
+    try {
+      const deletedLegacy = await db.delete(templateQuestions)
+        .where(eq(templateQuestions.templateId, 'office-building'))
+        .returning();
+      console.log(`  ✅ Removed ${deletedLegacy.length} legacy office-building questions\n`);
+    } catch (error: any) {
+      if (error.code === '23503') {
+        console.log(`  ⚠️  Legacy questions still referenced by existing assessments - skipping cleanup\n`);
+      } else {
+        throw error;
+      }
+    }
     
-    console.log('Cleared existing office-building template questions');
+    // Step 2: Fetch all controls to create name→ID mapping
+    const controls = await db.select().from(controlLibrary);
+    const controlNameToId = new Map(controls.map(c => [c.name, c.id]));
     
-    // Insert new questions
-    const inserted = await db.insert(templateQuestions)
-      .values(OFFICE_BUILDING_QUESTIONS)
-      .returning();
+    console.log(`📚 Loaded ${controls.length} controls from control_library\n`);
     
-    console.log(`✓ Seeded ${inserted.length} facility survey questions for office-building template`);
+    const templates = [
+      { id: 'retail-store', name: 'Retail Store', questions: RETAIL_STORE_QUESTIONS },
+      { id: 'warehouse-distribution', name: 'Warehouse & Distribution', questions: WAREHOUSE_QUESTIONS },
+      { id: 'data-center', name: 'Data Center', questions: DATA_CENTER_QUESTIONS },
+      { id: 'manufacturing-facility', name: 'Manufacturing Facility', questions: MANUFACTURING_QUESTIONS }
+    ];
     
+    let totalQuestionsAdded = 0;
+    let totalQuestionsUpdated = 0;
+    let totalErrors = 0;
+    
+    for (const template of templates) {
+      console.log(`📋 Processing: ${template.name}`);
+      console.log('─'.repeat(60));
+      
+      let added = 0;
+      let updated = 0;
+      let errors = 0;
+      
+      for (const question of template.questions) {
+        const questionId = `${template.id}-${question.orderIndex.toString().padStart(3, '0')}`;
+        const controlId = controlNameToId.get(question.controlLibraryName);
+        
+        if (!controlId) {
+          console.log(`  ❌ Control not found: "${question.controlLibraryName}" for question ${questionId}`);
+          errors++;
+          totalErrors++;
+          continue;
+        }
+        
+        try {
+          // Check if question already exists
+          const existing = await db.select()
+            .from(templateQuestions)
+            .where(eq(templateQuestions.questionId, questionId))
+            .limit(1);
+          
+          const questionData = {
+            templateId: template.id,
+            questionId: questionId,
+            category: question.category,
+            question: question.questionText,
+            type: question.questionType,
+            orderIndex: question.orderIndex,
+            controlLibraryId: controlId,
+            bestPractice: question.followUpText || null,
+            rationale: question.evidenceType || null,
+            importance: "Medium" // Default importance
+          };
+          
+          if (existing.length > 0) {
+            // Update existing question
+            await db.update(templateQuestions)
+              .set(questionData)
+              .where(eq(templateQuestions.questionId, questionId));
+            updated++;
+            totalQuestionsUpdated++;
+          } else {
+            // Insert new question
+            await db.insert(templateQuestions).values(questionData);
+            added++;
+            totalQuestionsAdded++;
+          }
+        } catch (error: any) {
+          console.log(`  ❌ Error processing question ${questionId}: ${error.message}`);
+          errors++;
+          totalErrors++;
+        }
+      }
+      
+      console.log(`  ✅ Added: ${added} | Updated: ${updated} | Errors: ${errors}`);
+      console.log(`  📊 Total questions for ${template.name}: ${template.questions.length}\n`);
+    }
+    
+    console.log('═'.repeat(60));
+    console.log('✅ Seeding complete!\n');
+    console.log('📊 Summary:');
+    console.log(`  - Total questions added: ${totalQuestionsAdded}`);
+    console.log(`  - Total questions updated: ${totalQuestionsUpdated}`);
+    console.log(`  - Total errors: ${totalErrors}`);
+    console.log(`  - Grand total: ${totalQuestionsAdded + totalQuestionsUpdated} questions in database\n`);
+    
+    // Verify seeding
+    console.log('🔍 Verifying seeded data...');
+    for (const template of templates) {
+      const count = await db.select()
+        .from(templateQuestions)
+        .where(eq(templateQuestions.templateId, template.id));
+      console.log(`  - ${template.name}: ${count.length} questions`);
+    }
+    
+    console.log('\n✅ All facility questions seeded successfully!\n');
     process.exit(0);
   } catch (error) {
-    console.error('Error seeding facility questions:', error);
+    console.error('❌ Error seeding facility questions:', error);
     process.exit(1);
   }
 }

@@ -256,6 +256,7 @@ export const templateQuestions = pgTable("template_questions", {
   importance: text("importance"), // Critical, High, Medium, Low
   type: text("type").notNull().default("yes-no"), // yes-no, rating, text, checklist
   orderIndex: integer("order_index").notNull(), // Display order
+  controlLibraryId: varchar("control_library_id").references(() => controlLibrary.id), // Link to control_library for risk calculation
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
