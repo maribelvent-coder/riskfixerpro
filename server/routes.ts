@@ -1812,6 +1812,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-generate risk scenarios from interview responses
+  app.post("/api/assessments/:id/generate-scenarios-from-interview", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log(`🚀 Starting auto-generation of risk scenarios for assessment ${id}`);
+      
+      // Import the auto-generation service
+      const { autoGenerateScenariosFromInterview } = await import('./services/auto-generate-scenarios');
+      
+      // Run auto-generation
+      const result = await autoGenerateScenariosFromInterview(id, storage);
+      
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Failed to generate scenarios",
+          details: result.errors
+        });
+      }
+      
+      // Return success with details
+      res.json({
+        success: true,
+        threatsCreated: result.threatsCreated,
+        criticalThreats: result.criticalThreats,
+        overallRiskLevel: result.overallRiskLevel,
+        summary: result.summary,
+        warnings: result.errors // Include warnings even on success
+      });
+      
+    } catch (error) {
+      console.error("Error in generate-scenarios-from-interview endpoint:", error);
+      res.status(500).json({ 
+        error: "Internal server error during scenario generation",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Asset Bridge route - Extract assets from facility survey for Phase 2
   app.post("/api/assessments/:id/extract-assets", verifyAssessmentOwnership, async (req, res) => {
     try {
