@@ -14,7 +14,7 @@ Preferred communication style: Simple, everyday language.
 - **State Management**: TanStack Query for server state, React hooks for local state.
 - **Routing**: Wouter for lightweight client-side routing.
 - **Form Handling**: React Hook Form with Zod validation.
-- **Mobile Responsiveness**: iOS-optimized design with touch targets, pinch-to-zoom, and responsive layouts.
+- **Mobile-First Responsive Design**: Comprehensive platform-wide mobile optimization (November 2025) supporting 360px to desktop viewports. Mobile-first design tokens: typography (text-xs sm:text-sm for labels, text-sm sm:text-base for body, text-2xl sm:text-3xl for headings), spacing (p-2.5 sm:p-4 cards, space-y-2 sm:space-y-4), touch targets (min-h-11 / 44px minimum on all interactive controls), responsive grids (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3), full-width mobile buttons (w-full sm:w-auto), and horizontally scrollable tabs. Applied consistently across all 23+ pages and assessment workflow components. Critical fixes: navigation button stacking, tab scrolling containment, hero text scaling, and pricing table responsiveness to eliminate horizontal overflow on small devices.
 
 ### Technical Implementations
 - **Backend**: Express.js with Node.js ESM modules, TypeScript.
