@@ -107,7 +107,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const completedQuestions = questions.filter(q => 
     q.response !== undefined && q.response !== null && q.response !== ""
   ).length;
-  const progress = (completedQuestions / questions.length) * 100;
+  const progress = questions.length > 0 ? (completedQuestions / questions.length) * 100 : 0;
 
   // Autosave mutation for individual questions
   const autosaveQuestionMutation = useMutation({

@@ -266,7 +266,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const tabsAvailable = getTabsAvailability();
 
   const handleBack = () => {
-    console.log("Navigate back to dashboard");
+    setLocation("/assessments");
   };
 
   const handleSave = (data: Partial<Assessment>) => {
