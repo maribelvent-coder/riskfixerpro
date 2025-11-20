@@ -55,6 +55,25 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     enabled: !!assessmentId
   });
 
+  // Update assessment mutation
+  const updateAssessmentMutation = useMutation({
+    mutationFn: async (updateData: Partial<Assessment>) => {
+      const response = await apiRequest('PUT', `/api/assessments/${assessmentId}`, updateData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Save Failed",
+        description: `Failed to save assessment changes: ${(error as Error).message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete assessment mutation
   const deleteAssessmentMutation = useMutation({
     mutationFn: async () => {
@@ -250,12 +269,20 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     console.log("Navigate back to dashboard");
   };
 
-  const handleSave = (data: any) => {
-    console.log("Saving assessment data:", data);
+  const handleSave = (data: Partial<Assessment>) => {
+    updateAssessmentMutation.mutate(data);
   };
 
-  const handleSubmit = (data: any) => {
-    console.log("Submitting assessment for review:", data);
+  const handleSubmit = (data: Partial<Assessment>) => {
+    // Save and mark as submitted
+    updateAssessmentMutation.mutate({
+      ...data,
+      status: "in_review"
+    });
+    toast({
+      title: "Assessment Submitted",
+      description: "Your assessment has been submitted for review.",
+    });
   };
 
   const handleFacilitySurveyComplete = () => {
