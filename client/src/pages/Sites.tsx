@@ -313,13 +313,13 @@ export default function Sites() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto py-4 sm:py-8 px-4 max-w-7xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground" data-testid="heading-sites">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="heading-sites">
             Sites & Locations
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Manage your facility locations and site information
           </p>
         </div>
@@ -329,6 +329,7 @@ export default function Sites() {
             setIsCreateDialogOpen(true);
           }}
           data-testid="button-create-site"
+          className="w-full sm:w-auto text-xs sm:text-sm"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Site
@@ -336,13 +337,13 @@ export default function Sites() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="hover-elevate">
-              <CardHeader className="pb-3">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
                 <div className="h-6 bg-muted rounded animate-pulse" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-2">
                   <div className="h-4 bg-muted rounded animate-pulse" />
                   <div className="h-4 bg-muted rounded animate-pulse w-2/3" />
@@ -353,34 +354,34 @@ export default function Sites() {
         </div>
       ) : sites.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Building className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center mb-4" data-testid="text-no-sites">
+          <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 p-4 sm:p-6">
+            <Building className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mb-3 sm:mb-4" />
+            <p className="text-sm sm:text-base text-muted-foreground text-center mb-3 sm:mb-4" data-testid="text-no-sites">
               No sites yet. Create your first site to get started.
             </p>
-            <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-first-site">
+            <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-first-site" className="w-full sm:w-auto text-xs sm:text-sm">
               <Plus className="w-4 h-4 mr-2" />
               Add Your First Site
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {sites.map((site) => (
             <Card key={site.id} className="hover-elevate" data-testid={`card-site-${site.id}`}>
-              <CardHeader className="pb-3">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate" data-testid={`text-site-name-${site.id}`}>
+                    <CardTitle className="text-base sm:text-lg truncate" data-testid={`text-site-name-${site.id}`}>
                       {site.name}
                     </CardTitle>
                     {site.facilityType && (
-                      <CardDescription className="mt-1 capitalize">
+                      <CardDescription className="mt-1 text-xs sm:text-sm capitalize">
                         {site.facilityType}
                       </CardDescription>
                     )}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
                     <Button
                       size="icon"
                       variant="ghost"
@@ -418,10 +419,10 @@ export default function Sites() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 p-3 sm:p-6 pt-0">
                 {(site.address || site.city || site.state) && (
-                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       {site.address && <div className="truncate">{site.address}</div>}
                       {(site.city || site.state) && (
@@ -433,7 +434,7 @@ export default function Sites() {
                   </div>
                 )}
                 {site.contactName && (
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     <span className="font-medium">Contact:</span> {site.contactName}
                   </div>
                 )}
@@ -447,13 +448,13 @@ export default function Sites() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Site</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Add New Site</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Create a new site or facility location for your assessments.
             </DialogDescription>
           </DialogHeader>
           <Form {...createForm}>
-            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-3 sm:space-y-4">
               <FormField
                 control={createForm.control}
                 name="name"
@@ -508,13 +509,13 @@ export default function Sites() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <FormField
                   control={createForm.control}
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">City</FormLabel>
                       <FormControl>
                         <Input placeholder="City" {...field} data-testid="input-city" />
                       </FormControl>
@@ -528,7 +529,7 @@ export default function Sites() {
                   name="state"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State/Province</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">State/Province</FormLabel>
                       <FormControl>
                         <Input placeholder="State" {...field} data-testid="input-state" />
                       </FormControl>
@@ -538,7 +539,7 @@ export default function Sites() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <FormField
                   control={createForm.control}
                   name="zipCode"
@@ -582,13 +583,13 @@ export default function Sites() {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <FormField
                   control={createForm.control}
                   name="contactPhone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Phone</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Contact Phone</FormLabel>
                       <FormControl>
                         <Input placeholder="(555) 123-4567" {...field} data-testid="input-contact-phone" />
                       </FormControl>
@@ -602,7 +603,7 @@ export default function Sites() {
                   name="contactEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Contact Email</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="contact@example.com" {...field} data-testid="input-contact-email" />
                       </FormControl>
@@ -631,16 +632,17 @@ export default function Sites() {
                 )}
               />
 
-              <DialogFooter>
+              <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsCreateDialogOpen(false)}
                   data-testid="button-cancel-create"
+                  className="w-full sm:w-auto text-xs sm:text-sm"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-create">
+                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-create" className="w-full sm:w-auto text-xs sm:text-sm">
                   {createMutation.isPending ? "Creating..." : "Create Site"}
                 </Button>
               </DialogFooter>
@@ -653,13 +655,13 @@ export default function Sites() {
       <Dialog open={!!editingSite} onOpenChange={(open) => !open && setEditingSite(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Site</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Edit Site</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Update the site information.
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-3 sm:space-y-4">
               <FormField
                 control={editForm.control}
                 name="name"

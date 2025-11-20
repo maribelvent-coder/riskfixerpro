@@ -99,41 +99,41 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-settings">Settings</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="heading-settings">Settings</h1>
+        <p className="text-muted-foreground mt-1 sm:mt-2 text-xs sm:text-sm">
           Manage your account settings and preferences
         </p>
       </div>
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+      <div className="grid gap-4 sm:gap-6">
+        <Card className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-3 sm:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <User className="h-4 w-4 sm:h-5 sm:w-5" />
               Account Information
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Your account details and subscription tier
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <div className="text-sm font-medium text-muted-foreground">Username</div>
-              <div className="text-base" data-testid="text-username">{user?.username}</div>
+          <CardContent className="p-0 space-y-3 sm:space-y-4">
+            <div className="grid gap-1 sm:gap-2">
+              <div className="text-xs sm:text-sm font-medium text-muted-foreground">Username</div>
+              <div className="text-sm sm:text-base" data-testid="text-username">{user?.username}</div>
             </div>
-            <div className="grid gap-2">
-              <div className="text-sm font-medium text-muted-foreground">Account Tier</div>
-              <div className="text-base capitalize" data-testid="text-account-tier">
+            <div className="grid gap-1 sm:gap-2">
+              <div className="text-xs sm:text-sm font-medium text-muted-foreground">Account Tier</div>
+              <div className="text-sm sm:text-base capitalize" data-testid="text-account-tier">
                 {user?.accountTier || 'free'}
               </div>
             </div>
-            <div className="grid gap-2">
-              <div className="text-sm font-medium text-muted-foreground">Email</div>
+            <div className="grid gap-1 sm:gap-2">
+              <div className="text-xs sm:text-sm font-medium text-muted-foreground">Email</div>
               {isEditingEmail ? (
                 <Form {...emailForm}>
-                  <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-4">
+                  <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-3 sm:space-y-4">
                     <FormField
                       control={emailForm.control}
                       name="email"
@@ -143,11 +143,12 @@ export default function Settings() {
                             <Input
                               type="email"
                               placeholder="your.email@example.com"
+                              className="text-xs sm:text-sm"
                               data-testid="input-email"
                               {...field}
                             />
                           </FormControl>
-                          <FormDescription>
+                          <FormDescription className="text-xs sm:text-sm">
                             Add your email to enable password reset functionality
                           </FormDescription>
                           <FormMessage />
@@ -158,6 +159,7 @@ export default function Settings() {
                       <Button
                         type="submit"
                         size="sm"
+                        className="text-xs sm:text-sm"
                         disabled={updateEmailMutation.isPending}
                         data-testid="button-save-email"
                       >
@@ -167,6 +169,7 @@ export default function Settings() {
                         type="button"
                         variant="outline"
                         size="sm"
+                        className="text-xs sm:text-sm"
                         onClick={() => {
                           setIsEditingEmail(false);
                           emailForm.reset();
@@ -179,13 +182,14 @@ export default function Settings() {
                   </form>
                 </Form>
               ) : (
-                <div className="flex items-center gap-2">
-                  <div className="text-base" data-testid="text-email">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="text-sm sm:text-base" data-testid="text-email">
                     {user?.email || <span className="text-muted-foreground">No email set</span>}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="text-xs sm:text-sm self-start"
                     onClick={() => setIsEditingEmail(true)}
                     data-testid="button-edit-email"
                   >
@@ -194,28 +198,29 @@ export default function Settings() {
                 </div>
               )}
             </div>
-            <div className="grid gap-2">
-              <div className="text-sm font-medium text-muted-foreground">Member Since</div>
-              <div className="text-base" data-testid="text-created-at">
+            <div className="grid gap-1 sm:gap-2">
+              <div className="text-xs sm:text-sm font-medium text-muted-foreground">Member Since</div>
+              <div className="text-sm sm:text-base" data-testid="text-created-at">
                 {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LogOut className="h-5 w-5" />
+        <Card className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-3 sm:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
               Session
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Sign out of your account
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Button
               variant="destructive"
+              className="text-xs sm:text-sm"
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
               data-testid="button-logout"

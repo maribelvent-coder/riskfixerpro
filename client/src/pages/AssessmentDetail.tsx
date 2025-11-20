@@ -351,7 +351,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           size="icon"
           onClick={handleBack}
           data-testid="button-back"
-          className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-9 sm:min-w-9"
+          className="flex-shrink-0 min-h-9 sm:min-h-10"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -359,7 +359,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         <div className="flex-1 min-w-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="heading-assessment-title">
+              <h1 className="text-2xl sm:text-3xl font-bold truncate" data-testid="heading-assessment-title">
                 {assessmentData.title}
               </h1>
               <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground">
@@ -404,7 +404,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               <Badge 
                 variant={assessmentData.status === "completed" ? "default" : "secondary"}
                 data-testid="badge-status"
-                className="whitespace-nowrap"
+                className="whitespace-nowrap text-[10px] sm:text-xs"
               >
                 {assessmentData.status === "completed" ? "Completed" : 
                  assessmentData.status === "risk-assessment" ? "Risk Assessment" :
@@ -415,7 +415,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-shrink-0 gap-2"
+                    className="flex-shrink-0 gap-2 text-xs sm:text-sm min-h-9 sm:min-h-10"
                     disabled={generateReportMutation.isPending}
                     data-testid="button-generate-report"
                   >
@@ -457,7 +457,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                 variant="outline"
                 size="icon"
                 onClick={() => setDeleteDialogOpen(true)}
-                className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-9 sm:min-w-9"
+                className="flex-shrink-0 min-h-9 sm:min-h-10"
                 disabled={deleteAssessmentMutation.isPending}
                 data-testid="button-delete-assessment"
                 title="Delete assessment"
@@ -471,37 +471,40 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
       {/* Main Content - Paradigm-Aware Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full grid gap-2 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 h-auto p-2">
-          {workflowConfig.tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <TabsTrigger 
-                key={tab.id}
-                value={tab.id}
-                data-testid={`tab-${tab.id}`}
-                disabled={!(tabsAvailable as Record<string, boolean>)[tab.id]}
-                className="flex flex-wrap items-center gap-2 justify-center text-center min-h-11"
-              >
-                <Icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex gap-1 sm:gap-2 p-1 sm:p-2 w-max min-w-full">
+            {workflowConfig.tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger 
+                  key={tab.id}
+                  value={tab.id}
+                  data-testid={`tab-${tab.id}`}
+                  disabled={!(tabsAvailable as Record<string, boolean>)[tab.id]}
+                  className="flex items-center gap-1 sm:gap-2 justify-center text-center min-h-11 text-sm whitespace-nowrap px-3 flex-shrink-0"
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </div>
 
         {/* Phase 1: Facility Physical Security Survey */}
         <TabsContent value="facility-survey" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
                 Phase 1: Facility Physical Security Survey
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Professional assessment of existing physical security controls following CPP standards and Army FM guidelines.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <FacilitySurvey 
                 assessmentId={assessmentId} 
                 onComplete={handleFacilitySurveyComplete}
@@ -513,16 +516,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         {/* Phase 2: ASIS Risk Assessment */}
         <TabsContent value="risk-assessment" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                 Phase 2: Security Risk Assessment
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Systematic identification and analysis of security risks using ASIS International methodology.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <AssessmentForm 
                 assessmentId={assessmentId}
                 phase="risk-assessment"
@@ -558,16 +561,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         {/* Professional Reports */}
         <TabsContent value="reports" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                 Professional Security Assessment Reports
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Generate comprehensive reports for stakeholders, compliance, and remediation planning.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <ReportGenerator 
                 assessmentId={assessmentId}
                 onGenerate={handleGenerateReport}
@@ -581,12 +584,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         {/* Executive Protection Paradigm Tabs */}
         <TabsContent value="executive-interview" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
                 Executive Interview
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Conduct a comprehensive interview with the executive to gather critical security information about their daily routines, travel patterns, digital footprint, and threat awareness.
               </p>
             </CardHeader>
@@ -600,12 +603,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="executive-profile" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <User className="h-4 w-4 sm:h-5 sm:w-5" />
                 Executive Profile & Threat Assessment
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Comprehensive assessment of the executive's profile, public visibility, and threat landscape based on industry, position, and known threats.
               </p>
             </CardHeader>
@@ -619,12 +622,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="digital-footprint" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                 Digital Footprint Analysis
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 OSINT assessment, social media analysis, PII exposure, and dark web monitoring for the executive and their family.
               </p>
             </CardHeader>
@@ -639,12 +642,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="physical-security" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
                 Physical Security Review
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Assessment of residential security, executive office protection, travel routes, and pattern-of-life analysis.
               </p>
             </CardHeader>
@@ -664,16 +667,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="risk-analysis" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                 Executive Risk Analysis
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Comprehensive risk analysis combining digital footprint findings, physical security assessment, and threat intelligence.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <EnhancedRiskAssessment 
                 assessmentId={assessmentId}
                 onComplete={() => setActiveTab('treatment-plan')}
@@ -684,21 +687,21 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="treatment-plan" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                 Security Treatment Plan
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Protective measures, security controls, procedures, and recommendations for executive protection.
               </p>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Treatment planning controls are managed within the Risk Analysis tab above. Navigate to Risk Analysis to define and implement security controls for identified risks.</p>
+            <CardContent className="p-4 sm:p-6">
+              <p className="text-xs sm:text-sm text-muted-foreground">Treatment planning controls are managed within the Risk Analysis tab above. Navigate to Risk Analysis to define and implement security controls for identified risks.</p>
               <Button 
                 variant="outline" 
                 onClick={() => setActiveTab('risk-analysis')}
-                className="mt-4"
+                className="mt-4 w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
                 data-testid="button-goto-risk-analysis"
               >
                 Go to Risk Analysis
@@ -709,16 +712,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="executive-summary" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                 Executive Summary & Reports
               </CardTitle>
-              <p className="text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Final executive summary with key findings, priority risks, and recommended protective measures.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <ReportGenerator 
                 assessmentId={assessmentId}
                 onGenerate={handleGenerateReport}
@@ -733,17 +736,17 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       {/* Progress Summary */}
       {assessmentData.status === "completed" && (
         <Card className="bg-green-50 border-green-200">
-          <CardContent className="flex items-center justify-between py-4">
+          <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3 sm:py-4 p-3 sm:p-6">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
               <div>
-                <p className="font-medium text-green-800">Assessment Complete</p>
-                <p className="text-sm text-green-600">
+                <p className="text-sm sm:text-base font-medium text-green-800">Assessment Complete</p>
+                <p className="text-xs sm:text-sm text-green-600">
                   Both facility survey and risk assessment phases completed successfully
                 </p>
               </div>
             </div>
-            <Badge variant="default" className="bg-green-600">
+            <Badge variant="default" className="bg-green-600 text-[10px] sm:text-xs whitespace-nowrap">
               Completed {assessmentData.completedAt ? new Date(assessmentData.completedAt).toLocaleDateString() : 'N/A'}
             </Badge>
           </CardContent>
@@ -752,20 +755,20 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent data-testid="dialog-delete-confirmation">
+        <AlertDialogContent data-testid="dialog-delete-confirmation" className="p-4 sm:p-6">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Assessment</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg sm:text-xl">Delete Assessment</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs sm:text-sm">
               Are you sure you want to delete "{assessmentData.title}"? This action cannot be undone.
               All associated data including survey responses, risk assessments, and reports will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel data-testid="button-cancel-delete" className="w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10 m-0">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteAssessmentMutation.mutate()}
               disabled={deleteAssessmentMutation.isPending}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
               data-testid="button-confirm-delete"
             >
               {deleteAssessmentMutation.isPending ? "Deleting..." : "Delete"}

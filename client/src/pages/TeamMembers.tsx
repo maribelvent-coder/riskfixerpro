@@ -313,50 +313,50 @@ export default function TeamMembers() {
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Users className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-heading" data-testid="heading-team">
+    <div className="p-4 sm:p-8 space-y-4 sm:space-y-6">
+      <div className="mb-4 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2">
+          <Users className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-heading" data-testid="heading-team">
             Team Members
           </h1>
         </div>
-        <p className="text-muted-foreground" data-testid="text-team-subtitle">
+        <p className="text-sm sm:text-base text-muted-foreground" data-testid="text-team-subtitle">
           Manage your organization and collaborate with team members
         </p>
       </div>
 
       {/* Organization Info */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>{organization.name}</CardTitle>
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
+              <CardTitle className="text-base sm:text-lg">{organization.name}</CardTitle>
             </div>
-            <Badge className={getTierColor(organization.accountTier)}>
+            <Badge className={`${getTierColor(organization.accountTier)} text-[10px] sm:text-xs`}>
               {organization.accountTier}
             </Badge>
           </div>
-          <CardDescription>Organization details and limits</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">Organization details and limits</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Members</span>
-              <span className="text-2xl font-bold">
+              <span className="text-xs sm:text-sm text-muted-foreground">Members</span>
+              <span className="text-xl sm:text-2xl font-bold">
                 {members.length} / {organization.maxMembers === -1 ? "∞" : organization.maxMembers}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Sites</span>
-              <span className="text-2xl font-bold">
+              <span className="text-xs sm:text-sm text-muted-foreground">Sites</span>
+              <span className="text-xl sm:text-2xl font-bold">
                 {sites.length} / {organization.maxSites === -1 ? "∞" : organization.maxSites}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-sm text-muted-foreground">Assessments Limit</span>
-              <span className="text-2xl font-bold">
+              <span className="text-xs sm:text-sm text-muted-foreground">Assessments Limit</span>
+              <span className="text-xl sm:text-2xl font-bold">
                 {organization.maxAssessments === -1 ? "Unlimited" : organization.maxAssessments}
               </span>
             </div>
@@ -366,15 +366,15 @@ export default function TeamMembers() {
 
       {/* Pending Invitations */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Pending Invitations</CardTitle>
+              <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              <CardTitle className="text-base sm:text-lg">Pending Invitations</CardTitle>
             </div>
             <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="button-invite-member">
+                <Button data-testid="button-invite-member" className="w-full sm:w-auto text-xs sm:text-sm">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite Member
                 </Button>
@@ -454,48 +454,48 @@ export default function TeamMembers() {
               </DialogContent>
             </Dialog>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Invitations waiting to be accepted
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-6 pt-0">
           {invitationsLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
               Loading invitations...
             </div>
           ) : invitations.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
               No pending invitations
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-xs">Email</TableHead>
+                    <TableHead className="text-xs">Role</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Status</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Expires</TableHead>
+                    <TableHead className="text-xs text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {invitations.map((invitation) => (
                     <TableRow key={invitation.id} data-testid={`row-invitation-${invitation.id}`}>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-xs sm:text-sm">
                         {invitation.email}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
+                      <TableCell className="text-xs sm:text-sm">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs">
                           {invitation.role}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={invitation.status === "pending" ? "default" : "secondary"}>
+                      <TableCell className="text-xs sm:text-sm hidden sm:table-cell">
+                        <Badge variant={invitation.status === "pending" ? "default" : "secondary"} className="text-[10px] sm:text-xs">
                           {invitation.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {new Date(invitation.expiresAt).toLocaleDateString()}
@@ -508,8 +508,9 @@ export default function TeamMembers() {
                           onClick={() => revokeMutation.mutate(invitation.id)}
                           disabled={revokeMutation.isPending}
                           data-testid={`button-revoke-${invitation.id}`}
+                          className="text-xs"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -523,51 +524,51 @@ export default function TeamMembers() {
 
       {/* Team Members List */}
       <Card>
-        <CardHeader>
+        <CardHeader className="p-3 sm:p-6">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>Team Members</CardTitle>
+            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <CardTitle className="text-base sm:text-lg">Team Members</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             All members in your organization
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-6 pt-0">
           {membersLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
               Loading members...
             </div>
           ) : members.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
               No team members found
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Tier</TableHead>
+                    <TableHead className="text-xs">Username</TableHead>
+                    <TableHead className="text-xs hidden sm:table-cell">Email</TableHead>
+                    <TableHead className="text-xs">Role</TableHead>
+                    <TableHead className="text-xs">Tier</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {members.map((member) => (
                     <TableRow key={member.id} data-testid={`row-member-${member.id}`}>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-xs sm:text-sm">
                         {member.username}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground hidden sm:table-cell">
                         {member.email || "No email set"}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
+                      <TableCell className="text-xs sm:text-sm">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs">
                           {member.organizationRole || "member"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge className={getTierColor(member.accountTier)}>
+                      <TableCell className="text-xs sm:text-sm">
+                        <Badge className={`${getTierColor(member.accountTier)} text-[10px] sm:text-xs`}>
                           {member.accountTier}
                         </Badge>
                       </TableCell>
@@ -582,16 +583,16 @@ export default function TeamMembers() {
 
       {/* Sites with Member Filter */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Team Sites</CardTitle>
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              <CardTitle className="text-base sm:text-lg">Team Sites</CardTitle>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
               <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-                <SelectTrigger className="w-[200px]" data-testid="select-member-filter">
+                <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-member-filter">
                   <SelectValue placeholder="Filter by member" />
                 </SelectTrigger>
                 <SelectContent>

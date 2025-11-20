@@ -104,40 +104,40 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md space-y-4">
+    <div className="flex min-h-screen items-center justify-center p-4 sm:p-6 bg-background">
+      <div className="w-full max-w-md space-y-3 sm:space-y-4">
         <button
           onClick={() => setLocation("/login")}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors"
           data-testid="link-back-login"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           Back to Login
         </button>
         <Card className="w-full">
-          <CardHeader className="space-y-1">
+          <CardHeader className="space-y-1 p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">Create new password</CardTitle>
+              <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <CardTitle className="text-xl sm:text-2xl">Create new password</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {resetComplete 
                 ? "Your password has been successfully reset."
                 : "Enter your new password below."
               }
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             {resetComplete ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-center p-4 bg-muted rounded-md">
-                  <CheckCircle className="h-12 w-12 text-primary" />
+                  <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-primary" />
                 </div>
-                <p className="text-sm text-center text-muted-foreground">
+                <p className="text-xs sm:text-sm text-center text-muted-foreground">
                   You can now log in with your new password.
                 </p>
                 <Button
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm min-h-10 sm:min-h-11"
                   onClick={() => setLocation("/login")}
                   data-testid="button-go-to-login"
                 >
@@ -146,25 +146,26 @@ export default function ResetPassword() {
               </div>
             ) : (
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
                   <FormField
                     control={form.control}
                     name="newPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>New Password</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm">New Password</FormLabel>
                         <FormControl>
                           <Input
                             type="password"
                             placeholder="Enter new password"
+                            className="text-xs sm:text-sm"
                             data-testid="input-new-password"
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-xs sm:text-sm">
                           Must be at least 8 characters
                         </FormDescription>
-                        <FormMessage />
+                        <FormMessage className="text-xs sm:text-sm" />
                       </FormItem>
                     )}
                   />
@@ -173,22 +174,23 @@ export default function ResetPassword() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm">Confirm Password</FormLabel>
                         <FormControl>
                           <Input
                             type="password"
                             placeholder="Confirm new password"
+                            className="text-xs sm:text-sm"
                             data-testid="input-confirm-password"
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs sm:text-sm" />
                       </FormItem>
                     )}
                   />
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm min-h-10 sm:min-h-11"
                     disabled={resetPasswordMutation.isPending}
                     data-testid="button-reset-password"
                   >

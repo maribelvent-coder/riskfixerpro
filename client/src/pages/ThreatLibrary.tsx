@@ -33,73 +33,73 @@ export default function ThreatLibrary() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-threat-library">
-          <Shield className="w-8 h-8 text-primary" />
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-threat-library">
+          <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           Threat Library
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-muted-foreground mt-1 sm:mt-2 text-xs sm:text-sm">
           Comprehensive reference of physical security threats based on ASIS International standards
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card data-testid="card-stat-total-threats">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Threats</CardTitle>
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
+        <Card data-testid="card-stat-total-threats" className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Threats</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-total-threats">{threats.length}</div>
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-total-threats">{threats.length}</div>
           </CardContent>
         </Card>
         
-        <Card data-testid="card-stat-categories">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Categories</CardTitle>
+        <Card data-testid="card-stat-categories" className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">Categories</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-categories-count">{THREAT_CATEGORIES.length}</div>
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-categories-count">{THREAT_CATEGORIES.length}</div>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-stat-high-risk">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">High Risk</CardTitle>
+        <Card data-testid="card-stat-high-risk" className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">High Risk</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-high-risk-count">
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-high-risk-count">
               {threats.filter(t => t.typicalLikelihood === "high" || t.typicalLikelihood === "very-high").length}
             </div>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-stat-critical-impact">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Critical Impact</CardTitle>
+        <Card data-testid="card-stat-critical-impact" className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">Critical Impact</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-critical-impact-count">
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="text-critical-impact-count">
               {threats.filter(t => t.typicalImpact === "catastrophic" || t.typicalImpact === "major").length}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3 sm:w-4 sm:h-4" />
           <Input
             placeholder="Search threats..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-8 sm:pl-9 text-xs sm:text-sm"
             data-testid="input-search-threats"
           />
         </div>
         
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full sm:w-[240px]" data-testid="select-category">
+          <SelectTrigger className="w-full sm:w-[240px] text-xs sm:text-sm" data-testid="select-category">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
@@ -114,13 +114,13 @@ export default function ThreatLibrary() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-6 bg-muted rounded w-3/4"></div>
+            <Card key={i} className="animate-pulse p-3 sm:p-6">
+              <CardHeader className="p-0 pb-2 sm:pb-3">
+                <div className="h-5 sm:h-6 bg-muted rounded w-3/4"></div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="space-y-2">
                   <div className="h-4 bg-muted rounded"></div>
                   <div className="h-4 bg-muted rounded w-5/6"></div>
@@ -130,10 +130,10 @@ export default function ThreatLibrary() {
           ))}
         </div>
       ) : filteredThreats.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Target className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">
+        <Card className="p-3 sm:p-6">
+          <CardContent className="py-8 sm:py-12 text-center p-0">
+            <Target className="w-8 h-8 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-2 sm:mb-3" />
+            <p className="text-muted-foreground text-xs sm:text-sm">
               {searchQuery || selectedCategory !== "all" 
                 ? "No threats found matching your criteria" 
                 : "No threats available"}
@@ -141,36 +141,36 @@ export default function ThreatLibrary() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
           {filteredThreats.map((threat) => (
-            <Card key={threat.id} className="hover-elevate" data-testid={`card-threat-${threat.id}`}>
-              <CardHeader>
+            <Card key={threat.id} className="hover-elevate p-3 sm:p-6" data-testid={`card-threat-${threat.id}`}>
+              <CardHeader className="p-0 pb-3 sm:pb-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5 text-primary" />
-                      {threat.name}
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                      <span className="truncate">{threat.name}</span>
                     </CardTitle>
-                    <CardDescription className="mt-1">
+                    <CardDescription className="mt-1 text-xs sm:text-sm">
                       {threat.category}
                       {threat.subcategory && ` • ${threat.subcategory}`}
                     </CardDescription>
                   </div>
                   {threat.asisCode && (
-                    <Badge variant="outline" className="shrink-0">
+                    <Badge variant="outline" className="shrink-0 text-[10px] sm:text-xs">
                       {threat.asisCode}
                     </Badge>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm">{threat.description}</p>
+              <CardContent className="space-y-3 sm:space-y-4 p-0">
+                <p className="text-xs sm:text-sm">{threat.description}</p>
                 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   {threat.typicalLikelihood && (
                     <Badge 
                       variant="outline"
-                      className={getRiskBadgeClass(threat.typicalLikelihood)}
+                      className={`${getRiskBadgeClass(threat.typicalLikelihood)} text-[10px] sm:text-xs`}
                       data-testid={`badge-likelihood-${threat.typicalLikelihood}`}
                     >
                       Likelihood: {threat.typicalLikelihood.replace("-", " ")}
@@ -179,7 +179,7 @@ export default function ThreatLibrary() {
                   {threat.typicalImpact && (
                     <Badge 
                       variant="outline"
-                      className={getRiskBadgeClass(threat.typicalImpact)}
+                      className={`${getRiskBadgeClass(threat.typicalImpact)} text-[10px] sm:text-xs`}
                       data-testid={`badge-impact-${threat.typicalImpact}`}
                     >
                       Impact: {threat.typicalImpact}
@@ -189,17 +189,17 @@ export default function ThreatLibrary() {
 
                 {threat.mitigation && (
                   <div className="pt-2 border-t">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">Mitigation Strategy</p>
-                    <p className="text-sm">{threat.mitigation}</p>
+                    <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground mb-1">Mitigation Strategy</p>
+                    <p className="text-xs sm:text-sm">{threat.mitigation}</p>
                   </div>
                 )}
 
                 {threat.examples && threat.examples.length > 0 && (
                   <div className="pt-2 border-t">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">Examples</p>
+                    <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground mb-1">Examples</p>
                     <div className="flex flex-wrap gap-1">
                       {threat.examples.map((example, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
+                        <Badge key={idx} variant="secondary" className="text-[10px] sm:text-xs">
                           {example}
                         </Badge>
                       ))}

@@ -369,39 +369,39 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
   ];
 
   return (
-    <div className="space-y-6" data-testid="executive-risk-analysis">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3 sm:space-y-6" data-testid="executive-risk-analysis">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
         <div>
-          <h2 className="text-2xl font-semibold">Executive Protection Risk Analysis</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Step {currentStep + 1} of 3: {steps[currentStep].title}
+          <h2 className="text-base sm:text-lg font-semibold">Executive Protection Risk Analysis</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
+            Step {currentStep + 1}/3: {steps[currentStep].title}
           </p>
         </div>
-        <Badge variant="outline" data-testid="badge-progress">
+        <Badge variant="outline" data-testid="badge-progress" className="text-[10px] sm:text-xs w-fit">
           {Math.round(progressPercentage)}% Complete
         </Badge>
       </div>
 
-      <Progress value={progressPercentage} className="h-2" data-testid="progress-bar" />
+      <Progress value={progressPercentage} className="h-1.5 sm:h-2" data-testid="progress-bar" />
 
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto">
         {steps.map((step, index) => {
           const StepIcon = step.icon;
           return (
             <Card 
               key={index} 
-              className={`flex-1 ${currentStep === index ? 'border-primary' : ''}`}
+              className={`flex-1 min-w-[90px] ${currentStep === index ? 'border-primary' : ''}`}
               data-testid={`step-indicator-${index}`}
             >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`p-2 rounded-md ${currentStep === index ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                  <StepIcon className="h-4 w-4" />
+              <CardContent className="p-2 sm:p-4 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3">
+                <div className={`p-1 sm:p-2 rounded-md ${currentStep === index ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  <StepIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                 </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{step.title}</div>
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="text-[10px] sm:text-sm font-medium truncate">{step.title}</div>
                 </div>
                 {currentStep > index && (
-                  <CheckCircle className="h-5 w-5 text-green-500" data-testid={`step-complete-${index}`} />
+                  <CheckCircle className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-green-500" data-testid={`step-complete-${index}`} />
                 )}
               </CardContent>
             </Card>
@@ -410,32 +410,32 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
       </div>
 
       {currentStep === 0 && (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-6">
           <Card data-testid="card-add-asset">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5" />
+            <CardHeader className="p-2.5 sm:p-4">
+              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Add Executive Asset
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="asset-type">Asset Type</Label>
+            <CardContent className="space-y-2 sm:space-y-4 p-2.5 sm:p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="asset-type" className="text-xs sm:text-sm">Asset Type</Label>
                   <Select 
                     value={newAsset.type} 
                     onValueChange={(value) => setNewAsset({ ...newAsset, type: value })}
                   >
-                    <SelectTrigger id="asset-type" data-testid="select-asset-type">
+                    <SelectTrigger id="asset-type" data-testid="select-asset-type" className="text-xs sm:text-sm">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
                       {EXECUTIVE_ASSET_TYPES.map(type => {
                         const TypeIcon = type.icon;
                         return (
-                          <SelectItem key={type.value} value={type.value}>
-                            <div className="flex items-center gap-2">
-                              <TypeIcon className="h-4 w-4" />
+                          <SelectItem key={type.value} value={type.value} className="text-xs sm:text-sm">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <TypeIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               {type.label}
                             </div>
                           </SelectItem>
@@ -445,42 +445,45 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="asset-name">Name</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="asset-name" className="text-xs sm:text-sm">Name</Label>
                   <Input
                     id="asset-name"
                     data-testid="input-asset-name"
                     placeholder="e.g., CEO John Smith"
                     value={newAsset.name}
                     onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
+                    className="text-xs sm:text-sm"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="asset-owner">Owner/Manager</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="asset-owner" className="text-xs sm:text-sm">Owner/Manager</Label>
                   <Input
                     id="asset-owner"
                     data-testid="input-asset-owner"
                     placeholder="e.g., Security Department"
                     value={newAsset.owner}
                     onChange={(e) => setNewAsset({ ...newAsset, owner: e.target.value })}
+                    className="text-xs sm:text-sm"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="asset-scope">Scope/Location</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="asset-scope" className="text-xs sm:text-sm">Scope/Location</Label>
                   <Input
                     id="asset-scope"
                     data-testid="input-asset-scope"
-                    placeholder="e.g., Corporate HQ, Home Address"
+                    placeholder="e.g., Corporate HQ"
                     value={newAsset.scope}
                     onChange={(e) => setNewAsset({ ...newAsset, scope: e.target.value })}
+                    className="text-xs sm:text-sm"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Criticality: {newAsset.criticality}</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Criticality: {newAsset.criticality}</Label>
                 <Slider
                   data-testid="slider-asset-criticality"
                   value={[newAsset.criticality]}
@@ -488,9 +491,9 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                   min={1}
                   max={5}
                   step={1}
-                  className="w-full"
+                  className="w-full py-1"
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
+                <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground">
                   <span>Low</span>
                   <span>Medium</span>
                   <span>High</span>
@@ -499,8 +502,8 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="asset-notes">Notes</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="asset-notes" className="text-xs sm:text-sm">Notes</Label>
                 <Textarea
                   id="asset-notes"
                   data-testid="textarea-asset-notes"
@@ -508,6 +511,7 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                   value={newAsset.notes}
                   onChange={(e) => setNewAsset({ ...newAsset, notes: e.target.value })}
                   rows={3}
+                  className="text-xs sm:text-sm"
                 />
               </div>
 
@@ -515,48 +519,49 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                 onClick={handleAddAsset} 
                 disabled={createAssetMutation.isPending}
                 data-testid="button-add-asset"
+                className="text-xs sm:text-sm"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                 Add Asset
               </Button>
             </CardContent>
           </Card>
 
           <Card data-testid="card-assets-list">
-            <CardHeader>
-              <CardTitle>Defined Assets ({localAssets.length})</CardTitle>
+            <CardHeader className="p-2.5 sm:p-4">
+              <CardTitle className="text-base sm:text-lg">Defined Assets ({localAssets.length})</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2.5 sm:p-4">
               {assetsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading assets...</div>
+                <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">Loading assets...</div>
               ) : localAssets.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
                   No assets defined yet. Add your first executive asset above.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {localAssets.map((asset) => {
                     const assetType = EXECUTIVE_ASSET_TYPES.find(t => t.value === asset.type);
                     const AssetIcon = assetType?.icon || Target;
                     return (
                       <Card key={asset.id} data-testid={`asset-card-${asset.id}`}>
-                        <CardContent className="p-4 flex items-start gap-4">
-                          <div className="p-2 bg-primary/10 rounded-md">
-                            <AssetIcon className="h-5 w-5 text-primary" />
+                        <CardContent className="p-2 sm:p-4 flex items-start gap-2 sm:gap-4">
+                          <div className="p-1 sm:p-2 bg-primary/10 rounded-md flex-shrink-0">
+                            <AssetIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                           </div>
-                          <div className="flex-1">
-                            <div className="font-medium">{asset.name}</div>
-                            <div className="text-sm text-muted-foreground mt-1">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-xs sm:text-sm truncate">{asset.name}</div>
+                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                               {assetType?.label} • Criticality: {asset.criticality}/5
                             </div>
                             {asset.scope && (
-                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
+                              <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 flex items-center gap-0.5 sm:gap-1">
+                                <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                 {asset.scope}
                               </div>
                             )}
                             {asset.notes && (
-                              <div className="text-sm mt-2">{asset.notes}</div>
+                              <div className="text-xs sm:text-sm mt-1 sm:mt-2 line-clamp-2">{asset.notes}</div>
                             )}
                           </div>
                           <Button
@@ -565,8 +570,9 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                             onClick={() => deleteAssetMutation.mutate(asset.id)}
                             disabled={deleteAssetMutation.isPending}
                             data-testid={`button-delete-asset-${asset.id}`}
+                            className="h-7 w-7 sm:h-9 sm:w-9 p-0 flex-shrink-0"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </CardContent>
                       </Card>
@@ -580,19 +586,19 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
       )}
 
       {currentStep === 1 && (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-6">
           <Card data-testid="card-risk-scenarios">
-            <CardHeader>
-              <CardTitle>Executive Protection Risk Scenarios</CardTitle>
-              <p className="text-sm text-muted-foreground">
+            <CardHeader className="p-2.5 sm:p-4">
+              <CardTitle className="text-base sm:text-lg">Executive Protection Risk Scenarios</CardTitle>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Pre-populated executive-specific threats. Adjust likelihood and impact based on your assessment.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2.5 sm:p-4">
               {scenariosLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading scenarios...</div>
+                <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">Loading scenarios...</div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   {localScenarios.map((scenario, index) => {
                     const likelihoodValue = LIKELIHOOD_VALUES[scenario.likelihood as keyof typeof LIKELIHOOD_VALUES]?.value || 3;
                     const impactValue = IMPACT_VALUES[scenario.impact as keyof typeof IMPACT_VALUES]?.value || 3;
@@ -601,34 +607,34 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                     
                     return (
                       <Card key={scenario.id || index} data-testid={`scenario-card-${index}`}>
-                        <CardContent className="p-4 space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{scenario.scenario}</h4>
-                                <Badge className={riskColor} data-testid={`badge-risk-${index}`}>
+                        <CardContent className="p-2 sm:p-4 space-y-2 sm:space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                                <h4 className="font-medium text-xs sm:text-sm">{scenario.scenario}</h4>
+                                <Badge className={riskColor} data-testid={`badge-risk-${index}`} className={`${riskColor} text-[10px] sm:text-xs`}>
                                   {scenario.riskLevel} ({riskScore})
                                 </Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">
+                              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                                 {scenario.threatDescription}
                               </p>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Likelihood</Label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                            <div className="space-y-1.5 sm:space-y-2">
+                              <Label className="text-xs sm:text-sm">Likelihood</Label>
                               <Select
                                 value={scenario.likelihood}
                                 onValueChange={(value) => handleUpdateScenario(index, "likelihood", value)}
                               >
-                                <SelectTrigger data-testid={`select-likelihood-${index}`}>
+                                <SelectTrigger data-testid={`select-likelihood-${index}`} className="text-xs sm:text-sm">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {Object.entries(LIKELIHOOD_VALUES).map(([key, { label }]) => (
-                                    <SelectItem key={key} value={key}>
+                                    <SelectItem key={key} value={key} className="text-xs sm:text-sm">
                                       {label}
                                     </SelectItem>
                                   ))}
@@ -636,18 +642,18 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                               </Select>
                             </div>
 
-                            <div className="space-y-2">
-                              <Label>Impact</Label>
+                            <div className="space-y-1.5 sm:space-y-2">
+                              <Label className="text-xs sm:text-sm">Impact</Label>
                               <Select
                                 value={scenario.impact}
                                 onValueChange={(value) => handleUpdateScenario(index, "impact", value)}
                               >
-                                <SelectTrigger data-testid={`select-impact-${index}`}>
+                                <SelectTrigger data-testid={`select-impact-${index}`} className="text-xs sm:text-sm">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {Object.entries(IMPACT_VALUES).map(([key, { label }]) => (
-                                    <SelectItem key={key} value={key}>
+                                    <SelectItem key={key} value={key} className="text-xs sm:text-sm">
                                       {label}
                                     </SelectItem>
                                   ))}
@@ -656,14 +662,15 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                             </div>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label>Vulnerability Details</Label>
+                          <div className="space-y-1.5 sm:space-y-2">
+                            <Label className="text-xs sm:text-sm">Vulnerability Details</Label>
                             <Textarea
                               data-testid={`textarea-vulnerability-${index}`}
-                              placeholder="Describe specific vulnerabilities that make this scenario possible..."
+                              placeholder="Describe specific vulnerabilities..."
                               value={scenario.vulnerabilityDescription || ""}
                               onChange={(e) => handleUpdateScenario(index, "vulnerabilityDescription", e.target.value)}
                               rows={2}
+                              className="text-xs sm:text-sm"
                             />
                           </div>
 
@@ -679,42 +686,43 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
       )}
 
       {currentStep === 2 && (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-6">
           <Card data-testid="card-vulnerabilities">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+            <CardHeader className="p-2.5 sm:p-4">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base sm:text-lg">
                 <span>Identified Vulnerabilities</span>
                 <Button 
                   onClick={handleAddVulnerability}
                   disabled={createVulnerabilityMutation.isPending}
                   data-testid="button-add-vulnerability"
+                  className="text-xs sm:text-sm w-full sm:w-auto"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Add Vulnerability
                 </Button>
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Vulnerabilities identified from executive survey responses that increase risk exposure.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2.5 sm:p-4">
               {vulnerabilitiesLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading vulnerabilities...</div>
+                <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">Loading vulnerabilities...</div>
               ) : localVulnerabilities.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
                   No vulnerabilities identified yet. Add vulnerabilities based on your survey findings.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {localVulnerabilities.map((vuln) => (
                     <Card key={vuln.id} data-testid={`vulnerability-card-${vuln.id}`}>
-                      <CardContent className="p-4 flex items-start justify-between">
-                        <div className="flex-1">
+                      <CardContent className="p-2 sm:p-4 flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
                           {vuln.description && (
-                            <p className="text-sm font-medium">{vuln.description}</p>
+                            <p className="text-xs sm:text-sm font-medium">{vuln.description}</p>
                           )}
                           {vuln.notes && (
-                            <p className="text-sm text-muted-foreground mt-1">{vuln.notes}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{vuln.notes}</p>
                           )}
                         </div>
                         <Button
@@ -723,8 +731,9 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
                           onClick={() => deleteVulnerabilityMutation.mutate(vuln.id)}
                           disabled={deleteVulnerabilityMutation.isPending}
                           data-testid={`button-delete-vulnerability-${vuln.id}`}
+                          className="h-7 w-7 sm:h-9 sm:w-9 p-0 flex-shrink-0"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </CardContent>
                     </Card>
@@ -735,41 +744,41 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
           </Card>
 
           <Card data-testid="card-risk-summary">
-            <CardHeader>
-              <CardTitle>Risk Summary</CardTitle>
+            <CardHeader className="p-2.5 sm:p-4">
+              <CardTitle className="text-base sm:text-lg">Risk Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-2.5 sm:p-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">{localAssets.length}</div>
-                  <div className="text-sm text-muted-foreground">Assets</div>
+                  <div className="text-xl sm:text-3xl font-bold text-primary">{localAssets.length}</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">Assets</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-yellow-500">{localScenarios.length}</div>
-                  <div className="text-sm text-muted-foreground">Scenarios</div>
+                  <div className="text-xl sm:text-3xl font-bold text-yellow-500">{localScenarios.length}</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">Scenarios</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-red-500">{localVulnerabilities.length}</div>
-                  <div className="text-sm text-muted-foreground">Vulnerabilities</div>
+                  <div className="text-xl sm:text-3xl font-bold text-red-500">{localVulnerabilities.length}</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">Vulnerabilities</div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h4 className="font-medium">Risk Level Distribution</h4>
-                <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
+                <h4 className="text-xs sm:text-sm font-medium">Risk Level Distribution</h4>
+                <div className="space-y-1.5 sm:space-y-2">
                   {["Critical", "High", "Medium", "Low", "Very Low"].map(level => {
                     const count = localScenarios.filter(s => s.riskLevel === level).length;
                     const percentage = localScenarios.length > 0 ? (count / localScenarios.length) * 100 : 0;
                     return (
-                      <div key={level} className="flex items-center gap-2">
-                        <div className="w-24 text-sm">{level}</div>
-                        <div className="flex-1 bg-muted rounded-full h-6 overflow-hidden">
+                      <div key={level} className="flex items-center gap-1.5 sm:gap-2">
+                        <div className="w-16 sm:w-24 text-[10px] sm:text-xs">{level}</div>
+                        <div className="flex-1 bg-muted rounded-full h-4 sm:h-6 overflow-hidden">
                           <div 
                             className={`h-full ${getRiskColor(level)}`}
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
-                        <div className="w-12 text-sm text-right" data-testid={`count-${level.toLowerCase().replace(' ', '-')}`}>
+                        <div className="w-8 sm:w-12 text-[10px] sm:text-xs text-right" data-testid={`count-${level.toLowerCase().replace(' ', '-')}`}>
                           {count}
                         </div>
                       </div>
@@ -782,24 +791,25 @@ export function ExecutiveRiskAnalysis({ assessmentId, onComplete }: ExecutiveRis
         </div>
       )}
 
-      <div className="flex justify-between pt-6 border-t">
+      <div className="flex flex-col sm:flex-row justify-between gap-2 pt-4 sm:pt-6 border-t">
         <Button
           variant="outline"
           onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
           disabled={currentStep === 0}
           data-testid="button-previous"
+          className="text-sm min-h-11 w-full sm:w-auto"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Previous
         </Button>
 
         {currentStep < 2 ? (
-          <Button onClick={handleNext} data-testid="button-next">
+          <Button onClick={handleNext} data-testid="button-next" className="text-sm min-h-11 w-full sm:w-auto">
             Next
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
-          <Button onClick={handleComplete} data-testid="button-complete">
+          <Button onClick={handleComplete} data-testid="button-complete" className="text-sm min-h-11 w-full sm:w-auto">
             <CheckCircle className="h-4 w-4 mr-2" />
             Complete Analysis
           </Button>

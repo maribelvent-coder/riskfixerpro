@@ -165,38 +165,38 @@ export default function ExecutiveInterview({ assessmentId, onComplete }: Executi
 
   if (questionsLoading || responsesLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
+      <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="text-center">
-          <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
-          <p className="text-muted-foreground">Loading interview questions...</p>
+          <Shield className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-4 text-muted-foreground animate-pulse" />
+          <p className="text-xs sm:text-sm text-muted-foreground">Loading interview questions...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Header with Progress */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="space-y-0.5 sm:space-y-1">
+              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                 Executive Interview
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Conduct a comprehensive interview with the executive to gather critical security information
               </p>
             </div>
-            <Badge variant={progressPercent === 100 ? "default" : "secondary"}>
+            <Badge variant={progressPercent === 100 ? "default" : "secondary"} className="text-[10px] sm:text-xs">
               {answeredQuestions} / {totalQuestions} Questions
             </Badge>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+        <CardContent className="p-3 sm:p-6">
+          <div className="space-y-1.5 sm:space-y-2">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground">Progress</span>
               <span className="font-medium">{Math.round(progressPercent)}%</span>
             </div>
@@ -210,7 +210,7 @@ export default function ExecutiveInterview({ assessmentId, onComplete }: Executi
         type="multiple" 
         value={expandedCategories}
         onValueChange={setExpandedCategories}
-        className="space-y-4"
+        className="space-y-2 sm:space-y-4"
       >
         {Object.entries(groupedQuestions).map(([category, categoryQuestions]) => {
           const categoryAnswered = categoryQuestions.filter(q => {
@@ -224,56 +224,56 @@ export default function ExecutiveInterview({ assessmentId, onComplete }: Executi
           return (
             <AccordionItem key={category} value={category} className="border rounded-lg">
               <AccordionTrigger 
-                className="px-6 hover:no-underline hover-elevate"
+                className="px-3 sm:px-6 hover:no-underline hover-elevate"
                 data-testid={`accordion-${category.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <div className="flex items-center justify-between w-full pr-4">
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{category}</span>
-                    <Badge variant="secondary" className="text-xs">
+                <div className="flex items-center justify-between w-full pr-2 sm:pr-4">
+                  <div className="flex items-center gap-1.5 sm:gap-3">
+                    <span className="font-medium text-sm sm:text-base">{category}</span>
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs">
                       {categoryAnswered} / {categoryQuestions.length}
                     </Badge>
                   </div>
                   {categoryAnswered === categoryQuestions.length && (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
                   )}
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-6 pt-4 pb-6">
-                <div className="space-y-6">
+              <AccordionContent className="px-3 sm:px-6 pt-2.5 sm:pt-4 pb-3 sm:pb-6">
+                <div className="space-y-3 sm:space-y-6">
                   {categoryQuestions
                     .sort((a, b) => a.orderIndex - b.orderIndex)
                     .map((question, index) => {
                       const response = localResponses[question.id] || {};
                       
                       return (
-                        <div key={question.id} className="space-y-3 pb-6 border-b last:border-b-0">
-                          <div className="flex items-start gap-3">
-                            <Badge variant="outline" className="mt-1">
+                        <div key={question.id} className="space-y-2 sm:space-y-3 pb-3 sm:pb-6 border-b last:border-b-0">
+                          <div className="flex items-start gap-1.5 sm:gap-3">
+                            <Badge variant="outline" className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs">
                               Q{question.questionNumber}
                             </Badge>
-                            <div className="flex-1 space-y-3">
-                              <Label className="text-base font-normal leading-relaxed">
+                            <div className="flex-1 space-y-2 sm:space-y-3">
+                              <Label className="text-sm sm:text-base font-normal leading-relaxed">
                                 {question.question}
                               </Label>
                               
                               {question.responseType === 'yes-no-text' && (
-                                <div className="space-y-3">
+                                <div className="space-y-2 sm:space-y-3">
                                   <RadioGroup
                                     value={response.yesNoResponse === undefined ? "" : response.yesNoResponse ? "yes" : "no"}
                                     onValueChange={(value) => handleYesNoChange(question.id, value === "yes")}
                                     data-testid={`radio-question-${question.questionNumber}`}
                                   >
-                                    <div className="flex items-center gap-6">
-                                      <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-4 sm:gap-6">
+                                      <div className="flex items-center gap-1.5 sm:gap-2">
                                         <RadioGroupItem value="yes" id={`${question.id}-yes`} />
-                                        <Label htmlFor={`${question.id}-yes`} className="font-normal cursor-pointer">
+                                        <Label htmlFor={`${question.id}-yes`} className="font-normal cursor-pointer text-xs sm:text-sm">
                                           Yes
                                         </Label>
                                       </div>
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1.5 sm:gap-2">
                                         <RadioGroupItem value="no" id={`${question.id}-no`} />
-                                        <Label htmlFor={`${question.id}-no`} className="font-normal cursor-pointer">
+                                        <Label htmlFor={`${question.id}-no`} className="font-normal cursor-pointer text-xs sm:text-sm">
                                           No
                                         </Label>
                                       </div>
@@ -288,7 +288,7 @@ export default function ExecutiveInterview({ assessmentId, onComplete }: Executi
                                   : "Enter your response..."}
                                 value={response.textResponse || ""}
                                 onChange={(e) => handleTextChange(question.id, e.target.value)}
-                                className="min-h-[100px] resize-none"
+                                className="min-h-[80px] sm:min-h-[100px] resize-none text-xs sm:text-sm"
                                 data-testid={`textarea-question-${question.questionNumber}`}
                               />
                             </div>
@@ -306,12 +306,12 @@ export default function ExecutiveInterview({ assessmentId, onComplete }: Executi
       {/* Completion Message */}
       {progressPercent === 100 && (
         <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+          <CardContent className="p-3 sm:p-6">
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               <div>
-                <p className="font-medium text-green-900 dark:text-green-100">Interview Complete</p>
-                <p className="text-sm text-green-700 dark:text-green-300">
+                <p className="font-medium text-sm sm:text-base text-green-900 dark:text-green-100">Interview Complete</p>
+                <p className="text-xs sm:text-sm text-green-700 dark:text-green-300">
                   All questions have been answered. You can now proceed to the next phase.
                 </p>
               </div>

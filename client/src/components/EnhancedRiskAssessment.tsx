@@ -711,60 +711,60 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
     switch (currentStep) {
       case 0: // Asset Identification
         return (
-          <div className="space-y-6">
+          <div className="space-y-3 sm:space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
+              <CardHeader className="p-2.5 sm:p-4">
+                <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
+                  <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Step 1: Asset Identification
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="mb-4">
-                  <p className="text-sm text-muted-foreground mb-2">
+              <CardContent className="space-y-2 sm:space-y-4 p-2.5 sm:p-4">
+                <div className="mb-2 sm:mb-4">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1.5 sm:mb-2">
                     Identify the valuable assets your organization wants to protect. These can be people, property, 
                     information, reputation, or other things of value that could be compromised by threats.
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     <strong>Examples:</strong> Customer database (Information), Executive team (People), 
                     Server room (Property), Company reputation (Reputation)
                   </p>
                 </div>
 
                 {assets.length > 0 && (
-                  <div className="space-y-2 mb-4">
-                    <h4 className="font-medium">Assets to Protect ({assets.length} total)</h4>
-                    <div className="grid gap-2">
+                  <div className="space-y-1.5 sm:space-y-2 mb-2 sm:mb-4">
+                    <h4 className="text-sm sm:text-base font-medium">Assets to Protect ({assets.length} total)</h4>
+                    <div className="grid gap-1.5 sm:gap-2">
                       {assets.map((asset) => (
                         <Card key={asset.id} className="hover-elevate">
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium">{asset.name}</p>
-                                  <Badge variant="outline">{asset.type}</Badge>
-                                  <Badge variant="secondary">Criticality: {asset.criticality}</Badge>
+                          <CardContent className="p-2 sm:p-3">
+                            <div className="flex items-start sm:items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-1">
+                                  <p className="font-medium text-xs sm:text-sm truncate">{asset.name}</p>
+                                  <Badge variant="outline" className="text-[10px] sm:text-xs">{asset.type}</Badge>
+                                  <Badge variant="secondary" className="text-[10px] sm:text-xs">Criticality: {asset.criticality}</Badge>
                                 </div>
                                 {asset.owner && (
-                                  <p className="text-sm text-muted-foreground">Owner: {asset.owner}</p>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground">Owner: {asset.owner}</p>
                                 )}
                                 {asset.scope && (
-                                  <p className="text-sm text-muted-foreground">Scope: {asset.scope}</p>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground">Scope: {asset.scope}</p>
                                 )}
                                 {asset.notes && (
-                                  <p className="text-sm text-muted-foreground mt-1">{asset.notes}</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">{asset.notes}</p>
                                 )}
                                 {asset.protectionSystems && asset.protectionSystems.length > 0 && (
-                                  <div className="flex gap-1 mt-2">
+                                  <div className="flex flex-wrap gap-0.5 sm:gap-1 mt-1 sm:mt-2">
                                     {asset.protectionSystems.map(system => (
-                                      <Badge key={system} variant="outline" className="text-xs">
+                                      <Badge key={system} variant="outline" className="text-[10px] sm:text-xs">
                                         {system.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
                                       </Badge>
                                     ))}
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -780,8 +780,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                     });
                                   }}
                                   data-testid={`button-edit-asset-${asset.id}`}
+                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                 >
-                                  <Edit className="h-3 w-3" />
+                                  <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                 </Button>
                                 <Button
                                   size="sm"
@@ -789,8 +790,9 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                                   onClick={() => deleteAssetMutation.mutate(asset.id)}
                                   disabled={deleteAssetMutation.isPending}
                                   data-testid={`button-delete-asset-${asset.id}`}
+                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                 </Button>
                               </div>
                             </div>
@@ -801,77 +803,80 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                   </div>
                 )}
 
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">Add Asset to Protect</h4>
-                  <div className="grid gap-3">
+                <div className="border-t pt-2 sm:pt-4">
+                  <h4 className="text-sm sm:text-base font-medium mb-2 sm:mb-3">Add Asset to Protect</h4>
+                  <div className="grid gap-2 sm:gap-3">
                     <div>
-                      <Label htmlFor="asset-name">Asset Name</Label>
+                      <Label htmlFor="asset-name" className="text-xs sm:text-sm">Asset Name</Label>
                       <Input
                         id="asset-name"
                         value={newAsset.name}
                         onChange={(e) => setNewAsset(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Customer Database, Executive Team, Server Room"
+                        placeholder="e.g., Customer Database"
                         data-testid="input-asset-name"
+                        className="text-xs sm:text-sm"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="asset-type">Asset Type</Label>
+                      <Label htmlFor="asset-type" className="text-xs sm:text-sm">Asset Type</Label>
                       <Select 
                         value={newAsset.type} 
                         onValueChange={(value) => setNewAsset(prev => ({ ...prev, type: value }))}
                       >
-                        <SelectTrigger data-testid="select-asset-type">
+                        <SelectTrigger data-testid="select-asset-type" className="text-xs sm:text-sm">
                           <SelectValue placeholder="Select asset type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="People">People - Employees, visitors, contractors</SelectItem>
-                          <SelectItem value="Property">Property - Buildings, equipment, inventory</SelectItem>
-                          <SelectItem value="Information">Information - Data, documents, intellectual property</SelectItem>
-                          <SelectItem value="Reputation">Reputation - Brand, customer trust, public image</SelectItem>
-                          <SelectItem value="Other">Other - Specify in notes</SelectItem>
+                          <SelectItem value="People" className="text-xs sm:text-sm">People - Employees, visitors, contractors</SelectItem>
+                          <SelectItem value="Property" className="text-xs sm:text-sm">Property - Buildings, equipment, inventory</SelectItem>
+                          <SelectItem value="Information" className="text-xs sm:text-sm">Information - Data, documents, intellectual property</SelectItem>
+                          <SelectItem value="Reputation" className="text-xs sm:text-sm">Reputation - Brand, customer trust, public image</SelectItem>
+                          <SelectItem value="Other" className="text-xs sm:text-sm">Other - Specify in notes</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="asset-owner">Owner</Label>
+                      <Label htmlFor="asset-owner" className="text-xs sm:text-sm">Owner</Label>
                       <Input
                         id="asset-owner"
                         value={newAsset.owner}
                         onChange={(e) => setNewAsset(prev => ({ ...prev, owner: e.target.value }))}
-                        placeholder="e.g., IT Department, HR Manager"
+                        placeholder="e.g., IT Department"
                         data-testid="input-asset-owner"
+                        className="text-xs sm:text-sm"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="asset-criticality">Criticality (1-5)</Label>
+                      <Label htmlFor="asset-criticality" className="text-xs sm:text-sm">Criticality (1-5)</Label>
                       <Select 
                         value={newAsset.criticality.toString()} 
                         onValueChange={(value) => setNewAsset(prev => ({ ...prev, criticality: parseInt(value) }))}
                       >
-                        <SelectTrigger data-testid="select-asset-criticality">
+                        <SelectTrigger data-testid="select-asset-criticality" className="text-xs sm:text-sm">
                           <SelectValue placeholder="Select criticality level" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">1 - Very Low Impact</SelectItem>
-                          <SelectItem value="2">2 - Low Impact</SelectItem>
-                          <SelectItem value="3">3 - Medium Impact</SelectItem>
-                          <SelectItem value="4">4 - High Impact</SelectItem>
-                          <SelectItem value="5">5 - Critical Impact</SelectItem>
+                          <SelectItem value="1" className="text-xs sm:text-sm">1 - Very Low Impact</SelectItem>
+                          <SelectItem value="2" className="text-xs sm:text-sm">2 - Low Impact</SelectItem>
+                          <SelectItem value="3" className="text-xs sm:text-sm">3 - Medium Impact</SelectItem>
+                          <SelectItem value="4" className="text-xs sm:text-sm">4 - High Impact</SelectItem>
+                          <SelectItem value="5" className="text-xs sm:text-sm">5 - Critical Impact</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="asset-scope">Scope</Label>
+                      <Label htmlFor="asset-scope" className="text-xs sm:text-sm">Scope</Label>
                       <Input
                         id="asset-scope"
                         value={newAsset.scope}
                         onChange={(e) => setNewAsset(prev => ({ ...prev, scope: e.target.value }))}
-                        placeholder="e.g., HQ Building, IT Department, Company-wide"
+                        placeholder="e.g., HQ Building"
                         data-testid="input-asset-scope"
+                        className="text-xs sm:text-sm"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="asset-notes">Notes</Label>
+                      <Label htmlFor="asset-notes" className="text-xs sm:text-sm">Notes</Label>
                       <Textarea
                         id="asset-notes"
                         value={newAsset.notes}
@@ -879,27 +884,30 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
                         placeholder="Additional description or context..."
                         data-testid="textarea-asset-notes"
                         rows={2}
+                        className="text-xs sm:text-sm"
                       />
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                       <Button 
                         onClick={handleSaveAndAddAnother}
                         disabled={createAssetMutation.isPending}
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 text-xs sm:text-sm"
                         data-testid="button-save-and-add-another"
                       >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Save & Add Another
+                        <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        <span className="hidden sm:inline">Save & Add Another</span>
+                        <span className="sm:hidden">Add Another</span>
                       </Button>
                       <Button 
                         onClick={handleSaveAndFinish}
                         disabled={createAssetMutation.isPending}
-                        className="flex-1"
+                        className="flex-1 text-xs sm:text-sm"
                         data-testid="button-save-and-finish"
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Save & Finish
+                        <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        <span className="hidden sm:inline">Save & Finish</span>
+                        <span className="sm:hidden">Finish</span>
                       </Button>
                     </div>
                   </div>
@@ -2179,22 +2187,22 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Progress Header */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Enhanced Risk Assessment (Six-Step SRA Process)</CardTitle>
-            <Badge variant="secondary" data-testid="badge-step-progress">
-              Step {currentStep + 1} of {steps.length}
+        <CardHeader className="p-2.5 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
+            <CardTitle className="text-base sm:text-lg">Enhanced Risk Assessment <span className="hidden sm:inline">(Six-Step SRA Process)</span></CardTitle>
+            <Badge variant="secondary" data-testid="badge-step-progress" className="text-[10px] sm:text-xs w-fit">
+              Step {currentStep + 1}/{steps.length}
             </Badge>
           </div>
-          <Progress value={progress} className="mt-2" data-testid="progress-enhanced-assessment" />
+          <Progress value={progress} className="mt-1.5 sm:mt-2 h-1.5 sm:h-2" data-testid="progress-enhanced-assessment" />
         </CardHeader>
       </Card>
 
       {/* Step Navigation */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2">
         {steps.map((step, index) => {
           const StepIcon = step.icon;
           const isActive = currentStep === index;
@@ -2207,11 +2215,12 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
               size="sm"
               onClick={() => setCurrentStep(index)}
               data-testid={`button-step-${index}`}
-              className="flex items-center gap-2 whitespace-nowrap"
+              className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3"
             >
-              <StepIcon className="h-3 w-3" />
-              {isCompleted && <CheckCircle className="h-3 w-3" />}
-              {step.title}
+              <StepIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              {isCompleted && <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+              <span className="hidden sm:inline">{step.title}</span>
+              <span className="sm:hidden">{index + 1}</span>
             </Button>
           );
         })}
@@ -2223,12 +2232,13 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 pt-4">
         <Button 
           variant="outline"
           onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
           disabled={currentStep === 0}
           data-testid="button-previous-step"
+          className="text-sm min-h-11 w-full sm:w-auto"
         >
           Previous Step
         </Button>
@@ -2237,6 +2247,7 @@ export function EnhancedRiskAssessment({ assessmentId, onComplete }: EnhancedRis
           onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
           disabled={currentStep === steps.length - 1}
           data-testid="button-next-step"
+          className="text-sm min-h-11 w-full sm:w-auto"
         >
           Next Step
         </Button>

@@ -82,12 +82,12 @@ export default function Templates() {
   const categories = Array.from(new Set(templates.map(t => t.category)));
 
   return (
-    <div className="space-y-6" data-testid="page-templates">
+    <div className="space-y-4 sm:space-y-6" data-testid="page-templates">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-templates">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="heading-templates">
           Assessment Templates
         </h1>
-        <p className="text-muted-foreground mt-1" data-testid="text-templates-description">
+        <p className="text-sm sm:text-base text-muted-foreground mt-1" data-testid="text-templates-description">
           Start with pre-configured templates for common facility types
         </p>
       </div>
@@ -107,7 +107,7 @@ export default function Templates() {
       )}
 
       {/* Search */}
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search templates..."
@@ -119,9 +119,9 @@ export default function Templates() {
       </div>
 
       {/* Category Badges */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5 sm:gap-2">
         {categories.map(category => (
-          <Badge key={category} variant="secondary" data-testid={`badge-category-${category.toLowerCase()}`}>
+          <Badge key={category} variant="secondary" className="text-[10px] sm:text-xs" data-testid={`badge-category-${category.toLowerCase()}`}>
             {category}
           </Badge>
         ))}
@@ -133,38 +133,38 @@ export default function Templates() {
           <p className="text-muted-foreground">No templates found matching your search</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           {filteredTemplates.map((template) => (
             <Card 
               key={template.id} 
               className="hover-elevate transition-all"
               data-testid={`card-template-${template.id}`}
             >
-              <CardHeader>
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <template.icon className="h-6 w-6 text-primary" />
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="p-2 sm:p-3 bg-primary/10 rounded-lg flex-shrink-0">
+                    <template.icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-xl" data-testid={`title-${template.id}`}>
+                      <CardTitle className="text-base sm:text-xl" data-testid={`title-${template.id}`}>
                         {template.name}
                       </CardTitle>
-                      <Badge variant="outline">{template.category}</Badge>
+                      <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">{template.category}</Badge>
                     </div>
-                    <CardDescription className="mt-2">
+                    <CardDescription className="mt-1 sm:mt-2 text-xs sm:text-sm">
                       {template.description}
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-2 sm:pt-3">
                 {/* Asset Types */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-2">Typical Assets</h4>
+                  <h4 className="text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">Typical Assets</h4>
                   <div className="flex flex-wrap gap-1">
                     {template.assetTypes.map((asset, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
+                      <Badge key={idx} variant="secondary" className="text-[10px] sm:text-xs">
                         {asset}
                       </Badge>
                     ))}
@@ -173,12 +173,12 @@ export default function Templates() {
 
                 {/* Common Risks */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-2">Common Risk Scenarios</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
+                  <h4 className="text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">Common Risk Scenarios</h4>
+                  <ul className="text-xs sm:text-sm text-muted-foreground space-y-1">
                     {template.commonRisks.slice(0, 3).map((risk, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <span className="text-destructive mt-0.5">•</span>
-                        <span>{risk}</span>
+                        <span className="text-destructive mt-0.5 flex-shrink-0">•</span>
+                        <span className="flex-1">{risk}</span>
                       </li>
                     ))}
                   </ul>
@@ -186,12 +186,12 @@ export default function Templates() {
 
                 {/* Typical Controls */}
                 <div>
-                  <h4 className="text-sm font-semibold mb-2">Recommended Controls</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
+                  <h4 className="text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">Recommended Controls</h4>
+                  <ul className="text-xs sm:text-sm text-muted-foreground space-y-1">
                     {template.typicalControls.slice(0, 3).map((control, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <span className="text-chart-2 mt-0.5">✓</span>
-                        <span>{control}</span>
+                        <span className="text-chart-2 mt-0.5 flex-shrink-0">✓</span>
+                        <span className="flex-1">{control}</span>
                       </li>
                     ))}
                   </ul>
@@ -199,7 +199,7 @@ export default function Templates() {
 
                 {/* Action Button */}
                 <Button 
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm"
                   onClick={() => createFromTemplateMutation.mutate(template)}
                   disabled={createFromTemplateMutation.isPending || hasReachedFreeLimit}
                   data-testid={`button-use-template-${template.id}`}
@@ -214,10 +214,10 @@ export default function Templates() {
 
       {/* Info Section */}
       <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle className="text-base">About Assessment Templates</CardTitle>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">About Assessment Templates</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-2">
+        <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-2 p-3 sm:p-6 pt-0">
           <p>
             Templates provide a starting point for your security assessments based on industry best practices and ASIS International standards.
           </p>

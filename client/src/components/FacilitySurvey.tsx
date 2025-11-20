@@ -323,9 +323,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     switch (question.type) {
       case "measurement":
         return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor={`${question.templateId}-value`}>Measurement Value</Label>
+          <div className="space-y-2.5 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor={`${question.templateId}-value`} className="text-xs sm:text-sm">Measurement Value</Label>
               <Input
                 id={`${question.templateId}-value`}
                 type="number"
@@ -337,6 +337,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                   unit: question.response?.unit || "fc" 
                 })}
                 placeholder="Enter measurement"
+                className="text-xs sm:text-sm"
                 data-testid={`input-${question.templateId}-value`}
               />
               <Input
@@ -346,13 +347,14 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                   ...question.response, 
                   unit: e.target.value 
                 })}
+                className="text-xs sm:text-sm"
                 data-testid={`input-${question.templateId}-unit`}
               />
             </div>
             
             {/* Add Assessment Response for measurement questions, especially lighting */}
-            <div className="space-y-2">
-              <Label htmlFor={`${question.templateId}-assessment`}>Assessment Response</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor={`${question.templateId}-assessment`} className="text-xs sm:text-sm">Assessment Response</Label>
               <Select 
                 value={question.response?.assessment || ""} 
                 onValueChange={(value) => updateQuestion(question.templateId, "response", { 
@@ -360,7 +362,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                   assessment: value 
                 })}
               >
-                <SelectTrigger data-testid={`select-${question.templateId}-assessment`}>
+                <SelectTrigger data-testid={`select-${question.templateId}-assessment`} className="text-xs sm:text-sm">
                   <SelectValue placeholder="Select assessment" />
                 </SelectTrigger>
                 <SelectContent>
@@ -390,7 +392,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             value={question.response || ""} 
             onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
-            <SelectTrigger data-testid={`select-${question.templateId}`}>
+            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
             <SelectContent>
@@ -418,7 +420,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             value={question.response || ""} 
             onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
-            <SelectTrigger data-testid={`select-${question.templateId}`}>
+            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
               <SelectValue placeholder="Select response" />
             </SelectTrigger>
             <SelectContent>
@@ -436,7 +438,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             value={question.response || ""} 
             onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
-            <SelectTrigger data-testid={`select-${question.templateId}`}>
+            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
               <SelectValue placeholder="Select rating" />
             </SelectTrigger>
             <SelectContent>
@@ -482,37 +484,37 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex justify-between items-start gap-2">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                Facility Physical Security Survey
+              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
+                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-sm sm:text-base">Facility Physical Security Survey</span>
               </CardTitle>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Comprehensive assessment of existing physical security controls and systems
               </p>
             </div>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">
               Phase 1 of 2
             </Badge>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-6">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <div className="flex justify-between text-sm mb-2">
+              <div className="flex justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
                 <span>Survey Progress</span>
-                <span>{completedQuestions} of {questions.length} completed</span>
+                <span className="text-[11px] sm:text-sm">{completedQuestions} of {questions.length} completed</span>
               </div>
               <Progress value={progress} className="w-full" data-testid="progress-survey" />
             </div>
             
             {/* Category Navigation */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {categories.map((category, index) => {
                 const Icon = getCategoryIcon(category);
                 const categoryQuestions = questions.filter(q => q.category === category);
@@ -525,11 +527,11 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                     variant={currentCategory === index ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentCategory(index)}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 min-h-8 sm:min-h-9"
                     data-testid={`nav-category-${category}`}
                   >
                     <Icon className="h-3 w-3" />
-                    {category.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                    <span className="hidden xs:inline sm:inline">{category.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}</span>
                     {isComplete && <CheckCircle className="h-3 w-3 text-green-500" />}
                   </Button>
                 );
@@ -540,14 +542,14 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       </Card>
 
       {/* Current Category Questions */}
-      <div ref={contentRef} className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+      <div ref={contentRef} className="space-y-2 sm:space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm sm:text-lg font-semibold flex items-center gap-1.5 sm:gap-2">
             {(() => {
               const Icon = getCategoryIcon(categories[currentCategory]);
-              return <Icon className="h-4 w-4" />;
+              return <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
             })()}
-            {categories[currentCategory]?.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
+            <span className="text-xs sm:text-base">{categories[currentCategory]?.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}</span>
           </h3>
           <Button 
             variant="outline" 
@@ -567,54 +569,57 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
                 handleComplete();
               }
             }}
+            className="text-xs sm:text-sm min-h-8 sm:min-h-9"
             data-testid={`button-skip-category-${categories[currentCategory]}`}
           >
-            Skip Section
+            <span className="hidden xs:inline">Skip Section</span>
+            <span className="xs:hidden">Skip</span>
           </Button>
         </div>
 
         {currentCategoryQuestions.map((question) => (
           <Card key={question.templateId}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
+            <CardHeader className="p-2.5 sm:p-4 pb-2 sm:pb-3">
+              <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <CardTitle className="text-base leading-tight">{question.question}</CardTitle>
-                  <Badge variant="secondary" className="text-xs">{question.subcategory}</Badge>
+                  <CardTitle className="text-sm sm:text-base leading-tight">{question.question}</CardTitle>
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs">{question.subcategory}</Badge>
                 </div>
                 {question.response && (
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-1" />
+                  <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 mt-0.5 sm:mt-1 shrink-0" />
                 )}
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-2.5 sm:p-4 space-y-2.5 sm:space-y-4">
               {/* Standard Reference */}
-              <div className="bg-muted/50 p-3 rounded-md">
-                <p className="text-xs text-muted-foreground font-medium">Professional Standard:</p>
-                <p className="text-sm">{question.standard}</p>
+              <div className="bg-muted/50 p-2 sm:p-3 rounded-md">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">Professional Standard:</p>
+                <p className="text-xs sm:text-sm">{question.standard}</p>
               </div>
 
               {/* Response Input */}
               <div>
-                <Label className="text-sm font-medium">Assessment Response</Label>
+                <Label className="text-xs sm:text-sm font-medium">Assessment Response</Label>
                 {renderQuestionInput(question)}
               </div>
 
               {/* Notes */}
               <div>
-                <Label htmlFor={`${question.templateId}-notes`}>Observations & Notes</Label>
+                <Label htmlFor={`${question.templateId}-notes`} className="text-xs sm:text-sm">Observations & Notes</Label>
                 <Textarea
                   id={`${question.templateId}-notes`}
                   value={question.notes || ""}
                   onChange={(e) => updateQuestion(question.templateId, "notes", e.target.value)}
                   placeholder="Document specific observations, conditions, or concerns..."
                   rows={2}
+                  className="text-xs sm:text-sm"
                   data-testid={`textarea-${question.templateId}-notes`}
                 />
               </div>
 
               {/* Photo Evidence */}
               <div>
-                <Label className="text-sm font-medium mb-2 block">Photo Evidence</Label>
+                <Label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block">Photo Evidence</Label>
                 <EvidenceUploader
                   assessmentId={assessmentId}
                   questionId={question.dbId || ""}
@@ -626,8 +631,8 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               
               {/* Recommendations Badge */}
               {question.response && ["poor", "critical", "no"].includes(question.response) && (
-                <Badge variant="destructive" className="text-xs">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
+                <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                  <AlertTriangle className="h-3 w-3 mr-0.5 sm:mr-1" />
                   Requires Attention
                 </Badge>
               )}
@@ -637,22 +642,24 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 pt-3 sm:pt-4">
         <Button 
           variant="outline"
           onClick={handleSave}
           disabled={isPersisting}
+          className="text-sm min-h-11 w-full sm:w-auto"
           data-testid="button-save-survey"
         >
           <Save className="h-4 w-4 mr-2" />
           {isPersisting ? "Saving..." : "Save Progress"}
         </Button>
         
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {currentCategory > 0 && (
             <Button 
               variant="outline"
               onClick={() => setCurrentCategory(prev => prev - 1)}
+              className="text-sm min-h-11 w-full sm:w-auto"
               data-testid="button-previous-category"
             >
               Previous Category
@@ -662,6 +669,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
           {currentCategory < categories.length - 1 ? (
             <Button 
               onClick={() => setCurrentCategory(prev => prev + 1)}
+              className="text-sm min-h-11 w-full sm:w-auto"
               data-testid="button-next-category"
             >
               Next Category
@@ -670,9 +678,10 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             <Button 
               onClick={handleComplete}
               disabled={isPersisting}
+              className="text-sm min-h-11 w-full sm:w-auto"
               data-testid="button-complete-survey"
             >
-              Complete Survey & Start Risk Assessment
+              Complete Survey & Continue
             </Button>
           )}
         </div>

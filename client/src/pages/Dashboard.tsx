@@ -181,7 +181,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold" data-testid="heading-dashboard">Physical Security Risk Assessment</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold" data-testid="heading-dashboard">Physical Security Risk Assessment</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Comprehensive facility surveys and professional risk analysis following ASIS International standards
           </p>
@@ -191,7 +191,7 @@ export default function Dashboard() {
             onClick={handleCreateNew} 
             disabled={createAssessmentMutation.isPending || hasReachedLimit}
             data-testid="button-create-assessment"
-            className="w-full sm:w-auto min-h-11"
+            className="w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
           >
             <Plus className="h-4 w-4 mr-2" />
             {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
@@ -206,13 +206,13 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-6">
             <CardTitle className="text-sm font-medium">Total Assessments</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             <div className="text-2xl font-bold font-mono" data-testid="stat-total-assessments">
               {statsLoading ? "..." : stats?.totalAssessments || 0}
             </div>
@@ -223,11 +223,11 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-6">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             <div className="text-2xl font-bold font-mono" data-testid="stat-active-assessments">
               {statsLoading ? "..." : stats?.activeAssessments || 0}
             </div>
@@ -238,11 +238,11 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-6">
             <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             <div className="text-2xl font-bold font-mono" data-testid="stat-completed-month">
               {statsLoading ? "..." : stats?.completedThisMonth || 0}
             </div>
@@ -253,11 +253,11 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-6">
             <CardTitle className="text-sm font-medium">Avg Risk Score</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             <div className="text-2xl font-bold font-mono" data-testid="stat-avg-risk">
               {statsLoading ? "..." : (stats?.averageRiskScore || 0).toFixed(1)}/10
             </div>
@@ -271,8 +271,8 @@ export default function Dashboard() {
       {/* Risk Overview */}
       {stats?.riskDistribution && (
         <div>
-          <h2 className="text-lg font-semibold mb-4">Risk Distribution</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h2 className="text-base sm:text-lg font-semibold mb-4">Risk Distribution</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <RiskScoreCard
               title="Low Risk Assessments"
               score={stats.riskDistribution.low}
@@ -323,14 +323,14 @@ export default function Dashboard() {
                 data-testid="input-search-assessments"
               />
             </div>
-            <Button variant="outline" size="sm" data-testid="button-filter" className="flex-shrink-0">
+            <Button variant="outline" size="sm" data-testid="button-filter" className="flex-shrink-0 text-xs sm:text-sm min-h-9">
               <Filter className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
         {assessmentsLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="animate-pulse">
                 <CardHeader>
@@ -355,7 +355,7 @@ export default function Dashboard() {
                   {searchQuery ? "No assessments match your search." : "Get started by creating your first security assessment."}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={handleCreateNew}>
+                  <Button onClick={handleCreateNew} className="text-xs sm:text-sm min-h-9 sm:min-h-10">
                     <Plus className="h-4 w-4 mr-2" />
                     Create First Assessment
                   </Button>
@@ -364,7 +364,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {filteredAssessments.map((assessment) => (
               <AssessmentCard
                 key={assessment.id}
@@ -387,30 +387,31 @@ export default function Dashboard() {
 
       {/* Create Assessment Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent data-testid="dialog-create-assessment">
+        <DialogContent data-testid="dialog-create-assessment" className="p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Create New Assessment</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Create New Assessment</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Create a new physical security risk assessment for a facility or site.
             </DialogDescription>
           </DialogHeader>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3 sm:space-y-4">
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assessment Title</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Assessment Title</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="e.g., Main Office Security Assessment"
                         {...field}
                         data-testid="input-assessment-title"
+                        className="text-xs sm:text-sm"
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -420,10 +421,10 @@ export default function Dashboard() {
                 name="templateId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assessment Template *</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Assessment Template *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={templatesLoading}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-template">
+                        <SelectTrigger data-testid="select-template" className="text-xs sm:text-sm">
                           <SelectValue placeholder={
                             templatesLoading 
                               ? "Loading templates..." 
@@ -433,16 +434,16 @@ export default function Dashboard() {
                       </FormControl>
                       <SelectContent>
                         {templates.length > 0 && templates.map((template: any) => (
-                          <SelectItem key={template.id} value={template.id}>
+                          <SelectItem key={template.id} value={template.id} className="text-xs sm:text-sm">
                             {template.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
                       Templates pre-load survey questions and set the assessment workflow
                     </p>
-                    <FormMessage />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -452,10 +453,10 @@ export default function Dashboard() {
                 name="siteId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Site (Optional)</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Site (Optional)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={sitesLoading}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-site">
+                        <SelectTrigger data-testid="select-site" className="text-xs sm:text-sm">
                           <SelectValue placeholder={
                             sitesLoading 
                               ? "Loading sites..." 
@@ -466,26 +467,26 @@ export default function Dashboard() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="manual">Enter location manually</SelectItem>
+                        <SelectItem value="manual" className="text-xs sm:text-sm">Enter location manually</SelectItem>
                         {sites.length > 0 ? (
                           sites.map((site) => (
-                            <SelectItem key={site.id} value={site.id.toString()}>
+                            <SelectItem key={site.id} value={site.id.toString()} className="text-xs sm:text-sm">
                               {site.name} - {site.city}, {site.state}
                             </SelectItem>
                           ))
                         ) : !sitesLoading && (
-                          <SelectItem value="no-sites" disabled>
+                          <SelectItem value="no-sites" disabled className="text-xs sm:text-sm">
                             No sites available - create one first
                           </SelectItem>
                         )}
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
                       {selectedSiteId && selectedSiteId !== "manual" 
                         ? "Assessment will be linked to the selected site"
                         : "Select a site or enter location manually below"}
                     </p>
-                    <FormMessage />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -496,15 +497,16 @@ export default function Dashboard() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Location</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g., 123 Main St, New York, NY"
                           {...field}
                           data-testid="input-location"
+                          className="text-xs sm:text-sm"
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />
@@ -515,28 +517,29 @@ export default function Dashboard() {
                 name="assessor"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assessor</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Assessor</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Your name"
                         {...field}
                         data-testid="input-assessor"
+                        className="text-xs sm:text-sm"
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
 
               {createAssessmentMutation.isError && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <p className="text-sm text-destructive">
+                <div className="p-2 sm:p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-xs sm:text-sm text-destructive">
                     Failed to create assessment. Please try again.
                   </p>
                 </div>
               )}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -547,6 +550,7 @@ export default function Dashboard() {
                   }}
                   disabled={createAssessmentMutation.isPending}
                   data-testid="button-cancel-assessment"
+                  className="w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
                 >
                   Cancel
                 </Button>
@@ -554,16 +558,19 @@ export default function Dashboard() {
                   type="submit"
                   disabled={createAssessmentMutation.isPending || sitesLoading}
                   data-testid="button-submit-assessment"
+                  className="w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
                 >
                   {createAssessmentMutation.isPending ? (
                     <>
                       <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
+                      <span className="hidden sm:inline">Creating...</span>
+                      <span className="sm:hidden">Creating...</span>
                     </>
                   ) : (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Assessment
+                      <span className="hidden sm:inline">Create Assessment</span>
+                      <span className="sm:hidden">Create</span>
                     </>
                   )}
                 </Button>
