@@ -271,6 +271,15 @@ export const questionThreatMap = pgTable("question_threat_map", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Question-Control Mapping - Links survey questions to the controls they assess
+export const questionControlMap = pgTable("question_control_map", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: varchar("question_id").notNull().references(() => templateQuestions.id),
+  controlId: varchar("control_id").notNull().references(() => controlLibrary.id),
+  isPrimary: boolean("is_primary").notNull().default(false), // Primary control for this question
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Executive Interview Questions - Master interview questions for executive protection assessments
 export const executiveInterviewQuestions = pgTable("executive_interview_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

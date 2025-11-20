@@ -1,674 +1,369 @@
-export interface InterviewResponse {
-  questionId: string;
-  answer: string | number | string[] | null;
+/**
+ * ID-Based Interview Risk Mapping Service (v3)
+ * 
+ * PROPER ID-BASED ARCHITECTURE:
+ * - Queries question-threat and question-control mappings from database using IDs
+ * - NO runtime name-matching (all linkages resolved at seed time)
+ * - Fails fast if database relationships are missing
+ * - Preserves validated T×V×I calculation logic from v2
+ */
+import { db } from '../db';
+import {
+  templateQuestions,
+  questionThreatMap,
+  questionControlMap,
+  threatLibrary,
+  controlLibrary
+} from '../../shared/schema';
+import { eq, inArray } from 'drizzle-orm';
+
+// Response data structure (using database question IDs)
+export interface InterviewResponseV3 {
+  questionId: string; // Database UUID from template_questions.id
+  questionCode: string; // Human-readable code like "1.1" for logging
+  answer: string | number | boolean | null;
   notes?: string;
 }
 
-export interface ThreatScore {
+// Risk calculation result
+export interface ThreatRiskScoreV3 {
+  threatId: string;
   threatName: string;
+  threatCategory: string;
   likelihood: number; // 1-5
   vulnerability: number; // 1-5
   impact: number; // 1-5
-  inherentRisk: number; // T × V × I
-  contributingFactors: string[];
+  inherentRisk: number; // L × V × I
+  isCritical: boolean; // risk >= 50 or V >= 4
+  findings: string[]; // High-risk findings
+  recommendations: string[]; // Control recommendations
+  affectedControls: Array<{ id: string; name: string; detected: boolean }>;
 }
 
-export interface RiskAnalysis {
-  threats: ThreatScore[];
-  overallRiskLevel: 'Low' | 'Medium' | 'High' | 'Critical';
-  criticalFindings: string[];
-  recommendations: string[];
+export interface RiskAnalysisResultV3 {
+  overallRiskLevel: 'critical' | 'high' | 'medium' | 'low';
+  totalThreats: number;
+  criticalThreats: number;
+  threatScores: ThreatRiskScoreV3[];
+  summary: string;
 }
 
 /**
- * Main risk mapping service that analyzes interview responses and calculates
- * threat scores using the T×V×I formula from the "No BS" Security Framework
+ * Analyze interview responses using database ID linkages
+ * 
+ * @param templateId - Template identifier (e.g., "office-building")
+ * @param responses - Interview responses array (will be converted to Map internally)
+ * @returns Risk analysis with threat scores and recommendations
  */
-export class InterviewRiskMapper {
-  private responses: Map<string, InterviewResponse>;
+export async function analyzeInterviewRisksV3(
+  templateId: string,
+  responses: InterviewResponseV3[]
+): Promise<RiskAnalysisResultV3> {
   
-  constructor(responses: InterviewResponse[]) {
-    this.responses = new Map(responses.map(r => [r.questionId, r]));
+  // Load all questions for this template FIRST
+  const questions = await db
+    .select()
+    .from(templateQuestions)
+    .where(eq(templateQuestions.templateId, templateId));
+  
+  if (questions.length === 0) {
+    throw new Error(`No questions found for template: ${templateId}`);
   }
   
-  /**
-   * Analyze all interview responses and generate threat scores
-   */
-  analyzeInterview(): RiskAnalysis {
-    const threats: ThreatScore[] = [];
-    
-    // Analyze each threat category
-    threats.push(...this.analyzeForcedEntryThreats());
-    threats.push(...this.analyzeTailgatingThreats());
-    threats.push(...this.analyzeTheftThreats());
-    threats.push(...this.analyzeWorkplaceViolenceThreats());
-    threats.push(...this.analyzeCyberPhysicalThreats());
-    threats.push(...this.analyzeEspionageThreats());
-    
-    // Calculate overall risk level
-    const avgInherentRisk = threats.reduce((sum, t) => sum + t.inherentRisk, 0) / threats.length;
-    const overallRiskLevel = this.calculateRiskLevel(avgInherentRisk);
-    
-    // Identify critical findings
-    const criticalFindings = this.identifyCriticalFindings(threats);
-    
-    // Generate recommendations
-    const recommendations = this.generateRecommendations(threats);
-    
-    return {
-      threats,
-      overallRiskLevel,
-      criticalFindings,
-      recommendations
-    };
+  const questionIds = questions.map(q => q.id);
+  const validQuestionIdSet = new Set(questionIds);
+  
+  // Validate and filter responses to only include questions from this template
+  const invalidResponses = responses.filter(r => !validQuestionIdSet.has(r.questionId));
+  if (invalidResponses.length > 0) {
+    throw new Error(
+      `Invalid question IDs in responses: ${invalidResponses.map(r => r.questionCode || r.questionId).slice(0, 5).join(', ')}. ` +
+      `These questions do not belong to template '${templateId}'.`
+    );
   }
   
-  /**
-   * Analyze forced entry threats (doors, windows, perimeter)
-   */
-  private analyzeForcedEntryThreats(): ThreatScore[] {
-    const threats: ThreatScore[] = [];
-    
-    // Check perimeter security questions
-    const hasFencing = this.getYesNoResponse('1.1');
-    const fencingCondition = this.getRatingResponse('1.2');
-    const hasPerimeterLighting = this.getYesNoResponse('1.3');
-    const lightingQuality = this.getRatingResponse('1.4');
-    
-    // Check entry point security
-    const doorCondition = this.getRatingResponse('2.1');
-    const hasReinforcedDoors = this.getYesNoResponse('2.2');
-    const windowSecurity = this.getRatingResponse('3.1');
-    
-    // Calculate Forced Entry threat
-    let vulnerability = 5; // Start with maximum vulnerability
-    let likelihood = 3; // Medium baseline
-    const contributingFactors: string[] = [];
-    
-    // Reduce vulnerability based on controls
-    if (hasFencing === 'yes') {
-      vulnerability -= 1;
-      if (fencingCondition >= 4) vulnerability -= 0.5;
-    } else {
-      contributingFactors.push('No perimeter fencing installed');
+  // Convert filtered responses array to Map for efficient lookups
+  const responsesMap = new Map(
+    responses
+      .filter(r => validQuestionIdSet.has(r.questionId))
+      .map(r => [r.questionId, r])
+  );
+  
+  // Load threat mappings for all questions
+  const threatMappings = await db
+    .select()
+    .from(questionThreatMap)
+    .where(inArray(questionThreatMap.questionId, questionIds));
+  
+  // Load control mappings for all questions
+  const controlMappings = await db
+    .select()
+    .from(questionControlMap)
+    .where(inArray(questionControlMap.questionId, questionIds));
+  
+  // Load full threat library
+  const threats = await db.select().from(threatLibrary).where(eq(threatLibrary.active, true));
+  const threatMap = new Map(threats.map(t => [t.id, t]));
+  
+  // Load full control library
+  const controls = await db.select().from(controlLibrary).where(eq(controlLibrary.active, true));
+  const controlMap = new Map(controls.map(c => [c.id, c]));
+  
+  // Build threat-to-questions mapping
+  const threatQuestionMap = new Map<string, string[]>();
+  for (const mapping of threatMappings) {
+    if (!threatQuestionMap.has(mapping.threatId)) {
+      threatQuestionMap.set(mapping.threatId, []);
     }
-    
-    if (hasPerimeterLighting === 'yes' && lightingQuality >= 4) {
-      vulnerability -= 0.5;
-    } else {
-      contributingFactors.push('Inadequate perimeter lighting');
-    }
-    
-    if (hasReinforcedDoors === 'yes' && doorCondition >= 4) {
-      vulnerability -= 1;
-    } else {
-      contributingFactors.push('Doors not adequately reinforced');
-    }
-    
-    if (windowSecurity < 3) {
-      contributingFactors.push('Windows lack adequate security measures');
-    } else {
-      vulnerability -= 0.5;
-    }
-    
-    // Clamp vulnerability to 1-5 range
-    vulnerability = Math.max(1, Math.min(5, vulnerability));
-    
-    // Impact for forced entry (business disruption, property damage)
-    const impact = 4;
-    
-    threats.push({
-      threatName: 'Forced Entry',
-      likelihood,
-      vulnerability,
-      impact,
-      inherentRisk: likelihood * vulnerability * impact,
-      contributingFactors
-    });
-    
-    return threats;
+    threatQuestionMap.get(mapping.threatId)!.push(mapping.questionId);
   }
   
-  /**
-   * Analyze tailgating and piggybacking threats
-   */
-  private analyzeTailgatingThreats(): ThreatScore[] {
-    const threats: ThreatScore[] = [];
-    
-    const hasCardAccess = this.getYesNoResponse('4.1');
-    const cardAccessQuality = this.getRatingResponse('4.2');
-    const hasTurnstiles = this.getYesNoResponse('4.3');
-    const hasVisitorManagement = this.getYesNoResponse('5.1');
-    const badgeDisplayEnforced = this.getYesNoResponse('5.2');
-    const hasSecurityAwareness = this.getYesNoResponse('9.1');
-    
-    // Tailgating
-    let tailgatingVuln = 5;
-    const tailgatingFactors: string[] = [];
-    
-    if (hasCardAccess === 'yes' && cardAccessQuality >= 4) {
-      tailgatingVuln -= 1;
-    } else {
-      tailgatingFactors.push('Card access system not effective');
+  // Build question-to-controls mapping
+  const questionControlsMap = new Map<string, string[]>();
+  for (const mapping of controlMappings) {
+    if (!questionControlsMap.has(mapping.questionId)) {
+      questionControlsMap.set(mapping.questionId, []);
     }
-    
-    if (hasTurnstiles === 'yes') {
-      tailgatingVuln -= 1.5;
-    } else {
-      tailgatingFactors.push('No anti-tailgating turnstiles installed');
-    }
-    
-    if (hasVisitorManagement === 'yes') {
-      tailgatingVuln -= 0.5;
-    }
-    
-    if (badgeDisplayEnforced !== 'yes') {
-      tailgatingFactors.push('Badge display policy not enforced');
-    } else {
-      tailgatingVuln -= 0.5;
-    }
-    
-    if (hasSecurityAwareness === 'yes') {
-      tailgatingVuln -= 0.5;
-    } else {
-      tailgatingFactors.push('No security awareness training conducted');
-    }
-    
-    tailgatingVuln = Math.max(1, Math.min(5, tailgatingVuln));
-    
-    threats.push({
-      threatName: 'Tailgating',
-      likelihood: 4, // High likelihood without controls
-      vulnerability: tailgatingVuln,
-      impact: 2,
-      inherentRisk: 4 * tailgatingVuln * 2,
-      contributingFactors: tailgatingFactors
-    });
-    
-    // Piggybacking (similar but with consent)
-    let piggybackingVuln = 5;
-    const piggybackingFactors: string[] = [];
-    
-    if (hasSecurityAwareness !== 'yes') {
-      piggybackingFactors.push('Employees not trained on access control policy');
-    } else {
-      piggybackingVuln -= 1;
-    }
-    
-    if (badgeDisplayEnforced !== 'yes') {
-      piggybackingFactors.push('Visitors not easily identifiable');
-    } else {
-      piggybackingVuln -= 1;
-    }
-    
-    if (hasTurnstiles === 'yes') {
-      piggybackingVuln -= 1;
-    } else {
-      piggybackingFactors.push('No physical barriers prevent piggybacking');
-    }
-    
-    piggybackingVuln = Math.max(1, Math.min(5, piggybackingVuln));
-    
-    threats.push({
-      threatName: 'Piggybacking',
-      likelihood: 5, // Very high likelihood
-      vulnerability: piggybackingVuln,
-      impact: 2,
-      inherentRisk: 5 * piggybackingVuln * 2,
-      contributingFactors: piggybackingFactors
-    });
-    
-    return threats;
+    questionControlsMap.get(mapping.questionId)!.push(mapping.controlId);
   }
   
-  /**
-   * Analyze theft threats (equipment, intellectual property)
-   */
-  private analyzeTheftThreats(): ThreatScore[] {
-    const threats: ThreatScore[] = [];
-    
-    const hasCCTV = this.getYesNoResponse('6.1');
-    const cctvCoverage = this.getRatingResponse('6.2');
-    const hasAssetTracking = this.getYesNoResponse('7.1');
-    const hasClearDeskPolicy = this.getYesNoResponse('8.1');
-    const sensitiveDataProtection = this.getRatingResponse('8.2');
-    const hasBackgroundChecks = this.getYesNoResponse('9.2');
-    
-    // Equipment Theft
-    let equipmentTheftVuln = 4;
-    const equipmentFactors: string[] = [];
-    
-    if (hasCCTV === 'yes' && cctvCoverage >= 4) {
-      equipmentTheftVuln -= 1;
-    } else {
-      equipmentFactors.push('Inadequate video surveillance coverage');
-    }
-    
-    if (hasAssetTracking === 'yes') {
-      equipmentTheftVuln -= 1;
-    } else {
-      equipmentFactors.push('No asset tracking system in place');
-    }
-    
-    if (hasBackgroundChecks === 'yes') {
-      equipmentTheftVuln -= 0.5;
-    }
-    
-    equipmentTheftVuln = Math.max(1, Math.min(5, equipmentTheftVuln));
-    
-    threats.push({
-      threatName: 'Equipment Theft',
-      likelihood: 3,
-      vulnerability: equipmentTheftVuln,
-      impact: 3,
-      inherentRisk: 3 * equipmentTheftVuln * 3,
-      contributingFactors: equipmentFactors
-    });
-    
-    // Intellectual Property Theft
-    let ipTheftVuln = 4;
-    const ipFactors: string[] = [];
-    
-    if (hasClearDeskPolicy !== 'yes') {
-      ipFactors.push('No clear desk policy to protect sensitive documents');
-    } else {
-      ipTheftVuln -= 0.5;
-    }
-    
-    if (sensitiveDataProtection < 3) {
-      ipFactors.push('Inadequate protection of confidential information');
-    } else if (sensitiveDataProtection >= 4) {
-      ipTheftVuln -= 1;
-    }
-    
-    if (hasBackgroundChecks === 'yes') {
-      ipTheftVuln -= 0.5;
-    } else {
-      ipFactors.push('Employees not vetted through background checks');
-    }
-    
-    const hasCardAccess = this.getYesNoResponse('4.1');
-    if (hasCardAccess === 'yes') {
-      ipTheftVuln -= 0.5;
-    }
-    
-    ipTheftVuln = Math.max(1, Math.min(5, ipTheftVuln));
-    
-    threats.push({
-      threatName: 'Intellectual Property Theft',
-      likelihood: 3,
-      vulnerability: ipTheftVuln,
-      impact: 5, // Catastrophic impact
-      inherentRisk: 3 * ipTheftVuln * 5,
-      contributingFactors: ipFactors
-    });
-    
-    return threats;
-  }
-  
-  /**
-   * Analyze workplace violence threats
-   */
-  private analyzeWorkplaceViolenceThreats(): ThreatScore[] {
-    const threats: ThreatScore[] = [];
-    
-    const hasActiveShooterTraining = this.getYesNoResponse('10.1');
-    const hasPanicButtons = this.getYesNoResponse('10.2');
-    const hasIncidentResponsePlan = this.getYesNoResponse('10.3');
-    const hasWorkplaceViolencePolicy = this.getYesNoResponse('10.4');
-    const hasLockdownProcedures = this.getYesNoResponse('10.5');
-    
-    // Active Shooter
-    let activeShooterVuln = 5;
-    const activeShooterFactors: string[] = [];
-    
-    if (hasActiveShooterTraining !== 'yes') {
-      activeShooterFactors.push('No active threat response training provided');
-    } else {
-      activeShooterVuln -= 1;
-    }
-    
-    if (hasPanicButtons !== 'yes') {
-      activeShooterFactors.push('No panic buttons or duress alarms installed');
-    } else {
-      activeShooterVuln -= 0.5;
-    }
-    
-    if (hasLockdownProcedures !== 'yes') {
-      activeShooterFactors.push('No lockdown procedures established');
-    } else {
-      activeShooterVuln -= 1;
-    }
-    
-    if (hasIncidentResponsePlan === 'yes') {
-      activeShooterVuln -= 0.5;
-    }
-    
-    activeShooterVuln = Math.max(1, Math.min(5, activeShooterVuln));
-    
-    threats.push({
-      threatName: 'Active Shooter',
-      likelihood: 1, // Very low likelihood
-      vulnerability: activeShooterVuln,
-      impact: 5, // Catastrophic
-      inherentRisk: 1 * activeShooterVuln * 5,
-      contributingFactors: activeShooterFactors
-    });
-    
-    // Assault / Workplace Violence
-    let assaultVuln = 4;
-    const assaultFactors: string[] = [];
-    
-    if (hasWorkplaceViolencePolicy !== 'yes') {
-      assaultFactors.push('No workplace violence policy in place');
-    } else {
-      assaultVuln -= 0.5;
-    }
-    
-    if (hasPanicButtons === 'yes') {
-      assaultVuln -= 0.5;
-    }
-    
-    if (hasIncidentResponsePlan === 'yes') {
-      assaultVuln -= 0.5;
-    }
-    
-    assaultVuln = Math.max(1, Math.min(5, assaultVuln));
-    
-    threats.push({
-      threatName: 'Assault',
-      likelihood: 2,
-      vulnerability: assaultVuln,
-      impact: 3,
-      inherentRisk: 2 * assaultVuln * 3,
-      contributingFactors: assaultFactors
-    });
-    
-    return threats;
-  }
-  
-  /**
-   * Analyze cyber-physical threats
-   */
-  private analyzeCyberPhysicalThreats(): ThreatScore[] {
-    const threats: ThreatScore[] = [];
-    
-    const hasNetworkSegmentation = this.getYesNoResponse('11.1');
-    const hasMFA = this.getYesNoResponse('11.2');
-    const hasPatchManagement = this.getYesNoResponse('11.3');
-    const cctvNetworkSecurity = this.getRatingResponse('11.4');
-    
-    // Access Control System Hack
-    let acsHackVuln = 4;
-    const acsFactors: string[] = [];
-    
-    if (hasNetworkSegmentation !== 'yes') {
-      acsFactors.push('Security systems not segmented from corporate network');
-    } else {
-      acsHackVuln -= 1;
-    }
-    
-    if (hasMFA !== 'yes') {
-      acsFactors.push('Multi-factor authentication not implemented');
-    } else {
-      acsHackVuln -= 1;
-    }
-    
-    if (hasPatchManagement !== 'yes') {
-      acsFactors.push('No regular security patching schedule');
-    } else {
-      acsHackVuln -= 0.5;
-    }
-    
-    acsHackVuln = Math.max(1, Math.min(5, acsHackVuln));
-    
-    threats.push({
-      threatName: 'Access Control System Hack',
-      likelihood: 2,
-      vulnerability: acsHackVuln,
-      impact: 4,
-      inherentRisk: 2 * acsHackVuln * 4,
-      contributingFactors: acsFactors
-    });
-    
-    // Surveillance System Compromise
-    let cctvHackVuln = 4;
-    const cctvFactors: string[] = [];
-    
-    if (hasNetworkSegmentation !== 'yes') {
-      cctvFactors.push('CCTV systems accessible from corporate network');
-    } else {
-      cctvHackVuln -= 1;
-    }
-    
-    if (cctvNetworkSecurity < 3) {
-      cctvFactors.push('CCTV network security inadequate');
-    } else if (cctvNetworkSecurity >= 4) {
-      cctvHackVuln -= 1;
-    }
-    
-    if (hasPatchManagement === 'yes') {
-      cctvHackVuln -= 0.5;
-    }
-    
-    cctvHackVuln = Math.max(1, Math.min(5, cctvHackVuln));
-    
-    threats.push({
-      threatName: 'Surveillance System Compromise',
-      likelihood: 3,
-      vulnerability: cctvHackVuln,
-      impact: 3,
-      inherentRisk: 3 * cctvHackVuln * 3,
-      contributingFactors: cctvFactors
-    });
-    
-    return threats;
-  }
-  
-  /**
-   * Analyze espionage threats
-   */
-  private analyzeEspionageThreats(): ThreatScore[] {
-    const threats: ThreatScore[] = [];
-    
-    const hasVisitorEscort = this.getYesNoResponse('12.1');
-    const hasClearDesk = this.getYesNoResponse('8.1');
-    const hasBackgroundChecks = this.getYesNoResponse('9.2');
-    const meetingRoomSecurity = this.getRatingResponse('12.2');
-    const documentControlRating = this.getRatingResponse('12.3');
-    
-    // Corporate Espionage
-    let espionageVuln = 4;
-    const espionageFactors: string[] = [];
-    
-    if (hasVisitorEscort !== 'yes') {
-      espionageFactors.push('Visitors not escorted in sensitive areas');
-    } else {
-      espionageVuln -= 0.5;
-    }
-    
-    if (hasClearDesk !== 'yes') {
-      espionageFactors.push('Confidential documents left unsecured');
-    } else {
-      espionageVuln -= 0.5;
-    }
-    
-    if (hasBackgroundChecks !== 'yes') {
-      espionageFactors.push('Staff not vetted for access to sensitive information');
-    } else {
-      espionageVuln -= 0.5;
-    }
-    
-    if (meetingRoomSecurity < 3) {
-      espionageFactors.push('Meeting rooms lack privacy controls');
-    } else if (meetingRoomSecurity >= 4) {
-      espionageVuln -= 0.5;
-    }
-    
-    if (documentControlRating < 3) {
-      espionageFactors.push('Document control procedures inadequate');
-    } else if (documentControlRating >= 4) {
-      espionageVuln -= 0.5;
-    }
-    
-    espionageVuln = Math.max(1, Math.min(5, espionageVuln));
-    
-    threats.push({
-      threatName: 'Corporate Espionage',
-      likelihood: 3,
-      vulnerability: espionageVuln,
-      impact: 5, // Catastrophic
-      inherentRisk: 3 * espionageVuln * 5,
-      contributingFactors: espionageFactors
-    });
-    
-    // Insider Threat
-    let insiderVuln = 4;
-    const insiderFactors: string[] = [];
-    
-    if (hasBackgroundChecks !== 'yes') {
-      insiderFactors.push('No pre-employment screening');
-    } else {
-      insiderVuln -= 0.5;
-    }
-    
-    if (documentControlRating < 3) {
-      insiderFactors.push('Weak access controls on sensitive information');
-    } else if (documentControlRating >= 4) {
-      insiderVuln -= 1;
-    }
-    
-    const hasAccessAudits = this.getYesNoResponse('13.1');
-    if (hasAccessAudits !== 'yes') {
-      insiderFactors.push('No regular access rights audits conducted');
-    } else {
-      insiderVuln -= 1;
-    }
-    
-    insiderVuln = Math.max(1, Math.min(5, insiderVuln));
-    
-    threats.push({
-      threatName: 'Insider Threat',
-      likelihood: 3,
-      vulnerability: insiderVuln,
-      impact: 5,
-      inherentRisk: 3 * insiderVuln * 5,
-      contributingFactors: insiderFactors
-    });
-    
-    return threats;
-  }
-  
-  /**
-   * Helper to get yes/no response
-   */
-  private getYesNoResponse(questionId: string): 'yes' | 'no' | 'unknown' {
-    const response = this.responses.get(questionId);
-    if (!response || !response.answer) return 'unknown';
-    
-    const answer = String(response.answer).toLowerCase();
-    if (answer === 'yes' || answer === 'true') return 'yes';
-    if (answer === 'no' || answer === 'false') return 'no';
-    return 'unknown';
-  }
-  
-  /**
-   * Helper to get rating response (1-5 scale)
-   */
-  private getRatingResponse(questionId: string): number {
-    const response = this.responses.get(questionId);
-    if (!response || !response.answer) return 3; // Default to middle
-    
-    const rating = Number(response.answer);
-    return isNaN(rating) ? 3 : Math.max(1, Math.min(5, rating));
-  }
-  
-  /**
-   * Calculate overall risk level from average inherent risk
-   */
-  private calculateRiskLevel(avgRisk: number): 'Low' | 'Medium' | 'High' | 'Critical' {
-    if (avgRisk < 20) return 'Low';
-    if (avgRisk < 40) return 'Medium';
-    if (avgRisk < 60) return 'High';
-    return 'Critical';
-  }
-  
-  /**
-   * Identify critical findings from threat analysis
-   */
-  private identifyCriticalFindings(threats: ThreatScore[]): string[] {
-    const findings: string[] = [];
-    
-    // Find high-risk threats (inherent risk >= 50)
-    const highRiskThreats = threats.filter(t => t.inherentRisk >= 50);
-    highRiskThreats.forEach(threat => {
-      findings.push(`${threat.threatName}: Inherent Risk ${threat.inherentRisk.toFixed(1)} - ${threat.contributingFactors.join('; ')}`);
-    });
-    
-    // Find threats with very high vulnerability (>= 4)
-    const highVulnThreats = threats.filter(t => t.vulnerability >= 4 && !highRiskThreats.includes(t));
-    highVulnThreats.forEach(threat => {
-      findings.push(`${threat.threatName}: High vulnerability (${threat.vulnerability.toFixed(1)}) - immediate attention required`);
-    });
-    
-    return findings;
-  }
-  
-  /**
-   * Generate control recommendations based on threat analysis
-   */
-  private generateRecommendations(threats: ThreatScore[]): string[] {
-    const recommendations: string[] = [];
-    const topThreats = threats.sort((a, b) => b.inherentRisk - a.inherentRisk).slice(0, 5);
-    
-    topThreats.forEach(threat => {
-      switch (threat.threatName) {
-        case 'Forced Entry':
-          if (threat.vulnerability >= 4) {
-            recommendations.push('Install perimeter fencing with anti-climb features');
-            recommendations.push('Upgrade to reinforced doors and frames with commercial-grade locks');
-            recommendations.push('Install security window film or bars on ground-floor windows');
-          }
-          break;
-          
-        case 'Tailgating':
-        case 'Piggybacking':
-          if (threat.vulnerability >= 4) {
-            recommendations.push('Install optical turnstiles or speed gates at main entrances');
-            recommendations.push('Implement mandatory security awareness training for all employees');
-            recommendations.push('Enforce strict badge display policy');
-          }
-          break;
-          
-        case 'Active Shooter':
-          if (threat.vulnerability >= 3) {
-            recommendations.push('Conduct Run-Hide-Fight or ALICE active threat response training');
-            recommendations.push('Install panic buttons in key locations (reception, conference rooms)');
-            recommendations.push('Establish and test lockdown procedures quarterly');
-          }
-          break;
-          
-        case 'Intellectual Property Theft':
-        case 'Corporate Espionage':
-          if (threat.vulnerability >= 4) {
-            recommendations.push('Implement and enforce clear desk/screen policy');
-            recommendations.push('Require visitor escort in all non-public areas');
-            recommendations.push('Conduct quarterly access rights audits');
-            recommendations.push('Install video surveillance in sensitive areas');
-          }
-          break;
-          
-        case 'Access Control System Hack':
-        case 'Surveillance System Compromise':
-          if (threat.vulnerability >= 3) {
-            recommendations.push('Implement network segmentation for security systems');
-            recommendations.push('Deploy multi-factor authentication on all access control systems');
-            recommendations.push('Establish quarterly security patch management schedule');
-          }
-          break;
+  // Detect which controls are present based on responses
+  const detectedControls = new Set<string>();
+  for (const [questionId, response] of Array.from(responsesMap.entries())) {
+    const question = questions.find(q => q.id === questionId);
+    if (!question) continue;
+    
+    if (isControlPresent(question.type, response.answer)) {
+      const controlIds = questionControlsMap.get(questionId) || [];
+      for (const controlId of controlIds) {
+        detectedControls.add(controlId);
       }
+    }
+  }
+  
+  // Analyze each threat
+  const threatScores: ThreatRiskScoreV3[] = [];
+  
+  for (const [threatId, questionIds] of Array.from(threatQuestionMap.entries())) {
+    const threat = threatMap.get(threatId);
+    if (!threat) {
+      console.warn(`⚠️  Threat ID ${threatId} not found in library`);
+      continue;
+    }
+    
+    const relatedQuestions = questions.filter(q => questionIds.includes(q.id));
+    
+    const score = analyzeThreatScoreV3(
+      threat,
+      relatedQuestions,
+      responsesMap,
+      detectedControls,
+      questionControlsMap,
+      controlMap
+    );
+    
+    threatScores.push(score);
+  }
+  
+  // Sort by risk score (highest first)
+  threatScores.sort((a, b) => b.inherentRisk - a.inherentRisk);
+  
+  // Calculate overall risk level
+  const criticalThreats = threatScores.filter(t => t.isCritical).length;
+  const avgRisk = threatScores.length > 0
+    ? threatScores.reduce((sum, t) => sum + t.inherentRisk, 0) / threatScores.length
+    : 0;
+  
+  let overallRiskLevel: 'critical' | 'high' | 'medium' | 'low';
+  if (criticalThreats >= 3 || avgRisk >= 50) {
+    overallRiskLevel = 'critical';
+  } else if (criticalThreats >= 1 || avgRisk >= 35) {
+    overallRiskLevel = 'high';
+  } else if (avgRisk >= 20) {
+    overallRiskLevel = 'medium';
+  } else {
+    overallRiskLevel = 'low';
+  }
+  
+  return {
+    overallRiskLevel,
+    totalThreats: threatScores.length,
+    criticalThreats,
+    threatScores,
+    summary: generateSummary(overallRiskLevel, criticalThreats, threatScores.length)
+  };
+}
+
+/**
+ * Analyze a single threat to generate risk score
+ */
+function analyzeThreatScoreV3(
+  threat: any,
+  relatedQuestions: any[],
+  responses: Map<string, InterviewResponseV3>,
+  detectedControls: Set<string>,
+  questionControlsMap: Map<string, string[]>,
+  controlMap: Map<string, any>
+): ThreatRiskScoreV3 {
+  
+  // Extract likelihood and impact from threat library
+  const likelihood = mapLikelihoodToNumber(threat.typicalLikelihood || 'medium');
+  const impact = mapImpactToNumber(threat.typicalImpact || 'medium');
+  
+  // Calculate vulnerability based on control presence
+  let vulnerability = 5.0;
+  const findings: string[] = [];
+  const affectedControls: Array<{ id: string; name: string; detected: boolean }> = [];
+  
+  // Collect all controls relevant to this threat
+  const relevantControlIds = new Set<string>();
+  for (const question of relatedQuestions) {
+    const controlIds = questionControlsMap.get(question.id) || [];
+    for (const controlId of controlIds) {
+      relevantControlIds.add(controlId);
+    }
+  }
+  
+  // Check each control and reduce vulnerability if detected
+  for (const controlId of Array.from(relevantControlIds)) {
+    const control = controlMap.get(controlId);
+    if (!control) continue;
+    
+    const isDetected = detectedControls.has(controlId);
+    affectedControls.push({
+      id: control.id,
+      name: control.name,
+      detected: isDetected
     });
     
-    return Array.from(new Set(recommendations)); // Remove duplicates
+    if (isDetected) {
+      // Reduce vulnerability based on control weight
+      const reductionFactor = control.weight || 0.20;
+      vulnerability -= reductionFactor * 5; // Scale to vulnerability range
+    }
+  }
+  
+  // Check for high-risk findings from responses
+  for (const question of relatedQuestions) {
+    const response = responses.get(question.id);
+    if (response && isHighRiskResponse(question.type, response.answer)) {
+      findings.push(question.rationale || 'High risk identified');
+    }
+  }
+  
+  // Clamp vulnerability to 1-5 range
+  vulnerability = Math.max(1, Math.min(5, vulnerability));
+  
+  // Calculate inherent risk using T×V×I formula
+  const inherentRisk = Math.round(likelihood * vulnerability * impact);
+  
+  // Determine if critical
+  const isCritical = inherentRisk >= 50 || vulnerability >= 4;
+  
+  // Generate recommendations for undetected controls
+  const recommendations: string[] = [];
+  for (const control of affectedControls) {
+    if (!control.detected) {
+      const controlDetails = controlMap.get(control.id);
+      if (controlDetails) {
+        recommendations.push(`Implement ${control.name}: ${controlDetails.description}`);
+      }
+    }
+  }
+  
+  return {
+    threatId: threat.id,
+    threatName: threat.name,
+    threatCategory: threat.category,
+    likelihood,
+    vulnerability: Math.round(vulnerability * 10) / 10,
+    impact,
+    inherentRisk,
+    isCritical,
+    findings,
+    recommendations: recommendations.slice(0, 3),
+    affectedControls
+  };
+}
+
+/**
+ * Determine if a control is present based on response
+ */
+function isControlPresent(questionType: string, answer: any): boolean {
+  switch (questionType) {
+    case 'yes-no':
+      return answer === 'yes' || answer === true;
+    case 'rating':
+      return typeof answer === 'number' && answer >= 3;
+    case 'text':
+      return typeof answer === 'string' && answer.trim().length > 0;
+    case 'photo':
+      return typeof answer === 'string' && answer.length > 0;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Determine if a response indicates high risk
+ */
+function isHighRiskResponse(questionType: string, answer: any): boolean {
+  switch (questionType) {
+    case 'yes-no':
+      return answer === 'no' || answer === false;
+    case 'rating':
+      return typeof answer === 'number' && answer <= 2;
+    case 'text':
+      return typeof answer === 'string' && answer.trim().length < 10;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Map likelihood text to numeric score (1-5)
+ */
+function mapLikelihoodToNumber(likelihood: string): number {
+  const map: Record<string, number> = {
+    'very low': 1,
+    'low': 2,
+    'medium': 3,
+    'high': 4,
+    'very high': 5
+  };
+  return map[likelihood.toLowerCase()] || 3;
+}
+
+/**
+ * Map impact text to numeric score (1-5)
+ */
+function mapImpactToNumber(impact: string): number {
+  const map: Record<string, number> = {
+    'very low': 1,
+    'low': 2,
+    'medium': 3,
+    'high': 4,
+    'very high': 5,
+    'critical': 5
+  };
+  return map[impact.toLowerCase()] || 3;
+}
+
+/**
+ * Generate summary text
+ */
+function generateSummary(
+  overallLevel: string,
+  criticalCount: number,
+  totalCount: number
+): string {
+  if (overallLevel === 'critical') {
+    return `Critical security posture identified. ${criticalCount} of ${totalCount} threats require immediate attention. Comprehensive remediation plan needed.`;
+  } else if (overallLevel === 'high') {
+    return `Elevated security risks detected. ${criticalCount} critical threats identified among ${totalCount} total threats. Priority remediation recommended.`;
+  } else if (overallLevel === 'medium') {
+    return `Moderate security posture. ${totalCount} threats assessed with manageable risk levels. Continue monitoring and incremental improvements.`;
+  } else {
+    return `Strong security posture. ${totalCount} threats assessed with low risk levels. Maintain current controls and periodic reviews.`;
   }
 }
