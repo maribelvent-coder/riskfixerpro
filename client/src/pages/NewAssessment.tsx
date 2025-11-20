@@ -163,7 +163,10 @@ export default function NewAssessment() {
                       <SelectContent>
                         {ASSESSMENT_TEMPLATES.map((template) => (
                           <SelectItem key={template.id} value={template.id} data-testid={`template-option-${template.id}`}>
-                            {template.name}
+                            <div className="flex flex-col">
+                              <span className="font-medium">{template.name}</span>
+                              <span className="text-xs text-muted-foreground">{template.category} • {template.surveyParadigm === 'facility' ? 'Facility Survey' : 'Executive Interview'}</span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
