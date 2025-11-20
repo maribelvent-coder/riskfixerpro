@@ -97,7 +97,7 @@ export const OFFICE_BUILDING_INTERVIEW_QUESTIONS: InterviewQuestion[] = [
       highRisk: 'Dense vegetation and concealment opportunities near building',
       lowRisk: 'Well-maintained clear zones with low vegetation'
     },
-    threatMappings: ['Forced Entry', 'Unauthorized Entry', 'Surveillance & Pattern-of-Life Analysis'],
+    threatMappings: ['Forced Entry', 'Unauthorized Entry', 'Corporate Espionage'],
     controlMappings: ['CPTED Principles - Clear Zones']
   },
   {
@@ -929,7 +929,7 @@ export const OFFICE_BUILDING_INTERVIEW_QUESTIONS: InterviewQuestion[] = [
       highRisk: 'No security training program',
       lowRisk: 'Annual training with testing and accountability'
     },
-    threatMappings: ['Tailgating', 'Piggybacking', 'Social Engineering', 'Phishing'],
+    threatMappings: ['Tailgating', 'Piggybacking', 'Social Engineering'],
     controlMappings: ['Security Awareness Training']
   },
   {
