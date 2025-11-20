@@ -447,6 +447,94 @@ const threats: ThreatData[] = [
     mitigation: "Digital footprint reduction, PII protection, family security training, residential address privacy, monitoring",
     examples: ["Address publication", "Family member exposure", "Social media targeting"]
   },
+  {
+    name: "Targeted Kidnapping - Ransom",
+    category: "Executive Protection",
+    subcategory: "Kidnapping",
+    description: "Planned abduction of executive or family member for financial ransom",
+    typicalLikelihood: "very-low",
+    typicalImpact: "catastrophic",
+    asisCode: "EP-007",
+    mitigation: "Executive protection detail, route variation, residential security, travel security protocols, crisis response plan",
+    examples: ["Planned abduction for ransom", "Family member kidnapping", "Express kidnapping at ATM"]
+  },
+  {
+    name: "Express Kidnapping",
+    category: "Executive Protection",
+    subcategory: "Kidnapping",
+    description: "Short-term abduction to force ATM withdrawals or immediate ransom",
+    typicalLikelihood: "low",
+    typicalImpact: "major",
+    asisCode: "EP-008",
+    mitigation: "Awareness training, route variation, secure transportation, avoid predictable patterns, emergency response protocols",
+    examples: ["ATM forced withdrawal", "Short-term detention for cash", "Opportunistic abduction"]
+  },
+  {
+    name: "Home Invasion - Targeted",
+    category: "Executive Protection",
+    subcategory: "Property Crime",
+    description: "Planned invasion of residence targeting high-value assets or occupants",
+    typicalLikelihood: "low",
+    typicalImpact: "catastrophic",
+    asisCode: "EP-009",
+    mitigation: "Residential security team, panic room, alarm systems, CCTV monitoring, perimeter security, police liaison",
+    examples: ["Planned home invasion", "Safe room breach attempt", "Coordinated residential attack"]
+  },
+  {
+    name: "Stalking - Physical",
+    category: "Executive Protection",
+    subcategory: "Harassment",
+    description: "Persistent following or surveillance of executive by obsessed individual",
+    typicalLikelihood: "low",
+    typicalImpact: "moderate",
+    asisCode: "EP-010",
+    mitigation: "Awareness training, surveillance detection, restraining orders, security detail, law enforcement coordination",
+    examples: ["Persistent following", "Workplace surveillance", "Pattern observation", "Unwanted contact"]
+  },
+  {
+    name: "Cyberstalking & Doxxing",
+    category: "Executive Protection",
+    subcategory: "Cyber Threats",
+    description: "Online harassment and public disclosure of private information",
+    typicalLikelihood: "medium",
+    typicalImpact: "moderate",
+    asisCode: "EP-011",
+    mitigation: "Digital privacy services, social media management, online reputation monitoring, cyber threat intelligence",
+    examples: ["Social media harassment", "Public information disclosure", "Online threats", "Location tracking"]
+  },
+  {
+    name: "Assassination/Physical Assault",
+    category: "Executive Protection",
+    subcategory: "Physical Harm",
+    description: "Targeted attack intending to cause death or serious injury",
+    typicalLikelihood: "very-low",
+    typicalImpact: "catastrophic",
+    asisCode: "EP-012",
+    mitigation: "Executive protection detail, threat intelligence, route variation, armored vehicles, advance security, crisis response",
+    examples: ["Planned assassination", "Physical assault", "Targeted violence", "Ideological attack"]
+  },
+  {
+    name: "Paparazzi/Media Harassment",
+    category: "Executive Protection",
+    subcategory: "Privacy Invasion",
+    description: "Aggressive pursuit by media creating safety and privacy concerns",
+    typicalLikelihood: "medium",
+    typicalImpact: "minor",
+    asisCode: "EP-013",
+    mitigation: "Legal team coordination, privacy protocols, secure locations, family security training, public relations management",
+    examples: ["Aggressive media pursuit", "Privacy invasion", "Family photography", "Residence surveillance"]
+  },
+  {
+    name: "Protest/Demonstration at Residence",
+    category: "Executive Protection",
+    subcategory: "Activism",
+    description: "Organized protest at executive residence creating security concerns",
+    typicalLikelihood: "low",
+    typicalImpact: "moderate",
+    asisCode: "EP-014",
+    mitigation: "Intelligence gathering, law enforcement coordination, perimeter security, family relocation protocols, public relations",
+    examples: ["Organized protest", "Demonstration at home", "Activist targeting", "Public pressure campaign"]
+  },
 ];
 
 async function seedThreatLibrary() {
