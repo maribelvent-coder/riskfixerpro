@@ -1,0 +1,136 @@
+RiskFixer: Logic & Computation Specification (v1.0)Target System: Replit / Next.js / PostgreSQL / PrismaObjective: Implement a deterministic risk scoring engine based on the "No BS" physical security framework.1. The Core Equation (The "Truth" Source)The system must not "guess" risk. It must calculate it using this hard-coded formula in the backend logic.Formula$$R_{residual} = (T \times V \times I) \times (1 - C_e)$$Variable Definitions & ConstraintsVariableNameData TypeRangeSource$T$Threat LikelihoodInteger1 - 5Derived from AssessmentContext (Industry/Location) + QuestionAnswers (History).$V$VulnerabilityInteger1 - 5Derived from QuestionAnswers (Physical gaps).$I$Impact/CriticalityInteger1 - 5User Input at setup (Asset Value).$C_e$Control EffectivenessFloat0.00 - 0.95Sum of valid controls found in QuestionAnswers.2. Database Schema (Prisma)Copy this structure into schema.prisma. This relational structure allows the "Question Set" to act as a logic engine rather than just a flat survey.Code snippet// 1. The Assessment Session
+model Assessment {
+  id              String   @id @default(uuid())
+  clientName      String
+  industry        String   // e.g., "Retail", "Data Center" (Determines Baseline T)
+  assetValue      Int      // 1-5 (Sets Variable I)
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  answers         Answer
+  riskSnapshots   RiskSnapshot // The calculated results
+}
+
+// 2. The Knowledge Base (Static Data - The "Brain")
+model ThreatCategory {
+  id              String   @id // e.g., "TH_THEFT"
+  name            String   // "Theft / Shrinkage"
+  baseLikelihood  Int      // Default T score (1-5) before specific questions modify it
+  questions       QuestionThreatMap
+}
+
+model ControlLibrary {
+  id              String   @id // e.g., "CTRL_CCTV"
+  name            String   // "Perimeter CCTV"
+  type            ControlType // ENUM: PROCEDURAL, DETECTIVE, PREVENTATIVE
+  baseWeight      Float    // e.g., 0.20
+  questions       QuestionControlMap
+}
+
+// 3. The Logic Engine (Mapping Questions to Math)
+model Question {
+  id              String   @id
+  text            String
+  section         String   // "Perimeter", "Access Control"
+  
+  // Logic Mappers
+  threatsAffected QuestionThreatMap
+  controlsGranted QuestionControlMap
+  options         AnswerOption
+}
+
+model AnswerOption {
+  id              String   @id
+  questionId      String
+  text            String   // e.g., "Yes", "No", "Partial"
+  
+  // The "No BS" Logic Hooks
+  vulnerabilityMod Int     // e.g., +2 (If "No", V increases)
+  fidelityMod      Float   // e.g., 0.5 (If "Partial", control is only 50% effective)
+  
+  question        Question @relation(fields: [questionId], references: [id])
+}
+
+// 4. Join Tables for Logic
+model QuestionThreatMap {
+  questionId      String
+  threatId        String
+  
+  question        Question @relation(fields: [questionId], references: [id])
+  threat          ThreatCategory @relation(fields: [threatId], references: [id])
+  
+  @@id([questionId, threatId])
+}
+
+model QuestionControlMap {
+  questionId      String
+  controlId       String
+  
+  question        Question @relation(fields: [questionId], references: [id])
+  control         ControlLibrary @relation(fields: [controlId], references: [id])
+
+  @@id([questionId, controlId])
+}
+
+enum ControlType {
+  PROCEDURAL
+  DETECTIVE
+  PREVENTATIVE
+  ACTIVE
+}
+3. The Calculation Logic (Algorithm)This is the TypeScript logic for utils/riskEngine.ts. This function runs every time an answer is saved.A. Control Weighting Standard (The "No BS" Weights)Hardcode these constants to ensure consistency.Control TypeWeightLogic RationalePROCEDURAL0.10Paper policy. Easy to ignore. Low reliability.DETECTIVE0.20Cameras/Alarms. Sees it, but doesn't stop it.PREVENTATIVE0.40Locks/Fences. Physical impedance. High reliability.ACTIVE0.50Guards/Biometrics. Intelligent or absolute denial.B. The Calculation Function (Pseudo-code)TypeScriptfunction calculateRisk(assessmentId: string) {
+  
+  // 1. Fetch Context
+  const assessment = await db.assessment.find(assessmentId);
+  const Impact = assessment.assetValue; // Variable I
+
+  // 2. Iterate through all Threat Categories (Theft, Violence, etc.)
+  const threatResults = allThreats.map(threat => {
+
+    // A. Calculate Threat (T) & Vulnerability (V)
+    let T = threat.baseLikelihood; 
+    let V = 1; // Start at low vulnerability
+    
+    // Check user answers related to this threat
+    const relatedAnswers = db.answers.where(a => a.question.affects(threat));
+    
+    relatedAnswers.forEach(ans => {
+       // If answer indicates a gap (e.g., "Lighting is broken")
+       // The AnswerOption contains the modifier
+       V += ans.selectedOption.vulnerabilityMod;
+    });
+
+    // Clamp values to max 5
+    if (V > 5) V = 5;
+    if (T > 5) T = 5;
+
+    // B. Calculate Control Effectiveness (Ce)
+    let Ce = 0.0;
+    const relatedControls = db.answers.where(a => a.question.grantsControl);
+
+    relatedControls.forEach(ans => {
+       const weight = ans.control.baseWeight;     // e.g., 0.20 (Camera)
+       const fidelity = ans.selectedOption.fidelityMod; // e.g., 0.5 (Broken)
+       
+       // Math: Effective Weight = Base Weight * Fidelity
+       Ce += (weight * fidelity);
+    });
+
+    // Cap Ce at 0.95 (Risk is never zero)
+    if (Ce > 0.95) Ce = 0.95;
+
+    // C. Final Formula
+    const InherentRisk = T * V * Impact;
+    const ResidualRisk = InherentRisk * (1 - Ce);
+
+    return {
+      threatName: threat.name,
+      inherentScore: InherentRisk,
+      residualScore: ResidualRisk, // The final number for the report
+      grade: getGrade(ResidualRisk) // Low, Med, High
+    };
+  });
+
+  return threatResults;
+}
+4. The Logic Data (Seeding the System)To make the system "smart" immediately, you must seed the database with these Logic Maps. This is how the system knows that "Broken Locks" = "High Risk."Logic Map Example 1: Perimeter SecurityQuestion: "Are all exterior doors equipped with commercial-grade deadbolts or access control locks?"Answer A: "Yes, all functioning."grantsControl: "Physical Locks" (Preventative)fidelityMod: 1.0vulnerabilityMod: 0Result: Increases $C_e$ by 0.40.Answer B: "Yes, but some are broken/propped."grantsControl: "Physical Locks"fidelityMod: 0.2 (Severe penalty for poor maintenance)vulnerabilityMod: +2 (Increases V score for "Unauthorized Entry")Result: $C_e$ increases only by 0.08; Vulnerability spikes.Answer C: "No."grantsControl: None.vulnerabilityMod: +4 (Critical Vulnerability)Result: Vulnerability hits max (5). Risk score spikes.5. Implementation Roadmap for DeveloperSchema Init: Run npx prisma init and paste the schema from Section 2.Seed Script: Write a seed.ts file to populate ControlLibrary with the weights from Section 3A.Logic Service: Copy the algorithm in Section 3B into a backend API route (e.g., POST /api/calculate-risk).Frontend: Build the Question UI to send the AnswerOption.id to the backend. The backend handles the math. Do not do the math on the frontend.

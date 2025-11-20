@@ -1,0 +1,116 @@
+Here is the exact, copy-paste instruction set to feed into the Replit Agent.
+
+You need to be explicit because the Agent's default behavior is to build generic "CRUD" apps (Create, Read, Update, Delete). You are asking it to build a **Computational Engine**.
+
+### How to use this:
+
+1.  Open your Replit Agent chat.
+2.  If there is an existing "Phase 2" in the plan, tell the Agent: *"Delete the current Phase 2 plan. I have a specific technical specification for the Risk Engine I want you to follow."*
+3.  **Copy and paste the block below** into the chat.
+
+-----
+
+### **Replit Agent Instructions: Phase 2 - Risk Engine Implementation**
+
+**Context:**
+We are building a **Quantitative Physical Security Risk Assessment Platform**. We are moving beyond simple data collection. Phase 2 is about implementing a deterministic calculation engine that converts survey answers into risk scores.
+
+**Core Requirement:**
+Do not use generic risk logic. You must implement the specific "No BS" algorithms defined below using **Prisma (PostgreSQL)** and **TypeScript**.
+
+#### **Step 1: Database Schema (Update `schema.prisma`)**
+
+Create the following models to handle risk calculations. Ensure strict typing (Int vs Float).
+
+```prisma
+// The Asset being protected (e.g., "Main Server Room")
+model RiskAsset {
+  id            Int      @id @default(autoincrement())
+  assessmentId  Int
+  name          String
+  criticality   Float    // (I) Impact Score: 1-5 scale (e.g., 5 = Catastrophic)
+  description   String?
+  owner         String?
+  scenarios     RiskScenario
+  assessment    Assessment @relation(fields: [assessmentId], references: [id])
+}
+
+// The specific Threat Scenario (e.g., "Theft of Server")
+model RiskScenario {
+  id              Int      @id @default(autoincrement())
+  riskAssetId     Int
+  threatType      String   // e.g., "Theft", "Vandalism", "Unauthorized Entry"
+  likelihood      Float    // (L) Probability Score: 1-5 scale
+  
+  // Computed Risks - Store these to avoid re-calc on read
+  inherentRisk    Float    // L * I (Range 1-25)
+  residualRisk    Float    // Inherent * (1 - ControlEffectiveness)
+  
+  // Relations
+  riskAsset       RiskAsset @relation(fields: [riskAssetId], references: [id])
+  treatments      Treatment
+}
+
+// Mitigation Plans (Future State)
+model Treatment {
+  id              Int      @id @default(autoincrement())
+  riskScenarioId  Int
+  title           String
+  costEstimate    Float?
+  effectiveness   Float    // Estimated reduction factor (0.0 - 1.0)
+  riskScenario    RiskScenario @relation(fields:, references: [id])
+}
+```
+
+#### **Step 2: The Calculation Logic (Create `shared/riskEngine.ts`)**
+
+Implement this exact logic. Do not hallucinate new formulas.
+
+**Constants (Control Weights):**
+
+  * `WEIGHT_PREVENTATIVE = 0.40` (Barriers, Locks)
+  * `WEIGHT_DETECTIVE = 0.20` (CCTV, Alarms)
+  * `WEIGHT_PROCEDURAL = 0.10` (Policies, Signage)
+  * *Max Effectiveness Cap:* 0.95 (Risk is never zero).
+
+**Formula 1: Inherent Risk ($R_{inh}$)**
+$$R_{inh} = \text{Likelihood} \times \text{Criticality}$$
+
+  * *Constraints:* Result must be between 1 and 25.
+
+**Formula 2: Control Effectiveness ($C_e$)**
+This is calculated by querying the `SurveyResponses` linked to the assessment.
+
+1.  Fetch all "Yes" answers mapped to the specific `threatType` of the scenario.
+2.  Sum their weights based on the control type.
+3.  $$C_e = \sum (\text{Weight} \times \text{ImplementationStatus})$$
+      * ImplementationStatus: Yes = 1.0, Partial = 0.5, No = 0.0.
+
+**Formula 3: Current/Residual Risk ($R_{res}$)**
+$$R_{res} = R_{inh} \times (1 - \min(C_e, 0.95))$$
+
+#### **Step 3: API Endpoints (Server Actions)**
+
+Create the following API routes in `server/routes.ts`:
+
+1.  **`POST /api/assessments/:id/risk-scenarios`**:
+      * Accepts: `assetId`, `threatType`, `likelihood` (1-5).
+      * Action: Fetches the Asset Criticality, runs the `calculateInherentRisk` function, and saves the record.
+2.  **`GET /api/assessments/:id/risk-matrix`**:
+      * Returns a JSON object grouped by risk level (Low, Med, High, Critical) for the dashboard heatmap.
+3.  **`POST /api/recalc-controls`**:
+      * Trigger this whenever a user updates a Survey Answer. It must re-run the $C_e$ calculation for all linked scenarios to update the `residualRisk` in real-time.
+
+#### **Step 4: Frontend Visualization**
+
+  * Replace the placeholder risk table with a **5x5 Heatmap Grid**.
+  * X-Axis: Likelihood (1-5).
+  * Y-Axis: Impact/Criticality (1-5).
+  * Plot the `RiskScenarios` as dots on this grid.
+
+**Execution Order:**
+
+1.  Update Schema & Run Migrations.
+2.  Build `riskEngine.ts` logic.
+3.  Build API endpoints.
+4.  Build Frontend Heatmap.
