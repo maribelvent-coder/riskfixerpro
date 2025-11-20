@@ -426,9 +426,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
               <SelectValue placeholder="Select response" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="yes">Yes - Compliant</SelectItem>
-              <SelectItem value="no">No - Non-compliant</SelectItem>
-              <SelectItem value="partial">Partial - Partially compliant</SelectItem>
+              <SelectItem value="yes">Yes (100%) - Fully compliant</SelectItem>
+              <SelectItem value="partial">Partial (50%) - Partially compliant</SelectItem>
+              <SelectItem value="no">No (0%) - Non-compliant</SelectItem>
               <SelectItem value="na">N/A - Not applicable</SelectItem>
             </SelectContent>
           </Select>

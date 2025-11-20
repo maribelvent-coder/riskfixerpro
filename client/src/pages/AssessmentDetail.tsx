@@ -20,6 +20,7 @@ import { ReportGenerator } from "@/components/ReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
+import { RiskAssessmentNBS } from "@/components/RiskAssessmentNBS";
 import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -513,27 +514,34 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </Card>
         </TabsContent>
 
-        {/* Phase 2: ASIS Risk Assessment */}
+        {/* Phase 2: ASIS Risk Assessment - Using No BS Framework for Facility assessments */}
         <TabsContent value="risk-assessment" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                Phase 2: Security Risk Assessment
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Systematic identification and analysis of security risks using ASIS International methodology.
-              </p>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <AssessmentForm 
-                assessmentId={assessmentId}
-                phase="risk-assessment"
-                onSave={handleSave}
-                onSubmit={handleRiskAssessmentComplete}
-              />
-            </CardContent>
-          </Card>
+          {assessmentData.surveyParadigm === "facility" ? (
+            <RiskAssessmentNBS 
+              assessmentId={assessmentId}
+              onComplete={handleRiskAssessmentComplete}
+            />
+          ) : (
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Phase 2: Security Risk Assessment
+                </CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Systematic identification and analysis of security risks using ASIS International methodology.
+                </p>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                <AssessmentForm 
+                  assessmentId={assessmentId}
+                  phase="risk-assessment"
+                  onSave={handleSave}
+                  onSubmit={handleRiskAssessmentComplete}
+                />
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* AI-Powered Risk Analysis - Temporarily Disabled */}
