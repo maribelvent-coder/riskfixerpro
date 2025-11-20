@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, jsonb, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, jsonb, timestamp, integer, boolean, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -260,6 +260,15 @@ export const templateQuestions = pgTable("template_questions", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Question-Threat Mapping - Links survey questions to the threats they help assess/mitigate
+export const questionThreatMap = pgTable("question_threat_map", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: varchar("question_id").notNull().references(() => templateQuestions.id),
+  threatId: varchar("threat_id").notNull().references(() => threatLibrary.id),
+  impactDriver: boolean("impact_driver").notNull().default(true), // Does this question affect this threat's likelihood or impact?
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Executive Interview Questions - Master interview questions for executive protection assessments
 export const executiveInterviewQuestions = pgTable("executive_interview_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -358,22 +367,28 @@ export const riskScenarios = pgTable("risk_scenarios", {
   assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
   assetId: varchar("asset_id").references(() => riskAssets.id),
   scenario: text("scenario").notNull(), // "Theft of cash register"
-  asset: text("asset").notNull(), // "Cash register" 
+  asset: text("asset").notNull(), // "Cash register"
   
-  // Threat information
+  // Threat information  
   threatType: text("threat_type"), // human, environmental, technical, operational
+  threatLibraryId: varchar("threat_library_id").references(() => threatLibrary.id), // Link to threat library
   threatDescription: text("threat_description"), // Specific threat
   vulnerabilityDescription: text("vulnerability_description"), // What makes this possible
   
-  // Inherent Risk (before any controls)
+  // LEGACY TEXT-BASED RISK (kept for backward compatibility)
   likelihood: text("likelihood").notNull(), // "very-low", "low", "medium", "high", "very-high"
   impact: text("impact").notNull(), // "negligible", "minor", "moderate", "major", "catastrophic"
   riskLevel: text("risk_level").notNull(), // "Low", "Medium", "High", "Critical" (auto-calculated)
-  
-  // Current Risk (after existing controls)
   currentLikelihood: text("current_likelihood"), 
   currentImpact: text("current_impact"),
   currentRiskLevel: text("current_risk_level"),
+  
+  // "NO BS" NUMERIC RISK CALCULATIONS
+  likelihoodScore: real("likelihood_score"), // L: 1-5 numeric scale
+  impactScore: real("impact_score"), // I: 1-5 numeric scale (from asset criticality)
+  inherentRisk: real("inherent_risk"), // R_inh = L × I (range 1-25)
+  controlEffectiveness: real("control_effectiveness"), // Ce: 0.0 - 0.95 (sum of control weights × fidelity)
+  residualRisk: real("residual_risk"), // R_res = R_inh × (1 - Ce)
   
   // Decision and treatment
   decision: text("decision").default("undecided"), // "undecided", "accept", "transfer", "remediate"
@@ -429,6 +444,9 @@ export const treatmentPlans = pgTable("treatment_plans", {
   type: text("type"), // "people", "process", "technology", "physical", "policy", "training", "vendor", "other"
   effect: text("effect"), // "reduce_likelihood", "reduce_impact"
   value: integer("value"), // How much to reduce (1-5)
+  
+  // "No BS" risk reduction calculation
+  projectedRiskReduction: real("projected_risk_reduction"), // Estimated reduction in residual risk score (for before/after visualization)
   
   responsible: text("responsible"), // Who is responsible
   deadline: text("deadline"), // When to implement
@@ -494,9 +512,10 @@ export const controlLibrary = pgTable("control_library", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // "CCTV System", "Access Badges", etc.
   category: text("category").notNull(), // "Access Control", "Surveillance", "Physical Barriers", "Security Personnel", "Procedural Controls", "Environmental Design", "Cyber-Physical Security"
-  controlType: text("control_type").notNull(), // "Detective", "Preventive", "Corrective", "Deterrent"
+  controlType: text("control_type").notNull(), // "Detective", "Preventive", "Corrective", "Deterrent" or "PREVENTATIVE", "DETECTIVE", "PROCEDURAL", "ACTIVE"
   description: text("description").notNull(), // Detailed control description
-  baseWeight: integer("base_weight"), // Effectiveness baseline (1-5)
+  baseWeight: integer("base_weight"), // Effectiveness baseline (1-5) - LEGACY
+  weight: real("weight"), // "No BS" weight (0.10, 0.20, 0.40, 0.50) for risk calculations
   reductionPercentage: integer("reduction_percentage"), // Typical risk reduction (0-100)
   implementationNotes: text("implementation_notes"), // Best practices for implementation
   estimatedCost: text("estimated_cost"), // Typical cost range
