@@ -280,33 +280,56 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   };
 
   const handleComplete = async () => {
-    if (progress >= 80) {
-      const questionsData = questions.map(q => ({
-        assessmentId,
-        templateQuestionId: q.templateId,
-        category: q.category,
-        subcategory: q.subcategory,
-        question: q.question,
-        standard: q.standard,
-        type: q.type,
-        response: q.response,
-        notes: q.notes,
-        evidence: q.evidence || [],
-        recommendations: q.recommendations || []
-      }));
+    console.log("Complete Survey clicked - Progress:", progress, "Threshold: 80%");
+    
+    if (progress < 80) {
+      toast({
+        title: "Survey Incomplete",
+        description: `Please complete at least 80% of the survey (currently ${Math.round(progress)}%). Answer more questions to continue.`,
+        variant: "destructive"
+      });
+      return;
+    }
 
-      try {
-        // Wait for save to complete before advancing workflow
-        await saveSurveyMutation.mutateAsync(questionsData);
-        onComplete?.();
-        toast({
-          title: "Facility Survey Complete",
-          description: "Ready to proceed to ASIS Risk Assessment phase.",
-        });
-      } catch (error) {
-        // Error toast already shown by mutation's onError handler
-        console.error("Failed to complete survey:", error);
+    const questionsData = questions.map(q => ({
+      assessmentId,
+      templateQuestionId: q.templateId,
+      category: q.category,
+      subcategory: q.subcategory,
+      question: q.question,
+      standard: q.standard,
+      type: q.type,
+      response: q.response,
+      notes: q.notes,
+      evidence: q.evidence || [],
+      recommendations: q.recommendations || []
+    }));
+
+    try {
+      console.log("Saving survey questions before completing...");
+      // Wait for save to complete before advancing workflow
+      await saveSurveyMutation.mutateAsync(questionsData);
+      console.log("Survey saved successfully, calling onComplete callback");
+      
+      toast({
+        title: "Facility Survey Complete",
+        description: "Ready to proceed to ASIS Risk Assessment phase.",
+      });
+      
+      // Call onComplete after successful save
+      if (onComplete) {
+        onComplete();
+      } else {
+        console.warn("No onComplete callback provided");
       }
+    } catch (error) {
+      // Error toast already shown by mutation's onError handler
+      console.error("Failed to complete survey:", error);
+      toast({
+        title: "Failed to Complete Survey",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive"
+      });
     }
   };
 
@@ -324,34 +347,39 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const renderQuestionInput = (question: SurveyQuestion) => {
     switch (question.type) {
       case "measurement":
+        const isCountQuestion = question.question.toLowerCase().startsWith("how many");
         return (
           <div className="space-y-2.5 sm:space-y-4">
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor={`${question.templateId}-value`} className="text-xs sm:text-sm">Measurement Value</Label>
+              <Label htmlFor={`${question.templateId}-value`} className="text-xs sm:text-sm">
+                {isCountQuestion ? "Count" : "Measurement Value"}
+              </Label>
               <Input
                 id={`${question.templateId}-value`}
                 type="number"
-                step="0.1"
+                step={isCountQuestion ? "1" : "0.1"}
                 value={question.response?.value || ""}
                 onChange={(e) => updateQuestion(question.templateId, "response", { 
                   ...question.response, 
                   value: e.target.value,
-                  unit: question.response?.unit || "fc" 
+                  unit: isCountQuestion ? "count" : (question.response?.unit || "fc")
                 })}
-                placeholder="Enter measurement"
+                placeholder={isCountQuestion ? "Enter count" : "Enter measurement"}
                 className="text-xs sm:text-sm"
                 data-testid={`input-${question.templateId}-value`}
               />
-              <Input
-                placeholder="Unit (fc, Px/ft, feet, etc.)"
-                value={question.response?.unit || ""}
-                onChange={(e) => updateQuestion(question.templateId, "response", { 
-                  ...question.response, 
-                  unit: e.target.value 
-                })}
-                className="text-xs sm:text-sm"
-                data-testid={`input-${question.templateId}-unit`}
-              />
+              {!isCountQuestion && (
+                <Input
+                  placeholder="Unit (fc, Px/ft, feet, etc.)"
+                  value={question.response?.unit || ""}
+                  onChange={(e) => updateQuestion(question.templateId, "response", { 
+                    ...question.response, 
+                    unit: e.target.value 
+                  })}
+                  className="text-xs sm:text-sm"
+                  data-testid={`input-${question.templateId}-unit`}
+                />
+              )}
             </div>
             
             {/* Add Assessment Response for measurement questions, especially lighting */}
