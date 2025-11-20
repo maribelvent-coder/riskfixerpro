@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,7 +255,27 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   ).length;
   const progress = (completedQuestions / questions.length) * 100;
 
-  // Save facility survey mutation
+  // Autosave mutation for individual questions
+  const autosaveQuestionMutation = useMutation({
+    mutationFn: async ({ questionId, updateData }: { questionId: string; updateData: any }) => {
+      const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${questionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+      if (!response.ok) throw new Error('Failed to autosave question');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey-questions"] });
+    },
+    onError: (error) => {
+      console.error("Autosave failed:", error);
+      // Silent fail for autosave - don't annoy users with error toasts on every keystroke
+    },
+  });
+
+  // Save facility survey mutation (for manual save/complete actions)
   const saveSurveyMutation = useMutation({
     mutationFn: async (questionsData: any[]) => {
       const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`, {
@@ -282,10 +302,24 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     },
   });
 
+  // Debounced autosave function
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const triggerAutosave = useCallback((questionId: string, updateData: any) => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+    autosaveTimeoutRef.current = setTimeout(() => {
+      autosaveQuestionMutation.mutate({ questionId, updateData });
+    }, 1500); // Autosave after 1.5 seconds of inactivity
+  }, [autosaveQuestionMutation]);
+
   const updateQuestion = (id: string, field: string, value: any) => {
     setQuestions(prev => prev.map(q => 
       q.id === id ? { ...q, [field]: value } : q
     ));
+    
+    // Trigger autosave for this question
+    triggerAutosave(id, { [field]: value });
   };
 
   const handleSave = () => {
