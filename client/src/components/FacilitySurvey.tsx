@@ -133,12 +133,17 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       // Find the prerequisite question
       const prereqQuestion = questions.find(pq => pq.templateId === q.conditionalOnQuestionId);
       
-      // If prerequisite answer doesn't match showWhenAnswer, this question is auto-completed (hidden)
-      if (prereqQuestion && prereqQuestion.response !== q.showWhenAnswer) {
+      // Auto-complete if prerequisite is unanswered (undefined/null/empty)
+      if (!prereqQuestion || !prereqQuestion.response) {
+        return true; // Auto-complete until prerequisite is answered
+      }
+      
+      // Auto-complete if prerequisite answer doesn't match showWhenAnswer (question is hidden)
+      if (prereqQuestion.response !== q.showWhenAnswer) {
         return true; // Auto-complete hidden conditional questions
       }
       
-      // If prerequisite matches, fall through to normal validation
+      // If prerequisite matches showWhenAnswer, fall through to normal validation
     }
     
     if (!q.response) return false;
