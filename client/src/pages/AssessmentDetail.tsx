@@ -596,6 +596,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             // Office Building Security Interview (91 questions, 13 sections)
             <OfficeBuildingInterview 
               assessmentId={assessmentId}
+              assessmentStatus={assessmentData?.status}
               onComplete={() => setActiveTab('executive-profile')}
             />
           ) : (

@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface OfficeBuildingInterviewProps {
   assessmentId: string;
+  assessmentStatus?: string;
   onComplete?: () => void;
 }
 
@@ -45,7 +46,7 @@ const SECTION_DEFINITIONS = [
   { section: 13, title: "Emergency & Continuity", icon: CheckCircle }
 ];
 
-export default function OfficeBuildingInterview({ assessmentId, onComplete }: OfficeBuildingInterviewProps) {
+export default function OfficeBuildingInterview({ assessmentId, assessmentStatus, onComplete }: OfficeBuildingInterviewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [currentSection, setCurrentSection] = useState(1);
@@ -81,6 +82,53 @@ export default function OfficeBuildingInterview({ assessmentId, onComplete }: Of
     },
     onError: (error) => {
       console.error("Autosave failed:", error);
+    },
+  });
+
+  // Generate scenarios mutation
+  const generateScenariosMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/assessments/${assessmentId}/generate-scenarios-from-interview`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Check if generation actually succeeded
+      if (!data.success) {
+        // Generation failed - show error and don't navigate
+        console.error("Scenario generation failed:", data.errors);
+        toast({
+          variant: "destructive",
+          title: "Failed to Generate Scenarios",
+          description: data.errors?.join('. ') || "Scenario generation was unsuccessful. Please try again.",
+        });
+        return;
+      }
+      
+      // Generation succeeded - invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, 'assessment-questions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments'] });
+      
+      // Show success with warnings if present
+      const description = data.warnings && data.warnings.length > 0
+        ? `Created ${data.threatsCreated} risk scenarios${data.criticalThreats > 0 ? `, ${data.criticalThreats} critical` : ''}. Note: ${data.warnings[0]}`
+        : `Created ${data.threatsCreated} risk scenarios${data.criticalThreats > 0 ? `, ${data.criticalThreats} critical` : ''}. ${data.summary}`;
+      
+      toast({
+        title: "Scenarios Generated Successfully",
+        description,
+      });
+      
+      // Call onComplete callback to navigate to risk assessment
+      onComplete?.();
+    },
+    onError: (error: any) => {
+      console.error("Failed to generate scenarios:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to Generate Scenarios",
+        description: error.message || "An error occurred during scenario generation. Please try again.",
+      });
     },
   });
 
@@ -464,8 +512,13 @@ export default function OfficeBuildingInterview({ assessmentId, onComplete }: Of
         </CardContent>
       </Card>
 
-      {/* Completion Action */}
-      {overallProgress === 100 && onComplete && (
+      {/* Completion Action - Only show when 100% complete AND still in interview phase */}
+      {overallProgress === 100 && 
+       onComplete && 
+       assessmentStatus !== 'risk-assessment' && 
+       assessmentStatus !== 'treatment-planning' &&
+       assessmentStatus !== 'reporting' &&
+       !generateScenariosMutation.isPending && (
         <Card className="border-primary">
           <CardContent className="p-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -474,14 +527,36 @@ export default function OfficeBuildingInterview({ assessmentId, onComplete }: Of
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">Interview Complete!</p>
                   <p className="text-xs text-muted-foreground">
-                    All questions answered. Proceed to risk analysis.
+                    All questions answered. Generate risk scenarios to proceed to risk assessment.
                   </p>
                 </div>
               </div>
-              <Button onClick={onComplete} className="flex-shrink-0" data-testid="button-complete-interview">
-                Continue to Risk Analysis
+              <Button 
+                onClick={() => generateScenariosMutation.mutate()} 
+                disabled={generateScenariosMutation.isPending}
+                className="flex-shrink-0" 
+                data-testid="button-complete-interview"
+              >
+                <span>Generate Risk Scenarios</span>
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Show generating state even if card would be hidden */}
+      {generateScenariosMutation.isPending && (
+        <Card className="border-primary">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Save className="w-5 h-5 text-primary animate-spin flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Generating Risk Scenarios...</p>
+                <p className="text-xs text-muted-foreground">
+                  Analyzing interview responses and creating threat scenarios.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

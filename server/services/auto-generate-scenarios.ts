@@ -106,6 +106,19 @@ export async function autoGenerateScenariosFromInterview(
     
     console.log(`✅ Created ${createdThreats.length} identified threat records`);
     
+    // Validate that at least one threat was created
+    if (createdThreats.length === 0) {
+      errors.push('No threats were identified from the interview responses. This may indicate incomplete or insufficient data.');
+      return {
+        success: false,
+        threatsCreated: 0,
+        criticalThreats: 0,
+        overallRiskLevel: analysis.overallRiskLevel,
+        summary: 'Failed to generate scenarios: No threats identified.',
+        errors
+      };
+    }
+    
     // Step 6: Update assessment status to advance to risk assessment phase
     // Only update if currently in executive-interview phase
     if (assessment.status === 'executive-interview' || assessment.status === 'draft') {
