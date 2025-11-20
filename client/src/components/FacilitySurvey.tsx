@@ -30,7 +30,8 @@ interface FacilitySurveyProps {
 }
 
 interface SurveyQuestion {
-  id: string;
+  id: string; // Database UUID (after save) or template ID (before save)
+  templateId?: string; // Stable template ID for lookups - never changes
   category: string;
   subcategory: string;
   question: string;
@@ -205,6 +206,9 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Map template IDs to database UUIDs - preserves stable lookups while tracking database records
+  const templateToDbIdMap = useRef<Map<string, string>>(new Map());
 
   // Load existing facility survey data
   const { data: savedQuestions } = useQuery({
@@ -223,22 +227,33 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         savedQuestions.map((sq: any) => [sq.templateQuestionId || sq.question, sq])
       );
       
+      // Populate the template-to-database ID mapping
+      savedQuestions.forEach((sq: any) => {
+        const templateId = sq.templateQuestionId;
+        if (templateId && sq.id) {
+          templateToDbIdMap.current.set(templateId, sq.id);
+        }
+      });
+      
       const mergedQuestions = facilityQuestions.map(staticQ => {
         const savedQ = savedQuestionsMap.get(staticQ.id) || savedQuestionsMap.get(staticQ.question);
         
         if (savedQ) {
           return {
             ...staticQ,
-            id: savedQ.id,
+            templateId: staticQ.id, // Preserve template ID for stable lookups
             response: savedQ.response,
             notes: savedQ.notes,
             evidence: savedQ.evidence || [],
             recommendations: savedQ.recommendations || []
           };
         }
-        return staticQ;
+        return { ...staticQ, templateId: staticQ.id }; // Set templateId even for unsaved questions
       });
       setQuestions(mergedQuestions);
+    } else {
+      // No saved questions - ensure all static questions have templateId
+      setQuestions(facilityQuestions.map(q => ({ ...q, templateId: q.id })));
     }
   }, [savedQuestions]);
 
@@ -257,14 +272,54 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
 
   // Autosave mutation for individual questions
   const autosaveQuestionMutation = useMutation({
-    mutationFn: async ({ questionId, updateData }: { questionId: string; updateData: any }) => {
-      const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${questionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      });
-      if (!response.ok) throw new Error('Failed to autosave question');
-      return response.json();
+    mutationFn: async ({ question, updateData }: { question: SurveyQuestion; updateData: any }) => {
+      // Use templateId for stable identification
+      const templateId = question.templateId || question.id;
+      const dbId = templateToDbIdMap.current.get(templateId);
+      
+      if (dbId) {
+        // Question exists in database - use PATCH to update it
+        const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${dbId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        });
+        if (!response.ok) throw new Error('Failed to update question');
+        return await response.json();
+      } else {
+        // Question doesn't exist yet - use POST to create it
+        // Include all current field values to prevent data loss
+        const questionData = {
+          assessmentId,
+          templateQuestionId: templateId,
+          category: question.category,
+          subcategory: question.subcategory,
+          question: question.question,
+          standard: question.standard,
+          type: question.type,
+          response: question.response,
+          notes: question.notes || '',
+          evidence: question.evidence || [],
+          recommendations: question.recommendations || [],
+          ...updateData // Apply the latest update on top
+        };
+        
+        const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questions: [questionData] }),
+        });
+        if (!response.ok) throw new Error('Failed to create question');
+        const result = await response.json();
+        const savedQuestion = result[0];
+        
+        // Store the new database ID in the mapping
+        if (savedQuestion && savedQuestion.id) {
+          templateToDbIdMap.current.set(templateId, savedQuestion.id);
+        }
+        
+        return savedQuestion;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey-questions"] });
@@ -304,22 +359,29 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
 
   // Debounced autosave function
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const triggerAutosave = useCallback((questionId: string, updateData: any) => {
+  const triggerAutosave = useCallback((question: SurveyQuestion, updateData: any) => {
     if (autosaveTimeoutRef.current) {
       clearTimeout(autosaveTimeoutRef.current);
     }
     autosaveTimeoutRef.current = setTimeout(() => {
-      autosaveQuestionMutation.mutate({ questionId, updateData });
+      autosaveQuestionMutation.mutate({ question, updateData });
     }, 1500); // Autosave after 1.5 seconds of inactivity
   }, [autosaveQuestionMutation]);
 
   const updateQuestion = (id: string, field: string, value: any) => {
-    setQuestions(prev => prev.map(q => 
-      q.id === id ? { ...q, [field]: value } : q
-    ));
-    
-    // Trigger autosave for this question
-    triggerAutosave(id, { [field]: value });
+    setQuestions(prev => {
+      const updated = prev.map(q => 
+        q.id === id ? { ...q, [field]: value } : q
+      );
+      
+      // Find the updated question to trigger autosave
+      const updatedQuestion = updated.find(q => q.id === id);
+      if (updatedQuestion) {
+        triggerAutosave(updatedQuestion, { [field]: value });
+      }
+      
+      return updated;
+    });
   };
 
   const handleSave = () => {
