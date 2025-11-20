@@ -2006,7 +2006,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const scenarioData = insertRiskScenarioSchema.parse({ ...req.body, assessmentId: id });
-      const result = await storage.createRiskScenario(scenarioData);
+      
+      // Automatic risk calculation (Task 9)
+      const { calculateInherentRisk, calculateControlEffectiveness, calculateResidualRiskNBS } = await import("../shared/riskCalculations");
+      
+      // Use numeric scores if provided, otherwise default to 3
+      const likelihoodScore = scenarioData.likelihoodScore ?? 3;
+      const impactScore = scenarioData.impactScore ?? 3;
+      
+      // Calculate inherent risk (L × I)
+      const inherentRisk = calculateInherentRisk(likelihoodScore, impactScore);
+      
+      // Calculate control effectiveness if threatLibraryId is provided
+      let residualRisk = inherentRisk;
+      let controlEffectiveness = 0;
+      if (scenarioData.threatLibraryId) {
+        const surveyResponses = await storage.getSurveyResponsesWithControlWeights(id, scenarioData.threatLibraryId);
+        controlEffectiveness = calculateControlEffectiveness(surveyResponses);
+        residualRisk = calculateResidualRiskNBS(inherentRisk, controlEffectiveness);
+      }
+      
+      // Add calculated fields
+      const dataWithCalculations = {
+        ...scenarioData,
+        likelihoodScore,
+        impactScore,
+        inherentRisk,
+        controlEffectiveness,
+        residualRisk,
+      };
+      
+      const result = await storage.createRiskScenario(dataWithCalculations);
       res.status(201).json(result);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -2038,7 +2068,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Sanitize: Remove ownership fields to prevent reassignment
       const { assessmentId, ...updateData } = req.body;
-      const result = await storage.updateRiskScenario(id, updateData);
+      
+      // Automatic risk recalculation if likelihood/impact/threat changed (Task 9)
+      const { calculateInherentRisk, calculateControlEffectiveness, calculateResidualRiskNBS } = await import("../shared/riskCalculations");
+      
+      const likelihoodScore = updateData.likelihoodScore ?? resource.likelihoodScore ?? 3;
+      const impactScore = updateData.impactScore ?? resource.impactScore ?? 3;
+      const threatLibraryId = updateData.threatLibraryId ?? resource.threatLibraryId;
+      
+      // Recalculate inherent risk
+      const inherentRisk = calculateInherentRisk(likelihoodScore, impactScore);
+      
+      // Recalculate control effectiveness
+      let residualRisk = inherentRisk;
+      let controlEffectiveness = 0;
+      if (threatLibraryId) {
+        const surveyResponses = await storage.getSurveyResponsesWithControlWeights(resource.assessmentId, threatLibraryId);
+        controlEffectiveness = calculateControlEffectiveness(surveyResponses);
+        residualRisk = calculateResidualRiskNBS(inherentRisk, controlEffectiveness);
+      }
+      
+      const dataWithCalculations = {
+        ...updateData,
+        likelihoodScore,
+        impactScore,
+        inherentRisk,
+        controlEffectiveness,
+        residualRisk,
+      };
+      
+      const result = await storage.updateRiskScenario(id, dataWithCalculations);
       res.json(result);
     } catch (error) {
       console.error("Error updating risk scenario:", error);
@@ -2094,6 +2153,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error bulk upserting scenarios:", error);
       res.status(500).json({ error: "Failed to bulk upsert scenarios" });
+    }
+  });
+
+  // Task 11: Risk Matrix endpoint - returns scenarios grouped by risk level for heatmap
+  app.get("/api/assessments/:id/risk-matrix", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const scenarios = await storage.getRiskScenarios(id);
+      
+      // Group scenarios by likelihood (1-5) and impact (1-5) for 5x5 matrix
+      const matrix: { [key: string]: typeof scenarios } = {};
+      
+      scenarios.forEach(scenario => {
+        const l = scenario.likelihoodScore ?? 3;
+        const i = scenario.impactScore ?? 3;
+        const key = `${l}-${i}`;
+        
+        if (!matrix[key]) {
+          matrix[key] = [];
+        }
+        matrix[key].push(scenario);
+      });
+      
+      res.json({
+        matrix,
+        scenarios,
+        summary: {
+          total: scenarios.length,
+          critical: scenarios.filter(s => (s.residualRisk ?? 0) >= 20).length,
+          high: scenarios.filter(s => (s.residualRisk ?? 0) >= 12 && (s.residualRisk ?? 0) < 20).length,
+          medium: scenarios.filter(s => (s.residualRisk ?? 0) >= 6 && (s.residualRisk ?? 0) < 12).length,
+          low: scenarios.filter(s => (s.residualRisk ?? 0) < 6).length,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching risk matrix:", error);
+      res.status(500).json({ error: "Failed to fetch risk matrix" });
+    }
+  });
+
+  // Task 12: Cascading recalculation - recalculates all scenarios when survey answers change
+  app.post("/api/assessments/:id/recalc-controls", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const scenarios = await storage.getRiskScenarios(id);
+      
+      const { calculateInherentRisk, calculateControlEffectiveness, calculateResidualRiskNBS } = await import("../shared/riskCalculations");
+      
+      // Recalculate each scenario
+      const updatedScenarios = await Promise.all(
+        scenarios.map(async (scenario) => {
+          const likelihoodScore = scenario.likelihoodScore ?? 3;
+          const impactScore = scenario.impactScore ?? 3;
+          
+          // Recalculate inherent risk
+          const inherentRisk = calculateInherentRisk(likelihoodScore, impactScore);
+          
+          // Recalculate control effectiveness if threat is specified
+          let residualRisk = inherentRisk;
+          let controlEffectiveness = 0;
+          if (scenario.threatLibraryId) {
+            const surveyResponses = await storage.getSurveyResponsesWithControlWeights(id, scenario.threatLibraryId);
+            controlEffectiveness = calculateControlEffectiveness(surveyResponses);
+            residualRisk = calculateResidualRiskNBS(inherentRisk, controlEffectiveness);
+          }
+          
+          // Update the scenario with new calculations
+          return await storage.updateRiskScenario(scenario.id, {
+            inherentRisk,
+            controlEffectiveness,
+            residualRisk,
+          });
+        })
+      );
+      
+      res.json({
+        updated: updatedScenarios.length,
+        scenarios: updatedScenarios,
+      });
+    } catch (error) {
+      console.error("Error recalculating controls:", error);
+      res.status(500).json({ error: "Failed to recalculate controls" });
     }
   });
 
