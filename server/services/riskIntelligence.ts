@@ -353,13 +353,19 @@ function generateKeyInsights(crimeSummary: CrimeDataSummary): string[] {
     insights.push(`✓ Low property crime area - ${propertyRate.toFixed(1)} incidents per 100k`);
   }
   
-  // Ratio insights
+  // Ratio insights - only show if crime rates are meaningful (not both very-low)
+  // Don't comment on ratios when absolute numbers are negligible
   if (crimeSummary.violentTotal > 0 && crimeSummary.propertyTotal > 0) {
-    const ratio = crimeSummary.propertyTotal / crimeSummary.violentTotal;
-    if (ratio > 10) {
-      insights.push(`Property crimes significantly outnumber violent crimes (${ratio.toFixed(1)}:1 ratio)`);
-    } else if (ratio < 3) {
-      insights.push(`Unusually high proportion of violent crime relative to property crime`);
+    // Only show ratio insights if at least one category is above "very-low" severity
+    const showRatioInsight = violentSeverity !== "very-low" || propertySeverity !== "very-low";
+    
+    if (showRatioInsight) {
+      const ratio = crimeSummary.propertyTotal / crimeSummary.violentTotal;
+      if (ratio > 10) {
+        insights.push(`Property crimes significantly outnumber violent crimes (${ratio.toFixed(1)}:1 ratio)`);
+      } else if (ratio < 3) {
+        insights.push(`Unusually high proportion of violent crime relative to property crime`);
+      }
     }
   }
   
