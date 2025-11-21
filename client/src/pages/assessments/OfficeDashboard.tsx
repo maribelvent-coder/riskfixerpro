@@ -424,12 +424,12 @@ export default function OfficeDashboard() {
           )}
         </div>
       </div>
-        </TabsContent>
+      </TabsContent>
 
-        <TabsContent value="risk-assessment" className="mt-6">
-          {id && <RiskAssessmentNBS assessmentId={id} />}
-        </TabsContent>
-      </Tabs>
+      <TabsContent value="risk-assessment" className="mt-6">
+        {id && <RiskAssessmentNBS assessmentId={id} />}
+      </TabsContent>
+    </Tabs>
     </div>
   );
 }
