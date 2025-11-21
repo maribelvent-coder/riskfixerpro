@@ -209,20 +209,34 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       };
     }
     
-    // Check if this is a warehouse template
-    const isWarehouse = templateId === "warehouse-distribution";
+    // Check for specialized templates that skip Asset Inventory
+    const specializedTemplates = ["warehouse-distribution", "retail-store", "manufacturing-facility", "data-center"];
+    const isSpecializedTemplate = specializedTemplates.includes(templateId);
     
-    // Default facility paradigm with optional warehouse tab
+    // Base tabs for facility paradigm - always start with Facility Survey
     const baseTabs = [
       { id: "facility-survey", label: "Facility Survey", icon: Building },
-      { id: "risk-assessment", label: "Security Risk Assessment", icon: Shield },
-      { id: "reports", label: "Reports", icon: FileText }
     ];
     
-    // Insert warehouse tab after facility survey for warehouse templates
-    if (isWarehouse) {
-      baseTabs.splice(1, 0, { id: "warehouse", label: "Warehouse Operations", icon: Warehouse });
+    // Add template-specific tabs OR Asset Inventory
+    if (templateId === "warehouse-distribution") {
+      baseTabs.push({ id: "warehouse", label: "Warehouse Operations", icon: Warehouse });
+    } else if (templateId === "retail-store") {
+      baseTabs.push({ id: "retail", label: "Retail Operations", icon: Building });
+    } else if (templateId === "manufacturing-facility") {
+      baseTabs.push({ id: "manufacturing", label: "Manufacturing Operations", icon: Building });
+    } else if (templateId === "data-center") {
+      baseTabs.push({ id: "datacenter", label: "Data Center Operations", icon: Building });
+    } else {
+      // Non-specialized templates (office-building, etc.) use standard Asset Inventory
+      baseTabs.push({ id: "assets", label: "Asset Inventory", icon: Building });
     }
+    
+    // Add Risk Assessment and Reports tabs for all facility templates
+    baseTabs.push(
+      { id: "risk-assessment", label: "Security Risk Assessment", icon: Shield },
+      { id: "reports", label: "Reports", icon: FileText }
+    );
     
     return {
       tabs: baseTabs,
@@ -260,7 +274,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const getTabsAvailability = () => {
     const paradigm = assessmentData?.surveyParadigm || "facility";
     const templateId = assessmentData?.templateId || "";
-    const isWarehouse = templateId === "warehouse-distribution";
+    const specializedTemplates = ["warehouse-distribution", "retail-store", "manufacturing-facility", "data-center"];
+    const isSpecializedTemplate = specializedTemplates.includes(templateId);
     
     if (paradigm === "executive") {
       // Executive paradigm - all tabs available from start for now
@@ -277,9 +292,18 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       "reports": assessmentData?.riskAssessmentCompleted || false
     };
     
-    // Warehouse tab is always available for warehouse templates
-    if (isWarehouse) {
+    // Add specialized template tabs OR standard Asset Inventory
+    if (templateId === "warehouse-distribution") {
       tabs["warehouse"] = true;
+    } else if (templateId === "retail-store") {
+      tabs["retail"] = true;
+    } else if (templateId === "manufacturing-facility") {
+      tabs["manufacturing"] = true;
+    } else if (templateId === "data-center") {
+      tabs["datacenter"] = true;
+    } else {
+      // Non-specialized templates use Asset Inventory (unlocked after survey completion)
+      tabs["assets"] = assessmentData?.facilitySurveyCompleted || false;
     }
     
     return tabs;
@@ -308,8 +332,27 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   };
 
   const handleFacilitySurveyComplete = () => {
-    console.log("Facility survey completed, advancing to risk assessment");
-    setActiveTab("risk-assessment");
+    const templateId = assessmentData?.templateId || "";
+    console.log("Facility survey completed, checking templateId:", templateId);
+    
+    // Redirect to specialized tabs for specialized templates
+    if (templateId === "warehouse-distribution") {
+      console.log("Warehouse template detected, advancing to warehouse operations");
+      setActiveTab("warehouse");
+    } else if (templateId === "retail-store") {
+      console.log("Retail template detected, advancing to retail operations");
+      setActiveTab("retail");
+    } else if (templateId === "manufacturing-facility") {
+      console.log("Manufacturing template detected, advancing to manufacturing operations");
+      setActiveTab("manufacturing");
+    } else if (templateId === "data-center") {
+      console.log("Data center template detected, advancing to datacenter operations");
+      setActiveTab("datacenter");
+    } else {
+      // Default behavior for non-specialized templates (office-building, etc.)
+      console.log("Standard template, advancing to asset inventory");
+      setActiveTab("assets");
+    }
   };
 
   const handleRiskAssessmentComplete = () => {
@@ -590,6 +633,63 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         {/* Warehouse Operations Tab */}
         <TabsContent value="warehouse" className="space-y-4">
           <WarehouseDashboard />
+        </TabsContent>
+
+        {/* Retail Operations Tab */}
+        <TabsContent value="retail" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Retail Operations</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Retail-specific security analysis and loss prevention metrics
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Retail Operations Dashboard</p>
+                <p className="text-sm">Coming soon - configure shrinkage rates, inventory controls, and POS security</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Manufacturing Operations Tab */}
+        <TabsContent value="manufacturing" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Manufacturing Operations</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manufacturing-specific security analysis and operational safety
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Manufacturing Operations Dashboard</p>
+                <p className="text-sm">Coming soon - configure production security, equipment protection, and supply chain controls</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Data Center Operations Tab */}
+        <TabsContent value="datacenter" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Center Operations</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Data center-specific security analysis and environmental controls
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Data Center Operations Dashboard</p>
+                <p className="text-sm">Coming soon - configure physical access, environmental monitoring, and redundancy systems</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Professional Reports */}
