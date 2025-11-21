@@ -72,7 +72,7 @@ function generateKidnappingScenario(
   }
   
   const netWorth = profile.netWorthRange;
-  const isHighValue = netWorth.includes('50-100M') || netWorth.includes('100M+');
+  const isHighValue = netWorth === '50m_100m' || netWorth === 'over_100m';
   
   if (!isHighValue) {
     console.log('  ⏭️  Skipping Kidnapping scenario (net worth < $50M)');
@@ -120,7 +120,8 @@ function generateStalkingScenario(
   // Only generate for publicly visible individuals
   const isPublic = profile.publicProfile === 'very_high' || 
                    profile.publicProfile === 'high' ||
-                   profile.mediaExposure === 'frequent';
+                   profile.mediaExposure === 'high' ||
+                   profile.mediaExposure === 'very_high';
   
   if (!isPublic) {
     console.log('  ⏭️  Skipping Stalking scenario (low public profile)');
@@ -167,7 +168,7 @@ function generateVehicularAmbushScenario(
   }
   
   // Only generate for high-value targets with predictable patterns
-  const isHighValue = profile.netWorthRange?.includes('50M') || profile.netWorthRange?.includes('100M+');
+  const isHighValue = profile.netWorthRange === '50m_100m' || profile.netWorthRange === 'over_100m';
   const isPredictable = routePredictability === 'high' || routePredictability === 'very_high';
   
   if (!isHighValue || !isPredictable) {

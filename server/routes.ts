@@ -1747,6 +1747,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // EXECUTIVE PROTECTION FRAMEWORK ROUTES
+  // Get executive profile for an assessment
+  app.get("/api/assessments/:id/executive-profile", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      
+      // Get executive profile
+      const profile = await storage.getExecutiveProfileByAssessment(assessmentId);
+      
+      if (!profile) {
+        return res.json({
+          assessment: req.assessment,
+          profile: null,
+        });
+      }
+      
+      res.json({
+        assessment: req.assessment,
+        profile,
+      });
+    } catch (error) {
+      console.error("Error fetching executive profile:", error);
+      res.status(500).json({ error: "Failed to fetch executive profile" });
+    }
+  });
+
+  // Update/Create executive profile and auto-generate EP risk scenarios
+  app.patch("/api/assessments/:id/executive-profile", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const profileData = req.body;
+      
+      // Validate executive profile data structure
+      const executiveProfileSchema = z.object({
+        fullName: z.string(),
+        title: z.string().optional(),
+        companyRole: z.string().optional(),
+        publicProfile: z.string().default('medium'),
+        netWorthRange: z.string().optional(),
+        mediaExposure: z.string().optional(),
+        currentSecurityLevel: z.string().default('minimal'),
+        hasPersonalProtection: z.boolean().default(false),
+        hasPanicRoom: z.boolean().default(false),
+        hasArmoredVehicle: z.boolean().default(false),
+      });
+      
+      const validatedProfile = executiveProfileSchema.parse(profileData);
+      
+      // Check if profile exists for this assessment
+      const existingProfile = await storage.getExecutiveProfileByAssessment(assessmentId);
+      
+      let profile;
+      if (existingProfile) {
+        // Update existing profile
+        profile = await storage.updateExecutiveProfile(existingProfile.id, validatedProfile);
+      } else {
+        // Create new profile
+        profile = await storage.createExecutiveProfile({
+          assessmentId,
+          ...validatedProfile,
+        });
+      }
+      
+      if (!profile) {
+        return res.status(404).json({ error: "Failed to save executive profile" });
+      }
+      
+      // Auto-generate EP risk scenarios after profile update (non-fatal)
+      console.log(`🛡️  Triggering EP risk scenario generation for assessment ${assessmentId}`);
+      
+      try {
+        const { generateExecutiveProtectionRiskScenarios } = await import('./services/risk-engine/generators/executive-protection');
+        const scenarioResult = await generateExecutiveProtectionRiskScenarios(assessmentId, storage);
+        
+        console.log(`📊 EP scenario generation result:`, scenarioResult);
+        
+        // Return profile with scenario generation metadata
+        res.json({
+          profile,
+          _scenarioGeneration: scenarioResult
+        });
+      } catch (genError) {
+        // Scenario generation failed but profile save succeeded
+        console.error('⚠️ EP scenario generation failed:', genError);
+        
+        // Return success since profile update succeeded, but include error info
+        res.json({
+          profile,
+          _scenarioGeneration: {
+            success: false,
+            scenariosCreated: 0,
+            criticalScenarios: 0,
+            summary: 'Profile updated successfully, but scenario generation failed',
+            errors: [genError instanceof Error ? genError.message : 'Unknown error']
+          }
+        });
+      }
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid executive profile data", details: error.errors });
+      }
+      console.error("Error updating executive profile:", error);
+      res.status(500).json({ error: "Failed to update executive profile" });
+    }
+  });
+
   app.post("/api/assessments", async (req, res) => {
     try {
       const userId = req.session.userId;
