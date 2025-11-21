@@ -80,21 +80,32 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       });
       
       // Map database questions to template-centric model
-      const formattedQuestions: SurveyQuestion[] = savedQuestions.map((sq: any) => ({
-        templateId: sq.templateQuestionId,
-        dbId: sq.id,
-        category: sq.category,
-        subcategory: sq.subcategory,
-        question: sq.question,
-        standard: sq.standard,
-        type: sq.type,
-        response: sq.response,
-        notes: sq.notes,
-        evidence: sq.evidence || [],
-        recommendations: sq.recommendations || [],
-        conditionalOnQuestionId: sq.conditionalOnQuestionId,
-        showWhenAnswer: sq.showWhenAnswer
-      }));
+      const formattedQuestions: SurveyQuestion[] = savedQuestions.map((sq: any) => {
+        // Normalize scalar responses (rating, yes-no, condition) to strings
+        // JSONB may return numbers for rating questions - convert to strings for Select binding
+        let normalizedResponse = sq.response;
+        if (sq.type === 'rating' || sq.type === 'yes-no' || sq.type === 'condition') {
+          if (typeof sq.response === 'number') {
+            normalizedResponse = String(sq.response);
+          }
+        }
+        
+        return {
+          templateId: sq.templateQuestionId,
+          dbId: sq.id,
+          category: sq.category,
+          subcategory: sq.subcategory,
+          question: sq.question,
+          standard: sq.standard,
+          type: sq.type,
+          response: normalizedResponse,
+          notes: sq.notes,
+          evidence: sq.evidence || [],
+          recommendations: sq.recommendations || [],
+          conditionalOnQuestionId: sq.conditionalOnQuestionId,
+          showWhenAnswer: sq.showWhenAnswer
+        };
+      });
       
       setQuestions(formattedQuestions);
     }
@@ -164,8 +175,15 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       return false;
     }
     
-    // For yes-no, condition, and rating questions, response must be a non-empty string
-    return typeof q.response === 'string' && q.response !== "";
+    // For yes-no, condition, and rating questions, response must be a non-empty string or number
+    // Accept both types to handle JSONB serialization variations
+    if (typeof q.response === 'string') {
+      return q.response !== "";
+    }
+    if (typeof q.response === 'number') {
+      return true; // Any number is valid (1-5 for ratings)
+    }
+    return false;
   };
   
   const completedQuestions = questions.filter(isQuestionCompleted).length;
@@ -262,14 +280,29 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
           return false;
         }
         
-        // For other question types, verify response is a non-empty string
-        return typeof q.response === 'string' && q.response !== "";
+        // For yes-no, condition, and rating questions, accept both strings and numbers
+        // Accept both types to handle JSONB serialization variations
+        if (typeof q.response === 'string') {
+          return q.response !== "";
+        }
+        if (typeof q.response === 'number') {
+          return true; // Any number is valid (1-5 for ratings)
+        }
+        return false;
       });
       
       // Save each answered question individually using PATCH or POST
       const savePromises = answeredQuestions.map(async (question) => {
         const templateId = question.templateId;
         const dbId = templateToDbIdMap.current.get(templateId);
+        
+        // Defensive normalization: ensure rating/yes-no/condition responses are strings
+        let normalizedResponse = question.response;
+        if (question.type === 'rating' || question.type === 'yes-no' || question.type === 'condition') {
+          if (typeof question.response === 'number') {
+            normalizedResponse = String(question.response);
+          }
+        }
         
         const questionData = {
           assessmentId,
@@ -279,7 +312,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
           question: question.question,
           standard: question.standard,
           type: question.type,
-          response: question.response,
+          response: normalizedResponse,
           notes: question.notes || '',
           evidence: question.evidence || [],
           recommendations: question.recommendations || []
