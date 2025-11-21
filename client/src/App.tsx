@@ -29,6 +29,7 @@ import Pricing from "@/pages/Pricing";
 import Classes from "@/pages/Classes";
 import Consulting from "@/pages/Consulting";
 import Contact from "@/pages/Contact";
+import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
 import NotFound from "@/pages/not-found";
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
@@ -105,6 +106,14 @@ function App() {
             {(params) => (
               <ProtectedAppLayout>
                 <AssessmentDetail assessmentId={params.id} />
+              </ProtectedAppLayout>
+            )}
+          </Route>
+          
+          <Route path="/app/assessments/:id/warehouse">
+            {(params) => (
+              <ProtectedAppLayout>
+                <WarehouseDashboard />
               </ProtectedAppLayout>
             )}
           </Route>

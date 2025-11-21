@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CargoTheftROICalculator } from "@/components/calculators/CargoTheftROICalculator";
+import { LoadingDockGrid } from "@/components/warehouse/LoadingDockGrid";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -18,7 +19,8 @@ import {
   Save,
   Loader2,
   Package,
-  Shield
+  Shield,
+  Plus
 } from "lucide-react";
 
 interface WarehouseAnalysisResponse {
@@ -398,30 +400,70 @@ export default function WarehouseDashboard() {
         </div>
       </div>
 
-      {/* Loading Dock Summary (Placeholder) */}
+      {/* Loading Dock Security Grid */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Loading Dock Security Grid
-          </CardTitle>
-          <CardDescription>
-            Dock-by-dock security assessment and recommendations
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Loading Dock Security Grid
+              </CardTitle>
+              <CardDescription>
+                Dock-by-dock security assessment and recommendations
+              </CardDescription>
+            </div>
+            {loadingDocks.length === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="button-add-dock"
+                onClick={() => {
+                  toast({
+                    title: 'Add Loading Dock',
+                    description: 'Loading dock configuration feature coming soon.',
+                  });
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Dock
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="font-medium">Loading Dock Security Grid</p>
-            <p className="text-sm mt-2">
-              {loadingDocks.length > 0 
-                ? `${loadingDocks.length} loading dock${loadingDocks.length !== 1 ? 's' : ''} configured`
-                : 'No loading docks configured yet'}
-            </p>
-            <p className="text-xs mt-4">
-              This component will display individual dock security scores and recommendations.
-            </p>
-          </div>
+          {loadingDocks.length > 0 ? (
+            <LoadingDockGrid
+              loadingDocks={loadingDocks}
+              onDockClick={(dock) => {
+                toast({
+                  title: `${dock.dockNumber}`,
+                  description: `Security Score: ${dock.securityScore || 'N/A'}`,
+                });
+              }}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="font-medium mb-2">No Loading Docks Configured</p>
+              <p className="text-sm mb-6">
+                Add loading docks to track security metrics and identify vulnerabilities.
+              </p>
+              <Button
+                variant="default"
+                data-testid="button-add-first-dock"
+                onClick={() => {
+                  toast({
+                    title: 'Add Loading Dock',
+                    description: 'Loading dock configuration feature coming soon.',
+                  });
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Dock
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
