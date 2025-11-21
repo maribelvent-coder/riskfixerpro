@@ -58,24 +58,23 @@ export default function ManufacturingDashboard() {
   });
 
   // Load profile data when assessment loads (useEffect to avoid setState in render)
+  // ALWAYS run on assessment change to prevent stale state during loading/navigation
   useEffect(() => {
-    if (assessment) {
-      if (assessment.manufacturing_profile) {
-        const profile = assessment.manufacturing_profile;
-        // Use nullish coalescing to respect empty/cleared values
-        setAnnualProductionValue(profile.annualProductionValue?.toString() ?? '');
-        setShiftOperations(profile.shiftOperations ?? '1');
-        setSelectedIpTypes(profile.ipTypes ?? []);
-        setHazmatPresent(profile.hazmatPresent ?? false);
-      } else {
-        // No profile exists - reset to defaults to prevent stale state
-        setAnnualProductionValue('');
-        setShiftOperations('1');
-        setSelectedIpTypes([]);
-        setHazmatPresent(false);
-      }
+    if (assessment?.manufacturing_profile) {
+      const profile = assessment.manufacturing_profile;
+      // Use nullish coalescing to respect empty/cleared values
+      setAnnualProductionValue(profile.annualProductionValue?.toString() ?? '');
+      setShiftOperations(profile.shiftOperations ?? '1');
+      setSelectedIpTypes(profile.ipTypes ?? []);
+      setHazmatPresent(profile.hazmatPresent ?? false);
+    } else {
+      // No assessment or no profile - reset to defaults to prevent stale state
+      setAnnualProductionValue('');
+      setShiftOperations('1');
+      setSelectedIpTypes([]);
+      setHazmatPresent(false);
     }
-  }, [assessment]); // Run when assessment data changes
+  }, [assessment]); // Run when assessment data changes (including undefined)
 
   const saveMutation = useMutation({
     mutationFn: async (profileData: ManufacturingProfile) => {
