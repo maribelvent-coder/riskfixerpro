@@ -3,46 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { AssessmentCard } from "@/components/AssessmentCard";
 import { Plus, Search, Filter, TrendingUp, Users, Building2, Clock, AlertCircle } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { dashboardApi, assessmentApi } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
+import { dashboardApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import type { Assessment, Site, InsertAssessment } from "@shared/schema";
+import type { Assessment } from "@shared/schema";
 import { getTierLimits, getUpgradeMessage, type AccountTier } from "@shared/tierLimits";
-
-const createAssessmentFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  templateId: z.string().min(1, "Please select an assessment template"),
-  siteId: z.string().optional(),
-  location: z.string().optional(),
-  assessor: z.string().min(1, "Assessor name is required"),
-}).refine((data) => {
-  // Require location if siteId is not provided or is "manual"
-  if (!data.siteId || data.siteId === "manual") {
-    return !!data.location && data.location.length > 0;
-  }
-  return true;
-}, {
-  message: "Location is required when no site is selected",
-  path: ["location"],
-});
-
-type CreateAssessmentFormData = z.infer<typeof createAssessmentFormSchema>;
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -56,107 +28,12 @@ export default function Dashboard() {
   // Fetch all assessments
   const { data: assessments = [], isLoading: assessmentsLoading } = useQuery({
     queryKey: ["/api/assessments"],
-    queryFn: () => assessmentApi.getAll(),
-  });
-
-  // Fetch all sites for site selection
-  const { data: sites = [], isLoading: sitesLoading, isError: sitesError } = useQuery<Site[]>({
-    queryKey: ["/api/sites"],
-  });
-
-  // Fetch assessment templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
-    queryKey: ["/api/templates"],
   });
 
   // Check tier limitations
   const tier = (user?.accountTier || "free") as AccountTier;
   const tierLimits = getTierLimits(tier);
   const hasReachedLimit = tierLimits.assessments !== null && assessments.length >= tierLimits.assessments;
-
-  // Form for creating assessments
-  const form = useForm<CreateAssessmentFormData>({
-    resolver: zodResolver(createAssessmentFormSchema),
-    defaultValues: {
-      title: "New Security Assessment",
-      templateId: "",
-      siteId: "",
-      location: "",
-      assessor: user?.username || "Current User",
-    },
-  });
-
-  // Watch siteId to conditionally require location
-  const selectedSiteId = form.watch("siteId");
-
-  // Create new assessment mutation
-  const createAssessmentMutation = useMutation({
-    mutationFn: (data: CreateAssessmentFormData) => {
-      // Prepare assessment payload based on site selection
-      let assessmentPayload: Omit<InsertAssessment, "userId">;
-
-      // If a site is selected (not manual), include siteId
-      if (data.siteId && data.siteId !== "manual") {
-        const selectedSite = sites.find(s => s.id.toString() === data.siteId);
-        assessmentPayload = {
-          title: data.title,
-          assessor: data.assessor,
-          status: "draft" as const,
-          templateId: data.templateId,
-          siteId: data.siteId,
-          location: selectedSite 
-            ? `${selectedSite.name} - ${selectedSite.city}, ${selectedSite.state}`
-            : "Site Location",
-        };
-      } else {
-        // Manual location entry - no siteId
-        assessmentPayload = {
-          title: data.title,
-          assessor: data.assessor,
-          status: "draft" as const,
-          templateId: data.templateId,
-          location: data.location || "",
-        };
-      }
-
-      return assessmentApi.create(assessmentPayload);
-    },
-    onSuccess: (newAssessment) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      setIsCreateDialogOpen(false);
-      form.reset();
-      toast({
-        title: "Assessment Created",
-        description: `New assessment "${newAssessment.title}" has been created.`,
-      });
-      // Navigate to the new assessment
-      setLocation(`/app/assessments/${newAssessment.id}`);
-    },
-    onError: (error: any) => {
-      if (error.needsUpgrade) {
-        toast({
-          title: "Upgrade Required",
-          description: error.message || "Free accounts are limited to 1 assessment. Upgrade to create more.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: `Failed to create assessment: ${error.message}`,
-          variant: "destructive",
-        });
-      }
-    },
-  });
-
-  const handleCreateNew = () => {
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleSubmit = (data: CreateAssessmentFormData) => {
-    createAssessmentMutation.mutate(data);
-  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -188,13 +65,13 @@ export default function Dashboard() {
         </div>
         <div className="flex flex-col items-stretch sm:items-end gap-2">
           <Button 
-            onClick={handleCreateNew} 
-            disabled={createAssessmentMutation.isPending || hasReachedLimit}
+            onClick={() => setLocation("/app/assessments/new")} 
+            disabled={hasReachedLimit}
             data-testid="button-create-assessment"
             className="w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {createAssessmentMutation.isPending ? "Creating..." : "New Assessment"}
+            New Assessment
           </Button>
           {hasReachedLimit && (
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground" data-testid="message-upgrade-assessment">
@@ -355,7 +232,7 @@ export default function Dashboard() {
                   {searchQuery ? "No assessments match your search." : "Get started by creating your first security assessment."}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={handleCreateNew} className="text-xs sm:text-sm min-h-9 sm:min-h-10">
+                  <Button onClick={() => setLocation("/app/assessments/new")} className="text-xs sm:text-sm min-h-9 sm:min-h-10">
                     <Plus className="h-4 w-4 mr-2" />
                     Create First Assessment
                   </Button>
@@ -384,201 +261,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
-      {/* Create Assessment Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent data-testid="dialog-create-assessment" className="p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Create New Assessment</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Create a new physical security risk assessment for a facility or site.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3 sm:space-y-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs sm:text-sm">Assessment Title</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g., Main Office Security Assessment"
-                        {...field}
-                        data-testid="input-assessment-title"
-                        className="text-xs sm:text-sm"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="templateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs sm:text-sm">Assessment Template *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={templatesLoading}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-template" className="text-xs sm:text-sm">
-                          <SelectValue placeholder={
-                            templatesLoading 
-                              ? "Loading templates..." 
-                              : "Select an assessment template"
-                          } />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {templates.length > 0 && templates.map((template: any) => (
-                          <SelectItem key={template.id} value={template.id} className="text-xs sm:text-sm">
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Templates pre-load survey questions and set the assessment workflow
-                    </p>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="siteId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs sm:text-sm">Site (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={sitesLoading}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-site" className="text-xs sm:text-sm">
-                          <SelectValue placeholder={
-                            sitesLoading 
-                              ? "Loading sites..." 
-                              : sitesError 
-                              ? "Error loading sites - enter manually" 
-                              : "Select a site or enter manually"
-                          } />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="manual" className="text-xs sm:text-sm">Enter location manually</SelectItem>
-                        {sites.length > 0 ? (
-                          sites.map((site) => (
-                            <SelectItem key={site.id} value={site.id.toString()} className="text-xs sm:text-sm">
-                              {site.name} - {site.city}, {site.state}
-                            </SelectItem>
-                          ))
-                        ) : !sitesLoading && (
-                          <SelectItem value="no-sites" disabled className="text-xs sm:text-sm">
-                            No sites available - create one first
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      {selectedSiteId && selectedSiteId !== "manual" 
-                        ? "Assessment will be linked to the selected site"
-                        : "Select a site or enter location manually below"}
-                    </p>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              {(!selectedSiteId || selectedSiteId === "manual") && (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs sm:text-sm">Location</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g., 123 Main St, New York, NY"
-                          {...field}
-                          data-testid="input-location"
-                          className="text-xs sm:text-sm"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <FormField
-                control={form.control}
-                name="assessor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs sm:text-sm">Assessor</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Your name"
-                        {...field}
-                        data-testid="input-assessor"
-                        className="text-xs sm:text-sm"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              {createAssessmentMutation.isError && (
-                <div className="p-2 sm:p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <p className="text-xs sm:text-sm text-destructive">
-                    Failed to create assessment. Please try again.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreateDialogOpen(false);
-                    form.reset();
-                    createAssessmentMutation.reset();
-                  }}
-                  disabled={createAssessmentMutation.isPending}
-                  data-testid="button-cancel-assessment"
-                  className="w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createAssessmentMutation.isPending || sitesLoading}
-                  data-testid="button-submit-assessment"
-                  className="w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
-                >
-                  {createAssessmentMutation.isPending ? (
-                    <>
-                      <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      <span className="hidden sm:inline">Creating...</span>
-                      <span className="sm:hidden">Creating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Create Assessment</span>
-                      <span className="sm:hidden">Create</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
