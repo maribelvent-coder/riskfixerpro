@@ -7,6 +7,8 @@ import {
   type InsertSite,
   type FacilityZone,
   type InsertFacilityZone,
+  type LoadingDock,
+  type InsertLoadingDock,
   type Assessment,
   type InsertAssessment,
   type TemplateQuestion,
@@ -50,7 +52,9 @@ import {
   type CrimeObservation,
   type InsertCrimeObservation,
   type SiteIncident,
-  type InsertSiteIncident
+  type InsertSiteIncident,
+  type ExecutiveProfile,
+  type InsertExecutiveProfile
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -113,6 +117,13 @@ export interface IStorage {
   createLoadingDock(dock: InsertLoadingDock): Promise<LoadingDock>;
   updateLoadingDock(id: string, dock: Partial<LoadingDock>): Promise<LoadingDock | undefined>;
   deleteLoadingDock(id: string): Promise<boolean>;
+
+  // Executive Profile methods (Executive Protection Framework)
+  getExecutiveProfile(id: string): Promise<ExecutiveProfile | undefined>;
+  getExecutiveProfileByAssessment(assessmentId: string): Promise<ExecutiveProfile | undefined>;
+  createExecutiveProfile(profile: InsertExecutiveProfile): Promise<ExecutiveProfile>;
+  updateExecutiveProfile(id: string, profile: Partial<ExecutiveProfile>): Promise<ExecutiveProfile | undefined>;
+  deleteExecutiveProfile(id: string): Promise<boolean>;
 
   // Assessment methods
   getAssessment(id: string): Promise<Assessment | undefined>;
@@ -248,6 +259,7 @@ export class MemStorage implements IStorage {
   private sites: Map<string, Site>;
   private facilityZones: Map<string, FacilityZone>;
   private loadingDocks: Map<string, LoadingDock>;
+  private executiveProfiles: Map<string, ExecutiveProfile>;
   private assessments: Map<string, Assessment>;
   private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
   private assessmentQuestions: Map<string, AssessmentQuestion>;
@@ -268,6 +280,7 @@ export class MemStorage implements IStorage {
     this.sites = new Map();
     this.facilityZones = new Map();
     this.loadingDocks = new Map();
+    this.executiveProfiles = new Map();
     this.assessments = new Map();
     this.facilitySurveyQuestions = new Map();
     this.assessmentQuestions = new Map();
@@ -626,6 +639,38 @@ export class MemStorage implements IStorage {
 
   async deleteLoadingDock(id: string): Promise<boolean> {
     return this.loadingDocks.delete(id);
+  }
+
+  // Executive Profile methods (Executive Protection Framework)
+  async getExecutiveProfile(id: string): Promise<ExecutiveProfile | undefined> {
+    return this.executiveProfiles.get(id);
+  }
+
+  async getExecutiveProfileByAssessment(assessmentId: string): Promise<ExecutiveProfile | undefined> {
+    return Array.from(this.executiveProfiles.values()).find(profile => profile.assessmentId === assessmentId);
+  }
+
+  async createExecutiveProfile(profile: InsertExecutiveProfile): Promise<ExecutiveProfile> {
+    const newProfile: ExecutiveProfile = {
+      id: randomUUID(),
+      ...profile,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.executiveProfiles.set(newProfile.id, newProfile);
+    return newProfile;
+  }
+
+  async updateExecutiveProfile(id: string, updateData: Partial<ExecutiveProfile>): Promise<ExecutiveProfile | undefined> {
+    const existing = this.executiveProfiles.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updateData, updatedAt: new Date() };
+    this.executiveProfiles.set(id, updated);
+    return updated;
+  }
+
+  async deleteExecutiveProfile(id: string): Promise<boolean> {
+    return this.executiveProfiles.delete(id);
   }
 
   // Assessment methods
