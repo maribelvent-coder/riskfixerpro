@@ -37,11 +37,12 @@ interface SurveyQuestion {
   subcategory: string;
   question: string;
   standard: string;
-  type: "condition" | "measurement" | "yes-no" | "rating" | "text";
+  type: "condition" | "measurement" | "yes-no" | "rating" | "text" | "checklist";
   response?: any;
   notes?: string;
   evidence?: string[];
   recommendations?: string[];
+  options?: string[]; // For checklist type questions
   conditionalOnQuestionId?: string; // The templateId of the prerequisite question
   showWhenAnswer?: string; // The answer value that triggers showing this question (e.g., "yes")
   riskDirection?: "positive" | "negative"; // 'positive' = Yes is good, 'negative' = Yes is bad (incidents)
@@ -700,6 +701,79 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
                   <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        );
+
+      case "checklist":
+        return (
+          <div className="space-y-2.5 sm:space-y-4">
+            {/* Checkboxes for each option */}
+            <div className="space-y-2">
+              {question.options && question.options.length > 0 ? (
+                question.options.map((option, index) => {
+                  const selectedOptions = Array.isArray(question.response?.selectedOptions) 
+                    ? question.response.selectedOptions 
+                    : [];
+                  const isChecked = selectedOptions.includes(option);
+                  
+                  return (
+                    <div key={index} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`${question.templateId}-option-${index}`}
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const currentSelected = Array.isArray(question.response?.selectedOptions) 
+                            ? [...question.response.selectedOptions] 
+                            : [];
+                          
+                          let newSelected;
+                          if (e.target.checked) {
+                            newSelected = [...currentSelected, option];
+                          } else {
+                            newSelected = currentSelected.filter(o => o !== option);
+                          }
+                          
+                          updateQuestion(question.templateId, "response", {
+                            ...question.response,
+                            selectedOptions: newSelected
+                          });
+                        }}
+                        className="h-4 w-4 rounded border-input"
+                        data-testid={`checkbox-${question.templateId}-${index}`}
+                      />
+                      <Label 
+                        htmlFor={`${question.templateId}-option-${index}`}
+                        className="text-xs sm:text-sm font-normal cursor-pointer"
+                      >
+                        {option}
+                      </Label>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-xs sm:text-sm text-muted-foreground">No options available</p>
+              )}
+            </div>
+            
+            {/* Text area for additional details */}
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor={`${question.templateId}-details`} className="text-xs sm:text-sm">
+                Additional Details (Optional)
+              </Label>
+              <Textarea
+                id={`${question.templateId}-details`}
+                value={question.response?.textResponse || ""}
+                onChange={(e) => updateQuestion(question.templateId, "response", { 
+                  ...question.response, 
+                  textResponse: e.target.value 
+                })}
+                placeholder="Add any additional details or context..."
+                rows={2}
+                className="text-xs sm:text-sm"
+                data-testid={`textarea-${question.templateId}-details`}
+              />
             </div>
           </div>
         );
