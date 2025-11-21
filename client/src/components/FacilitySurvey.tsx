@@ -242,47 +242,70 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   });
 
   // Save facility survey mutation (for manual save/complete actions)
+  // Uses individual saves to prevent data loss from bulk upsert
   const saveSurveyMutation = useMutation({
-    mutationFn: async (questionsData: any[]) => {
+    mutationFn: async (questionsToSave: SurveyQuestion[]) => {
       setIsPersisting(true);
-      const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions: questionsData }),
+      
+      // Save each question individually using PATCH or POST
+      const savePromises = questionsToSave.map(async (question) => {
+        const templateId = question.templateId;
+        const dbId = templateToDbIdMap.current.get(templateId);
+        
+        const questionData = {
+          assessmentId,
+          templateQuestionId: templateId,
+          category: question.category,
+          subcategory: question.subcategory,
+          question: question.question,
+          standard: question.standard,
+          type: question.type,
+          response: question.response,
+          notes: question.notes || '',
+          evidence: question.evidence || [],
+          recommendations: question.recommendations || []
+        };
+        
+        if (dbId) {
+          // Update existing question
+          const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${dbId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(questionData),
+          });
+          if (!response.ok) throw new Error(`Failed to update question ${templateId}`);
+          return response.json();
+        } else {
+          // Create new question
+          const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(questionData),
+          });
+          if (!response.ok) throw new Error(`Failed to create question ${templateId}`);
+          return response.json();
+        }
       });
-      if (!response.ok) throw new Error('Failed to save facility survey');
-      return response.json();
+      
+      return Promise.all(savePromises);
     },
     onSuccess: (savedQuestions: any[]) => {
       setIsPersisting(false);
-      // Eagerly update local state with new database IDs to prevent race condition
-      // This ensures autosave uses correct IDs even if user starts typing immediately
-      templateToDbIdMap.current.clear();
-      const updatedQuestions: SurveyQuestion[] = savedQuestions.map((sq: any) => {
+      
+      // Update mapping with any new database IDs
+      savedQuestions.forEach((sq: any) => {
         const templateId = sq.templateQuestionId;
         if (templateId && sq.id) {
           templateToDbIdMap.current.set(templateId, sq.id);
         }
-        return {
-          templateId: templateId,
-          dbId: sq.id,
-          category: sq.category,
-          subcategory: sq.subcategory,
-          question: sq.question,
-          standard: sq.standard,
-          type: sq.type,
-          response: sq.response,
-          notes: sq.notes,
-          evidence: sq.evidence || [],
-          recommendations: sq.recommendations || []
-        };
       });
-      setQuestions(updatedQuestions);
       
       toast({
         title: "Survey Saved",
         description: "Your facility survey progress has been saved.",
       });
+      
+      // Refresh data from server to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] });
     },
     onError: (error) => {
@@ -323,21 +346,8 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
   };
 
   const handleSave = () => {
-    const questionsData = questions.map(q => ({
-      assessmentId,
-      templateQuestionId: q.templateId, // Use the stable templateId field
-      category: q.category,
-      subcategory: q.subcategory,
-      question: q.question,
-      standard: q.standard,
-      type: q.type,
-      response: q.response,
-      notes: q.notes,
-      evidence: q.evidence || [],
-      recommendations: q.recommendations || []
-    }));
-
-    saveSurveyMutation.mutate(questionsData);
+    // Pass questions directly - mutation will handle individual saves
+    saveSurveyMutation.mutate(questions);
   };
 
   const handleComplete = async () => {
@@ -352,24 +362,11 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       return;
     }
 
-    const questionsData = questions.map(q => ({
-      assessmentId,
-      templateQuestionId: q.templateId,
-      category: q.category,
-      subcategory: q.subcategory,
-      question: q.question,
-      standard: q.standard,
-      type: q.type,
-      response: q.response,
-      notes: q.notes,
-      evidence: q.evidence || [],
-      recommendations: q.recommendations || []
-    }));
-
     try {
       console.log("Saving survey questions before completing...");
       // Wait for save to complete before advancing workflow
-      await saveSurveyMutation.mutateAsync(questionsData);
+      // Pass questions directly - mutation will handle individual saves
+      await saveSurveyMutation.mutateAsync(questions);
       console.log("Survey saved successfully, calling onComplete callback");
       
       toast({
