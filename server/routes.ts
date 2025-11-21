@@ -1707,7 +1707,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Assessment not found" });
       }
       
-      res.json(updatedAssessment);
+      // Auto-generate retail risk scenarios after profile update (non-fatal)
+      console.log(`🛒 Triggering retail risk scenario generation for assessment ${assessmentId}`);
+      
+      try {
+        const { generateRetailRiskScenarios } = await import('./services/risk-engine/generators/retail');
+        const scenarioResult = await generateRetailRiskScenarios(assessmentId, storage);
+        
+        console.log(`📊 Retail scenario generation result:`, scenarioResult);
+        
+        // Return assessment with scenario generation metadata
+        res.json({
+          ...updatedAssessment,
+          _scenarioGeneration: scenarioResult
+        });
+      } catch (genError) {
+        // Scenario generation failed but profile save succeeded
+        console.error('⚠️ Retail scenario generation failed:', genError);
+        
+        // Return success since profile update succeeded, but include error info
+        res.json({
+          ...updatedAssessment,
+          _scenarioGeneration: {
+            success: false,
+            scenariosCreated: 0,
+            criticalScenarios: 0,
+            summary: 'Profile updated successfully, but scenario generation failed',
+            errors: [genError instanceof Error ? genError.message : 'Unknown error']
+          }
+        });
+      }
+      
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid retail profile data", details: error.errors });
