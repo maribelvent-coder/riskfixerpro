@@ -313,6 +313,36 @@ export class DbStorage implements IStorage {
     return results.length > 0;
   }
 
+  // Loading Dock methods (Warehouse Framework v2.0)
+  async getLoadingDock(id: string): Promise<LoadingDock | undefined> {
+    const results = await db.select().from(schema.loadingDocks).where(eq(schema.loadingDocks.id, id));
+    return results[0];
+  }
+
+  async getLoadingDocksByAssessment(assessmentId: string): Promise<LoadingDock[]> {
+    return await db.select().from(schema.loadingDocks).where(eq(schema.loadingDocks.assessmentId, assessmentId));
+  }
+
+  async createLoadingDock(dock: InsertLoadingDock): Promise<LoadingDock> {
+    const results = await db.insert(schema.loadingDocks).values(dock).returning();
+    return results[0];
+  }
+
+  async updateLoadingDock(id: string, updateData: Partial<LoadingDock>): Promise<LoadingDock | undefined> {
+    const results = await db.update(schema.loadingDocks)
+      .set(updateData)
+      .where(eq(schema.loadingDocks.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteLoadingDock(id: string): Promise<boolean> {
+    const results = await db.delete(schema.loadingDocks)
+      .where(eq(schema.loadingDocks.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
   // Assessment methods
   async getAssessment(id: string): Promise<Assessment | undefined> {
     const results = await db.select().from(schema.assessments).where(eq(schema.assessments.id, id));

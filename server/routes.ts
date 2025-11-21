@@ -1497,6 +1497,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WAREHOUSE FRAMEWORK v2.0 ROUTES
+  // Get warehouse-specific analysis including cargo theft vulnerability score
+  app.get("/api/assessments/:id/warehouse-analysis", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const assessment = req.assessment; // Verified by middleware
+      
+      // Import the cargo theft vulnerability scoring function
+      const { calculateCargoTheftVulnerabilityScore } = await import("./services/risk-engine/adapters/warehouse");
+      
+      // Get loading docks for this assessment
+      const loadingDocks = await storage.getLoadingDocksByAssessment(assessmentId);
+      
+      // Calculate cargo theft vulnerability score
+      const riskAnalysis = calculateCargoTheftVulnerabilityScore(assessment);
+      
+      // Return comprehensive warehouse data
+      res.json({
+        assessment,
+        loadingDocks,
+        riskAnalysis,
+      });
+    } catch (error) {
+      console.error("Error generating warehouse analysis:", error);
+      res.status(500).json({ error: "Failed to generate warehouse analysis" });
+    }
+  });
+
+  // Update warehouse profile (JSONB column)
+  app.patch("/api/assessments/:id/warehouse-profile", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const warehouseProfileData = req.body;
+      
+      // Validate warehouse profile data structure
+      const warehouseProfileSchema = z.object({
+        warehouseType: z.string().optional(),
+        squareFootage: z.number().optional(),
+        inventoryValue: z.number().optional(),
+        highValueProducts: z.array(z.string()).optional(),
+        loadingDockCount: z.number().optional(),
+        dailyTruckVolume: z.number().optional(),
+        shrinkageRate: z.number().optional(),
+        cargoTheftIncidents: z.array(z.object({
+          date: z.string(),
+          loss: z.number(),
+          insiderInvolvement: z.boolean().optional(),
+        })).optional(),
+        locationRisk: z.enum(['High', 'Medium', 'Low']).optional(),
+      });
+      
+      const validatedProfile = warehouseProfileSchema.parse(warehouseProfileData);
+      
+      // Update assessment with new warehouse_profile data
+      const updatedAssessment = await storage.updateAssessment(assessmentId, {
+        warehouse_profile: validatedProfile,
+      });
+      
+      if (!updatedAssessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+      
+      res.json(updatedAssessment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid warehouse profile data", details: error.errors });
+      }
+      console.error("Error updating warehouse profile:", error);
+      res.status(500).json({ error: "Failed to update warehouse profile" });
+    }
+  });
+
   app.post("/api/assessments", async (req, res) => {
     try {
       const userId = req.session.userId;

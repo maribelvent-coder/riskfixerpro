@@ -107,6 +107,13 @@ export interface IStorage {
   updateFacilityZone(id: string, zone: Partial<FacilityZone>): Promise<FacilityZone | undefined>;
   deleteFacilityZone(id: string): Promise<boolean>;
 
+  // Loading Dock methods (Warehouse Framework v2.0)
+  getLoadingDock(id: string): Promise<LoadingDock | undefined>;
+  getLoadingDocksByAssessment(assessmentId: string): Promise<LoadingDock[]>;
+  createLoadingDock(dock: InsertLoadingDock): Promise<LoadingDock>;
+  updateLoadingDock(id: string, dock: Partial<LoadingDock>): Promise<LoadingDock | undefined>;
+  deleteLoadingDock(id: string): Promise<boolean>;
+
   // Assessment methods
   getAssessment(id: string): Promise<Assessment | undefined>;
   getAssessmentWithQuestions(id: string): Promise<AssessmentWithQuestions | undefined>;
@@ -240,6 +247,7 @@ export class MemStorage implements IStorage {
   private organizationInvitations: Map<string, OrganizationInvitation>;
   private sites: Map<string, Site>;
   private facilityZones: Map<string, FacilityZone>;
+  private loadingDocks: Map<string, LoadingDock>;
   private assessments: Map<string, Assessment>;
   private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
   private assessmentQuestions: Map<string, AssessmentQuestion>;
@@ -259,6 +267,7 @@ export class MemStorage implements IStorage {
     this.organizationInvitations = new Map();
     this.sites = new Map();
     this.facilityZones = new Map();
+    this.loadingDocks = new Map();
     this.assessments = new Map();
     this.facilitySurveyQuestions = new Map();
     this.assessmentQuestions = new Map();
@@ -585,6 +594,38 @@ export class MemStorage implements IStorage {
 
   async deleteFacilityZone(id: string): Promise<boolean> {
     return this.facilityZones.delete(id);
+  }
+
+  // Loading Dock methods (Warehouse Framework v2.0)
+  async getLoadingDock(id: string): Promise<LoadingDock | undefined> {
+    return this.loadingDocks.get(id);
+  }
+
+  async getLoadingDocksByAssessment(assessmentId: string): Promise<LoadingDock[]> {
+    return Array.from(this.loadingDocks.values()).filter(dock => dock.assessmentId === assessmentId);
+  }
+
+  async createLoadingDock(dock: InsertLoadingDock): Promise<LoadingDock> {
+    const newDock: LoadingDock = {
+      id: randomUUID(),
+      ...dock,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.loadingDocks.set(newDock.id, newDock);
+    return newDock;
+  }
+
+  async updateLoadingDock(id: string, updateData: Partial<LoadingDock>): Promise<LoadingDock | undefined> {
+    const existing = this.loadingDocks.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updateData, updatedAt: new Date() };
+    this.loadingDocks.set(id, updated);
+    return updated;
+  }
+
+  async deleteLoadingDock(id: string): Promise<boolean> {
+    return this.loadingDocks.delete(id);
   }
 
   // Assessment methods
