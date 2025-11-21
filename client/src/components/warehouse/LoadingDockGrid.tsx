@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { LoadingDock } from "@shared/schema";
 import { 
   Camera, 
   Activity, 
@@ -9,21 +10,6 @@ import {
   AlertTriangle,
   XCircle
 } from "lucide-react";
-
-export interface LoadingDock {
-  id: string;
-  assessmentId: string;
-  dockNumber: string;
-  securityScore?: number | null;
-  hasCctv: boolean;
-  hasMotionSensor?: boolean | null;
-  hasAlarm?: boolean | null;
-  hasAccessControl?: boolean | null;
-  lightingQuality?: string | null;
-  notes?: string | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
 
 interface LoadingDockGridProps {
   loadingDocks: LoadingDock[];
@@ -125,8 +111,8 @@ export function LoadingDockGrid({ loadingDocks, onDockClick }: LoadingDockGridPr
                 </div>
               )}
 
-              {/* Motion Sensor Badge */}
-              {dock.hasMotionSensor && (
+              {/* Door/Motion Sensor Badge */}
+              {dock.hasSensor && (
                 <div
                   className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium"
                   data-testid={`badge-sensor-${dock.id}`}

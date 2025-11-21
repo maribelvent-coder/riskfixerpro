@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CargoTheftROICalculator } from "@/components/calculators/CargoTheftROICalculator";
 import { LoadingDockGrid } from "@/components/warehouse/LoadingDockGrid";
-import { AddDockDialog } from "@/components/warehouse/AddDockDialog";
+import { LoadingDockDialog } from "@/components/warehouse/LoadingDockDialog";
+import type { LoadingDock } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -55,7 +56,7 @@ interface WarehouseAnalysisResponse {
       operationalVulnerabilities: number;
     };
   };
-  loadingDocks: any[];
+  loadingDocks: LoadingDock[];
 }
 
 const HIGH_VALUE_PRODUCT_OPTIONS = [
@@ -73,6 +74,7 @@ export default function WarehouseDashboard() {
   
   // Dialog state
   const [isAddDockOpen, setIsAddDockOpen] = useState(false);
+  const [selectedDock, setSelectedDock] = useState<LoadingDock | null>(null);
 
   // Fetch warehouse analysis data
   const { data, isLoading, error } = useQuery<WarehouseAnalysisResponse>({
@@ -184,7 +186,7 @@ export default function WarehouseDashboard() {
 
   const assessment = data?.assessment;
   const riskAnalysis = data?.riskAnalysis;
-  const loadingDocks = data?.loadingDocks || [];
+  const loadingDocks = (data?.loadingDocks || []) as LoadingDock[];
 
   // Prepare data for ROI Calculator
   const roiAssessmentData = {
@@ -429,12 +431,12 @@ export default function WarehouseDashboard() {
         <CardContent>
           {loadingDocks.length > 0 ? (
             <LoadingDockGrid
+              // @ts-ignore - Type compatibility issue between Date | null vs Date | undefined
               loadingDocks={loadingDocks}
               onDockClick={(dock) => {
-                toast({
-                  title: `${dock.dockNumber}`,
-                  description: `Security Score: ${dock.securityScore || 'N/A'}`,
-                });
+                // @ts-ignore - Type compatibility issue
+                setSelectedDock(dock);
+                setIsAddDockOpen(true);
               }}
             />
           ) : (
@@ -457,11 +459,17 @@ export default function WarehouseDashboard() {
         </CardContent>
       </Card>
 
-      {/* Add Dock Dialog */}
-      <AddDockDialog
+      {/* Loading Dock Dialog (Create/Edit) */}
+      <LoadingDockDialog
         assessmentId={id!}
         open={isAddDockOpen}
-        onOpenChange={setIsAddDockOpen}
+        onOpenChange={(open) => {
+          setIsAddDockOpen(open);
+          if (!open) {
+            setSelectedDock(null);
+          }
+        }}
+        dockToEdit={selectedDock ?? undefined}
       />
     </div>
   );

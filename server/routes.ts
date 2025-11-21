@@ -1594,6 +1594,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update loading dock
+  app.patch("/api/assessments/:id/loading-docks/:dockId", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id: assessmentId, dockId } = req.params;
+      
+      // Get existing dock to verify it belongs to this assessment
+      const existingDock = await storage.getLoadingDock(dockId);
+      if (!existingDock) {
+        return res.status(404).json({ error: "Loading dock not found" });
+      }
+      
+      if (existingDock.assessmentId !== assessmentId) {
+        return res.status(403).json({ error: "Loading dock does not belong to this assessment" });
+      }
+      
+      // Validate partial update data (excluding assessmentId which shouldn't change)
+      const { assessmentId: _, ...updateData } = req.body;
+      const validatedData = insertLoadingDockSchema.partial().parse(updateData);
+      
+      // Update loading dock
+      const updatedDock = await storage.updateLoadingDock(dockId, validatedData);
+      
+      if (!updatedDock) {
+        return res.status(404).json({ error: "Loading dock not found" });
+      }
+      
+      res.json(updatedDock);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid loading dock data", details: error.errors });
+      }
+      console.error("Error updating loading dock:", error);
+      res.status(500).json({ error: "Failed to update loading dock" });
+    }
+  });
+
+  // Delete loading dock
+  app.delete("/api/assessments/:id/loading-docks/:dockId", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id: assessmentId, dockId } = req.params;
+      
+      // Get existing dock to verify it belongs to this assessment
+      const existingDock = await storage.getLoadingDock(dockId);
+      if (!existingDock) {
+        return res.status(404).json({ error: "Loading dock not found" });
+      }
+      
+      if (existingDock.assessmentId !== assessmentId) {
+        return res.status(403).json({ error: "Loading dock does not belong to this assessment" });
+      }
+      
+      // Delete loading dock
+      const success = await storage.deleteLoadingDock(dockId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Loading dock not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting loading dock:", error);
+      res.status(500).json({ error: "Failed to delete loading dock" });
+    }
+  });
+
   app.post("/api/assessments", async (req, res) => {
     try {
       const userId = req.session.userId;
