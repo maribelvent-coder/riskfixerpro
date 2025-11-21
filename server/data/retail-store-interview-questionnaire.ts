@@ -20,6 +20,10 @@ export interface RetailInterviewQuestion {
   riskIndicators?: string[]; // Keywords that elevate risk
   riskDirection?: 'positive' | 'negative'; // 'positive' = Yes is good (default), 'negative' = Yes is bad (incidents)
   
+  // Conditional logic
+  conditionalOnQuestionId?: string; // The question ID this depends on
+  showWhenAnswer?: string; // The answer value that triggers showing this question
+  
   // Direct mapping to risk scenarios
   informsThreat?: string[]; // Threat IDs this question informs
   informsVulnerability?: boolean; // Does this assess vulnerability?
@@ -396,7 +400,6 @@ const section3_eas: RetailInterviewQuestion[] = [
     questionText: 'What percentage of your merchandise is protected with EAS tags?',
     questionType: 'multiple_choice',
     options: [
-      'No EAS system',
       'Under 25% (high-value only)',
       '25-50%',
       '50-75%',
@@ -404,7 +407,9 @@ const section3_eas: RetailInterviewQuestion[] = [
     ],
     required: true,
     informsVulnerability: true,
-    riskIndicators: ['no eas', 'under 25%'],
+    riskIndicators: ['under 25%'],
+    conditionalOnQuestionId: 'eas_1',
+    showWhenAnswer: 'yes',
   },
 
   {
@@ -422,6 +427,8 @@ const section3_eas: RetailInterviewQuestion[] = [
     required: true,
     informsVulnerability: true,
     riskIndicators: ['rarely approaches', 'frequently ignored', 'no formal'],
+    conditionalOnQuestionId: 'eas_1',
+    showWhenAnswer: 'yes',
   },
 
   {
@@ -438,6 +445,8 @@ const section3_eas: RetailInterviewQuestion[] = [
     required: true,
     informsVulnerability: true,
     riskIndicators: ['inconsistent', 'rarely'],
+    conditionalOnQuestionId: 'eas_1',
+    showWhenAnswer: 'yes',
   },
 
   {
@@ -455,6 +464,8 @@ const section3_eas: RetailInterviewQuestion[] = [
     required: true,
     informsVulnerability: true,
     riskIndicators: ['rarely', 'only when problems'],
+    conditionalOnQuestionId: 'eas_1',
+    showWhenAnswer: 'yes',
   },
 ];
 const section4_cctv: RetailInterviewQuestion[] = [
