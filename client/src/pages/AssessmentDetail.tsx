@@ -46,6 +46,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Global Template Configuration - Single source of truth for all templates
+const TEMPLATE_CONFIG: Record<string, { tabId: string; label: string; icon: typeof Warehouse; dashboardComponent: any }> = {
+  "warehouse-distribution": { tabId: "warehouse", label: "Warehouse Operations", icon: Warehouse, dashboardComponent: WarehouseDashboard },
+  "retail-store": { tabId: "retail", label: "Retail Operations", icon: ShoppingBag, dashboardComponent: RetailDashboard },
+  "manufacturing-facility": { tabId: "manufacturing", label: "Production Operations", icon: Factory, dashboardComponent: ManufacturingDashboard },
+  "data-center": { tabId: "datacenter", label: "Infrastructure Operations", icon: Server, dashboardComponent: DatacenterDashboard },
+  "office-building": { tabId: "office", label: "Corporate Operations", icon: Building2, dashboardComponent: OfficeDashboard },
+};
+
 interface AssessmentDetailProps {
   assessmentId?: string;
 }
@@ -224,17 +233,14 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       { id: "facility-survey", label: "Facility Survey", icon: Building },
     ];
     
-    // Add template-specific tabs OR Asset Inventory
-    if (templateId === "warehouse-distribution") {
-      baseTabs.push({ id: "warehouse", label: "Warehouse Operations", icon: Warehouse });
-    } else if (templateId === "retail-store") {
-      baseTabs.push({ id: "retail", label: "Retail Operations", icon: ShoppingBag });
-    } else if (templateId === "manufacturing-facility") {
-      baseTabs.push({ id: "manufacturing", label: "Production Operations", icon: Factory });
-    } else if (templateId === "data-center") {
-      baseTabs.push({ id: "datacenter", label: "Infrastructure Operations", icon: Server });
-    } else if (templateId === "office-building") {
-      baseTabs.push({ id: "office", label: "Corporate Operations", icon: Building2 });
+    // Add template-specific tabs OR Asset Inventory (configuration-driven)
+    const templateConfig = TEMPLATE_CONFIG[templateId];
+    if (templateConfig) {
+      baseTabs.push({
+        id: templateConfig.tabId,
+        label: templateConfig.label,
+        icon: templateConfig.icon
+      });
     } else {
       // Other non-specialized templates use standard Asset Inventory
       baseTabs.push({ id: "assets", label: "Asset Inventory", icon: Building });
@@ -300,17 +306,10 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       "reports": assessmentData?.riskAssessmentCompleted || false
     };
     
-    // Add specialized template tabs OR standard Asset Inventory
-    if (templateId === "warehouse-distribution") {
-      tabs["warehouse"] = true;
-    } else if (templateId === "retail-store") {
-      tabs["retail"] = true;
-    } else if (templateId === "manufacturing-facility") {
-      tabs["manufacturing"] = true;
-    } else if (templateId === "data-center") {
-      tabs["datacenter"] = true;
-    } else if (templateId === "office-building") {
-      tabs["office"] = true;
+    // Add specialized template tabs OR standard Asset Inventory (configuration-driven)
+    const templateConfig = TEMPLATE_CONFIG[templateId];
+    if (templateConfig) {
+      tabs[templateConfig.tabId] = true; // Always available for specialized templates
     } else {
       // Non-specialized templates use Asset Inventory (unlocked after survey completion)
       tabs["assets"] = assessmentData?.facilitySurveyCompleted || false;
@@ -345,22 +344,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     const templateId = assessmentData?.templateId || "";
     console.log("Facility survey completed, checking templateId:", templateId);
     
-    // Redirect to specialized tabs for specialized templates
-    if (templateId === "warehouse-distribution") {
-      console.log("Warehouse template detected, advancing to warehouse operations");
-      setActiveTab("warehouse");
-    } else if (templateId === "retail-store") {
-      console.log("Retail template detected, advancing to retail operations");
-      setActiveTab("retail");
-    } else if (templateId === "manufacturing-facility") {
-      console.log("Manufacturing template detected, advancing to manufacturing operations");
-      setActiveTab("manufacturing");
-    } else if (templateId === "data-center") {
-      console.log("Data center template detected, advancing to datacenter operations");
-      setActiveTab("datacenter");
-    } else if (templateId === "office-building") {
-      console.log("Office Building template detected, advancing to corporate operations");
-      setActiveTab("office");
+    // Redirect to specialized tabs for specialized templates (configuration-driven)
+    const templateConfig = TEMPLATE_CONFIG[templateId];
+    if (templateConfig) {
+      console.log(`${templateId} template detected, advancing to ${templateConfig.label}`);
+      setActiveTab(templateConfig.tabId);
     } else {
       // Default behavior for non-specialized templates
       console.log("Standard template, advancing to asset inventory");
