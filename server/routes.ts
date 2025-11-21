@@ -2013,6 +2013,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-generate warehouse risk scenarios from warehouse profile + facility survey
+  app.post("/api/assessments/:id/generate-warehouse-scenarios", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log(`🏭 Starting warehouse risk scenario generation for assessment ${id}`);
+      
+      // Import the warehouse generator
+      const { generateWarehouseRiskScenarios } = await import('./services/risk-engine/generators/warehouse');
+      
+      // Run scenario generation
+      const result = await generateWarehouseRiskScenarios(id, storage);
+      
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Failed to generate warehouse scenarios",
+          details: result.errors
+        });
+      }
+      
+      // Return success with details
+      res.json({
+        success: true,
+        scenariosCreated: result.scenariosCreated,
+        criticalScenarios: result.criticalScenarios,
+        summary: result.summary,
+        warnings: result.errors // Include warnings even on success
+      });
+      
+    } catch (error) {
+      console.error("Error in generate-warehouse-scenarios endpoint:", error);
+      res.status(500).json({ 
+        error: "Internal server error during warehouse scenario generation",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Asset Bridge route - Extract assets from facility survey for Phase 2
   app.post("/api/assessments/:id/extract-assets", verifyAssessmentOwnership, async (req, res) => {
     try {

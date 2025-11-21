@@ -146,9 +146,9 @@ export async function generateWarehouseRiskScenarios(
       scenarios.map(scenario => storage.createRiskScenario(scenario))
     );
     
-    // Count critical scenarios (inherent risk > 15)
+    // Count critical scenarios (inherent risk >= 75 on 1-125 scale)
     const criticalCount = createdScenarios.filter((s: any) => 
-      s.inherentRisk && s.inherentRisk > 15
+      s.inherentRisk && s.inherentRisk >= 75
     ).length;
     
     console.log(`✅ Created ${createdScenarios.length} warehouse risk scenarios (${criticalCount} critical)`);
@@ -228,12 +228,19 @@ function generateCargoTheftScenario(
   if (dock4Response) {
     const answer = normalizeAnswer(dock4Response);
     
-    if (answer === 'no' || answer === 'informal') {
+    // Match against actual option strings from warehouse questionnaire
+    if (answer.includes('no seal') || answer.includes('no verification')) {
       vulnerabilityScore = 5;
-      vulnerabilityReason = "Trailer seals are not verified (or only informal verification)";
-    } else if (answer === 'yes') {
+      vulnerabilityReason = "No trailer seal verification performed";
+    } else if (answer.includes('informal')) {
+      vulnerabilityScore = 4;
+      vulnerabilityReason = "Only informal seal checking (not documented)";
+    } else if (answer.includes('manual')) {
       vulnerabilityScore = 2;
-      vulnerabilityReason = "Trailer seals are systematically verified";
+      vulnerabilityReason = "Manual seal verification with documentation in place";
+    } else if (answer.includes('electronic')) {
+      vulnerabilityScore = 1;
+      vulnerabilityReason = "Electronic seal verification system with documentation in place";
     }
   }
   
@@ -243,8 +250,8 @@ function generateCargoTheftScenario(
     likelihoodScore = Math.min(5, 3 + profile.cargoTheftIncidents);
   }
   
-  // Calculate inherent risk: T × V × I
-  const inherentRisk = (likelihoodScore * vulnerabilityScore * impactScore) / 5; // Normalize to 1-25 scale
+  // Calculate inherent risk: T × V × I (range 1-125)
+  const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
   return {
     assessmentId,
@@ -261,7 +268,8 @@ function generateCargoTheftScenario(
     inherentRisk,
     controlEffectiveness: 0,
     residualRisk: inherentRisk,
-    decision: 'undecided'
+    // Include vulnerability score for schema compliance (same as likelihood in T×V×I)
+    vulnerabilityScore
   };
 }
 
@@ -306,18 +314,24 @@ function generateLoadingDockBreachScenario(
   if (dock9Response) {
     const answer = normalizeAnswer(dock9Response);
     
-    if (answer === 'unrestricted' || answer === 'no') {
+    // Match against actual option strings from warehouse questionnaire
+    if (answer.includes('no restrictions')) {
       likelihoodScore = 5;
-      likelihoodReason = "Drivers have unrestricted access to loading areas";
-      vulnerabilityScore = Math.min(5, vulnerabilityScore + 1); // Compound vulnerability
-    } else if (answer === 'escorted' || answer === 'yes') {
+      likelihoodReason = "Drivers have unrestricted access to warehouse during loading/unloading";
+    } else if (answer.includes('restricted but no physical barrier')) {
+      likelihoodScore = 4;
+      likelihoodReason = "Drivers restricted but no physical barrier in place";
+    } else if (answer.includes('escorted')) {
       likelihoodScore = 2;
-      likelihoodReason = "Driver access is restricted/escorted";
+      likelihoodReason = "Drivers are escorted if they need to enter warehouse";
+    } else if (answer.includes('designated waiting area')) {
+      likelihoodScore = 1;
+      likelihoodReason = "Drivers must remain in physically separated waiting area";
     }
   }
   
   const impactScore = 4; // High impact - direct facility access
-  const inherentRisk = (likelihoodScore * vulnerabilityScore * impactScore) / 5;
+  const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
   return {
     assessmentId,
@@ -334,7 +348,7 @@ function generateLoadingDockBreachScenario(
     inherentRisk,
     controlEffectiveness: 0,
     residualRisk: inherentRisk,
-    decision: 'undecided'
+    vulnerabilityScore
   };
 }
 
@@ -358,8 +372,9 @@ function generateInsiderTheftScenario(
   const answer = normalizeAnswer(personnel1Response);
   
   // Only create scenario if background checks are insufficient
-  if (answer !== 'no' && answer !== 'basic' && answer !== 'none') {
-    return null; // Adequate background checks in place
+  // Check for various forms of "no" or "basic" responses
+  if (!answer.includes('no') && !answer.includes('none') && !answer.includes('basic')) {
+    return null; // Adequate background checks in place (comprehensive checks)
   }
   
   // Vulnerability: Unvetted staff
@@ -392,7 +407,7 @@ function generateInsiderTheftScenario(
   }
   
   const likelihoodScore = 4; // High likelihood with unvetted staff
-  const inherentRisk = (likelihoodScore * vulnerabilityScore * impactScore) / 5;
+  const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
   return {
     assessmentId,
@@ -409,7 +424,7 @@ function generateInsiderTheftScenario(
     inherentRisk,
     controlEffectiveness: 0,
     residualRisk: inherentRisk,
-    decision: 'undecided'
+    vulnerabilityScore
   };
 }
 
@@ -446,7 +461,7 @@ function generatePerimeterIntrusionScenario(
   
   const likelihoodScore = 4; // High likelihood with compromised perimeter
   const impactScore = 4; // High impact - unrestricted site access
-  const inherentRisk = (likelihoodScore * vulnerabilityScore * impactScore) / 5;
+  const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
   return {
     assessmentId,
@@ -463,7 +478,7 @@ function generatePerimeterIntrusionScenario(
     inherentRisk,
     controlEffectiveness: 0,
     residualRisk: inherentRisk,
-    decision: 'undecided'
+    vulnerabilityScore
   };
 }
 
@@ -515,11 +530,12 @@ function mapScoreToText(score: number, type: 'likelihood' | 'impact'): string {
 }
 
 /**
- * Calculate overall risk level from inherent risk score
+ * Calculate overall risk level from inherent risk score (1-125 scale)
  */
 function calculateRiskLevel(inherentRisk: number): string {
-  if (inherentRisk >= 15) return 'Critical';
-  if (inherentRisk >= 9) return 'High';
-  if (inherentRisk >= 4) return 'Medium';
-  return 'Low';
+  // Based on 1-125 scale (T×V×I where each is 1-5)
+  if (inherentRisk >= 75) return 'Critical'; // High scores across the board
+  if (inherentRisk >= 45) return 'High'; // Elevated risk
+  if (inherentRisk >= 15) return 'Medium'; // Moderate risk
+  return 'Low'; // Lower risk
 }
