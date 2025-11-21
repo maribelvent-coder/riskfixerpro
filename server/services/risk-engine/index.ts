@@ -11,7 +11,7 @@
 
 import { ExecutiveProtectionAdapter } from './adapters/executive-protection';
 import { OfficeBuildingAdapter } from './adapters/office-building';
-import { RetailStoreAdapter } from './adapters/retail-store';
+import { RetailAdapter } from './adapters/retail';
 import { WarehouseAdapter } from './adapters/warehouse';
 import { RiskEngineAdapter, InterviewResponse, ThreatData, RiskCalculationResult } from './types';
 
@@ -48,7 +48,7 @@ export function getRiskEngineAdapter(templateType: string): RiskEngineAdapter {
     case 'retail-store':
     case 'retail store':
     case 'retail':
-      return new RetailStoreAdapter();
+      return new RetailAdapter();
     
     case 'warehouse':
     case 'distribution-center':
@@ -226,4 +226,4 @@ function generateFindings(
 
 // Export types and utilities
 export * from './types';
-export { ExecutiveProtectionAdapter, OfficeBuildingAdapter, RetailStoreAdapter, WarehouseAdapter };
+export { ExecutiveProtectionAdapter, OfficeBuildingAdapter, RetailAdapter, WarehouseAdapter };
