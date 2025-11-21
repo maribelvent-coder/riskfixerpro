@@ -526,6 +526,8 @@ const section4_cctv: RetailInterviewQuestion[] = [
     ],
     required: true,
     informsVulnerability: true,
+    conditionalOnQuestionId: 'cctv_1',
+    showWhenAnswer: 'yes',
   },
 
   {
@@ -542,6 +544,8 @@ const section4_cctv: RetailInterviewQuestion[] = [
     required: true,
     informsVulnerability: true,
     riskIndicators: ['rarely', 'no - cameras'],
+    conditionalOnQuestionId: 'cctv_1',
+    showWhenAnswer: 'yes',
   },
 
   {
@@ -558,6 +562,8 @@ const section4_cctv: RetailInterviewQuestion[] = [
     required: true,
     informsVulnerability: true,
     riskIndicators: ['rarely reviewed'],
+    conditionalOnQuestionId: 'cctv_1',
+    showWhenAnswer: 'yes',
   },
 
   {
@@ -568,6 +574,8 @@ const section4_cctv: RetailInterviewQuestion[] = [
     required: true,
     informsThreat: ['employee_theft'],
     suggestsControls: ['pos_exception_reporting'],
+    conditionalOnQuestionId: 'cctv_1',
+    showWhenAnswer: 'yes',
     followUpQuestions: [
       {
         id: 'cctv_5a',
@@ -598,6 +606,8 @@ const section4_cctv: RetailInterviewQuestion[] = [
     },
     required: true,
     informsVulnerability: true,
+    conditionalOnQuestionId: 'cctv_1',
+    showWhenAnswer: 'yes',
   },
 ];
 const section5_cash: RetailInterviewQuestion[] = [
