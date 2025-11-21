@@ -7,6 +7,7 @@ export interface QuestionConfig {
   controlLibraryName: string;
   evidenceType?: string;
   orderIndex: number;
+  riskDirection?: "positive" | "negative"; // 'positive' = Yes is good (default), 'negative' = Yes is bad (incidents)
 }
 
 export const RETAIL_STORE_QUESTIONS: QuestionConfig[] = [
@@ -209,5 +210,41 @@ export const RETAIL_STORE_QUESTIONS: QuestionConfig[] = [
     controlLibraryName: "Panic Button / Duress Alarm",
     evidenceType: "Emergency communication plan",
     orderIndex: 20
+  },
+  {
+    questionText: "Have you had any confirmed employee theft incidents in the past 12 months?",
+    category: "Shrinkage & Loss History",
+    questionType: "yes-no",
+    controlLibraryName: "Background Checks",
+    evidenceType: "Incident reports",
+    orderIndex: 21,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you experienced shoplifting incidents in the past 12 months?",
+    category: "Shrinkage & Loss History",
+    questionType: "yes-no",
+    controlLibraryName: "Electronic Article Surveillance (EAS)",
+    evidenceType: "Loss prevention reports",
+    orderIndex: 22,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you experienced organized retail crime (ORC) activity in the past 12 months?",
+    category: "Shrinkage & Loss History",
+    questionType: "yes-no",
+    controlLibraryName: "Security Officers - Unarmed",
+    evidenceType: "ORC incident reports",
+    orderIndex: 23,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you had any robbery or burglary incidents in the past 5 years?",
+    category: "Shrinkage & Loss History",
+    questionType: "yes-no",
+    controlLibraryName: "Intrusion Detection System (IDS)",
+    evidenceType: "Police reports",
+    orderIndex: 24,
+    riskDirection: "negative"
   }
 ];

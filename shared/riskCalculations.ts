@@ -254,16 +254,46 @@ export function calculateResidualRisk(
  */
 
 export type AnswerValue = "yes" | "no" | "partial" | "compliant" | "non-compliant" | "n-a" | null | undefined;
+export type RiskDirection = "positive" | "negative";
 
 /**
  * Map survey answer to fidelity score for control effectiveness calculation
+ * 
+ * @param answer - Survey response value
+ * @param riskDirection - 'positive' (Yes = Good) or 'negative' (Yes = Bad, e.g., incidents/threats)
+ * @returns Fidelity score 0.0 to 1.0
  */
-export function mapAnswerToFidelity(answer: AnswerValue): number {
+export function mapAnswerToFidelity(
+  answer: AnswerValue, 
+  riskDirection: RiskDirection = "positive"
+): number {
   if (!answer || answer === "n-a" || answer === null || answer === undefined) {
     return 0.0; // Missing/N/A = no fidelity
   }
   
-  switch (answer.toLowerCase()) {
+  const answerLower = answer.toLowerCase();
+  
+  // For NEGATIVE direction questions (incidents/threats), invert the logic
+  // "Yes" to "Have you had theft incidents?" should score as BAD (0.0)
+  // "No" to "Have you had theft incidents?" should score as GOOD (1.0)
+  if (riskDirection === "negative") {
+    switch (answerLower) {
+      case "yes":
+      case "compliant":
+        return 0.0; // Yes to negative event = high risk, no fidelity
+      case "partial":
+        return 0.5; // Partial negative event = moderate risk
+      case "no":
+      case "non-compliant":
+        return 1.0; // No negative events = safe, full fidelity
+      default:
+        return 0.0; // Unknown = no fidelity
+    }
+  }
+  
+  // For POSITIVE direction questions (controls), use standard logic
+  // "Yes" to "Do you have cameras?" should score as GOOD (1.0)
+  switch (answerLower) {
     case "yes":
     case "compliant":
       return 1.0; // Full fidelity

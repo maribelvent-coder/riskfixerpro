@@ -559,9 +559,40 @@ export class DbStorage implements IStorage {
   }
 
   // Facility Survey methods
-  async getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]> {
-    return await db.select().from(schema.facilitySurveyQuestions)
+  async getFacilitySurveyQuestions(assessmentId: string): Promise<any[]> {
+    // LEFT JOIN with template_questions to include riskDirection for proper scoring
+    const results = await db
+      .select({
+        id: schema.facilitySurveyQuestions.id,
+        assessmentId: schema.facilitySurveyQuestions.assessmentId,
+        templateQuestionId: schema.facilitySurveyQuestions.templateQuestionId,
+        category: schema.facilitySurveyQuestions.category,
+        subcategory: schema.facilitySurveyQuestions.subcategory,
+        question: schema.facilitySurveyQuestions.question,
+        standard: schema.facilitySurveyQuestions.standard,
+        type: schema.facilitySurveyQuestions.type,
+        response: schema.facilitySurveyQuestions.response,
+        notes: schema.facilitySurveyQuestions.notes,
+        evidence: schema.facilitySurveyQuestions.evidence,
+        recommendations: schema.facilitySurveyQuestions.recommendations,
+        bestPractice: schema.facilitySurveyQuestions.bestPractice,
+        rationale: schema.facilitySurveyQuestions.rationale,
+        importance: schema.facilitySurveyQuestions.importance,
+        orderIndex: schema.facilitySurveyQuestions.orderIndex,
+        conditionalOnQuestionId: schema.facilitySurveyQuestions.conditionalOnQuestionId,
+        showWhenAnswer: schema.facilitySurveyQuestions.showWhenAnswer,
+        createdAt: schema.facilitySurveyQuestions.createdAt,
+        // NEW: Include riskDirection from template_questions for proper scoring
+        riskDirection: schema.templateQuestions.riskDirection,
+      })
+      .from(schema.facilitySurveyQuestions)
+      .leftJoin(
+        schema.templateQuestions,
+        eq(schema.facilitySurveyQuestions.templateQuestionId, schema.templateQuestions.questionId)
+      )
       .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId));
+    
+    return results;
   }
 
   async getFacilitySurveyQuestion(questionId: string): Promise<FacilitySurveyQuestion | null> {

@@ -200,5 +200,32 @@ export const WAREHOUSE_QUESTIONS: QuestionConfig[] = [
     controlLibraryName: "Security Awareness Training",
     evidenceType: "Training records",
     orderIndex: 20
+  },
+  {
+    questionText: "Have you experienced cargo theft or full truckload theft in the past 3 years?",
+    category: "Cargo Theft & Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "Mobile Patrol",
+    evidenceType: "Theft incident reports",
+    orderIndex: 21,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you experienced cargo pilferage or partial load theft in the past 12 months?",
+    category: "Cargo Theft & Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "CCTV System - IP/Network",
+    evidenceType: "Loss reports",
+    orderIndex: 22,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you had confirmed employee or driver theft incidents in the past 12 months?",
+    category: "Cargo Theft & Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "Background Checks",
+    evidenceType: "Internal investigation reports",
+    orderIndex: 23,
+    riskDirection: "negative"
   }
 ];

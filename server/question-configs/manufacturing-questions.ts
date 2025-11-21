@@ -210,5 +210,32 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     controlLibraryName: "Security Awareness Training",
     evidenceType: "Safety inspection checklist",
     orderIndex: 21
+  },
+  {
+    questionText: "Have you experienced workplace safety incidents or OSHA violations in the past 12 months?",
+    category: "Safety Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "Security Awareness Training",
+    evidenceType: "OSHA incident reports",
+    orderIndex: 22,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you had intellectual property theft or industrial espionage attempts in the past 3 years?",
+    category: "Security Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "Card Access System",
+    evidenceType: "Security incident reports",
+    orderIndex: 23,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you experienced production disruptions due to security breaches or sabotage?",
+    category: "Security Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "CCTV System - IP/Network",
+    evidenceType: "Incident investigation reports",
+    orderIndex: 24,
+    riskDirection: "negative"
   }
 ];

@@ -275,6 +275,7 @@ async function seedFacilityQuestions() {
             question: question.questionText,
             type: question.questionType,
             orderIndex: question.orderIndex,
+            riskDirection: question.riskDirection || "positive", // Default to positive if not specified
             controlLibraryId: controlId,
             bestPractice: question.followUpText || null,
             rationale: question.evidenceType || null,

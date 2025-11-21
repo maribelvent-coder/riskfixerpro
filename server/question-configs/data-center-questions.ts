@@ -200,5 +200,32 @@ export const DATA_CENTER_QUESTIONS: QuestionConfig[] = [
     controlLibraryName: "Redundant Power Systems (UPS/Generator)",
     evidenceType: "Generator test logs",
     orderIndex: 20
+  },
+  {
+    questionText: "Have you experienced unplanned downtime or outages in the past 12 months?",
+    category: "Reliability & Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "Redundant Power Systems (UPS/Generator)",
+    evidenceType: "Incident reports",
+    orderIndex: 21,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you had security breaches or unauthorized physical access incidents in the past 3 years?",
+    category: "Security Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "Card Access System",
+    evidenceType: "Security incident logs",
+    orderIndex: 22,
+    riskDirection: "negative"
+  },
+  {
+    questionText: "Have you experienced data theft or attempted data exfiltration incidents?",
+    category: "Security Incident History",
+    questionType: "yes-no",
+    controlLibraryName: "CCTV System - IP/Network",
+    evidenceType: "Investigation reports",
+    orderIndex: 23,
+    riskDirection: "negative"
   }
 ];
