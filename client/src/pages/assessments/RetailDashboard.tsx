@@ -28,6 +28,7 @@ interface RetailAnalysisResponse {
   assessment: {
     id: string;
     title: string;
+    executiveSummary?: string;
     retail_profile?: {
       annualRevenue?: number;
       shrinkageRate?: number;
@@ -493,11 +494,11 @@ export default function RetailDashboard() {
       </div>
 
       {/* AI Executive Summary */}
-      {id && analysis?.assessment && (
+      {id && (
         <div className="mt-6">
           <ExecutiveSummaryCard 
             assessmentId={id} 
-            executiveSummary={analysis.assessment.executiveSummary}
+            executiveSummary={data?.assessment.executiveSummary}
           />
         </div>
       )}
