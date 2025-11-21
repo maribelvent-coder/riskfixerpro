@@ -356,8 +356,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     } else if (templateId === "data-center") {
       console.log("Data center template detected, advancing to datacenter operations");
       setActiveTab("datacenter");
+    } else if (templateId === "office-building") {
+      console.log("Office Building template detected, advancing to corporate operations");
+      setActiveTab("office");
     } else {
-      // Default behavior for non-specialized templates (office-building, etc.)
+      // Default behavior for non-specialized templates
       console.log("Standard template, advancing to asset inventory");
       setActiveTab("assets");
     }
