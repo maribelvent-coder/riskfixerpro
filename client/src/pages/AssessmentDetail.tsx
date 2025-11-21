@@ -282,7 +282,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const getTabsAvailability = () => {
     const paradigm = assessmentData?.surveyParadigm || "facility";
     const templateId = assessmentData?.templateId || "";
-    const specializedTemplates = ["warehouse-distribution", "retail-store", "manufacturing-facility", "data-center"];
+    const specializedTemplates = ["warehouse-distribution", "retail-store", "manufacturing-facility", "data-center", "office-building"];
     const isSpecializedTemplate = specializedTemplates.includes(templateId);
     
     if (paradigm === "executive") {
@@ -309,6 +309,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       tabs["manufacturing"] = true;
     } else if (templateId === "data-center") {
       tabs["datacenter"] = true;
+    } else if (templateId === "office-building") {
+      tabs["office"] = true;
     } else {
       // Non-specialized templates use Asset Inventory (unlocked after survey completion)
       tabs["assets"] = assessmentData?.facilitySurveyCompleted || false;
