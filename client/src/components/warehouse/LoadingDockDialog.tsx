@@ -110,7 +110,7 @@ export function LoadingDockDialog({
       return await apiRequest("POST", `/api/assessments/${assessmentId}/loading-docks`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${assessmentId}/warehouse-analysis`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, 'warehouse-analysis'] });
       
       toast({
         title: "Loading Dock Added",
@@ -135,7 +135,7 @@ export function LoadingDockDialog({
       return await apiRequest("PATCH", `/api/assessments/${assessmentId}/loading-docks/${dockToEdit.id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${assessmentId}/warehouse-analysis`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, 'warehouse-analysis'] });
       
       toast({
         title: "Loading Dock Updated",
@@ -159,7 +159,7 @@ export function LoadingDockDialog({
       return await apiRequest("DELETE", `/api/assessments/${assessmentId}/loading-docks/${dockToEdit.id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${assessmentId}/warehouse-analysis`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, 'warehouse-analysis'] });
       
       toast({
         title: "Loading Dock Deleted",
