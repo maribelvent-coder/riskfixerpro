@@ -37,12 +37,12 @@ interface SurveyQuestion {
   subcategory: string;
   question: string;
   standard: string;
-  type: "condition" | "measurement" | "yes-no" | "rating" | "text" | "checklist";
+  type: "condition" | "measurement" | "yes-no" | "rating" | "text" | "checklist" | "multiple-choice";
   response?: any;
   notes?: string;
   evidence?: string[];
   recommendations?: string[];
-  options?: string[]; // For checklist type questions
+  options?: string[]; // For checklist and multiple-choice type questions
   conditionalOnQuestionId?: string; // The templateId of the prerequisite question
   showWhenAnswer?: string; // The answer value that triggers showing this question (e.g., "yes")
   riskDirection?: "positive" | "negative"; // 'positive' = Yes is good, 'negative' = Yes is bad (incidents)
@@ -777,6 +777,29 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
               />
             </div>
           </div>
+        );
+
+      case "multiple-choice":
+        return (
+          <Select 
+            value={String(question.response || "")} 
+            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
+          >
+            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
+              <SelectValue placeholder="Select an option" />
+            </SelectTrigger>
+            <SelectContent>
+              {question.options && question.options.length > 0 ? (
+                question.options.map((option, index) => (
+                  <SelectItem key={index} value={option}>
+                    {option}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-options" disabled>No options available</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         );
 
       default:
