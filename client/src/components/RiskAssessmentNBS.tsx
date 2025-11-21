@@ -589,7 +589,7 @@ function ScenariosList({ assessmentId, scenarios, assets, onEdit, onDelete }: Sc
 
   return (
     <div className="space-y-3">
-      {scenarios.map((scenario) => {
+      {scenarios.filter(scenario => scenario).map((scenario) => {
         const asset = assets.find(a => a.id === scenario.assetId);
         
         return (
