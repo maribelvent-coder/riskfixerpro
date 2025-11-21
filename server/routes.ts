@@ -3370,6 +3370,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { questionId } = req.params;
       const updateData = req.body;
       
+      console.log("PATCH facility-survey-questions - Received payload:", JSON.stringify(updateData, null, 2));
+      
       // Sanitize: don't allow changing assessmentId or templateQuestionId
       const { assessmentId, templateQuestionId, ...safeData } = updateData;
       
@@ -3379,6 +3381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Question not found" });
       }
       
+      console.log("PATCH facility-survey-questions - Saved successfully:", questionId);
       res.json(updated);
     } catch (error) {
       console.error("Error updating facility survey question:", error);
@@ -3391,13 +3394,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const questionData = req.body;
       
+      console.log("POST facility-survey-questions - Received payload:", JSON.stringify(questionData, null, 2));
+      
       const validatedQuestion = insertFacilitySurveyQuestionSchema.parse({ ...questionData, assessmentId: id });
       
       const created = await storage.createFacilitySurveyQuestion(validatedQuestion);
       
+      console.log("POST facility-survey-questions - Created successfully:", created.id);
       res.status(201).json(created);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("POST facility-survey-questions - Zod validation failed:", error.errors);
         return res.status(400).json({ error: "Invalid question data", details: error.errors });
       }
       console.error("Error creating facility survey question:", error);

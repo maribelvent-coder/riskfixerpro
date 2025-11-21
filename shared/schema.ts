@@ -1008,9 +1008,24 @@ export const insertTemplateQuestionSchema = createInsertSchema(templateQuestions
   createdAt: true,
 });
 
+// Relaxed schema to accept any JSON-compatible response type (strings, numbers, booleans, arrays, objects)
+// This prevents validation failures for Rating questions (numbers), Checklist questions (arrays), etc.
 export const insertFacilitySurveyQuestionSchema = createInsertSchema(facilitySurveyQuestions).omit({
   id: true,
   createdAt: true,
+}).extend({
+  response: z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(z.string()),
+    z.object({
+      value: z.union([z.string(), z.number()]).optional(),
+      assessment: z.string().optional(),
+      textResponse: z.string().optional(),
+    }),
+    z.null(),
+  ]).optional(),
 });
 
 export const insertAssessmentQuestionSchema = createInsertSchema(assessmentQuestions).omit({
