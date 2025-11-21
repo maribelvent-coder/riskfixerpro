@@ -912,9 +912,10 @@ const section7_lp_staff: RetailInterviewQuestion[] = [
       'Inventory audits',
       'Employee investigations',
       'Training staff',
-      'Not applicable - no LP staff',
     ],
     required: true,
+    conditionalOnQuestionId: 'lp_staff_1',
+    showWhenAnswer: 'Yes', // Will match any answer starting with "Yes"
   },
 
   {
@@ -926,10 +927,11 @@ const section7_lp_staff: RetailInterviewQuestion[] = [
       'All operating hours',
       'Peak hours only (weekends, holidays)',
       'Sporadic/as-needed',
-      'No LP coverage',
     ],
     required: true,
     informsVulnerability: true,
+    conditionalOnQuestionId: 'lp_staff_1',
+    showWhenAnswer: 'Yes', // Will match any answer starting with "Yes"
   },
 
   {

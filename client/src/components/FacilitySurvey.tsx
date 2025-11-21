@@ -182,8 +182,16 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
     // Find the prerequisite question
     const prereqQuestion = questions.find(pq => pq.templateId === q.conditionalOnQuestionId);
     
-    // Only show if prerequisite answer matches showWhenAnswer
-    return prereqQuestion?.response === q.showWhenAnswer;
+    if (!prereqQuestion?.response) {
+      return false;
+    }
+    
+    // Support both exact match and "starts with" match for conditional logic
+    // This allows showWhenAnswer="Yes" to match "Yes - full-time LP team" etc.
+    const response = String(prereqQuestion.response);
+    const expectedAnswer = q.showWhenAnswer;
+    
+    return response === expectedAnswer || response.startsWith(expectedAnswer);
   };
   
   // Filter questions for current category AND apply conditional rendering
@@ -204,7 +212,12 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       }
       
       // Auto-complete if prerequisite answer doesn't match showWhenAnswer (question is hidden)
-      if (prereqQuestion.response !== q.showWhenAnswer) {
+      // Support both exact match and "starts with" match
+      const response = String(prereqQuestion.response);
+      const expectedAnswer = q.showWhenAnswer;
+      const matches = response === expectedAnswer || response.startsWith(expectedAnswer);
+      
+      if (!matches) {
         return true; // Auto-complete hidden conditional questions
       }
       
