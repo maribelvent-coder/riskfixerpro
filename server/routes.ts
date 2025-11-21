@@ -1965,46 +1965,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
             assetId: personnelAsset?.id,
             asset: "Personnel",
             scenario: "Workplace Violence - Active Threat",
+            threatLibraryId: "81aeb117-b2bf-4fed-94c3-0277aeedbf37", // Active Shooter
             threatType: "human",
             threatDescription: "Armed individual enters facility with intent to cause harm",
             vulnerabilityDescription: "Insufficient access control and emergency response protocols",
             likelihood: "low",
             impact: "catastrophic",
-            riskLevel: "High",
+            riskLevel: "Medium",
             currentLikelihood: "low",
             currentImpact: "catastrophic",
-            currentRiskLevel: "High",
+            currentRiskLevel: "Medium",
             likelihoodScore: 2,
             impactScore: 5,
-            inherentRisk: 50,
+            inherentRisk: 10, // 2 × 5 = 10
             controlEffectiveness: 0,
-            residualRisk: 50
+            residualRisk: 10
           },
           {
             assessmentId,
             assetId: personnelAsset?.id,
             asset: "Personnel",
             scenario: "Workplace Violence - Domestic Spillover",
+            threatLibraryId: "b6006880-4c3e-4b0d-8ffb-d1b086afb6dd", // Domestic Violence Spillover
             threatType: "human",
             threatDescription: "Personal conflict extends into workplace environment",
             vulnerabilityDescription: "Lack of threat assessment procedures for domestic situations",
             likelihood: "medium",
             impact: "major",
-            riskLevel: "High",
+            riskLevel: "Medium",
             currentLikelihood: "medium",
             currentImpact: "major",
-            currentRiskLevel: "High",
+            currentRiskLevel: "Medium",
             likelihoodScore: 3,
             impactScore: 4,
-            inherentRisk: 48,
+            inherentRisk: 12, // 3 × 4 = 12
             controlEffectiveness: 0,
-            residualRisk: 48
+            residualRisk: 12
           },
           {
             assessmentId,
             assetId: facilityAsset?.id,
             asset: "Facility",
             scenario: "Unauthorized Facility Access",
+            threatLibraryId: "5fdfc173-f4cd-45bb-b754-f9f5bd1515cd", // Unescorted Visitor Access
             threatType: "human",
             threatDescription: "Intruder gains access to restricted areas",
             vulnerabilityDescription: "Weak perimeter controls or badge system vulnerabilities",
@@ -2016,49 +2019,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentRiskLevel: "Medium",
             likelihoodScore: 3,
             impactScore: 3,
-            inherentRisk: 27,
+            inherentRisk: 9, // 3 × 3 = 9
             controlEffectiveness: 0,
-            residualRisk: 27
+            residualRisk: 9
           },
           {
             assessmentId,
             assetId: dataAsset?.id,
             asset: "Data & Information",
             scenario: "Data Breach - Physical Document Exposure",
+            threatLibraryId: "93b74046-e3b9-40d6-975a-57eca178b22a", // Document Theft - Clean Desk Violation
             threatType: "operational",
             threatDescription: "Sensitive documents left unsecured or improperly disposed",
             vulnerabilityDescription: "Inadequate clean desk policy and document handling procedures",
             likelihood: "high",
             impact: "major",
-            riskLevel: "Critical",
+            riskLevel: "High",
             currentLikelihood: "high",
             currentImpact: "major",
-            currentRiskLevel: "Critical",
+            currentRiskLevel: "High",
             likelihoodScore: 4,
             impactScore: 4,
-            inherentRisk: 64,
+            inherentRisk: 16, // 4 × 4 = 16
             controlEffectiveness: 0,
-            residualRisk: 64
+            residualRisk: 16
           },
           {
             assessmentId,
             assetId: dataAsset?.id,
             asset: "Data & Information",
             scenario: "Social Engineering Attack",
+            threatLibraryId: "d16ede3a-a8a1-45a3-95b0-031c11ff9362", // Credential Theft - Phishing
             threatType: "human",
             threatDescription: "Attacker manipulates staff to gain sensitive information",
             vulnerabilityDescription: "Insufficient security awareness training",
             likelihood: "high",
             impact: "moderate",
-            riskLevel: "High",
+            riskLevel: "Medium",
             currentLikelihood: "high",
             currentImpact: "moderate",
-            currentRiskLevel: "High",
+            currentRiskLevel: "Medium",
             likelihoodScore: 4,
             impactScore: 3,
-            inherentRisk: 48,
+            inherentRisk: 12, // 4 × 3 = 12
             controlEffectiveness: 0,
-            residualRisk: 48
+            residualRisk: 12
           }
         ];
         
