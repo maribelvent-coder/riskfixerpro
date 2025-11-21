@@ -13,13 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Factory, AlertCircle, DollarSign, Shield, FileText, CheckCircle, XCircle } from 'lucide-react';
-
-interface ManufacturingProfile {
-  annualProductionValue?: number;
-  shiftOperations?: '1' | '2' | '24/7';
-  ipTypes?: string[];
-  hazmatPresent?: boolean;
-}
+import type { ManufacturingProfile } from '@shared/schema';
 
 interface ProductionContinuityScore {
   score: number;
@@ -65,28 +59,28 @@ export default function ManufacturingDashboard() {
 
   // Load profile data when assessment loads (useEffect to avoid setState in render)
   useEffect(() => {
-    if (assessment?.manufacturing_profile) {
-      const profile = assessment.manufacturing_profile;
-      if (profile.annualProductionValue) setAnnualProductionValue(profile.annualProductionValue.toString());
-      if (profile.shiftOperations) setShiftOperations(profile.shiftOperations);
-      if (profile.ipTypes) setSelectedIpTypes(profile.ipTypes);
-      if (profile.hazmatPresent !== undefined) setHazmatPresent(profile.hazmatPresent);
+    if (assessment) {
+      if (assessment.manufacturing_profile) {
+        const profile = assessment.manufacturing_profile;
+        // Use nullish coalescing to respect empty/cleared values
+        setAnnualProductionValue(profile.annualProductionValue?.toString() ?? '');
+        setShiftOperations(profile.shiftOperations ?? '1');
+        setSelectedIpTypes(profile.ipTypes ?? []);
+        setHazmatPresent(profile.hazmatPresent ?? false);
+      } else {
+        // No profile exists - reset to defaults to prevent stale state
+        setAnnualProductionValue('');
+        setShiftOperations('1');
+        setSelectedIpTypes([]);
+        setHazmatPresent(false);
+      }
     }
   }, [assessment]); // Run when assessment data changes
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      const profile: ManufacturingProfile = {
-        annualProductionValue: annualProductionValue ? parseFloat(annualProductionValue) : undefined,
-        shiftOperations,
-        ipTypes: selectedIpTypes,
-        hazmatPresent
-      };
-
-      return apiRequest(`/api/assessments/${id}/manufacturing-profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ manufacturing_profile: profile })
+    mutationFn: async (profileData: ManufacturingProfile) => {
+      return await apiRequest('PATCH', `/api/assessments/${id}/manufacturing-profile`, {
+        manufacturing_profile: profileData
       });
     },
     onSuccess: () => {
@@ -97,14 +91,31 @@ export default function ManufacturingDashboard() {
         description: 'Production profile updated successfully'
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || 'Failed to update production profile';
       toast({
         title: 'Save Failed',
-        description: 'Failed to update production profile',
+        description: errorMessage,
         variant: 'destructive'
       });
     }
   });
+
+  const handleSaveAndAnalyze = () => {
+    const profileData: ManufacturingProfile = {
+      shiftOperations,
+      ipTypes: selectedIpTypes,
+      hazmatPresent
+    };
+    
+    // Only include annualProductionValue if it's a valid number
+    const parsedValue = parseFloat(annualProductionValue);
+    if (!isNaN(parsedValue) && annualProductionValue.trim() !== '') {
+      profileData.annualProductionValue = parsedValue;
+    }
+
+    saveMutation.mutate(profileData);
+  };
 
   const toggleIpType = (ipType: string) => {
     setSelectedIpTypes(prev => 
@@ -239,7 +250,7 @@ export default function ManufacturingDashboard() {
               </div>
 
               <Button
-                onClick={() => saveMutation.mutate()}
+                onClick={handleSaveAndAnalyze}
                 disabled={saveMutation.isPending}
                 className="w-full sm:w-auto"
                 data-testid="button-save-profile"
@@ -264,11 +275,11 @@ export default function ManufacturingDashboard() {
               {continuityScore ? (
                 <>
                   <div className="text-center space-y-2">
-                    <div className={`text-5xl font-bold ${getRiskColor(continuityScore.riskLevel)}`}>
+                    <div className={`text-5xl font-bold ${getRiskColor(continuityScore.riskLevel)}`} data-testid="text-risk-score">
                       {continuityScore.score}
                     </div>
                     <div className="text-sm text-muted-foreground">Risk Score (0-100)</div>
-                    <Badge variant={getRiskBadgeVariant(continuityScore.riskLevel)}>
+                    <Badge variant={getRiskBadgeVariant(continuityScore.riskLevel)} data-testid="badge-risk-level">
                       {continuityScore.riskLevel} Risk
                     </Badge>
                   </div>
@@ -280,9 +291,9 @@ export default function ManufacturingDashboard() {
 
                   <div className="space-y-2">
                     <div className="text-sm font-semibold">Risk Factors:</div>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1" data-testid="list-risk-factors">
                       {continuityScore.riskFactors.map((factor, idx) => (
-                        <li key={idx} className="text-xs sm:text-sm text-muted-foreground flex gap-2">
+                        <li key={idx} className="text-xs sm:text-sm text-muted-foreground flex gap-2" data-testid={`text-risk-factor-${idx}`}>
                           <span className="text-orange-500">•</span>
                           <span>{factor}</span>
                         </li>
@@ -313,7 +324,7 @@ export default function ManufacturingDashboard() {
                   <div className="text-sm text-muted-foreground">
                     Estimated Cost of 24-Hour Shutdown:
                   </div>
-                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                  <div className="text-3xl font-bold text-red-600 dark:text-red-400" data-testid="text-downtime-cost">
                     ${continuityScore.estimatedDailyDowntimeCost.toLocaleString()}
                   </div>
                   <p className="text-xs text-muted-foreground">

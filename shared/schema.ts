@@ -952,6 +952,16 @@ export const insertSiteSchema = createInsertSchema(sites).omit({
   createdAt: true,
 });
 
+// Manufacturing Profile Schema (for JSONB column in assessments table)
+export const manufacturingProfileSchema = z.object({
+  annualProductionValue: z.number().optional(),
+  shiftOperations: z.enum(['1', '2', '24/7']).optional(),
+  ipTypes: z.array(z.string()).optional(),
+  hazmatPresent: z.boolean().optional(),
+});
+
+export type ManufacturingProfile = z.infer<typeof manufacturingProfileSchema>;
+
 export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   id: true,
   createdAt: true,
@@ -959,6 +969,7 @@ export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   completedAt: true,
 }).extend({
   templateId: z.string().min(1, "Template selection is required"),
+  manufacturing_profile: manufacturingProfileSchema.optional(),
 });
 
 export const insertLoadingDockSchema = createInsertSchema(loadingDocks).omit({

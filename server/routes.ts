@@ -19,6 +19,7 @@ import {
   insertReportSchema,
   insertUserSchema,
   insertLoadingDockSchema,
+  manufacturingProfileSchema,
   type InsertFacilitySurveyQuestion,
   type InsertAssessmentQuestion
 } from "@shared/schema";
@@ -1749,30 +1750,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // MANUFACTURING FRAMEWORK ROUTES
   
-  // Update manufacturing profile (JSONB column)
+  // Update manufacturing profile (JSONB column) - explicit wrapped payload
   app.patch("/api/assessments/:id/manufacturing-profile", verifyAssessmentOwnership, async (req, res) => {
     try {
       const assessmentId = req.params.id;
-      const { manufacturing_profile } = req.body;
+      const { manufacturing_profile } = req.body; // Expect wrapped payload
       
-      // Guard against empty body
+      // Guard against missing payload
       if (!manufacturing_profile) {
         return res.status(400).json({ error: "Manufacturing profile data is required" });
       }
       
-      // Validate manufacturing profile data structure
-      const manufacturingProfileSchema = z.object({
-        annualProductionValue: z.number().optional(),
-        shiftOperations: z.enum(['1', '2', '24/7']).optional(),
-        ipTypes: z.array(z.string()).optional(),
-        hazmatPresent: z.boolean().optional(),
-      });
+      // Validate using shared schema with safeParse
+      const validationResult = manufacturingProfileSchema.safeParse(manufacturing_profile);
       
-      const validatedProfile = manufacturingProfileSchema.parse(manufacturing_profile);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid manufacturing profile data", 
+          details: validationResult.error.errors 
+        });
+      }
       
-      // Update assessment with new manufacturing_profile data
+      // Update assessment with validated profile
       const updatedAssessment = await storage.updateAssessment(assessmentId, {
-        manufacturing_profile: validatedProfile,
+        manufacturing_profile: validationResult.data,
       });
       
       if (!updatedAssessment) {
@@ -1781,9 +1782,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedAssessment);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid manufacturing profile data", details: error.errors });
-      }
       console.error("Error updating manufacturing profile:", error);
       res.status(500).json({ error: "Failed to update manufacturing profile" });
     }
