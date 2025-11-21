@@ -17,6 +17,7 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { officeProfileSchema } from '@shared/schema';
 import type { Assessment, OfficeProfile } from '@shared/schema';
 import { RiskAssessmentNBS } from '@/components/RiskAssessmentNBS';
+import { ExecutiveSummaryCard } from '@/components/analysis/ExecutiveSummaryCard';
 
 interface OfficeSafetyScore {
   riskScore: number;
@@ -435,6 +436,16 @@ export default function OfficeDashboard() {
         {id && <RiskAssessmentNBS assessmentId={id} />}
       </TabsContent>
     </Tabs>
+
+    {/* AI Executive Summary - Always visible */}
+    {id && (
+      <div className="mt-6">
+        <ExecutiveSummaryCard 
+          assessmentId={id} 
+          executiveSummary={assessment?.executiveSummary}
+        />
+      </div>
+    )}
     </div>
   );
 }

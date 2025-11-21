@@ -3671,9 +3671,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (highCount > 2) riskLevel = "high";
       else if (highCount > 0 || savedInsights.filter(i => i.severity === "medium").length > 3) riskLevel = "medium";
       
-      // Update assessment with risk level and completed status
+      // Update assessment with risk level, executive summary, and completed status
       await storage.updateAssessment(id, { 
         riskLevel,
+        executiveSummary: analysis.executiveSummary,
         status: "completed",
         completedAt: new Date()
       });

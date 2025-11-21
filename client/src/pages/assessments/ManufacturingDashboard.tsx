@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { ExecutiveSummaryCard } from '@/components/analysis/ExecutiveSummaryCard';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
 import { queryClient, apiRequest } from '@/lib/queryClient';
@@ -379,6 +380,16 @@ export default function ManufacturingDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* AI Executive Summary */}
+      {id && assessment && (
+        <div className="mt-6">
+          <ExecutiveSummaryCard 
+            assessmentId={id} 
+            executiveSummary={assessment.executiveSummary}
+          />
+        </div>
+      )}
     </div>
   );
 }

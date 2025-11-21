@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CargoTheftROICalculator } from "@/components/calculators/CargoTheftROICalculator";
 import { LoadingDockGrid } from "@/components/warehouse/LoadingDockGrid";
 import { LoadingDockDialog } from "@/components/warehouse/LoadingDockDialog";
+import { ExecutiveSummaryCard } from "@/components/analysis/ExecutiveSummaryCard";
 import type { LoadingDock } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -476,6 +477,16 @@ export default function WarehouseDashboard() {
         }}
         dockToEdit={selectedDock ?? undefined}
       />
+
+      {/* AI Executive Summary */}
+      {id && assessment?.assessment && (
+        <div className="mt-6">
+          <ExecutiveSummaryCard 
+            assessmentId={id} 
+            executiveSummary={assessment.assessment.executiveSummary}
+          />
+        </div>
+      )}
     </div>
   );
 }

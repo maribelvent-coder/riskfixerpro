@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LossPreventionROICalculator } from "@/components/calculators/LossPreventionROICalculator";
+import { ExecutiveSummaryCard } from "@/components/analysis/ExecutiveSummaryCard";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
@@ -490,6 +491,16 @@ export default function RetailDashboard() {
           />
         </div>
       </div>
+
+      {/* AI Executive Summary */}
+      {id && analysis?.assessment && (
+        <div className="mt-6">
+          <ExecutiveSummaryCard 
+            assessmentId={id} 
+            executiveSummary={analysis.assessment.executiveSummary}
+          />
+        </div>
+      )}
     </div>
   );
 }

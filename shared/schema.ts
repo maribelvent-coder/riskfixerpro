@@ -242,6 +242,9 @@ export const assessments = pgTable("assessments", {
   riskAssessmentCompleted: boolean("risk_assessment_completed").default(false),
   riskAssessmentCompletedAt: timestamp("risk_assessment_completed_at"),
   
+  // AI-Generated Executive Summary
+  executiveSummary: text("executive_summary"), // AI-generated 3-paragraph professional summary
+  
   // Template-Specific Profiles
   warehouse_profile: jsonb("warehouse_profile"), // Warehouse metrics: {warehouseType, squareFootage, inventoryValue, highValueProducts, loadingDockCount, dailyTruckVolume, shrinkageRate, cargoTheftIncidents}
   retail_profile: jsonb("retail_profile"), // Retail metrics: {annualRevenue, shrinkageRate, highValueMerchandise, storeFormat}
