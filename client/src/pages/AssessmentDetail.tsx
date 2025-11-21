@@ -267,7 +267,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       { id: "reports", label: "Reports", icon: FileText }
     );
     
-    const surveyTypeLabel = getSurveyTypeLabel(assessmentData?.templateId);
+    const surveyTypeLabel = getSurveyTypeLabel(assessmentData?.templateId || undefined);
     
     return {
       tabs: baseTabs,
@@ -581,7 +581,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                Phase 1: {getSurveyTypeLabel(assessmentData?.templateId)} Survey
+                Phase 1: {getSurveyTypeLabel(assessmentData?.templateId || undefined)} Survey
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground">
                 Professional assessment of existing physical security controls following ASIS and ANSI standards.
@@ -590,7 +590,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardContent className="p-4 sm:p-6">
               <FacilitySurvey 
                 assessmentId={assessmentId}
-                templateId={assessmentData?.templateId}
+                templateId={assessmentData?.templateId || undefined}
                 onComplete={handleFacilitySurveyComplete}
               />
             </CardContent>
