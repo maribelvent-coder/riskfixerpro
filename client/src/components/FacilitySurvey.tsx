@@ -567,7 +567,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       case "condition":
         return (
           <Select 
-            value={question.response || ""} 
+            value={String(question.response || "")} 
             onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
             <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
@@ -595,7 +595,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
       case "yes-no":
         return (
           <Select 
-            value={question.response || ""} 
+            value={String(question.response || "")} 
             onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
           >
             <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
