@@ -3386,6 +3386,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/assessments/:id/facility-survey-questions", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const questionData = req.body;
+      
+      const validatedQuestion = insertFacilitySurveyQuestionSchema.parse({ ...questionData, assessmentId: id });
+      
+      const created = await storage.createFacilitySurveyQuestion(validatedQuestion);
+      
+      res.status(201).json(created);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid question data", details: error.errors });
+      }
+      console.error("Error creating facility survey question:", error);
+      res.status(500).json({ error: "Failed to create question" });
+    }
+  });
+
   // AI Risk Analysis routes
   app.post("/api/assessments/:id/analyze", verifyAssessmentOwnership, async (req, res) => {
     try {

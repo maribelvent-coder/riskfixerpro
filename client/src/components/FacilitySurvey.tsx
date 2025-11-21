@@ -205,14 +205,13 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
           ...updateData // Apply the latest update on top
         };
         
-        const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`, {
+        const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questions: [questionData] }),
+          body: JSON.stringify(questionData),
         });
         if (!response.ok) throw new Error('Failed to create question');
-        const result = await response.json();
-        const savedQuestion = result[0];
+        const savedQuestion = await response.json();
         
         return { savedQuestion, templateId, isNew: true };
       }
