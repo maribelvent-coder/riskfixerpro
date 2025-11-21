@@ -27,7 +27,7 @@ export function ExecutiveSummaryCard({ assessmentId, executiveSummary }: Executi
       });
 
       // Invalidate assessment data to refetch with new summary
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${assessmentId}`] });
     } catch (error: any) {
       console.error("Failed to generate analysis:", error);
       toast({
