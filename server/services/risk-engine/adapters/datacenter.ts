@@ -1,5 +1,5 @@
 import type { IStorage } from '../../../storage';
-import type { Assessment, DatacenterProfile } from '@/shared/schema';
+import type { Assessment, DatacenterProfile } from '../../../shared/schema';
 
 export interface UptimeReliabilityScore {
   riskScore: number; // 0-100 (0 = minimal risk, 100 = critical risk)
@@ -102,7 +102,7 @@ export class DatacenterAdapter {
     // Factor 1: Tier Classification vs. SLA Risk
     if (profile.tierClassification && profile.uptimeSLA) {
       const requiredUptime = parseFloat(profile.uptimeSLA);
-      const tierSpec = TIER_SPECS[profile.tierClassification];
+      const tierSpec = TIER_SPECS[profile.tierClassification as keyof typeof TIER_SPECS];
       
       if (tierSpec && requiredUptime > tierSpec.uptime) {
         riskScore += 30;
@@ -144,13 +144,13 @@ export class DatacenterAdapter {
     // Normalize control names for robust matching (handles ALL Unicode dash/hyphen variations, spacing, casing)
     const normalizeControlName = (name: string) => 
       name.toLowerCase()
-        .replace(/\p{Pd}/gu, '-')  // Unicode-aware: normalize ALL dash/hyphen characters (includes U+2011 non-breaking hyphen, en-dash, em-dash, etc.)
+        .replace(/[\u002D\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-')  // Normalize all dash/hyphen characters (ASCII hyphen, hyphen, non-breaking hyphen, figure dash, en-dash, em-dash, horizontal bar)
         .replace(/\s+/g, ' ')       // Normalize whitespace
         .trim();
     
     const existingControlNames = controls
       .filter(c => c.controlType === 'existing')
-      .map(c => normalizeControlName(c.name || c.description || ''));
+      .map(c => normalizeControlName((c as any).name || c.description || ''));
 
     const criticalInfraControls = [
       { name: 'UPS System - N+1 Redundancy', points: 20, reason: 'No redundant UPS increases power outage risk' },
