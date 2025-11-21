@@ -247,8 +247,27 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     mutationFn: async (questionsToSave: SurveyQuestion[]) => {
       setIsPersisting(true);
       
-      // Save each question individually using PATCH or POST
-      const savePromises = questionsToSave.map(async (question) => {
+      // CRITICAL FIX: Only save questions that have been answered
+      // Filter out questions with empty/undefined responses to prevent overwriting existing data
+      const answeredQuestions = questionsToSave.filter(q => {
+        if (!q.response) return false;
+        
+        // For measurement/text questions, verify both fields are filled
+        if (q.type === "measurement" || q.type === "text") {
+          if (typeof q.response === 'object') {
+            return q.type === "measurement" 
+              ? !!(q.response.value && q.response.assessment)
+              : !!(q.response.textResponse && q.response.assessment);
+          }
+          return false;
+        }
+        
+        // For other question types, verify response is a non-empty string
+        return typeof q.response === 'string' && q.response !== "";
+      });
+      
+      // Save each answered question individually using PATCH or POST
+      const savePromises = answeredQuestions.map(async (question) => {
         const templateId = question.templateId;
         const dbId = templateToDbIdMap.current.get(templateId);
         
