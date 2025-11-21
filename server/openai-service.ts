@@ -107,16 +107,30 @@ Apply technical standards, reference specific metrics where applicable, and prov
       const result = JSON.parse(response.choices[0].message.content || "{}");
       
       // Validate and format the response
-      const insights: InsertRiskInsight[] = (result.insights || []).map((insight: any) => ({
-        assessmentId: assessment.id,
-        category: insight.category || "General",
-        severity: this.validateSeverity(insight.severity),
-        title: insight.title || "Security Finding",
-        description: insight.description || "No description provided",
-        recommendation: insight.recommendation || "Review and assess",
-        impact: Math.max(1, Math.min(10, insight.impact || 5)),
-        probability: Math.max(1, Math.min(10, insight.probability || 5))
-      }));
+      const insights: InsertRiskInsight[] = (result.insights || []).map((insight: any) => {
+        const impact = Math.max(1, Math.min(10, insight.impact || 5));
+        const probability = Math.max(1, Math.min(10, insight.probability || 5));
+        const riskScore = impact * probability;
+        
+        // Calculate risk matrix position based on impact and probability
+        let riskMatrix = "Low";
+        if (impact >= 7 && probability >= 7) riskMatrix = "Critical";
+        else if (impact >= 6 || probability >= 6) riskMatrix = "High";
+        else if (impact >= 4 || probability >= 4) riskMatrix = "Medium";
+        
+        return {
+          assessmentId: assessment.id,
+          category: insight.category || "General",
+          severity: this.validateSeverity(insight.severity),
+          title: insight.title || "Security Finding",
+          description: insight.description || "No description provided",
+          recommendation: insight.recommendation || "Review and assess",
+          impact,
+          probability,
+          riskScore,
+          riskMatrix
+        };
+      });
 
       return {
         overallRiskScore: Math.max(1, Math.min(100, result.overallRiskScore || 50)),
