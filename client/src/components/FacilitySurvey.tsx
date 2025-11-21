@@ -884,8 +884,12 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
                 />
               </div>
               
-              {/* Recommendations Badge */}
-              {question.response && ["poor", "critical", "no"].includes(question.response) && (
+              {/* Recommendations Badge - respects riskDirection */}
+              {question.response && (
+                question.riskDirection === 'negative'
+                  ? ["yes", "partial"].includes(question.response)  // For incidents: yes=bad
+                  : ["poor", "critical", "no"].includes(question.response)  // For controls: no=bad
+              ) && (
                 <Badge variant="destructive" className="text-[10px] sm:text-xs">
                   <AlertTriangle className="h-3 w-3 mr-0.5 sm:mr-1" />
                   Requires Attention
