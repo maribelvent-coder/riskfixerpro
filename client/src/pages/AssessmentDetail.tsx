@@ -26,8 +26,9 @@ import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
 import RetailDashboard from "@/pages/assessments/RetailDashboard";
 import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
+import OfficeDashboard from "@/pages/assessments/OfficeDashboard";
 import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -232,8 +233,10 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       baseTabs.push({ id: "manufacturing", label: "Production Operations", icon: Factory });
     } else if (templateId === "data-center") {
       baseTabs.push({ id: "datacenter", label: "Infrastructure Operations", icon: Server });
+    } else if (templateId === "office-building") {
+      baseTabs.push({ id: "office", label: "Corporate Operations", icon: Building2 });
     } else {
-      // Non-specialized templates (office-building, etc.) use standard Asset Inventory
+      // Other non-specialized templates use standard Asset Inventory
       baseTabs.push({ id: "assets", label: "Asset Inventory", icon: Building });
     }
     
@@ -653,6 +656,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         {/* Infrastructure Operations Tab (Data Center) */}
         <TabsContent value="datacenter" className="space-y-4">
           <DatacenterDashboard />
+        </TabsContent>
+
+        {/* Corporate Operations Tab (Office Building) */}
+        <TabsContent value="office" className="space-y-4">
+          <OfficeDashboard />
         </TabsContent>
 
         {/* Professional Reports */}

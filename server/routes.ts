@@ -1867,6 +1867,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OFFICE BUILDING FRAMEWORK ROUTES
+  
+  // Update office profile (JSONB column) - explicit wrapped payload
+  app.patch("/api/assessments/:id/office-profile", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const { office_profile } = req.body; // Expect wrapped payload
+      
+      // Guard against missing payload
+      if (!office_profile) {
+        return res.status(400).json({ error: "Office profile data is required" });
+      }
+      
+      // Validate using shared schema with safeParse
+      const { officeProfileSchema } = await import("@shared/schema");
+      const validationResult = officeProfileSchema.safeParse(office_profile);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid office profile data", 
+          details: validationResult.error.errors 
+        });
+      }
+      
+      // Update assessment with validated profile
+      const updatedAssessment = await storage.updateAssessment(assessmentId, {
+        office_profile: validationResult.data,
+      });
+      
+      if (!updatedAssessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+      
+      res.json(updatedAssessment);
+    } catch (error) {
+      console.error("Error updating office profile:", error);
+      res.status(500).json({ error: "Failed to update office profile" });
+    }
+  });
+
+  // Get office safety and data security analysis
+  app.get("/api/assessments/:id/office-safety", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const assessment = req.assessment; // Verified by middleware
+      
+      // Import the office adapter
+      const { OfficeAdapter } = await import("./services/risk-engine/adapters/office");
+      const adapter = new OfficeAdapter(storage);
+      
+      // Calculate office safety scores
+      const safetyScore = await adapter.calculateOfficeSafety(assessment);
+      
+      res.json(safetyScore);
+    } catch (error) {
+      console.error("Error calculating office safety:", error);
+      res.status(500).json({ error: "Failed to calculate office safety score" });
+    }
+  });
+
   // EXECUTIVE PROTECTION FRAMEWORK ROUTES
   
   /**
