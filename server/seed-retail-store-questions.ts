@@ -136,7 +136,8 @@ async function seedRetailQuestions() {
             importance: question.required ? 'High' : 'Medium',
             type: question.questionType.replace('_', '-'), // Convert yes_no to yes-no
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
-            controlLibraryId: controlLibraryId
+            controlLibraryId: controlLibraryId,
+            riskDirection: question.riskDirection || 'positive' // Default to 'positive' if not specified
           })
           .where(eq(templateQuestions.id, existingQuestion[0].id));
 
@@ -157,7 +158,8 @@ async function seedRetailQuestions() {
             importance: question.required ? 'High' : 'Medium',
             type: question.questionType.replace('_', '-'),
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
-            controlLibraryId: controlLibraryId
+            controlLibraryId: controlLibraryId,
+            riskDirection: question.riskDirection || 'positive' // Default to 'positive' if not specified
           })
           .returning();
 

@@ -18,6 +18,7 @@ export interface RetailInterviewQuestion {
   required: boolean;
   followUpQuestions?: RetailInterviewQuestion[];
   riskIndicators?: string[]; // Keywords that elevate risk
+  riskDirection?: 'positive' | 'negative'; // 'positive' = Yes is good (default), 'negative' = Yes is bad (incidents)
   
   // Direct mapping to risk scenarios
   informsThreat?: string[]; // Threat IDs this question informs
@@ -225,6 +226,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
     required: true,
     informsThreat: ['shoplifting_individual', 'shoplifting_organized_retail_crime'],
     riskIndicators: ['16-30', '30+'],
+    riskDirection: 'negative',
   },
 
   {
@@ -234,6 +236,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
     questionType: 'yes_no',
     required: true,
     informsThreat: ['shoplifting_organized_retail_crime'],
+    riskDirection: 'negative',
     followUpQuestions: [
       {
         id: 'shrinkage_4a',
@@ -243,6 +246,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
         options: ['1-2', '3-5', '6-10', '10+'],
         required: true,
         riskIndicators: ['6-10', '10+'],
+        riskDirection: 'negative',
       },
       {
         id: 'shrinkage_4b',
@@ -268,6 +272,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
     questionType: 'yes_no',
     required: true,
     informsThreat: ['employee_theft'],
+    riskDirection: 'negative',
     followUpQuestions: [
       {
         id: 'shrinkage_5a',
@@ -275,6 +280,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
         questionText: 'How many employee theft cases?',
         questionType: 'number',
         required: true,
+        riskDirection: 'negative',
       },
       {
         id: 'shrinkage_5b',
@@ -290,6 +296,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
           'Gift card fraud',
         ],
         required: true,
+        riskDirection: 'negative',
       },
     ],
   },
@@ -301,6 +308,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
     questionType: 'yes_no',
     required: true,
     informsThreat: ['armed_robbery'],
+    riskDirection: 'negative',
     followUpQuestions: [
       {
         id: 'shrinkage_6a',
@@ -315,6 +323,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
         ],
         required: true,
         riskIndicators: ['within past 6 months', '6-12 months'],
+        riskDirection: 'negative',
       },
       {
         id: 'shrinkage_6b',
@@ -322,6 +331,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
         questionText: 'Was the robbery armed?',
         questionType: 'yes_no',
         required: true,
+        riskDirection: 'negative',
       },
     ],
   },
@@ -333,6 +343,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
     questionType: 'yes_no',
     required: true,
     informsThreat: ['burglary_after_hours'],
+    riskDirection: 'negative',
     followUpQuestions: [
       {
         id: 'shrinkage_7a',
@@ -340,6 +351,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
         questionText: 'How many burglaries?',
         questionType: 'number',
         required: true,
+        riskDirection: 'negative',
       },
     ],
   },
