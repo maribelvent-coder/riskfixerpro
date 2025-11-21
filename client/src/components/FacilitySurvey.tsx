@@ -630,7 +630,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             <div>
               <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
                 <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="text-sm sm:text-base">Facility Physical Security Survey</span>
+                <span className="text-sm sm:text-base">Office Survey</span>
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Comprehensive assessment of existing physical security controls and systems

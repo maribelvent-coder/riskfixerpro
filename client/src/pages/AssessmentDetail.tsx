@@ -574,10 +574,10 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                Phase 1: Facility Physical Security Survey
+                Phase 1: Office Survey
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Professional assessment of existing physical security controls following CPP standards and Army FM guidelines.
+                Professional assessment of existing physical security controls following ASIS and ANSI standards.
               </p>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
