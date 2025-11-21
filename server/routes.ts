@@ -2876,9 +2876,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }, {} as Record<string, any>)
         : null;
 
-      // Generate AI narrative using OpenAI with survey context
-      const { generateWarehouseRiskNarrative } = await import("./services/ai/warehouse-narrative");
-      const narrative = await generateWarehouseRiskNarrative(scenario, assessment, surveyResponses);
+      // Generate AI narrative using template-aware factory
+      const { generateRiskNarrative } = await import("./services/ai/narrative-generator");
+      const narrative = await generateRiskNarrative(scenario, assessment, surveyResponses);
       
       // Update only the threatDescription field to avoid corrupting other data
       const updatedScenario = await storage.updateRiskScenario(id, {
