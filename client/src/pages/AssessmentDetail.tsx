@@ -22,7 +22,8 @@ import ExecutiveInterview from "@/components/ExecutiveInterview";
 import OfficeBuildingInterview from "@/components/OfficeBuildingInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
 import { RiskAssessmentNBS } from "@/components/RiskAssessmentNBS";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown } from "lucide-react";
+import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -187,6 +188,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   // Get paradigm-specific workflow configuration
   const getWorkflowConfig = () => {
     const paradigm = assessmentData?.surveyParadigm || "facility";
+    const templateId = assessmentData?.templateId || "";
     
     if (paradigm === "executive") {
       return {
@@ -207,13 +209,23 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       };
     }
     
-    // Default facility paradigm
+    // Check if this is a warehouse template
+    const isWarehouse = templateId === "warehouse-distribution";
+    
+    // Default facility paradigm with optional warehouse tab
+    const baseTabs = [
+      { id: "facility-survey", label: "Facility Survey", icon: Building },
+      { id: "risk-assessment", label: "Security Risk Assessment", icon: Shield },
+      { id: "reports", label: "Reports", icon: FileText }
+    ];
+    
+    // Insert warehouse tab after facility survey for warehouse templates
+    if (isWarehouse) {
+      baseTabs.splice(1, 0, { id: "warehouse", label: "Warehouse Operations", icon: Warehouse });
+    }
+    
     return {
-      tabs: [
-        { id: "facility-survey", label: "Facility Survey", icon: Building },
-        { id: "risk-assessment", label: "Security Risk Assessment", icon: Shield },
-        { id: "reports", label: "Reports", icon: FileText }
-      ],
+      tabs: baseTabs,
       phases: [
         { label: "Phase 1: Facility Survey", completed: assessmentData?.facilitySurveyCompleted || false },
         { label: "Phase 2: Risk Assessment", completed: assessmentData?.riskAssessmentCompleted || false },
@@ -247,6 +259,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   // Auto-advance tabs based on completion
   const getTabsAvailability = () => {
     const paradigm = assessmentData?.surveyParadigm || "facility";
+    const templateId = assessmentData?.templateId || "";
+    const isWarehouse = templateId === "warehouse-distribution";
     
     if (paradigm === "executive") {
       // Executive paradigm - all tabs available from start for now
@@ -257,11 +271,17 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     }
     
     // Facility paradigm - sequential unlock
-    const tabs = {
+    const tabs: Record<string, boolean> = {
       "facility-survey": true,
       "risk-assessment": assessmentData?.facilitySurveyCompleted || false,
       "reports": assessmentData?.riskAssessmentCompleted || false
     };
+    
+    // Warehouse tab is always available for warehouse templates
+    if (isWarehouse) {
+      tabs["warehouse"] = true;
+    }
+    
     return tabs;
   };
 
@@ -566,6 +586,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             </CardContent>
           </Card>
         </TabsContent> */}
+
+        {/* Warehouse Operations Tab */}
+        <TabsContent value="warehouse" className="space-y-4">
+          <WarehouseDashboard />
+        </TabsContent>
 
         {/* Professional Reports */}
         <TabsContent value="reports" className="space-y-4">
