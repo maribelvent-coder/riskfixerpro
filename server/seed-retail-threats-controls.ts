@@ -134,6 +134,140 @@ const RETAIL_COMMERCIAL_THREATS = [
     mitigation: "Redundant HVAC systems, environmental monitoring, preventive maintenance, backup cooling",
     examples: ["Data center overheating", "Server room flooding", "Chemical storage temperature failure"],
     active: true
+  },
+  
+  // DATACENTER-SPECIFIC THREATS
+  {
+    name: "Insider Threat - Privileged Access Abuse",
+    category: "Insider Threat",
+    subcategory: "Malicious Insider",
+    description: "Abuse of privileged physical access by authorized personnel to steal data, sabotage systems, or compromise customer equipment in datacenter facilities",
+    typicalLikelihood: "Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-INS-002",
+    mitigation: "Two-person rule, insider threat monitoring, background checks, access logging and auditing, behavioral analytics, privilege rotation",
+    examples: ["Technician stealing customer drives", "Administrator tampering with security systems", "Contractor installing rogue devices"],
+    active: true
+  },
+  {
+    name: "Multi-Tenant Breach - Cross-Contamination",
+    category: "Physical Intrusion",
+    subcategory: "Access Control Failure",
+    description: "Unauthorized access to one customer's equipment or data by another customer in multi-tenant colocation facilities",
+    typicalLikelihood: "Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-INT-007",
+    mitigation: "Cabinet-level access control, network segmentation, physical separation (cages/suites), hands-on-server cameras, strict authorization procedures",
+    examples: ["Customer accessing wrong cabinet", "Lack of cabinet locks allowing cross-contamination", "Shared network allowing lateral access"],
+    active: true
+  },
+  {
+    name: "Social Engineering - Fake Technician",
+    category: "Social Engineering",
+    subcategory: "Impersonation",
+    description: "Social engineering attack where adversary impersonates authorized technician, vendor, or contractor to gain physical access to datacenter",
+    typicalLikelihood: "Low",
+    typicalImpact: "High",
+    asisCode: "PSC.1-2012-SOC-001",
+    mitigation: "Visitor ID verification, pre-authorization procedures, mandatory escort policy, vendor vetting, security awareness training, badge verification",
+    examples: ["Fake fire inspector gaining access", "Impersonated vendor installing malicious hardware", "Social engineered entry through loading dock"],
+    active: true
+  },
+  {
+    name: "Supply Chain - Hardware Tampering",
+    category: "Supply Chain",
+    subcategory: "Equipment Integrity",
+    description: "Compromise of datacenter equipment through supply chain attacks including pre-installed malware, backdoors, or physical tampering",
+    typicalLikelihood: "Very Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-SUP-001",
+    mitigation: "Vendor vetting, equipment inspection procedures, trusted suppliers only, vulnerability assessments, firmware validation, secure receiving procedures",
+    examples: ["Compromised network switches", "Pre-infected servers", "Tampered UPS systems"],
+    active: true
+  },
+  {
+    name: "Tailgating - Unauthorized Entry",
+    category: "Physical Intrusion",
+    subcategory: "Access Control Bypass",
+    description: "Unauthorized entry by following authorized person through access-controlled doors without proper authentication",
+    typicalLikelihood: "Medium",
+    typicalImpact: "Medium",
+    asisCode: "PSC.1-2012-INT-008",
+    mitigation: "Man-trap portals, tailgating detection sensors, turnstiles, security guard monitoring, awareness training, one-person-at-a-time policies",
+    examples: ["Following employee through server floor door", "Bypassing access control at entrance", "Gaining access during shift change"],
+    active: true
+  },
+  {
+    name: "Power Failure - Service Disruption",
+    category: "Natural Disaster",
+    subcategory: "Utility Failure",
+    description: "Loss of electrical power leading to service disruption, data loss, or equipment damage in datacenter facilities",
+    typicalLikelihood: "Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-ENV-002",
+    mitigation: "Redundant power paths (2N/N+1), UPS systems, backup generators with 48+ hour fuel, automatic transfer switches, power distribution monitoring",
+    examples: ["Utility power outage", "Generator failure during storm", "UPS battery depletion", "Transfer switch malfunction"],
+    active: true
+  },
+  {
+    name: "Cooling Loss - Environmental Failure",
+    category: "Natural Disaster",
+    subcategory: "HVAC Failure",
+    description: "Loss of cooling capacity leading to equipment overheating, thermal shutdown, or permanent hardware damage in datacenter",
+    typicalLikelihood: "Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-ENV-001",
+    mitigation: "Redundant cooling (2N/N+1), environmental monitoring and alerting, hot/cold aisle containment, preventive maintenance, temperature sensors",
+    examples: ["CRAC unit failure", "Chiller plant outage", "Blocked airflow causing hotspots", "Coolant leak"],
+    active: true
+  },
+  {
+    name: "Unauthorized Physical Access - Customer Data",
+    category: "Physical Intrusion",
+    subcategory: "Data Theft",
+    description: "Unauthorized physical access to customer servers, storage, or network equipment with intent to steal, copy, or compromise data",
+    typicalLikelihood: "Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-INT-006",
+    mitigation: "Multi-factor authentication (3 factors), biometric access control, cabinet electronic locks, CCTV coverage, access logging, man-trap portals",
+    examples: ["Unauthorized server room access", "Physical theft of customer drives", "USB device insertion into servers", "Network tap installation"],
+    active: true
+  },
+  {
+    name: "Data Theft - Server/Drive Removal",
+    category: "Theft",
+    subcategory: "Equipment Theft",
+    description: "Physical theft of servers, hard drives, or storage media containing customer data from datacenter facilities",
+    typicalLikelihood: "Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-THF-012",
+    mitigation: "Cabinet electronic locks, asset tracking, hands-on-server cameras, two-person rule for equipment moves, secure disposal procedures",
+    examples: ["Server removed from cabinet", "Hard drive theft during decommissioning", "Backup tape theft", "SSD removal"],
+    active: true
+  },
+  {
+    name: "Fire - Data Loss",
+    category: "Natural Disaster",
+    subcategory: "Fire",
+    description: "Fire in datacenter facility leading to data loss, equipment destruction, and business disruption",
+    typicalLikelihood: "Very Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-FIR-001",
+    mitigation: "Clean agent fire suppression (FM-200/Novec), VESDA early smoke detection, fire-rated construction, automatic suppression, evacuation procedures",
+    examples: ["Electrical fire in server cabinet", "UPS battery fire", "Cable fire in raised floor", "External fire spreading to facility"],
+    active: true
+  },
+  {
+    name: "Sabotage - Infrastructure Disruption",
+    category: "Vandalism",
+    subcategory: "Critical Infrastructure",
+    description: "Intentional sabotage of datacenter critical infrastructure (power, cooling, network) to cause service disruption or data loss",
+    typicalLikelihood: "Very Low",
+    typicalImpact: "Critical",
+    asisCode: "PSC.1-2012-SAB-003",
+    mitigation: "Access control to infrastructure areas, two-person rule, insider threat monitoring, CCTV coverage, tamper detection, security guard patrols",
+    examples: ["Disabling cooling systems", "Cutting power feeds", "Network infrastructure tampering", "EPO button abuse"],
+    active: true
   }
 ];
 
