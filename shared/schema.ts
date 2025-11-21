@@ -344,7 +344,8 @@ export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
   importance: text("importance"), // Critical, High, Medium, Low
   orderIndex: integer("order_index"), // Display order from template
   standard: text("standard"), // Reference to CPP/Army FM standard
-  type: text("type").notNull(), // condition, measurement, yes-no, rating, text
+  type: text("type").notNull(), // condition, measurement, yes-no, rating, text, checklist
+  options: text("options").array(), // For checklist/multi-select questions
   response: jsonb("response"), // Condition, measurements, ratings
   notes: text("notes"),
   evidence: text("evidence").array(), // Photo evidence

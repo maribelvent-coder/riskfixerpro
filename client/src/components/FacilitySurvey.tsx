@@ -112,6 +112,7 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           question: sq.question,
           standard: sq.standard,
           type: sq.type,
+          options: sq.options || [], // For checklist questions
           response: normalizedResponse,
           notes: sq.notes,
           evidence: sq.evidence || [],
@@ -220,10 +221,10 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       return false;
     }
     
-    // For text questions, both textResponse and assessment must be filled
+    // For text questions, only assessment is required (textResponse is optional)
     if (q.type === "text") {
       if (typeof q.response === 'object') {
-        return !!(q.response.textResponse && q.response.assessment);
+        return !!q.response.assessment;
       }
       return false;
     }

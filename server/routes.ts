@@ -2426,6 +2426,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 importance: tq.importance || null,
                 orderIndex: tq.orderIndex,
                 type: tq.type || "yes-no",
+                options: tq.options || null, // Copy options for checklist questions
+                conditionalOnQuestionId: tq.conditionalOnQuestionId || null, // Copy conditional logic
+                showWhenAnswer: tq.showWhenAnswer || null, // Copy conditional logic
                 response: null,
                 notes: null,
                 evidence: null,
