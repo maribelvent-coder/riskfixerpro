@@ -738,21 +738,27 @@ const section6_physical: RetailInterviewQuestion[] = [
   },
 
   {
-    id: 'physical_2',
+    id: 'physical_2a',
     section: 'Physical Security & Access Control',
-    questionText: 'Are your entry doors reinforced or do you use security gates after hours?',
-    questionType: 'multiple_choice',
-    options: [
-      'Both reinforced doors and security gates',
-      'Reinforced doors only',
-      'Security gates only',
-      'Standard doors, no gates',
-    ],
+    questionText: 'Are your entry doors reinforced?',
+    questionType: 'yes_no',
     required: true,
     informsVulnerability: true,
     informsThreat: ['burglary_after_hours', 'smash_and_grab'],
-    suggestsControls: ['reinforced_entrance_doors', 'security_gates_after_hours'],
-    riskIndicators: ['standard doors'],
+    suggestsControls: ['reinforced_entrance_doors'],
+    riskDirection: 'positive',
+  },
+
+  {
+    id: 'physical_2b',
+    section: 'Physical Security & Access Control',
+    questionText: 'Do you use security gates after hours?',
+    questionType: 'yes_no',
+    required: true,
+    informsVulnerability: true,
+    informsThreat: ['burglary_after_hours', 'smash_and_grab'],
+    suggestsControls: ['security_gates_after_hours'],
+    riskDirection: 'positive',
   },
 
   {
