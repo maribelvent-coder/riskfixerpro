@@ -241,6 +241,24 @@ export const assessments = pgTable("assessments", {
   // Risk Assessment completion status
   riskAssessmentCompleted: boolean("risk_assessment_completed").default(false),
   riskAssessmentCompletedAt: timestamp("risk_assessment_completed_at"),
+  
+  // Template-Specific Profiles
+  warehouse_profile: jsonb("warehouse_profile"), // Warehouse metrics: {warehouseType, squareFootage, inventoryValue, highValueProducts, loadingDockCount, dailyTruckVolume, shrinkageRate, cargoTheftIncidents}
+});
+
+// Loading Docks - Warehouse-specific dock-by-dock security tracking
+export const loadingDocks = pgTable("loading_docks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  dockNumber: varchar("dock_number").notNull(), // e.g., "Dock 1", "Dock 2", "Bay A"
+  securityScore: integer("security_score"), // 0-100 score based on security controls
+  hasCctv: boolean("has_cctv").notNull().default(false),
+  hasSensor: boolean("has_sensor").notNull().default(false), // Door contact sensor
+  hasAlarm: boolean("has_alarm").notNull().default(false),
+  photoIds: text("photo_ids"), // JSON array of photo IDs
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
 });
 
 // Template Questions - Master survey questions for each template type
@@ -941,6 +959,12 @@ export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   templateId: z.string().min(1, "Template selection is required"),
 });
 
+export const insertLoadingDockSchema = createInsertSchema(loadingDocks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Insert schemas
 export const insertTemplateQuestionSchema = createInsertSchema(templateQuestions).omit({
   id: true,
@@ -1115,6 +1139,9 @@ export type InsertFacilityZone = z.infer<typeof insertFacilityZoneSchema>;
 
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
+
+export type LoadingDock = typeof loadingDocks.$inferSelect;
+export type InsertLoadingDock = z.infer<typeof insertLoadingDockSchema>;
 
 export type TemplateQuestion = typeof templateQuestions.$inferSelect;
 export type InsertTemplateQuestion = z.infer<typeof insertTemplateQuestionSchema>;
