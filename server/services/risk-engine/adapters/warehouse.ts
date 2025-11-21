@@ -375,3 +375,229 @@ export class WarehouseAdapter implements RiskEngineAdapter {
     return recommendations;
   }
 }
+
+/**
+ * CARGO THEFT VULNERABILITY SCORING
+ * Standalone 0-100 scoring system for warehouse cargo theft risk
+ * Framework: Warehouse Framework v2.0
+ */
+
+export interface CargoTheftVulnerabilityScore {
+  score: number; // 0-100
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  breakdown: {
+    locationRisk: number; // Max 20 pts
+    highValueGoods: number; // Max 15 pts
+    controlGaps: number; // Max 35 pts
+    incidentHistory: number; // Max 20 pts
+    operationalVulnerabilities: number; // Max 10 pts
+  };
+}
+
+export interface WarehouseProfile {
+  warehouseType?: string;
+  squareFootage?: number;
+  inventoryValue?: number;
+  highValueProducts?: string[]; // e.g., ['electronics', 'pharmaceuticals', 'alcohol', 'designer_clothing']
+  loadingDockCount?: number;
+  dailyTruckVolume?: number;
+  shrinkageRate?: number;
+  cargoTheftIncidents?: Array<{
+    date: string;
+    loss: number;
+    insiderInvolvement?: boolean;
+  }>;
+  locationRisk?: 'High' | 'Medium' | 'Low'; // Placeholder for future crime API integration
+}
+
+export interface AssessmentWithWarehouseData {
+  warehouse_profile?: WarehouseProfile;
+  // Interview responses stored as key-value pairs
+  // Keys like: 'dock_2', 'fleet_2', 'perimeter_4', 'inventory_3', 'dock_4', 'facility_6', 'facility_7', 'facility_5', 'personnel_2'
+  [key: string]: any;
+}
+
+/**
+ * Calculate Cargo Theft Vulnerability Score (0-100)
+ * 
+ * Scoring Components:
+ * - Location Risk: 20 pts (crime data / hotspot analysis)
+ * - High-Value Goods: 15 pts (electronics, pharma, alcohol, designer goods)
+ * - Control Gaps: 35 pts (CCTV, GPS, gates, caging, seals)
+ * - Incident History: 20 pts (past cargo theft incidents)
+ * - Operational Vulnerabilities: 10 pts (24/7 ops, truck volume, employees, driver vetting)
+ * 
+ * Risk Levels:
+ * - 0-24: LOW
+ * - 25-49: MEDIUM
+ * - 50-74: HIGH
+ * - 75-100: CRITICAL
+ */
+export function calculateCargoTheftVulnerabilityScore(
+  assessment: AssessmentWithWarehouseData
+): CargoTheftVulnerabilityScore {
+  const profile = assessment.warehouse_profile || {};
+  const responses = assessment; // Interview responses at root level
+  
+  let locationRisk = 0;
+  let highValueGoods = 0;
+  let controlGaps = 0;
+  let incidentHistory = 0;
+  let operationalVulnerabilities = 0;
+
+  // ============================================================
+  // 1. LOCATION RISK (Max 20 pts)
+  // ============================================================
+  // Placeholder logic for crime API integration
+  if (profile.locationRisk === 'High') {
+    locationRisk = 20;
+  } else if (profile.locationRisk === 'Medium') {
+    locationRisk = 10;
+  } else if (profile.locationRisk === 'Low') {
+    locationRisk = 0;
+  }
+
+  // ============================================================
+  // 2. HIGH-VALUE GOODS (Max 15 pts)
+  // ============================================================
+  if (profile.highValueProducts && Array.isArray(profile.highValueProducts)) {
+    for (const product of profile.highValueProducts) {
+      const productLower = product.toLowerCase();
+      if (productLower.includes('electronics')) {
+        highValueGoods += 5;
+      } else if (productLower.includes('pharmaceuticals') || productLower.includes('pharma')) {
+        highValueGoods += 5;
+      } else if (productLower.includes('alcohol')) {
+        highValueGoods += 3;
+      } else if (productLower.includes('designer') || productLower.includes('clothing')) {
+        highValueGoods += 2;
+      }
+    }
+    // Cap at 15
+    highValueGoods = Math.min(15, highValueGoods);
+  }
+
+  // ============================================================
+  // 3. CONTROL GAPS (Max 35 pts)
+  // ============================================================
+  // Check interview responses for security control gaps
+  
+  // dock_2: Loading Dock CCTV (10 pts)
+  if (responses.dock_2 === 'no' || responses.dock_2 === false) {
+    controlGaps += 10;
+  }
+
+  // fleet_2: GPS Tracking (8 pts)
+  if (responses.fleet_2 === 'no' || responses.fleet_2 === false) {
+    controlGaps += 8;
+  }
+
+  // perimeter_4: Gate Access Control (7 pts)
+  if (responses.perimeter_4) {
+    const answer = typeof responses.perimeter_4 === 'string' 
+      ? responses.perimeter_4.toLowerCase() 
+      : String(responses.perimeter_4).toLowerCase();
+    if (answer.includes('open access') || answer.includes('open_access') || answer.includes('no gate')) {
+      controlGaps += 7;
+    }
+  }
+
+  // inventory_3: High-Value Inventory Caging (5 pts)
+  if (responses.inventory_3 === 'no' || responses.inventory_3 === false) {
+    controlGaps += 5;
+  }
+
+  // dock_4: Trailer Seal Verification (5 pts)
+  if (responses.dock_4) {
+    const answer = typeof responses.dock_4 === 'string' 
+      ? responses.dock_4.toLowerCase() 
+      : String(responses.dock_4).toLowerCase();
+    if (answer.includes('no seal') || answer.includes('informal') || answer.includes('none')) {
+      controlGaps += 5;
+    }
+  }
+
+  // Cap at 35
+  controlGaps = Math.min(35, controlGaps);
+
+  // ============================================================
+  // 4. INCIDENT HISTORY (Max 20 pts)
+  // ============================================================
+  if (profile.cargoTheftIncidents && Array.isArray(profile.cargoTheftIncidents)) {
+    const incidentCount = profile.cargoTheftIncidents.length;
+    incidentHistory = Math.min(20, incidentCount * 4);
+  }
+
+  // ============================================================
+  // 5. OPERATIONAL VULNERABILITIES (Max 10 pts)
+  // ============================================================
+  
+  // facility_6: Operating Hours (3 pts if 24/7)
+  if (responses.facility_6) {
+    const answer = typeof responses.facility_6 === 'string' 
+      ? responses.facility_6.toLowerCase() 
+      : String(responses.facility_6).toLowerCase();
+    if (answer.includes('24') || answer.includes('24/7') || answer.includes('24-7')) {
+      operationalVulnerabilities += 3;
+    }
+  }
+
+  // facility_7: Daily Truck Volume (3 pts if > 75)
+  if (responses.facility_7) {
+    const truckVolume = typeof responses.facility_7 === 'number' 
+      ? responses.facility_7 
+      : parseInt(String(responses.facility_7));
+    if (!isNaN(truckVolume) && truckVolume > 75) {
+      operationalVulnerabilities += 3;
+    }
+  }
+
+  // facility_5: Employee Count (2 pts if > 150)
+  if (responses.facility_5) {
+    const employeeCount = typeof responses.facility_5 === 'number' 
+      ? responses.facility_5 
+      : parseInt(String(responses.facility_5));
+    if (!isNaN(employeeCount) && employeeCount > 150) {
+      operationalVulnerabilities += 2;
+    }
+  }
+
+  // personnel_2: Driver Vetting (2 pts if no)
+  if (responses.personnel_2 === 'no' || responses.personnel_2 === false) {
+    operationalVulnerabilities += 2;
+  }
+
+  // Cap at 10
+  operationalVulnerabilities = Math.min(10, operationalVulnerabilities);
+
+  // ============================================================
+  // TOTAL SCORE CALCULATION
+  // ============================================================
+  const totalScore = locationRisk + highValueGoods + controlGaps + incidentHistory + operationalVulnerabilities;
+
+  // ============================================================
+  // RISK LEVEL CLASSIFICATION
+  // ============================================================
+  let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  if (totalScore >= 75) {
+    riskLevel = 'CRITICAL';
+  } else if (totalScore >= 50) {
+    riskLevel = 'HIGH';
+  } else if (totalScore >= 25) {
+    riskLevel = 'MEDIUM';
+  } else {
+    riskLevel = 'LOW';
+  }
+
+  return {
+    score: totalScore,
+    riskLevel,
+    breakdown: {
+      locationRisk,
+      highValueGoods,
+      controlGaps,
+      incidentHistory,
+      operationalVulnerabilities,
+    },
+  };
+}

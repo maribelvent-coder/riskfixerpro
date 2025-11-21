@@ -1,0 +1,50 @@
+Step 2: Create the Warehouse Logic Adapter.
+
+Create a new file at `server/services/risk-engine/adapters/warehouse.ts`.
+
+I need you to implement the `calculateCargoTheftVulnerabilityScore` function exactly as specified in the "Warehouse Framework v2.0" document.
+
+Here is the logic requirement:
+
+1.  **Input:** The function should accept an `assessment` object (which contains the `warehouse_profile` and `interview_responses`).
+2.  **Output:** Return an object containing:
+    * `score`: number (0-100)
+    * `riskLevel`: string ('LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')
+    * `breakdown`: object (showing points from Location, Goods, Controls, Incidents, Operations)
+
+3.  **Scoring Logic (Max 100 points):**
+
+    * **Location Risk (20 pts):**
+        * Placeholder logic: If `warehouse_profile.locationRisk` is 'High', add 20. 'Medium' add 10. (We will connect a crime API later).
+
+    * **High-Value Goods (15 pts):**
+        * Check `warehouse_profile.highValueProducts`.
+        * Add 5 pts each for: 'electronics', 'pharmaceuticals'.
+        * Add 3 pts for 'alcohol'.
+        * Add 2 pts for 'designer_clothing'.
+        * Cap at 15.
+
+    * **Control Gaps (35 pts) - Check `interview_responses` keys:**
+        * If `dock_2` (Dock CCTV) is 'no' -> Add 10 pts.
+        * If `fleet_2` (GPS Tracking) is 'no' -> Add 8 pts.
+        * If `perimeter_4` (Gate Access) contains 'open access' -> Add 7 pts.
+        * If `inventory_3` (High Value Caging) is 'no' -> Add 5 pts.
+        * If `dock_4` (Seal Verification) contains 'no seal' or 'informal' -> Add 5 pts.
+
+    * **Incident History (20 pts):**
+        * Check `warehouse_profile.cargoTheftIncidents` array length.
+        * Add 4 pts per incident (Cap at 20).
+
+    * **Operational Vulnerabilities (10 pts):**
+        * If `facility_6` (Hours) is '24/7' -> Add 3 pts.
+        * If `facility_7` (Truck Volume) > '75' -> Add 3 pts.
+        * If `facility_5` (Employees) > '150' -> Add 2 pts.
+        * If `personnel_2` (Driver Vetting) is 'no' -> Add 2 pts.
+
+4.  **Classification Logic:**
+    * 0-24: LOW
+    * 25-49: MEDIUM
+    * 50-74: HIGH
+    * 75-100: CRITICAL
+
+Please write the complete TypeScript file with necessary interfaces.
