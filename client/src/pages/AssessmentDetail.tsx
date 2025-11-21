@@ -24,8 +24,9 @@ import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
 import { RiskAssessmentNBS } from "@/components/RiskAssessmentNBS";
 import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
 import RetailDashboard from "@/pages/assessments/RetailDashboard";
+import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -227,7 +228,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     } else if (templateId === "retail-store") {
       baseTabs.push({ id: "retail", label: "Retail Operations", icon: ShoppingBag });
     } else if (templateId === "manufacturing-facility") {
-      baseTabs.push({ id: "manufacturing", label: "Manufacturing Operations", icon: Building });
+      baseTabs.push({ id: "manufacturing", label: "Production Operations", icon: Factory });
     } else if (templateId === "data-center") {
       baseTabs.push({ id: "datacenter", label: "Data Center Operations", icon: Building });
     } else {
@@ -645,21 +646,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         {/* Manufacturing Operations Tab */}
         <TabsContent value="manufacturing" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manufacturing Operations</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Manufacturing-specific security analysis and operational safety
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">Manufacturing Operations Dashboard</p>
-                <p className="text-sm">Coming soon - configure production security, equipment protection, and supply chain controls</p>
-              </div>
-            </CardContent>
-          </Card>
+          <ManufacturingDashboard />
         </TabsContent>
 
         {/* Data Center Operations Tab */}

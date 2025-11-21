@@ -1,0 +1,32 @@
+We have successfully deployed the Executive Protection module. Now, let's implement the **Manufacturing Facility** template.
+
+This template focuses on **Production Continuity** (Downtime) and **Intellectual Property (IP)**.
+
+Please execute the "Golden Master" implementation plan:
+
+**Step 1: Database & Seeding (The Foundation)**
+1.  **Schema:** Update `server/db/schema.ts` to add the `manufacturing_profile` JSONB column to the `assessments` table.
+    * Fields: `annualProductionValue` (number), `shiftOperations` (string: '1', '2', '24/7'), `ipTypes` (string[]), `hazmatPresent` (boolean).
+2.  **Seeding:** Create/Update `server/db/seed-data/manufacturing-data.ts`.
+    * **Threats:** Seed the 15 specific threats (e.g., 'Industrial Espionage', 'Equipment Sabotage', 'Supply Chain Disruption').
+    * **Controls:** Seed the 70+ manufacturing controls (e.g., 'Lockout/Tagout', 'R&D Access Control').
+    * **Execute:** Run the seed.
+
+**Step 2: Logic Adapter (The "Downtime" Brain)**
+Create `server/services/risk-engine/adapters/manufacturing.ts`.
+Implement `calculateProductionContinuityScore(assessment)` based on Section 9.2 of the Manufacturing Framework:
+* **Value Risk:** >$100M Production = +20pts.
+* **Shift Risk:** 24/7 Operations = +10pts (higher impact of disruption).
+* **Control Gaps:** Missing 'Production Continuity Plan' = +10pts.
+* **Result:** Return `{ score (0-100), riskLevel, estimatedDailyDowntimeCost }` (Formula: AnnualValue / 365).
+
+**Step 3: The Dashboard UI (The Interface)**
+Create `client/src/pages/assessments/ManufacturingDashboard.tsx`.
+* **Left Column:** Form for Production details (Value, Shifts, IP Types).
+* **Right Column (The Visuals):**
+    * **Continuity Meter:** A Gauge showing the Risk Score (0-100).
+    * **Downtime Calculator:** A card showing "Estimated Cost of 24hr Shutdown" (calculated from Annual Value).
+    * **IP Matrix:** A simple list/grid showing which IP types are present vs. protected.
+* **Navigation:** Update `AssessmentLayout` to show the **"Production Operations"** tab (Factory icon) for this template.
+
+Please implement these components to activate the Manufacturing module.

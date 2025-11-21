@@ -245,6 +245,7 @@ export const assessments = pgTable("assessments", {
   // Template-Specific Profiles
   warehouse_profile: jsonb("warehouse_profile"), // Warehouse metrics: {warehouseType, squareFootage, inventoryValue, highValueProducts, loadingDockCount, dailyTruckVolume, shrinkageRate, cargoTheftIncidents}
   retail_profile: jsonb("retail_profile"), // Retail metrics: {annualRevenue, shrinkageRate, highValueMerchandise, storeFormat}
+  manufacturing_profile: jsonb("manufacturing_profile"), // Manufacturing metrics: {annualProductionValue, shiftOperations, ipTypes, hazmatPresent}
 });
 
 // Loading Docks - Warehouse-specific dock-by-dock security tracking

@@ -1747,6 +1747,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // MANUFACTURING FRAMEWORK ROUTES
+  
+  // Update manufacturing profile (JSONB column)
+  app.patch("/api/assessments/:id/manufacturing-profile", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const { manufacturing_profile } = req.body;
+      
+      // Guard against empty body
+      if (!manufacturing_profile) {
+        return res.status(400).json({ error: "Manufacturing profile data is required" });
+      }
+      
+      // Validate manufacturing profile data structure
+      const manufacturingProfileSchema = z.object({
+        annualProductionValue: z.number().optional(),
+        shiftOperations: z.enum(['1', '2', '24/7']).optional(),
+        ipTypes: z.array(z.string()).optional(),
+        hazmatPresent: z.boolean().optional(),
+      });
+      
+      const validatedProfile = manufacturingProfileSchema.parse(manufacturing_profile);
+      
+      // Update assessment with new manufacturing_profile data
+      const updatedAssessment = await storage.updateAssessment(assessmentId, {
+        manufacturing_profile: validatedProfile,
+      });
+      
+      if (!updatedAssessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+      
+      res.json(updatedAssessment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid manufacturing profile data", details: error.errors });
+      }
+      console.error("Error updating manufacturing profile:", error);
+      res.status(500).json({ error: "Failed to update manufacturing profile" });
+    }
+  });
+
+  // Get production continuity analysis
+  app.get("/api/assessments/:id/production-continuity", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const assessment = req.assessment; // Verified by middleware
+      
+      // Import the manufacturing adapter
+      const { ManufacturingAdapter } = await import("./services/risk-engine/adapters/manufacturing");
+      const adapter = new ManufacturingAdapter(storage);
+      
+      // Calculate production continuity score
+      const continuityScore = await adapter.calculateProductionContinuityScore(assessment);
+      
+      res.json(continuityScore);
+    } catch (error) {
+      console.error("Error calculating production continuity:", error);
+      res.status(500).json({ error: "Failed to calculate production continuity score" });
+    }
+  });
+
   // EXECUTIVE PROTECTION FRAMEWORK ROUTES
   
   /**
@@ -1770,23 +1832,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'very_high': 5
     };
     
+    // Map actual netWorthRange enum values to exposure scores
     const netWorthMap: Record<string, number> = {
       'under_1m': 1,
       '1m_5m': 2,
       '5m_10m': 2,
-      '5m_25m': 3,      // Legacy enum value
-      '10m_25m': 3,
       '10m_50m': 3,
-      '25m_50m': 4,
-      '25m_100m': 4,    // Legacy enum value
       '50m_100m': 4,
-      'over_100m': 5,
-      'unknown': 2      // Legacy/unknown fallback
+      'over_100m': 5
     };
     
     const publicProfile = publicProfileMap[profile.publicProfile] || 3;
     const mediaExposure = mediaExposureMap[profile.mediaExposure || 'medium'] || 3;
-    const netWorth = netWorthMap[profile.netWorthRange || '10m_25m'] || 3;
+    const netWorth = netWorthMap[profile.netWorthRange || '10m_50m'] || 3;
     const geographicRisk = 2; // Default to low-medium (could be enhanced with crime data)
     
     const exposure = (
@@ -1820,11 +1878,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (scenario.riskLevel === 'High') highCount++;
     }
     
-    // Normalize: inherentRisk is 0-625 (5×5×5×5), normalize to 0-100 scale
+    // Calculate average inherent risk and normalize to 0-100 scale
+    // EP: max inherentRisk is 500 (5×5×5×4 from T×V×E×I)
     const avgInherentRisk = scenarios.length > 0 ? totalRisk / scenarios.length : 0;
-    const avgRiskScore = Math.round((avgInherentRisk / 625) * 100);
+    const avgRiskScore = Math.round((avgInherentRisk / 500) * 100);
     
-    // Determine overall risk level
+    // Determine overall risk level based on normalized score and scenario counts
     let riskLevel = 'Low';
     if (criticalCount > 0 || avgRiskScore >= 75) {
       riskLevel = 'Critical';

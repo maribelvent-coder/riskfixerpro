@@ -249,26 +249,38 @@ export async function generateExecutiveProtectionRiskScenarios(
     let routePredictability = 'medium'; // Default
     
     try {
-      const interviewResponses = await storage.getExecutiveInterviewResponses(assessmentId);
-      
-      // Look for commute pattern/routine predictability questions
-      const commutePattern = interviewResponses.find((response: any) => 
-        response.questionId?.toLowerCase().includes('commute') || 
-        response.questionId?.toLowerCase().includes('routine') ||
-        response.questionId?.toLowerCase().includes('predictab')
+      // Get all interview questions to find commute-related questions
+      const allQuestions = await storage.getAllExecutiveInterviewQuestions();
+      const commuteQuestion = allQuestions.find(q => 
+        q.question?.toLowerCase().includes('commute') || 
+        q.question?.toLowerCase().includes('routine') ||
+        q.question?.toLowerCase().includes('predictab')
       );
       
-      if (commutePattern?.answer) {
-        const answer = commutePattern.answer.toString().toLowerCase();
+      if (commuteQuestion) {
+        // Get the response for this question
+        const responses = await storage.getExecutiveInterviewResponses(assessmentId);
+        const commuteResponse = responses.find(r => r.questionId === commuteQuestion.id);
         
-        // Map answer to predictability level
-        if (answer.includes('fixed') || answer.includes('same route') || answer.includes('predictable')) {
-          routePredictability = 'high';
-        } else if (answer.includes('varies') || answer.includes('different') || answer.includes('random')) {
-          routePredictability = 'low';
+        if (commuteResponse) {
+          // Check yesNoResponse first (primary answer for yes-no-text questions)
+          if (commuteResponse.yesNoResponse !== null && commuteResponse.yesNoResponse !== undefined) {
+            // Boolean response: true = predictable, false = varies
+            routePredictability = commuteResponse.yesNoResponse ? 'high' : 'low';
+            console.log(`  🚗 Route Predictability from boolean: ${routePredictability}`);
+          } else if (commuteResponse.textResponse) {
+            // Fall back to text response analysis
+            const answer = commuteResponse.textResponse.toLowerCase();
+            
+            if (answer.includes('fixed') || answer.includes('same route') || answer.includes('predictable')) {
+              routePredictability = 'high';
+            } else if (answer.includes('varies') || answer.includes('different') || answer.includes('random')) {
+              routePredictability = 'low';
+            }
+            
+            console.log(`  🚗 Route Predictability from text: ${routePredictability} (answer: ${answer})`);
+          }
         }
-        
-        console.log(`  🚗 Route Predictability from interview: ${routePredictability} (answer: ${answer})`);
       }
     } catch (error) {
       console.log(`  ⚠️  Could not fetch interview data for route analysis, using default: ${routePredictability}`);
