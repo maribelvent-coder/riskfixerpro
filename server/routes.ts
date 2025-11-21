@@ -2366,9 +2366,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
 
-      // Generate AI narrative using OpenAI
+      // Fetch facility survey questions and extract responses
+      const surveyQuestions = await storage.getFacilitySurveyQuestions(scenario.assessmentId);
+      const surveyResponses: Record<string, any> | null = surveyQuestions && surveyQuestions.length > 0
+        ? surveyQuestions.reduce((acc, q) => {
+            // Production data may have questionId field (from template_questions.questionId like "dock_4")
+            // Fall back to template UUID, category, or record ID
+            const questionData = q as any;  // Type assertion to access runtime fields
+            const key = questionData.questionId          // Primary: questionId from template ("dock_4", "perimeter_1")
+                     || q.templateQuestionId             // Fallback 1: template UUID
+                     || q.category                       // Fallback 2: category name
+                     || q.id;                            // Fallback 3: record UUID
+            
+            if (q.response && key) {
+              // Extract value from response JSONB - handle both simple and complex formats
+              let value = q.response;
+              if (typeof q.response === 'object' && q.response !== null) {
+                // Try to extract nested value/text/answer/optionId fields from JSONB
+                const responseObj = q.response as any;
+                value = responseObj.value 
+                     || responseObj.text 
+                     || responseObj.answer 
+                     || responseObj.optionId
+                     || responseObj.selected 
+                     || q.response;  // Fallback to full object
+              }
+              acc[key] = value;
+            }
+            return acc;
+          }, {} as Record<string, any>)
+        : null;
+
+      // Generate AI narrative using OpenAI with survey context
       const { generateWarehouseRiskNarrative } = await import("./services/ai/warehouse-narrative");
-      const narrative = await generateWarehouseRiskNarrative(scenario, assessment);
+      const narrative = await generateWarehouseRiskNarrative(scenario, assessment, surveyResponses);
       
       // Update only the threatDescription field to avoid corrupting other data
       const updatedScenario = await storage.updateRiskScenario(id, {

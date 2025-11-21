@@ -39,11 +39,13 @@ interface WarehouseProfile {
  * 
  * @param scenario - The risk scenario to analyze
  * @param assessment - The parent assessment with warehouse profile and survey data
+ * @param surveyResponses - Facility survey responses for context-specific vulnerability details
  * @returns Professional 3-paragraph security analysis
  */
 export async function generateWarehouseRiskNarrative(
   scenario: RiskScenario,
-  assessment: Assessment
+  assessment: Assessment,
+  surveyResponses: Record<string, any> | null = null
 ): Promise<string> {
   
   try {
@@ -52,8 +54,11 @@ export async function generateWarehouseRiskNarrative(
     // Extract warehouse profile
     const warehouseProfile = assessment.warehouse_profile as WarehouseProfile | null;
     
-    // Build context-rich prompt
-    const prompt = constructNarrativePrompt(scenario, assessment, warehouseProfile);
+    // Extract relevant survey findings to provide context-specific details
+    const surveyFindings = extractRelevantFindings(scenario.scenario, surveyResponses);
+    
+    // Build context-rich prompt with survey findings
+    const prompt = constructNarrativePrompt(scenario, assessment, warehouseProfile, surveyFindings);
     
     // Call OpenAI GPT-4 for narrative generation
     const response = await client.chat.completions.create({
@@ -97,7 +102,8 @@ Your writing style is:
 function constructNarrativePrompt(
   scenario: RiskScenario,
   assessment: Assessment,
-  warehouseProfile: WarehouseProfile | null
+  warehouseProfile: WarehouseProfile | null,
+  surveyFindings: string[]
 ): string {
   
   // Build facility context section with proper null handling
@@ -140,11 +146,16 @@ function constructNarrativePrompt(
 **Likelihood:** ${scenario.likelihood || 'Not specified'} (Score: ${scenario.likelihoodScore ?? 'N/A'}/5)
 **Impact:** ${scenario.impact || 'Not specified'} (Score: ${scenario.impactScore ?? 'N/A'}/5)`;
   
-  // Build vulnerability details with null handling
+  // Build vulnerability details with null handling and survey findings
   let vulnerabilityDetails = '';
   if (scenario.vulnerabilityDescription && scenario.vulnerabilityDescription.trim() !== '') {
     vulnerabilityDetails = `\n\n**Key Vulnerabilities Identified:**
 ${scenario.vulnerabilityDescription}`;
+  }
+  
+  // Add survey-specific findings if available
+  if (surveyFindings.length > 0) {
+    vulnerabilityDetails += `\n\n**Survey Findings:**\n${surveyFindings.join('\n')}`;
   }
   
   // Construct the full prompt
@@ -180,16 +191,18 @@ Describe the potential financial, operational, and reputational consequences if 
  * This helps provide context-specific vulnerability details
  */
 function extractRelevantFindings(
-  scenarioName: string,
+  scenarioName: string | null,
   surveyResponses: Record<string, any> | null
 ): string[] {
   
-  if (!surveyResponses) return [];
+  if (!surveyResponses || !scenarioName) return [];
   
   const findings: string[] = [];
   
+  const lowerScenarioName = scenarioName.toLowerCase();
+  
   // Map scenario types to relevant survey questions
-  if (scenarioName.toLowerCase().includes('cargo theft')) {
+  if (lowerScenarioName.includes('cargo theft')) {
     // Look for dock-related findings
     if (surveyResponses.dock_4) {
       findings.push(`Trailer seal verification: ${surveyResponses.dock_4}`);
