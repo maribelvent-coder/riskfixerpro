@@ -18,6 +18,7 @@ import {
   insertTreatmentPlanSchema,
   insertReportSchema,
   insertUserSchema,
+  insertLoadingDockSchema,
   type InsertFacilitySurveyQuestion,
   type InsertAssessmentQuestion
 } from "@shared/schema";
@@ -1566,6 +1567,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating warehouse profile:", error);
       res.status(500).json({ error: "Failed to update warehouse profile" });
+    }
+  });
+
+  // Create new loading dock
+  app.post("/api/assessments/:id/loading-docks", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      
+      // Validate input data using Zod schema
+      const validatedData = insertLoadingDockSchema.parse({
+        ...req.body,
+        assessmentId,
+      });
+      
+      // Create loading dock
+      const loadingDock = await storage.createLoadingDock(validatedData);
+      
+      res.status(201).json(loadingDock);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid loading dock data", details: error.errors });
+      }
+      console.error("Error creating loading dock:", error);
+      res.status(500).json({ error: "Failed to create loading dock" });
     }
   });
 

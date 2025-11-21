@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CargoTheftROICalculator } from "@/components/calculators/CargoTheftROICalculator";
 import { LoadingDockGrid } from "@/components/warehouse/LoadingDockGrid";
+import { AddDockDialog } from "@/components/warehouse/AddDockDialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -69,6 +70,9 @@ const HIGH_VALUE_PRODUCT_OPTIONS = [
 export default function WarehouseDashboard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  
+  // Dialog state
+  const [isAddDockOpen, setIsAddDockOpen] = useState(false);
 
   // Fetch warehouse analysis data
   const { data, isLoading, error } = useQuery<WarehouseAnalysisResponse>({
@@ -93,11 +97,7 @@ export default function WarehouseDashboard() {
   // Update warehouse profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: any) => {
-      return await apiRequest({
-        method: 'PATCH',
-        url: `/api/assessments/${id}/warehouse-profile`,
-        body: profileData,
-      });
+      return await apiRequest('PATCH', `/api/assessments/${id}/warehouse-profile`, profileData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'warehouse-analysis'] });
@@ -418,12 +418,7 @@ export default function WarehouseDashboard() {
                 variant="outline"
                 size="sm"
                 data-testid="button-add-dock"
-                onClick={() => {
-                  toast({
-                    title: 'Add Loading Dock',
-                    description: 'Loading dock configuration feature coming soon.',
-                  });
-                }}
+                onClick={() => setIsAddDockOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Dock
@@ -452,12 +447,7 @@ export default function WarehouseDashboard() {
               <Button
                 variant="default"
                 data-testid="button-add-first-dock"
-                onClick={() => {
-                  toast({
-                    title: 'Add Loading Dock',
-                    description: 'Loading dock configuration feature coming soon.',
-                  });
-                }}
+                onClick={() => setIsAddDockOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Dock
@@ -466,6 +456,13 @@ export default function WarehouseDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Dock Dialog */}
+      <AddDockDialog
+        assessmentId={id!}
+        open={isAddDockOpen}
+        onOpenChange={setIsAddDockOpen}
+      />
     </div>
   );
 }
