@@ -141,12 +141,11 @@ export class DatacenterAdapter {
       };
     }
     
-    // Normalize control names for robust matching (handles dash variations, spacing, casing)
+    // Normalize control names for robust matching (handles ALL Unicode dash/hyphen variations, spacing, casing)
     const normalizeControlName = (name: string) => 
       name.toLowerCase()
-        .replace(/–/g, '-')  // Replace en-dash with regular dash
-        .replace(/—/g, '-')  // Replace em-dash with regular dash
-        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/\p{Pd}/gu, '-')  // Unicode-aware: normalize ALL dash/hyphen characters (includes U+2011 non-breaking hyphen, en-dash, em-dash, etc.)
+        .replace(/\s+/g, ' ')       // Normalize whitespace
         .trim();
     
     const existingControlNames = controls
