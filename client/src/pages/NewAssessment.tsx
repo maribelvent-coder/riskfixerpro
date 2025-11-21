@@ -12,20 +12,30 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { assessmentApi } from "@/lib/api";
 import { ASSESSMENT_TEMPLATES } from "@shared/templates";
-import { insertAssessmentSchema } from "@shared/schema";
+import { insertAssessmentSchema, type Site } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
 
 const newAssessmentFormSchema = insertAssessmentSchema
   .omit({ userId: true })
   .extend({
-    title: z.string().min(1, "Title is required"),
+    siteId: z.string().optional(),
     location: z.string().optional(),
-    templateId: z.string().min(1, "Please select an assessment template"),
+  })
+  .refine((data) => {
+    // Require location if siteId is not provided or is "manual"
+    if (!data.siteId || data.siteId === "manual") {
+      return !!data.location && data.location.length > 0;
+    }
+    return true;
+  }, {
+    message: "Location is required when no site is selected",
+    path: ["location"],
   });
 
 type NewAssessmentForm = z.infer<typeof newAssessmentFormSchema>;
@@ -34,27 +44,63 @@ export default function NewAssessment() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  // Fetch all sites for site selection
+  const { data: sites = [], isLoading: sitesLoading, isError: sitesError } = useQuery<Site[]>({
+    queryKey: ["/api/sites"],
+  });
   
   const form = useForm<NewAssessmentForm>({
     resolver: zodResolver(newAssessmentFormSchema),
     defaultValues: {
       title: "",
       location: "",
-      assessor: "",
+      assessor: user?.username || "",
       status: "draft",
+      siteId: "",
       templateId: "",
+      surveyParadigm: "facility",
     },
   });
+
+  // Watch siteId to conditionally show location field
+  const selectedSiteId = form.watch("siteId");
 
   const createMutation = useMutation({
     mutationFn: async (data: NewAssessmentForm) => {
       const selectedTemplate = ASSESSMENT_TEMPLATES.find(t => t.id === data.templateId);
-      return assessmentApi.create({
-        ...data,
-        location: data.location || "",
-        templateId: data.templateId,
-        surveyParadigm: selectedTemplate?.surveyParadigm || data.surveyParadigm
-      });
+      
+      // Prepare assessment payload based on site selection
+      let assessmentPayload: any;
+      
+      // If a site is selected (not manual), include siteId
+      if (data.siteId && data.siteId !== "manual") {
+        const selectedSite = sites.find(s => s.id.toString() === data.siteId);
+        assessmentPayload = {
+          title: data.title,
+          assessor: data.assessor,
+          status: "draft" as const,
+          templateId: data.templateId,
+          siteId: data.siteId,
+          location: selectedSite 
+            ? `${selectedSite.name} - ${selectedSite.city}, ${selectedSite.state}`
+            : "Site Location",
+          surveyParadigm: selectedTemplate?.surveyParadigm || "facility"
+        };
+      } else {
+        // Manual location entry - no siteId
+        assessmentPayload = {
+          title: data.title,
+          assessor: data.assessor,
+          status: "draft" as const,
+          templateId: data.templateId,
+          location: data.location || "",
+          surveyParadigm: selectedTemplate?.surveyParadigm || "facility"
+        };
+      }
+      
+      return assessmentApi.create(assessmentPayload);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/assessments"] });
@@ -132,24 +178,6 @@ export default function NewAssessment() {
 
               <FormField
                 control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        data-testid="input-location"
-                        placeholder="e.g., San Francisco, CA"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="templateId"
                 render={({ field }) => (
                   <FormItem>
@@ -176,6 +204,87 @@ export default function NewAssessment() {
                         {selectedTemplate.description}
                       </FormDescription>
                     )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="siteId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={sitesLoading}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-site">
+                          <SelectValue placeholder={
+                            sitesLoading 
+                              ? "Loading sites..." 
+                              : sitesError 
+                              ? "Error loading sites - enter manually" 
+                              : "Select a site or enter manually"
+                          } />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="manual">Enter location manually</SelectItem>
+                        {sites.length > 0 ? (
+                          sites.map((site) => (
+                            <SelectItem key={site.id} value={site.id.toString()}>
+                              {site.name} - {site.city}, {site.state}
+                            </SelectItem>
+                          ))
+                        ) : !sitesLoading && (
+                          <SelectItem value="no-sites" disabled>
+                            No sites available - create one first
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {selectedSiteId && selectedSiteId !== "manual" 
+                        ? "Assessment will be linked to the selected site"
+                        : "Select a site or enter location manually below"}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {(!selectedSiteId || selectedSiteId === "manual") && (
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          data-testid="input-location"
+                          placeholder="e.g., 123 Main St, New York, NY"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="assessor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assessor</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        data-testid="input-assessor"
+                        placeholder="Your name"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
