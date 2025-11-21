@@ -95,18 +95,13 @@ function generateKidnappingScenario(
     scenario: 'Kidnapping for Ransom',
     asset: 'Executive Principal',
     threatType: 'human',
-    description: `High-value target for organized criminal groups due to significant net worth (${netWorth}). Kidnapping risk is elevated due to wealth visibility and potential lack of adequate protection detail.`,
+    threatDescription: `High-value target for organized criminal groups due to significant net worth (${netWorth}). Kidnapping risk is elevated due to wealth visibility and potential lack of adequate protection detail.`,
+    vulnerabilityDescription: `${profile.hasPersonalProtection ? 'Current personal protection reduces vulnerability.' : 'No personal protection detail increases vulnerability.'}`,
     likelihood: mapLikelihoodToText(threat),
     impact: mapImpactToText(impact),
     inherentRisk,
-    currentRisk: inherentRisk,
     residualRisk: inherentRisk,
-    riskLevel,
-    treatmentStrategy: 'mitigate',
-    justification: `Principal's net worth (${netWorth}) makes them a high-value target. ${profile.hasPersonalProtection ? 'Current personal protection reduces vulnerability.' : 'No personal protection detail increases vulnerability.'}`,
-    consequences: 'Life-threatening situation, significant ransom demands, psychological trauma, business disruption, reputational damage',
-    threatActors: 'Organized crime groups, professional kidnappers, foreign terrorist organizations',
-    attackVectors: 'Ambush during routine travel, home invasion, false emergency scenarios'
+    riskLevel
   };
 }
 
@@ -147,18 +142,13 @@ function generateStalkingScenario(
     scenario: 'Stalking / Doxxing',
     asset: 'Executive Principal',
     threatType: 'human',
-    description: `High public visibility (${profile.publicProfile} profile with ${profile.mediaExposure} media exposure) creates stalking and doxxing vulnerability. Personal information may be accessible online, enabling harassment and physical surveillance.`,
+    threatDescription: `High public visibility (${profile.publicProfile} profile with ${profile.mediaExposure} media exposure) creates stalking and doxxing vulnerability. Personal information may be accessible online, enabling harassment and physical surveillance.`,
+    vulnerabilityDescription: `Public profile (${profile.publicProfile}) and media exposure (${profile.mediaExposure}) increase stalking risk. Online footprint enables doxxing and targeted harassment.`,
     likelihood: mapLikelihoodToText(threat),
     impact: mapImpactToText(impact),
     inherentRisk,
-    currentRisk: inherentRisk,
     residualRisk: inherentRisk,
-    riskLevel,
-    treatmentStrategy: 'mitigate',
-    justification: `Public profile (${profile.publicProfile}) and media exposure (${profile.mediaExposure}) increase stalking risk. Online footprint enables doxxing and targeted harassment.`,
-    consequences: 'Psychological distress, privacy invasion, home address exposure, family harassment, potential escalation to violence',
-    threatActors: 'Obsessed individuals, disgruntled employees, activist groups, online trolls',
-    attackVectors: 'Social media tracking, property records search, surveillance at known locations, family targeting'
+    riskLevel
   };
 }
 
@@ -200,18 +190,13 @@ function generateVehicularAmbushScenario(
     scenario: 'Vehicular Ambush',
     asset: 'Executive Principal',
     threatType: 'human',
-    description: `Predictable commute patterns combined with high-value status create vulnerability to vehicular ambush attacks. ${hasArmoredVehicle ? 'Armored vehicle provides significant protection but route variation is still recommended.' : 'Lack of armored vehicle and route variation creates critical vulnerability.'}`,
+    threatDescription: `Predictable commute patterns combined with high-value status create vulnerability to vehicular ambush attacks. ${hasArmoredVehicle ? 'Armored vehicle provides significant protection but route variation is still recommended.' : 'Lack of armored vehicle and route variation creates critical vulnerability.'}`,
+    vulnerabilityDescription: `Fixed commute patterns (${routePredictability} predictability) enable threat actors to plan ambush. ${hasArmoredVehicle ? 'Current armored vehicle mitigates some risk.' : 'No armored vehicle protection increases vulnerability.'}`,
     likelihood: mapLikelihoodToText(threat),
     impact: mapImpactToText(impact),
     inherentRisk,
-    currentRisk: inherentRisk,
     residualRisk: inherentRisk,
-    riskLevel,
-    treatmentStrategy: 'mitigate',
-    justification: `Fixed commute patterns (${routePredictability} predictability) enable threat actors to plan ambush. ${hasArmoredVehicle ? 'Current armored vehicle mitigates some risk.' : 'No armored vehicle protection increases vulnerability.'}`,
-    consequences: 'Injury or death, kidnapping attempt, vehicle damage, psychological trauma, business disruption',
-    threatActors: 'Organized crime, terrorist groups, professional kidnappers, hostile competitors',
-    attackVectors: 'Roadblock ambush, PIT maneuver, vehicle ramming, chokepoint attacks at traffic signals'
+    riskLevel
   };
 }
 
