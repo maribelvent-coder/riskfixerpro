@@ -42,14 +42,12 @@ interface ExecutiveDashboardResponse {
     title: string;
   };
   profile?: ExecutiveProfileData;
-  exposureFactor?: number;
-  riskScore?: number;
-  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  topThreats?: Array<{
-    scenario: string;
-    likelihood: string;
-    impact: string;
-  }>;
+  analysis?: {
+    exposureFactor: number;
+    riskScore: number;
+    riskLevel: string;
+    activeScenarioCount: number;
+  };
 }
 
 const PUBLIC_PROFILE_OPTIONS = [
@@ -129,15 +127,18 @@ export default function ExecutiveDashboard() {
       return await apiRequest('PATCH', `/api/assessments/${id}/executive-profile`, profileData);
     },
     onSuccess: (response: any) => {
+      // Refetch the profile to get updated backend-calculated metrics
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'executive-profile'] });
       queryClient.invalidateQueries({ queryKey: ['/api/assessments', id] });
       queryClient.invalidateQueries({ queryKey: ['/api/risk-scenarios', id] });
       
       const scenarioResult = response._scenarioGeneration;
       const scenarioCount = scenarioResult?.scenariosCreated || 0;
+      const analysis = response.analysis;
       
       toast({
         title: 'Profile Updated',
-        description: `Executive profile saved. ${scenarioCount} risk scenario${scenarioCount !== 1 ? 's' : ''} generated.`,
+        description: `Executive profile saved. ${scenarioCount} risk scenario${scenarioCount !== 1 ? 's' : ''} generated. Risk Level: ${analysis?.riskLevel || 'Unknown'}`,
       });
     },
     onError: () => {
@@ -176,46 +177,11 @@ export default function ExecutiveDashboard() {
     updateProfileMutation.mutate(profileData);
   };
 
-  // Calculate exposure factor for display (simplified client-side estimate)
-  const calculateExposureFactor = (): number => {
-    let factor = 1.0;
-    
-    // Public profile contribution (40%)
-    const profileWeights: Record<string, number> = {
-      'private': 0.0,
-      'low': 0.1,
-      'medium': 0.2,
-      'high': 0.35,
-      'very_high': 0.4,
-    };
-    factor += profileWeights[publicProfile] || 0.2;
-    
-    // Media exposure contribution (30%)
-    const mediaWeights: Record<string, number> = {
-      'none': 0.0,
-      'minimal': 0.075,
-      'moderate': 0.15,
-      'high': 0.25,
-      'very_high': 0.3,
-    };
-    factor += mediaWeights[mediaExposure || 'minimal'] || 0.075;
-    
-    // Net worth visibility (20%)
-    const wealthWeights: Record<string, number> = {
-      'under_1m': 0.0,
-      '1m_5m': 0.04,
-      '5m_10m': 0.08,
-      '10m_50m': 0.14,
-      '50m_100m': 0.18,
-      'over_100m': 0.2,
-    };
-    factor += wealthWeights[netWorthRange || 'under_1m'] || 0.0;
-    
-    return Math.round(factor * 10) / 10; // Round to 1 decimal
-  };
-
-  const exposureFactor = calculateExposureFactor();
-  const estimatedRiskScore = Math.min(100, Math.round(exposureFactor * 25)); // 0-100 scale
+  // Get backend-calculated metrics (or defaults if not yet analyzed)
+  const exposureFactor = data?.analysis?.exposureFactor || 0;
+  const riskScore = data?.analysis?.riskScore || 0;
+  const riskLevel = data?.analysis?.riskLevel || 'Low';
+  const activeScenarioCount = data?.analysis?.activeScenarioCount || 0;
 
   if (isLoading) {
     return (
@@ -507,24 +473,22 @@ export default function ExecutiveDashboard() {
               <div className="flex items-center justify-center py-8">
                 <div className="text-center space-y-2">
                   <div className={`text-6xl font-bold ${
-                    estimatedRiskScore < 30 ? 'text-green-500' :
-                    estimatedRiskScore < 60 ? 'text-yellow-500' :
-                    estimatedRiskScore < 80 ? 'text-orange-500' :
+                    riskScore < 25 ? 'text-green-500' :
+                    riskScore < 50 ? 'text-yellow-500' :
+                    riskScore < 75 ? 'text-orange-500' :
                     'text-red-500'
                   }`}>
-                    {estimatedRiskScore}
+                    {riskScore}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    out of 100
+                    Inherent Risk Score
                   </p>
                   <Badge variant={
-                    estimatedRiskScore < 30 ? 'outline' :
-                    estimatedRiskScore < 60 ? 'secondary' :
+                    riskScore < 25 ? 'outline' :
+                    riskScore < 50 ? 'secondary' :
                     'destructive'
                   }>
-                    {estimatedRiskScore < 30 ? 'LOW' :
-                     estimatedRiskScore < 60 ? 'MEDIUM' :
-                     estimatedRiskScore < 80 ? 'HIGH' : 'CRITICAL'}
+                    {riskLevel.toUpperCase()}
                   </Badge>
                 </div>
               </div>

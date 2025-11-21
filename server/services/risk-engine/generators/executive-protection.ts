@@ -245,7 +245,36 @@ export async function generateExecutiveProtectionRiskScenarios(
       - Protection: ${profile.hasPersonalProtection ? 'Yes' : 'No'}
     `);
     
-    // Step 3: Generate scenario candidates (validate before persisting)
+    // Step 3: Fetch interview responses for route predictability analysis
+    let routePredictability = 'medium'; // Default
+    
+    try {
+      const interviewResponses = await storage.getExecutiveInterviewResponses(assessmentId);
+      
+      // Look for commute pattern/routine predictability questions
+      const commutePattern = interviewResponses.find((response: any) => 
+        response.questionId?.toLowerCase().includes('commute') || 
+        response.questionId?.toLowerCase().includes('routine') ||
+        response.questionId?.toLowerCase().includes('predictab')
+      );
+      
+      if (commutePattern?.answer) {
+        const answer = commutePattern.answer.toString().toLowerCase();
+        
+        // Map answer to predictability level
+        if (answer.includes('fixed') || answer.includes('same route') || answer.includes('predictable')) {
+          routePredictability = 'high';
+        } else if (answer.includes('varies') || answer.includes('different') || answer.includes('random')) {
+          routePredictability = 'low';
+        }
+        
+        console.log(`  🚗 Route Predictability from interview: ${routePredictability} (answer: ${answer})`);
+      }
+    } catch (error) {
+      console.log(`  ⚠️  Could not fetch interview data for route analysis, using default: ${routePredictability}`);
+    }
+    
+    // Step 4: Generate scenario candidates (validate before persisting)
     
     // Scenario 1: Kidnapping for Ransom (high net worth only)
     const kidnappingScenario = generateKidnappingScenario(assessmentId, profile);
@@ -260,12 +289,11 @@ export async function generateExecutiveProtectionRiskScenarios(
     }
     
     // Scenario 3: Vehicular Ambush (high value + predictable patterns)
-    // TODO: Get route predictability from interview responses when available
     const vehicularScenario = generateVehicularAmbushScenario(
       assessmentId,
       profile,
       profile.hasArmoredVehicle || false,
-      'high' // Default to high for now
+      routePredictability
     );
     if (vehicularScenario) {
       scenarios.push(vehicularScenario);

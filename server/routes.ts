@@ -1748,6 +1748,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // EXECUTIVE PROTECTION FRAMEWORK ROUTES
+  
+  /**
+   * Calculate exposure factor from executive profile
+   * E = (Public Profile × 0.4) + (Media Exposure × 0.3) + (Net Worth × 0.2) + (Geographic Risk × 0.1)
+   */
+  function calculateExposureFromProfile(profile: any): number {
+    const publicProfileMap: Record<string, number> = {
+      'private': 1,
+      'low': 2,
+      'medium': 3,
+      'high': 4,
+      'very_high': 5
+    };
+    
+    const mediaExposureMap: Record<string, number> = {
+      'none': 1,
+      'low': 2,
+      'medium': 3,
+      'high': 4,
+      'very_high': 5
+    };
+    
+    const netWorthMap: Record<string, number> = {
+      'under_1m': 1,
+      '1m_5m': 2,
+      '5m_10m': 2,
+      '5m_25m': 3,      // Legacy enum value
+      '10m_25m': 3,
+      '10m_50m': 3,
+      '25m_50m': 4,
+      '25m_100m': 4,    // Legacy enum value
+      '50m_100m': 4,
+      'over_100m': 5,
+      'unknown': 2      // Legacy/unknown fallback
+    };
+    
+    const publicProfile = publicProfileMap[profile.publicProfile] || 3;
+    const mediaExposure = mediaExposureMap[profile.mediaExposure || 'medium'] || 3;
+    const netWorth = netWorthMap[profile.netWorthRange || '10m_25m'] || 3;
+    const geographicRisk = 2; // Default to low-medium (could be enhanced with crime data)
+    
+    const exposure = (
+      publicProfile * 0.4 +
+      mediaExposure * 0.3 +
+      netWorth * 0.2 +
+      geographicRisk * 0.1
+    );
+    
+    return Math.round(exposure * 100) / 100; // Round to 2 decimals
+  }
+  
+  /**
+   * Calculate risk metrics from profile and scenarios
+   */
+  async function calculateRiskMetrics(assessmentId: string, profile: any, storage: any) {
+    const exposureFactor = calculateExposureFromProfile(profile);
+    
+    // Get all scenarios for this assessment
+    const scenarios = await storage.getRiskScenarios(assessmentId);
+    
+    // Calculate aggregate risk score
+    let totalRisk = 0;
+    let criticalCount = 0;
+    let highCount = 0;
+    
+    for (const scenario of scenarios) {
+      totalRisk += scenario.inherentRisk || 0;
+      
+      if (scenario.riskLevel === 'Critical') criticalCount++;
+      if (scenario.riskLevel === 'High') highCount++;
+    }
+    
+    // Normalize: inherentRisk is 0-625 (5×5×5×5), normalize to 0-100 scale
+    const avgInherentRisk = scenarios.length > 0 ? totalRisk / scenarios.length : 0;
+    const avgRiskScore = Math.round((avgInherentRisk / 625) * 100);
+    
+    // Determine overall risk level
+    let riskLevel = 'Low';
+    if (criticalCount > 0 || avgRiskScore >= 75) {
+      riskLevel = 'Critical';
+    } else if (highCount > 0 || avgRiskScore >= 50) {
+      riskLevel = 'High';
+    } else if (avgRiskScore >= 25) {
+      riskLevel = 'Medium';
+    }
+    
+    return {
+      exposureFactor,
+      riskScore: avgRiskScore,
+      riskLevel,
+      activeScenarioCount: scenarios.length
+    };
+  }
+  
   // Get executive profile for an assessment
   app.get("/api/assessments/:id/executive-profile", verifyAssessmentOwnership, async (req, res) => {
     try {
@@ -1760,12 +1854,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({
           assessment: req.assessment,
           profile: null,
+          analysis: null,
         });
       }
+      
+      // Calculate risk metrics from profile and scenarios
+      const analysis = await calculateRiskMetrics(assessmentId, profile, storage);
       
       res.json({
         assessment: req.assessment,
         profile,
+        analysis,
       });
     } catch (error) {
       console.error("Error fetching executive profile:", error);
@@ -1823,18 +1922,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`📊 EP scenario generation result:`, scenarioResult);
         
-        // Return profile with scenario generation metadata
+        // Calculate risk metrics from profile and scenarios
+        const analysis = await calculateRiskMetrics(assessmentId, profile, storage);
+        
+        // Return profile with scenario generation metadata and analysis
         res.json({
           profile,
+          analysis,
           _scenarioGeneration: scenarioResult
         });
       } catch (genError) {
         // Scenario generation failed but profile save succeeded
         console.error('⚠️ EP scenario generation failed:', genError);
         
+        // Still calculate metrics even if scenario generation failed
+        const analysis = await calculateRiskMetrics(assessmentId, profile, storage);
+        
         // Return success since profile update succeeded, but include error info
         res.json({
           profile,
+          analysis,
           _scenarioGeneration: {
             success: false,
             scenariosCreated: 0,
