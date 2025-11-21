@@ -25,8 +25,9 @@ import { RiskAssessmentNBS } from "@/components/RiskAssessmentNBS";
 import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
 import RetailDashboard from "@/pages/assessments/RetailDashboard";
 import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
+import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
 import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -230,7 +231,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     } else if (templateId === "manufacturing-facility") {
       baseTabs.push({ id: "manufacturing", label: "Production Operations", icon: Factory });
     } else if (templateId === "data-center") {
-      baseTabs.push({ id: "datacenter", label: "Data Center Operations", icon: Building });
+      baseTabs.push({ id: "datacenter", label: "Infrastructure Operations", icon: Server });
     } else {
       // Non-specialized templates (office-building, etc.) use standard Asset Inventory
       baseTabs.push({ id: "assets", label: "Asset Inventory", icon: Building });
@@ -649,23 +650,9 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           <ManufacturingDashboard />
         </TabsContent>
 
-        {/* Data Center Operations Tab */}
+        {/* Infrastructure Operations Tab (Data Center) */}
         <TabsContent value="datacenter" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Center Operations</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Data center-specific security analysis and environmental controls
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">Data Center Operations Dashboard</p>
-                <p className="text-sm">Coming soon - configure physical access, environmental monitoring, and redundancy systems</p>
-              </div>
-            </CardContent>
-          </Card>
+          <DatacenterDashboard />
         </TabsContent>
 
         {/* Professional Reports */}

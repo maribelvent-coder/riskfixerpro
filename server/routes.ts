@@ -20,6 +20,7 @@ import {
   insertUserSchema,
   insertLoadingDockSchema,
   manufacturingProfileSchema,
+  datacenterProfileSchema,
   type InsertFacilitySurveyQuestion,
   type InsertAssessmentQuestion
 } from "@shared/schema";
@@ -1804,6 +1805,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error calculating production continuity:", error);
       res.status(500).json({ error: "Failed to calculate production continuity score" });
+    }
+  });
+
+  // DATACENTER FRAMEWORK ROUTES
+  
+  // Update datacenter profile (JSONB column) - explicit wrapped payload
+  app.patch("/api/assessments/:id/datacenter-profile", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const { datacenter_profile } = req.body; // Expect wrapped payload
+      
+      // Guard against missing payload
+      if (!datacenter_profile) {
+        return res.status(400).json({ error: "Datacenter profile data is required" });
+      }
+      
+      // Validate using shared schema with safeParse
+      const validationResult = datacenterProfileSchema.safeParse(datacenter_profile);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid datacenter profile data", 
+          details: validationResult.error.errors 
+        });
+      }
+      
+      // Update assessment with validated profile
+      const updatedAssessment = await storage.updateAssessment(assessmentId, {
+        datacenter_profile: validationResult.data,
+      });
+      
+      if (!updatedAssessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+      
+      res.json(updatedAssessment);
+    } catch (error) {
+      console.error("Error updating datacenter profile:", error);
+      res.status(500).json({ error: "Failed to update datacenter profile" });
+    }
+  });
+
+  // Get uptime reliability and compliance analysis
+  app.get("/api/assessments/:id/uptime-reliability", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const assessment = req.assessment; // Verified by middleware
+      
+      // Import the datacenter adapter
+      const { DatacenterAdapter } = await import("./services/risk-engine/adapters/datacenter");
+      const adapter = new DatacenterAdapter(storage);
+      
+      // Calculate uptime reliability and compliance scores
+      const reliabilityScore = await adapter.calculateUptimeReliability(assessment);
+      
+      res.json(reliabilityScore);
+    } catch (error) {
+      console.error("Error calculating uptime reliability:", error);
+      res.status(500).json({ error: "Failed to calculate uptime reliability score" });
     }
   });
 

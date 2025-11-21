@@ -246,6 +246,7 @@ export const assessments = pgTable("assessments", {
   warehouse_profile: jsonb("warehouse_profile"), // Warehouse metrics: {warehouseType, squareFootage, inventoryValue, highValueProducts, loadingDockCount, dailyTruckVolume, shrinkageRate, cargoTheftIncidents}
   retail_profile: jsonb("retail_profile"), // Retail metrics: {annualRevenue, shrinkageRate, highValueMerchandise, storeFormat}
   manufacturing_profile: jsonb("manufacturing_profile"), // Manufacturing metrics: {annualProductionValue, shiftOperations, ipTypes, hazmatPresent}
+  datacenter_profile: jsonb("datacenter_profile"), // Datacenter metrics: {tierClassification, uptimeSLA, complianceRequirements, powerCapacity}
 });
 
 // Loading Docks - Warehouse-specific dock-by-dock security tracking
@@ -962,6 +963,16 @@ export const manufacturingProfileSchema = z.object({
 
 export type ManufacturingProfile = z.infer<typeof manufacturingProfileSchema>;
 
+// Datacenter Profile Schema (for JSONB column in assessments table)
+export const datacenterProfileSchema = z.object({
+  tierClassification: z.enum(['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4']).optional(),
+  uptimeSLA: z.string().optional(),
+  complianceRequirements: z.array(z.string()).optional(),
+  powerCapacity: z.number().nullable().optional(), // kW - nullable to support clearing stale values
+});
+
+export type DatacenterProfile = z.infer<typeof datacenterProfileSchema>;
+
 export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   id: true,
   createdAt: true,
@@ -970,6 +981,7 @@ export const insertAssessmentSchema = createInsertSchema(assessments).omit({
 }).extend({
   templateId: z.string().min(1, "Template selection is required"),
   manufacturing_profile: manufacturingProfileSchema.optional(),
+  datacenter_profile: datacenterProfileSchema.optional(),
 });
 
 export const insertLoadingDockSchema = createInsertSchema(loadingDocks).omit({
