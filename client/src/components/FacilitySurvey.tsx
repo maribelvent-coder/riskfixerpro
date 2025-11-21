@@ -26,6 +26,7 @@ import { EvidenceUploader } from "./EvidenceUploader";
 
 interface FacilitySurveyProps {
   assessmentId: string;
+  templateId?: string;
   onComplete?: () => void;
 }
 
@@ -47,7 +48,18 @@ interface SurveyQuestion {
 
 // NOTE: Hardcoded questions removed - now using template questions from database
 
-export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps) {
+// Template display name mapping
+const SURVEY_TYPE_LABELS: Record<string, string> = {
+  "office-building": "Office",
+  "retail-store": "Retail Store",
+  "warehouse-distribution": "Warehouse",
+  "manufacturing-facility": "Manufacturing Facility",
+  "data-center": "Data Center",
+  "executive-protection": "Executive Protection",
+};
+
+export function FacilitySurvey({ assessmentId, templateId, onComplete }: FacilitySurveyProps) {
+  const surveyType = templateId ? (SURVEY_TYPE_LABELS[templateId] || "Facility") : "Facility";
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [currentCategory, setCurrentCategory] = useState(0);
   const [isPersisting, setIsPersisting] = useState(false);
@@ -717,7 +729,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
             <div>
               <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
                 <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="text-sm sm:text-base">Office Survey</span>
+                <span className="text-sm sm:text-base">{surveyType} Survey</span>
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Comprehensive assessment of existing physical security controls and systems

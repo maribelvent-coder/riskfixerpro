@@ -55,6 +55,16 @@ const TEMPLATE_CONFIG: Record<string, { tabId: string; label: string; icon: type
   "office-building": { tabId: "office", label: "Corporate Operations", icon: Building2, dashboardComponent: OfficeDashboard },
 };
 
+// Survey type display names for dynamic headings
+const SURVEY_TYPE_LABELS: Record<string, string> = {
+  "office-building": "Office",
+  "retail-store": "Retail Store",
+  "warehouse-distribution": "Warehouse",
+  "manufacturing-facility": "Manufacturing Facility",
+  "data-center": "Data Center",
+  "executive-protection": "Executive Protection",
+};
+
 interface AssessmentDetailProps {
   assessmentId?: string;
 }
@@ -65,6 +75,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const hasInitializedTab = useRef(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Helper to get survey type label from templateId
+  const getSurveyTypeLabel = (templateId?: string) => {
+    return templateId ? (SURVEY_TYPE_LABELS[templateId] || "Facility") : "Facility";
+  };
 
   // Fetch assessment data with proper typing
   const { data: assessmentData, isLoading, error } = useQuery<Assessment>({
@@ -252,10 +267,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       { id: "reports", label: "Reports", icon: FileText }
     );
     
+    const surveyTypeLabel = getSurveyTypeLabel(assessmentData?.templateId);
+    
     return {
       tabs: baseTabs,
       phases: [
-        { label: "Phase 1: Facility Survey", completed: assessmentData?.facilitySurveyCompleted || false },
+        { label: `Phase 1: ${surveyTypeLabel} Survey`, completed: assessmentData?.facilitySurveyCompleted || false },
         { label: "Phase 2: Risk Assessment", completed: assessmentData?.riskAssessmentCompleted || false },
         { label: "Reports", completed: false }
       ]
@@ -564,7 +581,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                Phase 1: Office Survey
+                Phase 1: {getSurveyTypeLabel(assessmentData?.templateId)} Survey
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground">
                 Professional assessment of existing physical security controls following ASIS and ANSI standards.
@@ -572,7 +589,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
               <FacilitySurvey 
-                assessmentId={assessmentId} 
+                assessmentId={assessmentId}
+                templateId={assessmentData?.templateId}
                 onComplete={handleFacilitySurveyComplete}
               />
             </CardContent>
