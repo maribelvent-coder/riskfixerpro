@@ -41,12 +41,15 @@ export class OfficeAdapter {
     let dataRiskScore = 0;
     const keyVulnerabilities: string[] = [];
 
+    // CRITICAL FIX: Read facility survey responses to calculate risk
+    const surveyQuestions = await this.storage.getFacilitySurveyQuestions(assessment.id);
+    
     // Get existing controls
     const controls = await this.storage.getControls(assessment.id);
     
-    // Guardrail: Check if controls data exists
-    if (!controls || controls.length === 0) {
-      keyVulnerabilities.push('No security controls documented - complete control inventory to enable safety analysis');
+    // If no survey data AND no controls, return low score with prompt to complete survey
+    if ((!surveyQuestions || surveyQuestions.length === 0) && (!controls || controls.length === 0)) {
+      keyVulnerabilities.push('Complete facility survey to enable comprehensive risk analysis');
       
       return {
         riskScore: 0,
@@ -56,28 +59,90 @@ export class OfficeAdapter {
       };
     }
     
-    // Normalize control names for robust matching
-    const normalizeControlName = (name: string) => 
-      name.toLowerCase()
-        .replace(/[\u002D\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-')  // Normalize all dash/hyphen characters
-        .replace(/\s+/g, ' ')
-        .trim();
+    // ==================== FACILITY SURVEY ANALYSIS ====================
     
-    const existingControlNames = controls
-      .filter(c => c.controlType === 'existing')
-      .map(c => normalizeControlName((c as any).name || c.description || ''));
+    // Analyze survey responses for risk indicators
+    for (const question of surveyQuestions) {
+      const response = question.response;
+      const category = question.category?.toLowerCase() || '';
+      const subcategory = question.subcategory?.toLowerCase() || '';
+      const questionText = question.question?.toLowerCase() || '';
+      
+      // Rating questions (1-5 scale): Low ratings = high risk
+      if (question.type === 'rating' && typeof response === 'string') {
+        const rating = parseInt(response);
+        if (!isNaN(rating)) {
+          if (rating <= 2) {
+            // Poor/Fair ratings (1-2) indicate high risk
+            violenceRiskScore += 10;
+            keyVulnerabilities.push(`Poor rating (${rating}/5) for ${subcategory} in ${category}`);
+          } else if (rating === 3) {
+            // Satisfactory rating indicates moderate risk
+            violenceRiskScore += 5;
+          }
+        }
+      }
+      
+      // Yes/No questions: "No" or "Partial" responses indicate vulnerabilities
+      if (question.type === 'yes-no') {
+        if (response === 'no' || response === 'partial') {
+          const riskPoints = response === 'no' ? 15 : 10;
+          
+          // Categorize by threat type
+          if (category.includes('perimeter') || category.includes('access') || category.includes('surveillance')) {
+            violenceRiskScore += riskPoints;
+            keyVulnerabilities.push(`${response === 'no' ? 'Missing' : 'Inadequate'} ${subcategory} for perimeter security`);
+          } else if (category.includes('workplace violence') || category.includes('emergency')) {
+            violenceRiskScore += riskPoints;
+            keyVulnerabilities.push(`${response === 'no' ? 'No' : 'Partial'} workplace violence preparedness: ${subcategory}`);
+          } else if (category.includes('information') || category.includes('cyber') || category.includes('data')) {
+            dataRiskScore += riskPoints;
+            keyVulnerabilities.push(`${response === 'no' ? 'Missing' : 'Inadequate'} data security control: ${subcategory}`);
+          } else {
+            // Generic security gap
+            violenceRiskScore += riskPoints;
+            keyVulnerabilities.push(`Security gap identified in ${category}`);
+          }
+        }
+      }
+      
+      // Condition questions: Poor conditions indicate risk
+      if (question.type === 'condition') {
+        if (response === 'poor' || response === 'critical') {
+          violenceRiskScore += 15;
+          keyVulnerabilities.push(`${response.charAt(0).toUpperCase() + response.slice(1)} condition in ${category} - ${subcategory}`);
+        } else if (response === 'adequate') {
+          violenceRiskScore += 5;
+        }
+      }
+    }
+    
+    // ==================== CONTROLS-BASED ANALYSIS (EXISTING LOGIC) ====================
+    
+    // Only proceed with controls analysis if controls exist
+    if (controls && controls.length > 0) {
+      // Normalize control names for robust matching
+      const normalizeControlName = (name: string) => 
+        name.toLowerCase()
+          .replace(/[\u002D\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-')  // Normalize all dash/hyphen characters
+          .replace(/\s+/g, ' ')
+          .trim();
+      
+      const existingControlNames = controls
+        .filter(c => c.controlType === 'existing')
+        .map(c => normalizeControlName((c as any).name || c.description || ''));
 
-    // Helper function to check if a control exists
-    const hasControl = (controlName: string): boolean => {
-      const normalized = normalizeControlName(controlName);
-      return existingControlNames.some(name => {
-        if (!name || name.length < 3 || !normalized || normalized.length < 3) return false;
-        if (name === normalized) return true;
-        if (name.includes(normalized) && normalized.length >= 10) return true;
-        if (normalized.includes(name) && name.length >= 10) return true;
-        return false;
-      });
-    };
+      // Helper function to check if a control exists
+      const hasControl = (controlName: string): boolean => {
+        const normalized = normalizeControlName(controlName);
+        return existingControlNames.some(name => {
+          if (!name || name.length < 3 || !normalized || normalized.length < 3) return false;
+          if (name === normalized) return true;
+          if (name.includes(normalized) && normalized.length >= 10) return true;
+          if (normalized.includes(name) && name.length >= 10) return true;
+          return false;
+        });
+      };
 
     // ==================== WORKPLACE VIOLENCE RISK ====================
     
@@ -191,7 +256,12 @@ export class OfficeAdapter {
       }
     });
 
-    // Cap data risk score at 100
+      // Cap data risk score at 100
+      dataRiskScore = Math.min(dataRiskScore, 100);
+    } // End controls analysis block
+
+    // Cap violence risk from survey analysis
+    violenceRiskScore = Math.min(violenceRiskScore, 100);
     dataRiskScore = Math.min(dataRiskScore, 100);
 
     // Calculate overall risk score (weighted average: 60% violence + 40% data)

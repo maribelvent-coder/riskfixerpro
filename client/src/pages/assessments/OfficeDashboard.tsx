@@ -294,7 +294,7 @@ export default function OfficeDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2" data-testid="heading-overall-score">
                   <Shield className="w-5 h-5" />
-                  Overall Safety Score
+                  Overall Security Risk
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -303,7 +303,7 @@ export default function OfficeDashboard() {
                     {safetyScore.riskScore}
                   </div>
                   <p className="text-sm text-muted-foreground" data-testid="text-score-label">
-                    Risk Score (0-100)
+                    Risk Score (0-100, higher = more risk)
                   </p>
                 </div>
               </CardContent>
