@@ -1,6 +1,6 @@
 import { useParams } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, Shield, AlertTriangle, Users, Database } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertCircle, Shield, AlertTriangle, Users, Database, Target } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { officeProfileSchema } from '@shared/schema';
 import type { Assessment, OfficeProfile } from '@shared/schema';
+import { RiskAssessmentNBS } from '@/components/RiskAssessmentNBS';
 
 interface OfficeSafetyScore {
   riskScore: number;
@@ -25,6 +27,7 @@ interface OfficeSafetyScore {
 export default function OfficeDashboard() {
   const { id } = useParams();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('profile');
 
   // Initialize form with zodResolver and default values
   const form = useForm<OfficeProfile>({
@@ -140,7 +143,20 @@ export default function OfficeDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList data-testid="tabs-list">
+          <TabsTrigger value="profile" data-testid="tab-profile">
+            <Shield className="w-4 h-4 mr-2" />
+            Profile & Safety Score
+          </TabsTrigger>
+          <TabsTrigger value="risk-assessment" data-testid="tab-risk-assessment">
+            <Target className="w-4 h-4 mr-2" />
+            Risk Assessment
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column: Office Profile Form */}
         <Card data-testid="card-profile-form">
           <CardHeader>
@@ -408,6 +424,12 @@ export default function OfficeDashboard() {
           )}
         </div>
       </div>
+        </TabsContent>
+
+        <TabsContent value="risk-assessment" className="mt-6">
+          {id && <RiskAssessmentNBS assessmentId={id} />}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
