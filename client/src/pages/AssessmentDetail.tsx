@@ -589,7 +589,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </Card>
         </TabsContent>
 
-        {/* Phase 2: ASIS Risk Assessment - Using No BS Framework for Facility assessments */}
+        {/* Phase 2: ASIS Risk Assessment - Quantitative framework for facility assessments */}
         <TabsContent value="risk-assessment" className="space-y-4">
           {assessmentData.surveyParadigm === "facility" ? (
             <RiskAssessmentNBS 

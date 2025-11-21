@@ -1496,7 +1496,7 @@ export function RiskAssessmentNBS({ assessmentId, onComplete }: RiskAssessmentNB
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Risk Assessment (No BS)
+                Risk Assessment
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Quantitative risk analysis with numeric calculations
