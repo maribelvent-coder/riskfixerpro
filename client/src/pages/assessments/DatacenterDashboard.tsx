@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import type { Assessment, DatacenterProfile } from '@/shared/schema';
 import { Server, Shield, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
@@ -44,6 +45,10 @@ export default function DatacenterDashboard() {
     queryKey: [`/api/assessments/${id}/uptime-reliability`],
     enabled: !!id && !!assessment?.datacenter_profile
   });
+
+  // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
+  const profileSaved = !!assessment?.datacenter_profile;
+  const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Load profile data when assessment loads (useEffect to avoid setState in render)
   // ALWAYS run on assessment change to prevent stale state during loading/navigation

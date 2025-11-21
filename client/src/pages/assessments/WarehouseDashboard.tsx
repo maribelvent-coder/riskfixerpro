@@ -13,6 +13,7 @@ import { LoadingDockDialog } from "@/components/warehouse/LoadingDockDialog";
 import type { LoadingDock } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
 import { 
   Warehouse, 
   AlertTriangle, 
@@ -80,6 +81,10 @@ export default function WarehouseDashboard() {
   const { data, isLoading, error } = useQuery<WarehouseAnalysisResponse>({
     queryKey: ['/api/assessments', id, 'warehouse-analysis'],
   });
+
+  // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
+  const profileSaved = !!data?.assessment.warehouse_profile;
+  const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Form state for warehouse profile
   const [inventoryValue, setInventoryValue] = useState<string>('');

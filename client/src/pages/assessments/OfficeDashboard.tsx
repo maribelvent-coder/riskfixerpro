@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, Shield, AlertTriangle, Users, Database, Target } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { officeProfileSchema } from '@shared/schema';
 import type { Assessment, OfficeProfile } from '@shared/schema';
@@ -51,6 +52,10 @@ export default function OfficeDashboard() {
     queryKey: [`/api/assessments/${id}/office-safety`],
     enabled: !!id && !!assessment?.office_profile
   });
+
+  // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
+  const profileSaved = !!assessment?.office_profile;
+  const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Load profile data when assessment loads
   useEffect(() => {

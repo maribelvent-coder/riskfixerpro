@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Factory, AlertCircle, DollarSign, Shield, FileText, CheckCircle, XCircle } from 'lucide-react';
 import type { ManufacturingProfile } from '@shared/schema';
@@ -56,6 +57,10 @@ export default function ManufacturingDashboard() {
     queryKey: [`/api/assessments/${id}/production-continuity`],
     enabled: !!id && !!assessment?.manufacturing_profile
   });
+
+  // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
+  const profileSaved = !!assessment?.manufacturing_profile;
+  const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Load profile data when assessment loads (useEffect to avoid setState in render)
   // ALWAYS run on assessment change to prevent stale state during loading/navigation

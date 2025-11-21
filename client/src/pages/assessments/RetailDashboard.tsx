@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LossPreventionROICalculator } from "@/components/calculators/LossPreventionROICalculator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
 import { 
   ShoppingBag, 
   AlertTriangle, 
@@ -69,6 +70,10 @@ export default function RetailDashboard() {
   const { data, isLoading, error } = useQuery<RetailAnalysisResponse>({
     queryKey: ['/api/assessments', id, 'retail-analysis'],
   });
+
+  // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
+  const profileSaved = !!data?.assessment.retail_profile;
+  const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Form state for retail profile
   const [annualRevenue, setAnnualRevenue] = useState<string>('');

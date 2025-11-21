@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
 import { 
   Shield, 
   AlertTriangle, 
@@ -91,6 +92,10 @@ export default function ExecutiveDashboard() {
   const { data, isLoading } = useQuery<ExecutiveDashboardResponse>({
     queryKey: ['/api/assessments', id, 'executive-profile'],
   });
+
+  // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
+  const profileSaved = !!data?.profile;
+  const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Form state for executive profile
   const [fullName, setFullName] = useState<string>('');
