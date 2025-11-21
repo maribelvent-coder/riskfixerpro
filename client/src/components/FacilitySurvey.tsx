@@ -68,7 +68,7 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
     }
   });
 
-  // Load template questions directly from database - no merging needed
+  // Safe merge strategy: Preserve local unsaved changes when server data refreshes
   useEffect(() => {
     if (savedQuestions && savedQuestions.length > 0) {
       // Populate the template-to-database ID mapping
@@ -107,7 +107,45 @@ export function FacilitySurvey({ assessmentId, onComplete }: FacilitySurveyProps
         };
       });
       
-      setQuestions(formattedQuestions);
+      // Smart merge: If local state exists, preserve unsaved changes
+      setQuestions(prevQuestions => {
+        // First load: No local state exists yet
+        if (prevQuestions.length === 0) {
+          return formattedQuestions;
+        }
+        
+        // Subsequent loads: Merge server data with local unsaved changes
+        return formattedQuestions.map(serverQuestion => {
+          const localQuestion = prevQuestions.find(q => q.templateId === serverQuestion.templateId);
+          
+          // If no local version exists, use server data as-is
+          if (!localQuestion) {
+            return serverQuestion;
+          }
+          
+          // Merge: Use server data for structure, but preserve local unsaved changes
+          // Local changes take precedence if they differ from server (user is actively editing)
+          return {
+            ...serverQuestion,
+            // Preserve local response if it exists and differs from server
+            response: localQuestion.response !== undefined && localQuestion.response !== serverQuestion.response
+              ? localQuestion.response
+              : serverQuestion.response,
+            // Preserve local notes if they differ from server
+            notes: localQuestion.notes !== serverQuestion.notes ? localQuestion.notes : serverQuestion.notes,
+            // Preserve local evidence if modified
+            evidence: localQuestion.evidence && localQuestion.evidence.length > 0 && 
+                     JSON.stringify(localQuestion.evidence) !== JSON.stringify(serverQuestion.evidence)
+              ? localQuestion.evidence
+              : serverQuestion.evidence,
+            // Preserve local recommendations if modified
+            recommendations: localQuestion.recommendations && localQuestion.recommendations.length > 0 &&
+                           JSON.stringify(localQuestion.recommendations) !== JSON.stringify(serverQuestion.recommendations)
+              ? localQuestion.recommendations
+              : serverQuestion.recommendations
+          };
+        });
+      });
     }
   }, [savedQuestions]);
 
