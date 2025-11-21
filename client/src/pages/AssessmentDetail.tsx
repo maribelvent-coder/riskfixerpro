@@ -23,7 +23,8 @@ import OfficeBuildingInterview from "@/components/OfficeBuildingInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
 import { RiskAssessmentNBS } from "@/components/RiskAssessmentNBS";
 import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse } from "lucide-react";
+import RetailDashboard from "@/pages/assessments/RetailDashboard";
+import { ArrowLeft, MapPin, User, Calendar, Building, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -222,7 +223,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     if (templateId === "warehouse-distribution") {
       baseTabs.push({ id: "warehouse", label: "Warehouse Operations", icon: Warehouse });
     } else if (templateId === "retail-store") {
-      baseTabs.push({ id: "retail", label: "Retail Operations", icon: Building });
+      baseTabs.push({ id: "retail", label: "Retail Operations", icon: ShoppingBag });
     } else if (templateId === "manufacturing-facility") {
       baseTabs.push({ id: "manufacturing", label: "Manufacturing Operations", icon: Building });
     } else if (templateId === "data-center") {
@@ -637,21 +638,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         {/* Retail Operations Tab */}
         <TabsContent value="retail" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Retail Operations</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Retail-specific security analysis and loss prevention metrics
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">Retail Operations Dashboard</p>
-                <p className="text-sm">Coming soon - configure shrinkage rates, inventory controls, and POS security</p>
-              </div>
-            </CardContent>
-          </Card>
+          <RetailDashboard />
         </TabsContent>
 
         {/* Manufacturing Operations Tab */}

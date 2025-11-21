@@ -30,6 +30,7 @@ import Classes from "@/pages/Classes";
 import Consulting from "@/pages/Consulting";
 import Contact from "@/pages/Contact";
 import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
+import RetailDashboard from "@/pages/assessments/RetailDashboard";
 import NotFound from "@/pages/not-found";
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
@@ -114,6 +115,14 @@ function App() {
             {(params) => (
               <ProtectedAppLayout>
                 <WarehouseDashboard />
+              </ProtectedAppLayout>
+            )}
+          </Route>
+          
+          <Route path="/app/assessments/:id/retail">
+            {(params) => (
+              <ProtectedAppLayout>
+                <RetailDashboard />
               </ProtectedAppLayout>
             )}
           </Route>

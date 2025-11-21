@@ -1659,6 +1659,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RETAIL STORE FRAMEWORK ROUTES
+  // Get retail-specific analysis including shrinkage risk score
+  app.get("/api/assessments/:id/retail-analysis", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessment = req.assessment; // Verified by middleware
+      
+      // Import the shrinkage risk scoring function
+      const { calculateShrinkageRiskScore } = await import("./services/risk-engine/adapters/retail");
+      
+      // Calculate shrinkage risk score
+      const riskAnalysis = calculateShrinkageRiskScore(assessment);
+      
+      // Return comprehensive retail data
+      res.json({
+        assessment,
+        riskAnalysis,
+      });
+    } catch (error) {
+      console.error("Error generating retail analysis:", error);
+      res.status(500).json({ error: "Failed to generate retail analysis" });
+    }
+  });
+
+  // Update retail profile (JSONB column)
+  app.patch("/api/assessments/:id/retail-profile", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const assessmentId = req.params.id;
+      const retailProfileData = req.body;
+      
+      // Validate retail profile data structure
+      const retailProfileSchema = z.object({
+        annualRevenue: z.number().optional(),
+        shrinkageRate: z.number().optional(),
+        highValueMerchandise: z.array(z.string()).optional(),
+        storeFormat: z.string().optional(),
+      });
+      
+      const validatedProfile = retailProfileSchema.parse(retailProfileData);
+      
+      // Update assessment with new retail_profile data
+      const updatedAssessment = await storage.updateAssessment(assessmentId, {
+        retail_profile: validatedProfile,
+      });
+      
+      if (!updatedAssessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+      
+      res.json(updatedAssessment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid retail profile data", details: error.errors });
+      }
+      console.error("Error updating retail profile:", error);
+      res.status(500).json({ error: "Failed to update retail profile" });
+    }
+  });
+
   app.post("/api/assessments", async (req, res) => {
     try {
       const userId = req.session.userId;
