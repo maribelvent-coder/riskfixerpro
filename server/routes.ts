@@ -2417,7 +2417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // For facility paradigm, copy to facilitySurveyQuestions table (existing behavior)
               const facilityQuestions: InsertFacilitySurveyQuestion[] = templateQuestions.map(tq => ({
                 assessmentId: assessment.id,
-                templateQuestionId: tq.id,
+                templateQuestionId: tq.questionId, // FIX: Use questionId (string) not id (UUID) for JOIN matching
                 category: tq.category,
                 subcategory: tq.subcategory || null,
                 question: tq.question,
