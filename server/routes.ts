@@ -1900,7 +1900,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Assessment not found" });
       }
       
-      res.json(updatedAssessment);
+      // AUTO-GENERATE office risk scenarios after profile update (Hybrid Model)
+      console.log(`🏢 Auto-generating office risk scenarios for assessment ${assessmentId}`);
+      
+      try {
+        // Create implicit assets FIRST (idempotent - only if missing)
+        const existingAssets = await storage.getRiskAssets(assessmentId);
+        const implicitAssetNames = ["Personnel", "Facility", "Data & Information"];
+        let assetsCreated = 0;
+        
+        for (const assetName of implicitAssetNames) {
+          const exists = existingAssets.some(a => a.name === assetName);
+          if (!exists) {
+            try {
+              await storage.createRiskAsset({
+                assessmentId,
+                name: assetName,
+                type: assetName === "Facility" ? "Property" : assetName === "Data & Information" ? "Information" : "People",
+                criticality: 3,
+                owner: "Auto-generated",
+                scope: `Implicit asset for ${assetName.toLowerCase()} risk scenarios`,
+                notes: "Auto-created to support standard office building risk assessment"
+              });
+              assetsCreated++;
+              console.log(`✓ Created implicit asset: ${assetName}`);
+            } catch (assetError) {
+              console.error(`⚠️ Failed to create asset ${assetName}:`, assetError);
+            }
+          }
+        }
+        
+        // Check if scenarios already exist (after ensuring assets exist)
+        const existingScenarios = await storage.getRiskScenarios(assessmentId);
+        if (existingScenarios.length > 0) {
+          console.log(`⏭️  Skipping scenario generation - ${existingScenarios.length} scenarios already exist`);
+          
+          // Reload assessment to include any newly created assets
+          const refreshedAssessment = await storage.getAssessment(assessmentId);
+          
+          return res.json({
+            ...refreshedAssessment,
+            _scenarioGeneration: {
+              success: true,
+              scenariosCreated: 0,
+              assetsCreated,
+              scenariosSkipped: existingScenarios.length,
+              summary: assetsCreated > 0 
+                ? `Created ${assetsCreated} implicit assets; ${existingScenarios.length} scenarios already exist`
+                : `${existingScenarios.length} scenarios already exist`
+            }
+          });
+        }
+        
+        // Get refreshed assets list
+        const assets = await storage.getRiskAssets(assessmentId);
+        const personnelAsset = assets.find(a => a.name === "Personnel");
+        const facilityAsset = assets.find(a => a.name === "Facility");
+        const dataAsset = assets.find(a => a.name === "Data & Information");
+        
+        // Generate standard office risk scenarios with full schema-compliant fields
+        const scenarios = [
+          {
+            assessmentId,
+            assetId: personnelAsset?.id,
+            asset: "Personnel",
+            scenario: "Workplace Violence - Active Threat",
+            threatType: "human",
+            threatDescription: "Armed individual enters facility with intent to cause harm",
+            vulnerabilityDescription: "Insufficient access control and emergency response protocols",
+            likelihood: "low",
+            impact: "catastrophic",
+            riskLevel: "High",
+            currentLikelihood: "low",
+            currentImpact: "catastrophic",
+            currentRiskLevel: "High",
+            likelihoodScore: 2,
+            impactScore: 5,
+            inherentRisk: 50,
+            controlEffectiveness: 0,
+            residualRisk: 50
+          },
+          {
+            assessmentId,
+            assetId: personnelAsset?.id,
+            asset: "Personnel",
+            scenario: "Workplace Violence - Domestic Spillover",
+            threatType: "human",
+            threatDescription: "Personal conflict extends into workplace environment",
+            vulnerabilityDescription: "Lack of threat assessment procedures for domestic situations",
+            likelihood: "medium",
+            impact: "major",
+            riskLevel: "High",
+            currentLikelihood: "medium",
+            currentImpact: "major",
+            currentRiskLevel: "High",
+            likelihoodScore: 3,
+            impactScore: 4,
+            inherentRisk: 48,
+            controlEffectiveness: 0,
+            residualRisk: 48
+          },
+          {
+            assessmentId,
+            assetId: facilityAsset?.id,
+            asset: "Facility",
+            scenario: "Unauthorized Facility Access",
+            threatType: "human",
+            threatDescription: "Intruder gains access to restricted areas",
+            vulnerabilityDescription: "Weak perimeter controls or badge system vulnerabilities",
+            likelihood: "medium",
+            impact: "moderate",
+            riskLevel: "Medium",
+            currentLikelihood: "medium",
+            currentImpact: "moderate",
+            currentRiskLevel: "Medium",
+            likelihoodScore: 3,
+            impactScore: 3,
+            inherentRisk: 27,
+            controlEffectiveness: 0,
+            residualRisk: 27
+          },
+          {
+            assessmentId,
+            assetId: dataAsset?.id,
+            asset: "Data & Information",
+            scenario: "Data Breach - Physical Document Exposure",
+            threatType: "operational",
+            threatDescription: "Sensitive documents left unsecured or improperly disposed",
+            vulnerabilityDescription: "Inadequate clean desk policy and document handling procedures",
+            likelihood: "high",
+            impact: "major",
+            riskLevel: "Critical",
+            currentLikelihood: "high",
+            currentImpact: "major",
+            currentRiskLevel: "Critical",
+            likelihoodScore: 4,
+            impactScore: 4,
+            inherentRisk: 64,
+            controlEffectiveness: 0,
+            residualRisk: 64
+          },
+          {
+            assessmentId,
+            assetId: dataAsset?.id,
+            asset: "Data & Information",
+            scenario: "Social Engineering Attack",
+            threatType: "human",
+            threatDescription: "Attacker manipulates staff to gain sensitive information",
+            vulnerabilityDescription: "Insufficient security awareness training",
+            likelihood: "high",
+            impact: "moderate",
+            riskLevel: "High",
+            currentLikelihood: "high",
+            currentImpact: "moderate",
+            currentRiskLevel: "High",
+            likelihoodScore: 4,
+            impactScore: 3,
+            inherentRisk: 48,
+            controlEffectiveness: 0,
+            residualRisk: 48
+          }
+        ];
+        
+        let created = 0;
+        const errors: string[] = [];
+        
+        for (const scenarioData of scenarios) {
+          try {
+            await storage.createRiskScenario(scenarioData);
+            created++;
+          } catch (scenarioError) {
+            const errorMsg = scenarioError instanceof Error ? scenarioError.message : 'Unknown error';
+            errors.push(`Failed to create scenario "${scenarioData.scenario}": ${errorMsg}`);
+            console.error(`⚠️ Failed to create scenario "${scenarioData.scenario}":`, scenarioError);
+          }
+        }
+        
+        console.log(`✅ Auto-generated ${created}/${scenarios.length} office risk scenarios`);
+        
+        // Reload assessment to include freshly created assets and scenarios
+        const refreshedAssessment = await storage.getAssessment(assessmentId);
+        
+        res.json({
+          ...refreshedAssessment,
+          _scenarioGeneration: {
+            success: created > 0,
+            scenariosCreated: created,
+            assetsCreated,
+            summary: created === scenarios.length 
+              ? `Auto-generated ${created} standard office building risk scenarios`
+              : `Partially generated: ${created}/${scenarios.length} scenarios created`,
+            errors: errors.length > 0 ? errors : undefined
+          }
+        });
+      } catch (genError) {
+        // Scenario generation failed but profile save succeeded
+        console.error('⚠️ Office scenario auto-generation failed:', genError);
+        res.json(updatedAssessment);
+      }
     } catch (error) {
       console.error("Error updating office profile:", error);
       res.status(500).json({ error: "Failed to update office profile" });

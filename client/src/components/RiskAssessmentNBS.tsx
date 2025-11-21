@@ -1395,7 +1395,7 @@ function TreatmentsList({ assessmentId, treatments, scenarios, onEdit, onDelete 
 export function RiskAssessmentNBS({ assessmentId, onComplete }: RiskAssessmentNBSProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("assets");
+  const [activeTab, setActiveTab] = useState("scenarios"); // Default to scenarios tab for immediate value
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
   const [scenarioDialogOpen, setScenarioDialogOpen] = useState(false);
   const [treatmentDialogOpen, setTreatmentDialogOpen] = useState(false);
