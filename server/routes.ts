@@ -2344,6 +2344,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Narrative Intelligence - Generate professional analysis for warehouse risk scenarios
+  app.post("/api/risk-scenarios/:id/generate-narrative", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      
+      // Fetch the risk scenario
+      const scenario = await storage.getRiskScenario(id);
+      if (!scenario) {
+        return res.status(404).json({ error: "Risk scenario not found" });
+      }
+
+      // Verify ownership through parent assessment
+      const assessment = await storage.getAssessment(scenario.assessmentId);
+      if (!assessment || assessment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Generate AI narrative using OpenAI
+      const { generateWarehouseRiskNarrative } = await import("./services/ai/warehouse-narrative");
+      const narrative = await generateWarehouseRiskNarrative(scenario, assessment);
+      
+      // Update only the threatDescription field to avoid corrupting other data
+      const updatedScenario = await storage.updateRiskScenario(id, {
+        threatDescription: narrative
+      });
+      
+      console.log(`✅ Generated and saved AI narrative for scenario: ${scenario.scenario}`);
+      
+      res.json({
+        success: true,
+        narrative,
+        updatedScenario
+      });
+      
+    } catch (error) {
+      console.error("❌ Error generating risk narrative:", error);
+      res.status(500).json({ 
+        error: "Failed to generate AI narrative",
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.delete("/api/risk-scenarios/:id", async (req, res) => {
     try {
       const userId = req.session.userId;

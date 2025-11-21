@@ -27,7 +27,8 @@ import {
   Calculator,
   BarChart3,
   Target,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from "lucide-react";
 
 interface RiskAssessmentNBSProps {
@@ -531,6 +532,7 @@ interface ScenariosListProps {
 
 function ScenariosList({ assessmentId, scenarios, assets, onEdit, onDelete }: ScenariosListProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -538,6 +540,40 @@ function ScenariosList({ assessmentId, scenarios, assets, onEdit, onDelete }: Sc
     },
     onError: (error: Error) => {
       toast({ title: "Failed to delete scenario", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const generateNarrativeMutation = useMutation({
+    mutationFn: async (scenarioId: string) => {
+      const response = await apiRequest("POST", `/api/risk-scenarios/${scenarioId}/generate-narrative`);
+      return { scenarioId, ...response };
+    },
+    onSuccess: (data, scenarioId) => {
+      toast({ 
+        title: "AI Analysis Generated", 
+        description: "Professional security narrative has been generated successfully." 
+      });
+      
+      // Update cache immediately with full updated scenario from API
+      queryClient.setQueryData<RiskScenario[]>(
+        ["/api/assessments", assessmentId, "risk-scenarios"],
+        (oldScenarios) => {
+          if (!oldScenarios) return oldScenarios;
+          return oldScenarios.map(s => 
+            s.id === scenarioId ? data.updatedScenario : s
+          );
+        }
+      );
+      
+      // Also invalidate to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-scenarios"] });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Failed to generate AI analysis", 
+        description: error.message, 
+        variant: "destructive" 
+      });
     },
   });
 
@@ -600,9 +636,36 @@ function ScenariosList({ assessmentId, scenarios, assets, onEdit, onDelete }: Sc
                       </Badge>
                     </div>
                   </div>
+
+                  {/* AI-Generated Professional Analysis */}
+                  {scenario.threatDescription && scenario.threatDescription.length > 100 && (
+                    <div className="mt-3 p-3 rounded-md bg-muted/50 border border-border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-medium text-primary">AI Security Analysis</span>
+                      </div>
+                      <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                        {scenario.threatDescription}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => generateNarrativeMutation.mutate(scenario.id)}
+                    disabled={generateNarrativeMutation.isPending}
+                    title="Generate AI Analysis"
+                    data-testid={`button-generate-ai-${scenario.id}`}
+                  >
+                    {generateNarrativeMutation.isPending ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                  </Button>
                   <Button
                     size="icon"
                     variant="outline"
