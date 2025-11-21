@@ -6,6 +6,7 @@
  * 2. Physical Security Survey Responses - Qualitative security assessments
  * 
  * Based on Warehouse Framework v2.0
+ * Production-ready implementation with proper schema compliance and 1-125 risk scale
  */
 
 import type { IStorage } from '../../../storage';
@@ -39,6 +40,82 @@ export interface WarehouseScenarioGenerationResult {
   criticalScenarios: number;
   summary: string;
   errors?: string[];
+}
+
+/**
+ * Helper function to extract survey response from JSONB field
+ * Handles both structured objects and plain values
+ */
+function getSurveyResponse(surveyMap: Map<string, any>, questionId: string): any {
+  const responseData = surveyMap.get(questionId);
+  
+  if (!responseData) {
+    return null;
+  }
+  
+  // Handle structured response objects
+  if (typeof responseData === 'object' && responseData !== null) {
+    // Try different common field names for the actual value
+    if ('value' in responseData) return responseData.value;
+    if ('text' in responseData) return responseData.text;
+    if ('optionId' in responseData) return responseData.optionId;
+    if ('answer' in responseData) return responseData.answer;
+    if ('selected' in responseData) return responseData.selected;
+    
+    // If it's an object with a condition property (for condition-type questions)
+    if ('condition' in responseData) return responseData.condition;
+  }
+  
+  // Return as-is for plain values (string, number, boolean)
+  return responseData;
+}
+
+/**
+ * Normalize answer to lowercase string for comparison
+ */
+function normalizeAnswer(answer: any): string {
+  if (answer === null || answer === undefined) {
+    return '';
+  }
+  
+  if (typeof answer === 'boolean') {
+    return answer ? 'yes' : 'no';
+  }
+  
+  return String(answer).toLowerCase().trim();
+}
+
+/**
+ * Calculate overall risk level from inherent risk score (1-125 scale)
+ * Platform-wide thresholds for T×V×I formula
+ */
+function classifyRiskLevel(inherentRisk: number): string {
+  if (inherentRisk >= 75) return 'Critical'; // High scores across the board
+  if (inherentRisk >= 50) return 'High'; // Elevated risk
+  if (inherentRisk >= 25) return 'Medium'; // Moderate risk
+  return 'Low'; // Lower risk
+}
+
+/**
+ * Map numeric score to text descriptor for likelihood
+ */
+function mapLikelihoodToText(score: number): string {
+  if (score >= 4.5) return 'very-high';
+  if (score >= 3.5) return 'high';
+  if (score >= 2.5) return 'medium';
+  if (score >= 1.5) return 'low';
+  return 'very-low';
+}
+
+/**
+ * Map numeric score to text descriptor for impact
+ */
+function mapImpactToText(score: number): string {
+  if (score >= 4.5) return 'catastrophic';
+  if (score >= 3.5) return 'major';
+  if (score >= 2.5) return 'moderate';
+  if (score >= 1.5) return 'minor';
+  return 'negligible';
 }
 
 /**
@@ -224,21 +301,19 @@ function generateCargoTheftScenario(
   let vulnerabilityScore = 3; // Default moderate
   let vulnerabilityReason = "Trailer seal verification process not assessed";
   
-  const dock4Response = surveyMap.get('dock_4');
-  if (dock4Response) {
-    const answer = normalizeAnswer(dock4Response);
-    
+  const dock4Answer = normalizeAnswer(getSurveyResponse(surveyMap, 'dock_4'));
+  if (dock4Answer) {
     // Match against actual option strings from warehouse questionnaire
-    if (answer.includes('no seal') || answer.includes('no verification')) {
+    if (dock4Answer.includes('no seal') || dock4Answer.includes('no verification')) {
       vulnerabilityScore = 5;
       vulnerabilityReason = "No trailer seal verification performed";
-    } else if (answer.includes('informal')) {
+    } else if (dock4Answer.includes('informal')) {
       vulnerabilityScore = 4;
       vulnerabilityReason = "Only informal seal checking (not documented)";
-    } else if (answer.includes('manual')) {
+    } else if (dock4Answer.includes('manual')) {
       vulnerabilityScore = 2;
       vulnerabilityReason = "Manual seal verification with documentation in place";
-    } else if (answer.includes('electronic')) {
+    } else if (dock4Answer.includes('electronic')) {
       vulnerabilityScore = 1;
       vulnerabilityReason = "Electronic seal verification system with documentation in place";
     }
@@ -253,6 +328,11 @@ function generateCargoTheftScenario(
   // Calculate inherent risk: T × V × I (range 1-125)
   const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
+  // Map scores to text descriptors
+  const likelihoodText = mapLikelihoodToText(likelihoodScore);
+  const impactText = mapImpactToText(impactScore);
+  const riskLevel = classifyRiskLevel(inherentRisk);
+  
   return {
     assessmentId,
     scenario: "Cargo Theft (Full Truckload)",
@@ -260,16 +340,23 @@ function generateCargoTheftScenario(
     threatType: "human",
     threatDescription: "Organized cargo theft targeting full truckloads",
     vulnerabilityDescription: vulnerabilityReason,
-    likelihood: mapScoreToText(likelihoodScore, 'likelihood'),
-    impact: mapScoreToText(impactScore, 'impact'),
-    riskLevel: calculateRiskLevel(inherentRisk),
+    
+    // Required text-based risk fields
+    likelihood: likelihoodText,
+    impact: impactText,
+    riskLevel: riskLevel,
+    
+    // Current state fields (initially same as inherent)
+    currentLikelihood: likelihoodText,
+    currentImpact: impactText,
+    currentRiskLevel: riskLevel,
+    
+    // Numeric risk calculations (T×V×I formula, 1-125 scale)
     likelihoodScore,
     impactScore,
     inherentRisk,
-    controlEffectiveness: 0,
-    residualRisk: inherentRisk,
-    // Include vulnerability score for schema compliance (same as likelihood in T×V×I)
-    vulnerabilityScore
+    controlEffectiveness: 0, // No controls applied yet
+    residualRisk: inherentRisk // Same as inherent before controls
   };
 }
 
@@ -310,21 +397,19 @@ function generateLoadingDockBreachScenario(
   let likelihoodScore = 3; // Baseline moderate
   let likelihoodReason = "Moderate driver activity";
   
-  const dock9Response = surveyMap.get('dock_9');
-  if (dock9Response) {
-    const answer = normalizeAnswer(dock9Response);
-    
+  const dock9Answer = normalizeAnswer(getSurveyResponse(surveyMap, 'dock_9'));
+  if (dock9Answer) {
     // Match against actual option strings from warehouse questionnaire
-    if (answer.includes('no restrictions')) {
+    if (dock9Answer.includes('no restrictions')) {
       likelihoodScore = 5;
       likelihoodReason = "Drivers have unrestricted access to warehouse during loading/unloading";
-    } else if (answer.includes('restricted but no physical barrier')) {
+    } else if (dock9Answer.includes('restricted but no physical barrier')) {
       likelihoodScore = 4;
       likelihoodReason = "Drivers restricted but no physical barrier in place";
-    } else if (answer.includes('escorted')) {
+    } else if (dock9Answer.includes('escorted')) {
       likelihoodScore = 2;
       likelihoodReason = "Drivers are escorted if they need to enter warehouse";
-    } else if (answer.includes('designated waiting area')) {
+    } else if (dock9Answer.includes('designated waiting area')) {
       likelihoodScore = 1;
       likelihoodReason = "Drivers must remain in physically separated waiting area";
     }
@@ -333,6 +418,10 @@ function generateLoadingDockBreachScenario(
   const impactScore = 4; // High impact - direct facility access
   const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
+  const likelihoodText = mapLikelihoodToText(likelihoodScore);
+  const impactText = mapImpactToText(impactScore);
+  const riskLevel = classifyRiskLevel(inherentRisk);
+  
   return {
     assessmentId,
     scenario: "Loading Dock Breach",
@@ -340,15 +429,20 @@ function generateLoadingDockBreachScenario(
     threatType: "human",
     threatDescription: "Unauthorized access through loading dock during operations",
     vulnerabilityDescription: `${vulnerabilityReason}. ${likelihoodReason}.`,
-    likelihood: mapScoreToText(likelihoodScore, 'likelihood'),
-    impact: mapScoreToText(impactScore, 'impact'),
-    riskLevel: calculateRiskLevel(inherentRisk),
+    
+    likelihood: likelihoodText,
+    impact: impactText,
+    riskLevel: riskLevel,
+    
+    currentLikelihood: likelihoodText,
+    currentImpact: impactText,
+    currentRiskLevel: riskLevel,
+    
     likelihoodScore,
     impactScore,
     inherentRisk,
     controlEffectiveness: 0,
-    residualRisk: inherentRisk,
-    vulnerabilityScore
+    residualRisk: inherentRisk
   };
 }
 
@@ -364,16 +458,14 @@ function generateInsiderTheftScenario(
 ): InsertRiskScenario | null {
   
   // Trigger: Check personnel_1 (background checks)
-  const personnel1Response = surveyMap.get('personnel_1');
-  if (!personnel1Response) {
+  const personnel1Answer = normalizeAnswer(getSurveyResponse(surveyMap, 'personnel_1'));
+  if (!personnel1Answer) {
     return null; // Don't create scenario if not assessed
   }
   
-  const answer = normalizeAnswer(personnel1Response);
-  
   // Only create scenario if background checks are insufficient
   // Check for various forms of "no" or "basic" responses
-  if (!answer.includes('no') && !answer.includes('none') && !answer.includes('basic')) {
+  if (!personnel1Answer.includes('no') && !personnel1Answer.includes('none') && !personnel1Answer.includes('basic')) {
     return null; // Adequate background checks in place (comprehensive checks)
   }
   
@@ -381,7 +473,7 @@ function generateInsiderTheftScenario(
   let vulnerabilityScore = 5;
   let vulnerabilityReason = "No background checks performed on warehouse staff";
   
-  if (answer === 'basic') {
+  if (personnel1Answer.includes('basic')) {
     vulnerabilityScore = 4;
     vulnerabilityReason = "Only basic background checks performed (insufficient for high-value warehouse)";
   }
@@ -409,6 +501,10 @@ function generateInsiderTheftScenario(
   const likelihoodScore = 4; // High likelihood with unvetted staff
   const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
+  const likelihoodText = mapLikelihoodToText(likelihoodScore);
+  const impactText = mapImpactToText(impactScore);
+  const riskLevel = classifyRiskLevel(inherentRisk);
+  
   return {
     assessmentId,
     scenario: "Insider Theft Risk (Unvetted Staff)",
@@ -416,15 +512,20 @@ function generateInsiderTheftScenario(
     threatType: "human",
     threatDescription: "Theft by warehouse employees or contractors",
     vulnerabilityDescription: `${vulnerabilityReason}. ${impactReason}.`,
-    likelihood: mapScoreToText(likelihoodScore, 'likelihood'),
-    impact: mapScoreToText(impactScore, 'impact'),
-    riskLevel: calculateRiskLevel(inherentRisk),
+    
+    likelihood: likelihoodText,
+    impact: impactText,
+    riskLevel: riskLevel,
+    
+    currentLikelihood: likelihoodText,
+    currentImpact: impactText,
+    currentRiskLevel: riskLevel,
+    
     likelihoodScore,
     impactScore,
     inherentRisk,
     controlEffectiveness: 0,
-    residualRisk: inherentRisk,
-    vulnerabilityScore
+    residualRisk: inherentRisk
   };
 }
 
@@ -438,15 +539,13 @@ function generatePerimeterIntrusionScenario(
 ): InsertRiskScenario | null {
   
   // Trigger: Check perimeter_1 (fence condition)
-  const perimeter1Response = surveyMap.get('perimeter_1');
-  if (!perimeter1Response) {
+  const perimeter1Answer = normalizeAnswer(getSurveyResponse(surveyMap, 'perimeter_1'));
+  if (!perimeter1Answer) {
     return null; // Don't create scenario if not assessed
   }
   
-  const answer = normalizeAnswer(perimeter1Response);
-  
   // Only create scenario if fence is damaged or absent
-  if (answer !== 'damaged' && answer !== 'none' && answer !== 'poor') {
+  if (!perimeter1Answer.includes('damaged') && !perimeter1Answer.includes('none') && !perimeter1Answer.includes('poor')) {
     return null; // Adequate perimeter security
   }
   
@@ -454,7 +553,7 @@ function generatePerimeterIntrusionScenario(
   let vulnerabilityScore = 5;
   let vulnerabilityReason = "No perimeter fencing";
   
-  if (answer === 'damaged' || answer === 'poor') {
+  if (perimeter1Answer.includes('damaged') || perimeter1Answer.includes('poor')) {
     vulnerabilityScore = 4;
     vulnerabilityReason = "Perimeter fence is damaged or in poor condition";
   }
@@ -463,6 +562,10 @@ function generatePerimeterIntrusionScenario(
   const impactScore = 4; // High impact - unrestricted site access
   const inherentRisk = likelihoodScore * vulnerabilityScore * impactScore;
   
+  const likelihoodText = mapLikelihoodToText(likelihoodScore);
+  const impactText = mapImpactToText(impactScore);
+  const riskLevel = classifyRiskLevel(inherentRisk);
+  
   return {
     assessmentId,
     scenario: "Perimeter Security Gap",
@@ -470,72 +573,19 @@ function generatePerimeterIntrusionScenario(
     threatType: "human",
     threatDescription: "Unauthorized intrusion through compromised perimeter",
     vulnerabilityDescription: vulnerabilityReason,
-    likelihood: mapScoreToText(likelihoodScore, 'likelihood'),
-    impact: mapScoreToText(impactScore, 'impact'),
-    riskLevel: calculateRiskLevel(inherentRisk),
+    
+    likelihood: likelihoodText,
+    impact: impactText,
+    riskLevel: riskLevel,
+    
+    currentLikelihood: likelihoodText,
+    currentImpact: impactText,
+    currentRiskLevel: riskLevel,
+    
     likelihoodScore,
     impactScore,
     inherentRisk,
     controlEffectiveness: 0,
-    residualRisk: inherentRisk,
-    vulnerabilityScore
+    residualRisk: inherentRisk
   };
-}
-
-/**
- * Normalize survey response to standard answer format
- */
-function normalizeAnswer(response: any): string {
-  if (typeof response === 'string') {
-    return response.toLowerCase().trim();
-  }
-  
-  if (typeof response === 'boolean') {
-    return response ? 'yes' : 'no';
-  }
-  
-  if (typeof response === 'object' && response !== null) {
-    // Handle complex response objects
-    if (response.condition) {
-      return String(response.condition).toLowerCase();
-    }
-    if (response.answer) {
-      return String(response.answer).toLowerCase();
-    }
-    if (response.value) {
-      return String(response.value).toLowerCase();
-    }
-  }
-  
-  return String(response).toLowerCase();
-}
-
-/**
- * Map numeric score to text descriptor
- */
-function mapScoreToText(score: number, type: 'likelihood' | 'impact'): string {
-  if (type === 'likelihood') {
-    if (score >= 4.5) return 'very-high';
-    if (score >= 3.5) return 'high';
-    if (score >= 2.5) return 'medium';
-    if (score >= 1.5) return 'low';
-    return 'very-low';
-  } else {
-    if (score >= 4.5) return 'catastrophic';
-    if (score >= 3.5) return 'major';
-    if (score >= 2.5) return 'moderate';
-    if (score >= 1.5) return 'minor';
-    return 'negligible';
-  }
-}
-
-/**
- * Calculate overall risk level from inherent risk score (1-125 scale)
- */
-function calculateRiskLevel(inherentRisk: number): string {
-  // Based on 1-125 scale (T×V×I where each is 1-5)
-  if (inherentRisk >= 75) return 'Critical'; // High scores across the board
-  if (inherentRisk >= 45) return 'High'; // Elevated risk
-  if (inherentRisk >= 15) return 'Medium'; // Moderate risk
-  return 'Low'; // Lower risk
 }
