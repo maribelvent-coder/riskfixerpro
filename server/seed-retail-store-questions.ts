@@ -131,10 +131,11 @@ async function seedRetailQuestions() {
             category: question.section,
             subcategory: question.zoneApplicable?.join(', ') || null,
             question: question.questionText,
-            bestPractice: question.options?.join('; ') || null,
+            bestPractice: null, // Not using this field for options anymore
             rationale: question.riskIndicators?.join('; ') || null,
             importance: question.required ? 'High' : 'Medium',
             type: question.questionType.replace('_', '-'), // Convert yes_no to yes-no
+            options: question.options || null, // Store options array for checklist questions
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
             controlLibraryId: controlLibraryId,
             riskDirection: question.riskDirection || 'positive' // Default to 'positive' if not specified
@@ -153,10 +154,11 @@ async function seedRetailQuestions() {
             category: question.section,
             subcategory: question.zoneApplicable?.join(', ') || null,
             question: question.questionText,
-            bestPractice: question.options?.join('; ') || null,
+            bestPractice: null, // Not using this field for options anymore
             rationale: question.riskIndicators?.join('; ') || null,
             importance: question.required ? 'High' : 'Medium',
             type: question.questionType.replace('_', '-'),
+            options: question.options || null, // Store options array for checklist questions
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
             controlLibraryId: controlLibraryId,
             riskDirection: question.riskDirection || 'positive' // Default to 'positive' if not specified

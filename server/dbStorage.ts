@@ -582,8 +582,9 @@ export class DbStorage implements IStorage {
         conditionalOnQuestionId: schema.facilitySurveyQuestions.conditionalOnQuestionId,
         showWhenAnswer: schema.facilitySurveyQuestions.showWhenAnswer,
         createdAt: schema.facilitySurveyQuestions.createdAt,
-        // NEW: Include riskDirection from template_questions for proper scoring
+        // Include riskDirection and options from template_questions for proper scoring and checklist rendering
         riskDirection: schema.templateQuestions.riskDirection,
+        options: schema.templateQuestions.options,
       })
       .from(schema.facilitySurveyQuestions)
       .leftJoin(

@@ -277,6 +277,7 @@ export const templateQuestions = pgTable("template_questions", {
   rationale: text("rationale"), // Risk being mitigated
   importance: text("importance"), // Critical, High, Medium, Low
   type: text("type").notNull().default("yes-no"), // yes-no, rating, text, checklist
+  options: text("options").array(), // For checklist/multi-select questions
   orderIndex: integer("order_index").notNull(), // Display order
   riskDirection: text("risk_direction").notNull().default("positive"), // 'positive' = Yes is good, 'negative' = Yes is bad (incidents/threats)
   controlLibraryId: varchar("control_library_id").references(() => controlLibrary.id), // Link to control_library for risk calculation
