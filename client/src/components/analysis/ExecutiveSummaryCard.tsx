@@ -17,9 +17,7 @@ export function ExecutiveSummaryCard({ assessmentId, executiveSummary }: Executi
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const response = await apiRequest(`/api/assessments/${assessmentId}/analyze`, {
-        method: "POST"
-      });
+      const response = await apiRequest("POST", `/api/assessments/${assessmentId}/analyze`);
 
       toast({
         title: "Analysis Complete",
