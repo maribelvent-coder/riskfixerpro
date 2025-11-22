@@ -160,22 +160,25 @@ ${scenario.vulnerabilityDescription}`;
   }
   
   // Construct the full prompt
-  return `Write a professional, 3-paragraph security risk analysis for this data center security scenario.
+  return `Write a professional, 4-paragraph security risk analysis for this data center security scenario using a Security-First approach.
 
 ${facilityContext}
 
 ${riskDetails}${vulnerabilityDetails}
 
-**Instructions:**
+**Instructions - Security Professional Perspective:**
 
-**Paragraph 1 - Context & Threat Definition (3-4 sentences):**
-Define this specific risk in the context of THIS data center facility. Reference the tier level, uptime requirement, or compliance frameworks to establish why this threat is material to operations. For SLA breach scenarios, emphasize the customer count affected and penalty costs. For compliance gap scenarios, emphasize the regulatory frameworks at risk (SOC 2, PCI-DSS, HIPAA, ISO 27001) and audit implications.
+**Paragraph 1 - Security Posture (3-4 sentences):**
+State the risk level and identify the primary threats to this facility. Reference key facility characteristics to establish threat landscape. Emphasize operational vulnerabilities specific to data centers (compliance gaps, SLA exposure, redundancy failures, environmental controls).
 
 **Paragraph 2 - Vulnerability Analysis (3-4 sentences):**
-Explain WHY the risk level is ${(scenario.riskLevel || 'elevated').toLowerCase()} based on the specific security gaps identified in the vulnerability assessment. Reference the actual findings (e.g., inadequate redundancy, missing environmental monitoring, insufficient physical access controls, backup power gaps, inadequate change management). Connect these vulnerabilities to how they enable the threat.
+Identify the specific security gaps that create this risk level. Reference actual findings from the assessment (e.g., missing controls like redundancy systems, environmental monitoring, access control, backup power). Explain HOW these gaps enable the threat - this is the "Why" of the risk.
 
-**Paragraph 3 - Impact Assessment (3-4 sentences):**
-Describe the potential financial, operational, and regulatory consequences if this risk materializes. For SLA breach risks, quantify customer impact, revenue loss per hour of downtime, contractual penalties, and customer churn. For compliance gaps, focus on audit failures, certification loss (SOC 2 Type II, PCI-DSS), regulatory fines (GDPR, HIPAA), and customer trust erosion. Use specific metrics when available (uptime requirement, customer count, annual revenue).
+**Paragraph 3 - Recommendations (3-4 sentences):**
+Provide actionable security measures to close the gaps. List specific controls appropriate to data center facilities. Prioritize operational fixes over ROI calculations.
+
+**Paragraph 4 - Business Impact (2-3 sentences, BRIEF):**
+Briefly mention consequences if risk materializes. Keep this section concise - security professionals understand the stakes.
 
 **Formatting:**
 - Write in third person

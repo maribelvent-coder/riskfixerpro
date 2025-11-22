@@ -163,22 +163,25 @@ ${scenario.vulnerabilityDescription}`;
   }
   
   // Construct the full prompt
-  return `Write a professional, 3-paragraph security risk analysis for this warehouse security scenario.
+  return `Write a professional, 4-paragraph security risk analysis for this warehouse security scenario using a Security-First approach.
 
 ${facilityContext}
 
 ${riskDetails}${vulnerabilityDetails}
 
-**Instructions:**
+**Instructions - Security Professional Perspective:**
 
-**Paragraph 1 - Context & Threat Definition (3-4 sentences):**
-Define this specific risk in the context of THIS facility. Reference the warehouse type, inventory value, or high-value products to establish why this threat is material to the operation. Explain what the threat actor would target and why this facility is an attractive target.
+**Paragraph 1 - Security Posture (3-4 sentences):**
+State the risk level and identify the primary threats to this facility. Reference key facility characteristics to establish threat landscape. Emphasize operational vulnerabilities specific to warehouses (cargo theft patterns, loading dock security gaps, perimeter weaknesses, seal verification gaps).
 
 **Paragraph 2 - Vulnerability Analysis (3-4 sentences):**
-Explain WHY the risk level is ${(scenario.riskLevel || 'elevated').toLowerCase()} based on the specific security gaps identified in the vulnerability assessment. Reference the actual findings (e.g., lack of seal verification, no CCTV coverage, insufficient background checks, compromised perimeter). Connect these vulnerabilities to how they enable the threat.
+Identify the specific security gaps that create this risk level. Reference actual findings from the assessment (e.g., missing controls like seal verification, CCTV, access control, perimeter security). Explain HOW these gaps enable the threat - this is the "Why" of the risk.
 
-**Paragraph 3 - Impact Assessment (3-4 sentences):**
-Describe the potential financial, operational, and reputational consequences if this risk materializes. Use specific metrics when available (inventory value, shrinkage rate, prior incidents). Explain both immediate impact (direct loss) and secondary effects (insurance premiums, customer confidence, regulatory scrutiny).
+**Paragraph 3 - Recommendations (3-4 sentences):**
+Provide actionable security measures to close the gaps. List specific controls appropriate to warehouse facilities. Prioritize operational fixes over ROI calculations.
+
+**Paragraph 4 - Business Impact (2-3 sentences, BRIEF):**
+Briefly mention consequences if risk materializes. Keep this section concise - security professionals understand the stakes.
 
 **Formatting:**
 - Write in third person

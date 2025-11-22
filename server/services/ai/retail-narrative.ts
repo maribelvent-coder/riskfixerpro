@@ -164,28 +164,31 @@ ${scenario.vulnerabilityDescription}`;
   }
   
   // Construct the full prompt
-  return `Write a professional, 3-paragraph security risk analysis for this retail store security scenario.
+  return `Write a professional, 4-paragraph security risk analysis for this retail store security scenario using a Security-First approach.
 
 ${facilityContext}
 
 ${riskDetails}${vulnerabilityDetails}
 
-**Instructions:**
+**Instructions - Security Professional Perspective:**
 
-**Paragraph 1 - Context & Threat Definition (3-4 sentences):**
-Define this specific risk in the context of THIS retail store. Reference the store type, shrinkage rate, or annual revenue to establish why this threat is material to profitability. For shrinkage scenarios, emphasize the percentage impact on profit margins (industry avg 1.4-1.6%). For ORC scenarios, emphasize the organized nature, repeat offenders, and fencing operations. For employee theft, emphasize internal control weaknesses and trust violations.
+**Paragraph 1 - Security Posture (3-4 sentences):**
+State the risk level and identify the primary threats to this facility. Reference key facility characteristics to establish threat landscape. Emphasize operational vulnerabilities specific to retail stores (ORC patterns, shrinkage drivers, missing EAS tags, point-of-sale weaknesses).
 
 **Paragraph 2 - Vulnerability Analysis (3-4 sentences):**
-Explain WHY the risk level is ${(scenario.riskLevel || 'elevated').toLowerCase()} based on the specific security gaps identified in the vulnerability assessment. Reference the actual findings (e.g., inadequate EAS coverage, blind spots in surveillance, poor POS controls, insufficient employee training, missing receipt checks, weak fitting room monitoring). Connect these vulnerabilities to how they enable the threat.
+Identify the specific security gaps that create this risk level. Reference actual findings from the assessment (e.g., missing controls like EAS, CCTV, access control, perimeter security). Explain HOW these gaps enable the threat - this is the "Why" of the risk.
 
-**Paragraph 3 - Impact Assessment (3-4 sentences):**
-Describe the potential financial, operational, and competitive consequences if this risk materializes. For shrinkage risks, quantify annual loss dollars (shrinkage % × revenue), margin erosion, and compounding effects. For ORC, focus on targeted high-value merchandise, repeat victimization, and neighborhood crime patterns. For employee theft, focus on internal losses averaging 2-3× external theft, severance costs, and morale impact. Use specific metrics when available (shrinkage rate, annual revenue, ORC incidents).
+**Paragraph 3 - Recommendations (3-4 sentences):**
+Provide actionable security measures to close the gaps. List specific controls appropriate to retail stores. Prioritize operational fixes over ROI calculations.
+
+**Paragraph 4 - Business Impact (2-3 sentences, BRIEF):**
+Briefly mention consequences if risk materializes. Keep this section concise - security professionals understand the stakes.
 
 **Formatting:**
 - Write in third person
 - Use specific data from the assessment
 - Avoid generic security platitudes
-- Focus on THIS specific store's context
+- Focus on THIS specific facility's context
 - Be concise but authoritative
 - Do NOT use bullet points or lists
 - Write in flowing paragraph format`;
