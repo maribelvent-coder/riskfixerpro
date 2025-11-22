@@ -142,6 +142,13 @@ export interface RetailProfile {
   shrinkageRate?: number; // Percentage (e.g., 2.5 for 2.5%)
   highValueMerchandise?: string[]; // e.g., ['electronics', 'jewelry', 'cosmetics', 'designer_apparel']
   storeFormat?: string; // 'Mall', 'Standalone', 'Strip Center'
+  // TCOR - Total Cost of Risk fields
+  employeeCount?: number;
+  annualTurnoverRate?: number; // percentage (e.g., 50 for 50%)
+  avgHiringCost?: number; // dollars per hire
+  annualLiabilityEstimates?: number; // annual legal/insurance/WC costs
+  securityIncidentsPerYear?: number; // number of incidents
+  brandDamageEstimate?: number; // estimated brand/reputation cost
 }
 
 export interface AssessmentWithRetailData {
@@ -248,5 +255,78 @@ export function calculateShrinkageRiskScore(
       highValueGoods,
       incidentHistory,
     },
+  };
+}
+
+/**
+ * TOTAL COST OF RISK (TCOR) CALCULATION
+ * Calculates comprehensive annual risk exposure including direct and indirect costs
+ */
+
+export interface TCORBreakdown {
+  directLoss: number; // Annual shrinkage/theft losses
+  turnoverCost: number; // Security-related employee turnover costs
+  liabilityCost: number; // Insurance, legal, workers' comp
+  incidentCost: number; // Operational disruption from security incidents
+  brandDamageCost: number; // Reputation/brand damage
+  totalAnnualExposure: number; // Sum of all costs
+}
+
+/**
+ * Calculate Total Annual Exposure for retail operations
+ * 
+ * Formula:
+ * Total Annual Exposure = Direct Loss + Turnover Cost + Liability Cost + Incident Cost + Brand Damage
+ * 
+ * Where:
+ * - Direct Loss = Annual Revenue × Shrinkage Rate
+ * - Turnover Cost = (Employee Count × Turnover Rate × Hiring Cost) × 0.20
+ *   (Assumes 20% of turnover is security-related in high-risk retail environments)
+ * - Liability Cost = Annual liability/insurance/WC estimates
+ * - Incident Cost = Security Incidents × Average Incident Cost ($5,000 per incident baseline)
+ * - Brand Damage = Estimated brand/reputation damage
+ */
+export function calculateTotalCostOfRisk(
+  profile: RetailProfile
+): TCORBreakdown {
+  // 1. DIRECT LOSS (Shrinkage)
+  const annualRevenue = profile.annualRevenue || 0;
+  const shrinkageRate = profile.shrinkageRate || 0;
+  const directLoss = annualRevenue * (shrinkageRate / 100);
+
+  // 2. TURNOVER COST
+  const employeeCount = profile.employeeCount || 0;
+  const turnoverRate = profile.annualTurnoverRate || 0;
+  const avgHiringCost = profile.avgHiringCost || 0;
+  // Assume 20% of turnover is security-related (theft, violence, unsafe conditions)
+  const securityRelatedTurnoverFactor = 0.20;
+  const turnoverCost = employeeCount * (turnoverRate / 100) * avgHiringCost * securityRelatedTurnoverFactor;
+
+  // 3. LIABILITY COST
+  const liabilityCost = profile.annualLiabilityEstimates || 0;
+
+  // 4. INCIDENT COST
+  const incidentsPerYear = profile.securityIncidentsPerYear || 0;
+  const avgIncidentCost = 5000; // $5K baseline (police response, staff time, lost sales, cleanup)
+  const incidentCost = incidentsPerYear * avgIncidentCost;
+
+  // 5. BRAND DAMAGE COST
+  const brandDamageCost = profile.brandDamageEstimate || 0;
+
+  // TOTAL ANNUAL EXPOSURE
+  const totalAnnualExposure = 
+    directLoss + 
+    turnoverCost + 
+    liabilityCost + 
+    incidentCost + 
+    brandDamageCost;
+
+  return {
+    directLoss,
+    turnoverCost,
+    liabilityCost,
+    incidentCost,
+    brandDamageCost,
+    totalAnnualExposure,
   };
 }
