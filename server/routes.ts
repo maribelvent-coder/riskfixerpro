@@ -3651,10 +3651,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasEnhancedData = assessment.riskAssets && assessment.riskAssets.length > 0 && 
                               assessment.riskScenarios && assessment.riskScenarios.length > 0;
       
-      // Check for legacy facility survey questions
+      // Check for facility survey questions
+      const hasFacilitySurvey = assessment.facilityQuestions && assessment.facilityQuestions.length > 0;
+      
+      // Check for legacy assessment questions
       const hasLegacyData = assessment.questions && assessment.questions.length > 0;
 
-      if (!hasEnhancedData && !hasLegacyData) {
+      if (!hasEnhancedData && !hasFacilitySurvey && !hasLegacyData) {
         return res.status(400).json({ 
           error: "Assessment has no data to analyze. Please complete either the facility survey or the enhanced risk assessment." 
         });
