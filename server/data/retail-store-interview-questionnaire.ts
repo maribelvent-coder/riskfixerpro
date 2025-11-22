@@ -247,7 +247,7 @@ const section2_shrinkage: RetailInterviewQuestion[] = [
         section: 'Shrinkage & Loss History',
         questionText: 'How many ORC incidents occurred?',
         questionType: 'multiple_choice',
-        options: ['1-2', '3-5', '6-10', '10+'],
+        options: ['0', '1-2', '3-5', '6-10', '10+'],
         required: true,
         riskIndicators: ['6-10', '10+'],
         riskDirection: 'negative',
