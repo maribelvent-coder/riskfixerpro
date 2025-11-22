@@ -2947,15 +2947,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           && (scenario.impactScore ?? 5) <= 5;
         
         if (isLegacyData && scenario.id) {
-          // Convert old 5-25 scale to normalized 0-100 scale
-          const oldResidualScore = scenario.residualRisk ?? scenario.inherentRisk ?? 9;
-          const normalizedResidualRisk = Math.round((oldResidualScore / 25) * 100);
+          // Convert old 1-25 scale to normalized 0-100 scale
+          const oldInherentScore = scenario.inherentRisk ?? 9;
+          const oldResidualScore = scenario.residualRisk ?? oldInherentScore;
           
-          // Also convert inherentRisk (which was L×I on 5-25 scale) to L×V×I on 0-100 scale
-          const likelihood = scenario.likelihoodScore ?? 3;
-          const vulnerability = scenario.vulnerabilityScore ?? 3;
-          const impact = scenario.impactScore ?? 3;
-          const normalizedInherentRisk = likelihood * vulnerability * impact; // Store as raw triple product
+          const normalizedInherentRisk = Math.round((oldInherentScore / 25) * 100);
+          const normalizedResidualRisk = Math.round((oldResidualScore / 25) * 100);
           
           // Determine risk level based on 0-100 thresholds
           let riskLevel = 'Low';
@@ -2970,6 +2967,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             residualRisk: normalizedResidualRisk,
             riskLevel,
           };
+          
+          console.log(`[Migration] Scenario ${scenario.id}: ${oldInherentScore}/${oldResidualScore} (1-25) → ${normalizedInherentRisk}/${normalizedResidualRisk} (0-100), level: ${riskLevel}`);
           
           await storage.updateRiskScenario(scenario.id, updatedScenario);
           return updatedScenario;
