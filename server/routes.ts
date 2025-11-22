@@ -1702,11 +1702,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const retailProfileData = req.body;
       
       // Validate retail profile data structure
+      const { merchandiseDisplaySchema } = await import("../shared/schema");
       const retailProfileSchema = z.object({
         annualRevenue: z.number().optional(),
         shrinkageRate: z.number().optional(),
         highValueMerchandise: z.array(z.string()).optional(),
         storeFormat: z.string().optional(),
+        merchandiseDisplay: merchandiseDisplaySchema.optional().default('Open Shelving'),
         // TCOR - Total Cost of Risk fields
         employeeCount: z.number().optional(),
         annualTurnoverRate: z.number().optional(), // percentage (e.g., 50 for 50%)

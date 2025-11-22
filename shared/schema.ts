@@ -3,6 +3,19 @@ import { pgTable, text, varchar, jsonb, timestamp, integer, boolean, real } from
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+/**
+ * Merchandise Display Models
+ * Defines how merchandise is presented to customers in retail environments
+ */
+export const merchandiseDisplaySchema = z.enum([
+  'Open Shelving',
+  'Locked Cabinets / Tethered',
+  'Behind Counter / Staff Access Only',
+  'Service Only'
+]);
+
+export type MerchandiseDisplay = z.infer<typeof merchandiseDisplaySchema>;
+
 export const organizations = pgTable("organizations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),

@@ -9,6 +9,7 @@
  */
 
 import { RiskEngineAdapter, InterviewResponse, ThreatData, LIKELIHOOD_VALUES, IMPACT_VALUES } from '../types';
+import type { MerchandiseDisplay } from '../../../shared/schema';
 
 export class RetailAdapter implements RiskEngineAdapter {
   async calculateVulnerability(
@@ -143,6 +144,7 @@ export interface RetailProfile {
   shrinkageRate?: number; // Percentage (e.g., 2.5 for 2.5%)
   highValueMerchandise?: string[]; // e.g., ['electronics', 'jewelry', 'cosmetics', 'designer_apparel']
   storeFormat?: string; // 'Mall', 'Standalone', 'Strip Center'
+  merchandiseDisplay?: MerchandiseDisplay; // How merchandise is presented to customers
   // TCOR - Total Cost of Risk fields
   employeeCount?: number;
   annualTurnoverRate?: number; // percentage (e.g., 50 for 50%)
