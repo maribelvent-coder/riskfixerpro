@@ -8,6 +8,9 @@
 import type { RiskScenario, Assessment } from '@shared/schema';
 import { generateWarehouseRiskNarrative } from './warehouse-narrative';
 import { generateOfficeRiskNarrative } from './office-narrative';
+import { generateManufacturingRiskNarrative } from './manufacturing-narrative';
+import { generateDataCenterRiskNarrative } from './datacenter-narrative';
+import { generateExecutiveProtectionRiskNarrative } from './executive-protection-narrative';
 
 /**
  * Generate AI-powered risk narrative for any assessment template
@@ -37,11 +40,17 @@ export async function generateRiskNarrative(
     case 'office-building':
       return generateOfficeRiskNarrative(scenario, assessment, surveyResponses);
     
-    case 'retail-store':
-    case 'executive-protection':
     case 'manufacturing-facility':
+      return generateManufacturingRiskNarrative(scenario, assessment, surveyResponses);
+    
     case 'data-center':
-      // TODO: Implement template-specific narrative generators
+      return generateDataCenterRiskNarrative(scenario, assessment, surveyResponses);
+    
+    case 'executive-protection':
+      return generateExecutiveProtectionRiskNarrative(scenario, assessment, surveyResponses);
+    
+    case 'retail-store':
+      // TODO: Implement retail-specific narrative generator
       throw new Error(`Narrative generation not yet implemented for template: ${templateId}`);
     
     default:
