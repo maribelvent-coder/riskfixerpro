@@ -591,7 +591,8 @@ export class DbStorage implements IStorage {
         schema.templateQuestions,
         eq(schema.facilitySurveyQuestions.templateQuestionId, schema.templateQuestions.questionId)
       )
-      .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId));
+      .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId))
+      .orderBy(schema.facilitySurveyQuestions.orderIndex, schema.facilitySurveyQuestions.templateQuestionId);
     
     return results;
   }
