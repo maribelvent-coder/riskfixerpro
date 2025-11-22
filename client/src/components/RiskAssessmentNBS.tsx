@@ -1731,7 +1731,7 @@ export function RiskAssessmentNBS({ assessmentId, onComplete }: RiskAssessmentNB
             </div>
           </div>
 
-          {assets.length === 0 ? (
+          {assets.length === 0 && scenarios.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Please add assets first before creating scenarios.</p>
