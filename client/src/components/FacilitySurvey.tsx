@@ -242,7 +242,15 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       return false;
     }
     
-    // For yes-no, condition, and rating questions, response must be a non-empty string or number
+    // For checklist questions, at least one option must be selected
+    if (q.type === "checklist") {
+      if (typeof q.response === 'object' && q.response.selectedOptions) {
+        return Array.isArray(q.response.selectedOptions) && q.response.selectedOptions.length > 0;
+      }
+      return false;
+    }
+    
+    // For yes-no, condition, rating, and multiple-choice questions, response must be a non-empty string or number
     // Accept both types to handle JSONB serialization variations
     if (typeof q.response === 'string') {
       return q.response !== "";
