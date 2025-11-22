@@ -546,8 +546,57 @@ export default function RetailDashboard() {
           </Card>
         </div>
 
-        {/* RIGHT COLUMN: Risk Analysis & ROI */}
+        {/* RIGHT COLUMN: Control Gaps → Risk Score → ROI */}
         <div className="space-y-6">
+          {/* Control Gaps - PRIORITIZED */}
+          {riskAnalysis && riskAnalysis.breakdown.controlGaps > 0 && (
+            <Card className="border-2 border-orange-500/50" data-testid="card-control-gaps">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  Loss Prevention Control Gaps
+                </CardTitle>
+                <CardDescription>Critical vulnerabilities increasing shrinkage risk</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Control Gap Impact</span>
+                    <Badge variant="destructive" className="text-lg px-3">
+                      {riskAnalysis.breakdown.controlGaps} pts
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-muted-foreground">Common Gaps:</div>
+                    <ul className="space-y-1 text-sm">
+                      <li className="flex items-start gap-2">
+                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                        <span>No EAS (Electronic Article Surveillance) tags</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                        <span>Missing or inadequate CCTV coverage</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                        <span>POS (Point of Sale) security weaknesses</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                        <span>Inadequate employee screening</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      Implementing these controls is the most cost-effective strategy to reduce shrinkage and improve margins.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Shrinkage Risk Meter */}
           <Card data-testid="card-risk-meter">
             <CardHeader>

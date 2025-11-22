@@ -450,36 +450,7 @@ export default function ManufacturingDashboard() {
             </CardContent>
           </Card>
 
-          {/* Downtime Cost Calculator */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Downtime Impact
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {continuityScore?.estimatedDailyDowntimeCost ? (
-                <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground">
-                    Estimated Cost of 24-Hour Shutdown:
-                  </div>
-                  <div className="text-3xl font-bold text-red-600 dark:text-red-400" data-testid="text-downtime-cost">
-                    ${continuityScore.estimatedDailyDowntimeCost.toLocaleString()}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Based on annual production value of ${annualProductionValue ? parseFloat(annualProductionValue).toLocaleString() : '0'}
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p className="text-sm">Enter annual production value to calculate downtime cost</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* IP Protection Matrix */}
+          {/* IP Protection Matrix - PRIORITIZED */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -509,6 +480,35 @@ export default function ManufacturingDashboard() {
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
                   <p className="text-sm">Select IP types to view protection status</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Downtime Cost Calculator - MOVED TO BOTTOM */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Downtime Impact
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {continuityScore?.estimatedDailyDowntimeCost ? (
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    Estimated Cost of 24-Hour Shutdown:
+                  </div>
+                  <div className="text-3xl font-bold text-red-600 dark:text-red-400" data-testid="text-downtime-cost">
+                    ${continuityScore.estimatedDailyDowntimeCost.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Based on annual production value of ${annualProductionValue ? parseFloat(annualProductionValue).toLocaleString() : '0'}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p className="text-sm">Enter annual production value to calculate downtime cost</p>
                 </div>
               )}
             </CardContent>

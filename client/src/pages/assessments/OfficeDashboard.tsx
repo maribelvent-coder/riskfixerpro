@@ -187,16 +187,88 @@ export default function OfficeDashboard() {
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Office Profile Form */}
-        <Card data-testid="card-profile-form">
-          <CardHeader>
-            <CardTitle data-testid="heading-form-title">Office Profile</CardTitle>
-            <CardDescription data-testid="text-form-description">
-              Configure facility characteristics for risk analysis
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        {/* Security Risk Cards - TOP PRIORITY */}
+        {safetyScore && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Workplace Violence Risk */}
+            <Card data-testid="card-violence-risk">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2" data-testid="heading-violence-risk">
+                  <Users className="w-5 h-5" />
+                  Workplace Violence Risk
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium" data-testid="text-violence-label">Risk Level</span>
+                  <Badge 
+                    variant={getRiskLevelBadgeVariant(safetyScore.violenceRiskLevel)} 
+                    data-testid="badge-violence-risk"
+                  >
+                    {safetyScore.violenceRiskLevel}
+                  </Badge>
+                </div>
+                <div className="flex h-3 w-full rounded-full bg-muted overflow-hidden" data-testid="meter-violence-risk">
+                  <div 
+                    className={`h-full transition-all ${
+                      safetyScore.violenceRiskLevel === 'Critical' ? 'bg-red-600' :
+                      safetyScore.violenceRiskLevel === 'High' ? 'bg-orange-600' :
+                      safetyScore.violenceRiskLevel === 'Medium' ? 'bg-yellow-600' :
+                      'bg-green-600'
+                    }`}
+                    style={{ width: `${Math.min((safetyScore.riskScore * 0.6), 100)}%` }}
+                    data-testid="meter-violence-fill"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Data Security Risk */}
+            <Card data-testid="card-data-risk">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2" data-testid="heading-data-risk">
+                  <Database className="w-5 h-5" />
+                  Data Security Risk
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium" data-testid="text-data-label">Risk Level</span>
+                  <Badge 
+                    variant={getRiskLevelBadgeVariant(safetyScore.dataRiskLevel)} 
+                    data-testid="badge-data-risk"
+                  >
+                    {safetyScore.dataRiskLevel}
+                  </Badge>
+                </div>
+                <div className="flex h-3 w-full rounded-full bg-muted overflow-hidden" data-testid="meter-data-risk">
+                  <div 
+                    className={`h-full transition-all ${
+                      safetyScore.dataRiskLevel === 'Critical' ? 'bg-red-600' :
+                      safetyScore.dataRiskLevel === 'High' ? 'bg-orange-600' :
+                      safetyScore.dataRiskLevel === 'Medium' ? 'bg-yellow-600' :
+                      'bg-green-600'
+                    }`}
+                    style={{ width: `${Math.min((safetyScore.riskScore * 0.4), 100)}%` }}
+                    data-testid="meter-data-fill"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column: Office Profile Form */}
+          <Card data-testid="card-profile-form">
+            <CardHeader>
+              <CardTitle data-testid="heading-form-title">Office Profile</CardTitle>
+              <CardDescription data-testid="text-form-description">
+                Configure facility characteristics for risk analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Employee Count */}
@@ -438,101 +510,31 @@ export default function OfficeDashboard() {
           </CardContent>
         </Card>
 
-        {/* Right Column: Safety & Security Metrics */}
-        <div className="space-y-6">
-          {/* Overall Risk Score */}
-          {safetyScore && (
-            <Card data-testid="card-overall-score">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2" data-testid="heading-overall-score">
-                  <Shield className="w-5 h-5" />
-                  Overall Security Risk
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center space-y-2">
-                  <div className="text-5xl font-bold" data-testid="text-overall-score">
-                    {safetyScore.riskScore}
+          {/* Right Column: Overall Score & Vulnerabilities */}
+          <div className="space-y-6">
+            {/* Overall Risk Score */}
+            {safetyScore && (
+              <Card data-testid="card-overall-score">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2" data-testid="heading-overall-score">
+                    <Shield className="w-5 h-5" />
+                    Overall Security Risk
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center space-y-2">
+                    <div className="text-5xl font-bold" data-testid="text-overall-score">
+                      {safetyScore.riskScore}
+                    </div>
+                    <p className="text-sm text-muted-foreground" data-testid="text-score-label">
+                      Risk Score (0-100, higher = more risk)
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground" data-testid="text-score-label">
-                    Risk Score (0-100, higher = more risk)
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Workplace Violence Risk */}
-          {safetyScore && (
-            <Card data-testid="card-violence-risk">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2" data-testid="heading-violence-risk">
-                  <Users className="w-5 h-5" />
-                  Workplace Violence Risk
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium" data-testid="text-violence-label">Risk Level</span>
-                  <Badge 
-                    variant={getRiskLevelBadgeVariant(safetyScore.violenceRiskLevel)} 
-                    data-testid="badge-violence-risk"
-                  >
-                    {safetyScore.violenceRiskLevel}
-                  </Badge>
-                </div>
-                <div className="flex h-3 w-full rounded-full bg-muted overflow-hidden" data-testid="meter-violence-risk">
-                  <div 
-                    className={`h-full transition-all ${
-                      safetyScore.violenceRiskLevel === 'Critical' ? 'bg-red-600' :
-                      safetyScore.violenceRiskLevel === 'High' ? 'bg-orange-600' :
-                      safetyScore.violenceRiskLevel === 'Medium' ? 'bg-yellow-600' :
-                      'bg-green-600'
-                    }`}
-                    style={{ width: `${Math.min((safetyScore.riskScore * 0.6), 100)}%` }}
-                    data-testid="meter-violence-fill"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Data Security Risk */}
-          {safetyScore && (
-            <Card data-testid="card-data-risk">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2" data-testid="heading-data-risk">
-                  <Database className="w-5 h-5" />
-                  Data Security Risk
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium" data-testid="text-data-label">Risk Level</span>
-                  <Badge 
-                    variant={getRiskLevelBadgeVariant(safetyScore.dataRiskLevel)} 
-                    data-testid="badge-data-risk"
-                  >
-                    {safetyScore.dataRiskLevel}
-                  </Badge>
-                </div>
-                <div className="flex h-3 w-full rounded-full bg-muted overflow-hidden" data-testid="meter-data-risk">
-                  <div 
-                    className={`h-full transition-all ${
-                      safetyScore.dataRiskLevel === 'Critical' ? 'bg-red-600' :
-                      safetyScore.dataRiskLevel === 'High' ? 'bg-orange-600' :
-                      safetyScore.dataRiskLevel === 'Medium' ? 'bg-yellow-600' :
-                      'bg-green-600'
-                    }`}
-                    style={{ width: `${Math.min((safetyScore.riskScore * 0.4), 100)}%` }}
-                    data-testid="meter-data-fill"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Key Vulnerabilities */}
+            {/* Key Vulnerabilities */}
           {safetyScore && safetyScore.keyVulnerabilities.length > 0 && (
             <Card data-testid="card-vulnerabilities">
               <CardHeader>

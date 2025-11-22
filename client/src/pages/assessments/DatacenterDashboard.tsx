@@ -209,6 +209,107 @@ export default function DatacenterDashboard() {
         </div>
       </div>
 
+      {/* Risk Cards - TOP PRIORITY */}
+      {reliabilityScore && !scoreLoading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* SLA Risk Assessment */}
+          <Card data-testid="card-uptime-risk">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2" data-testid="heading-uptime-risk">
+                <AlertTriangle className="w-5 h-5" />
+                Uptime Risk Assessment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Risk Score Gauge */}
+                <div className="text-center">
+                  <div className={`text-6xl font-bold ${getRiskColor(reliabilityScore.slaRiskLevel)}`} data-testid="text-risk-score">
+                    {reliabilityScore.riskScore}
+                  </div>
+                  <div className="text-sm text-muted-foreground" data-testid="text-risk-out-of">
+                    out of 100
+                  </div>
+                  <Badge
+                    variant={reliabilityScore.slaRiskLevel === 'Low' ? 'default' : 'destructive'}
+                    className="mt-2"
+                    data-testid="badge-risk-level"
+                  >
+                    {reliabilityScore.slaRiskLevel} Risk
+                  </Badge>
+                </div>
+
+                {/* Risk Factors */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold" data-testid="heading-risk-factors">Risk Factors:</h4>
+                  <ul className="space-y-1" data-testid="list-risk-factors">
+                    {reliabilityScore.riskFactors.map((factor, idx) => (
+                      <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2" data-testid={`risk-factor-${idx}`}>
+                        <span className="text-yellow-600 dark:text-yellow-400 mt-0.5">•</span>
+                        <span>{factor}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Compliance Gaps */}
+          <Card data-testid="card-compliance">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2" data-testid="heading-compliance">
+                <Shield className="w-5 h-5" />
+                Compliance Scorecard
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Compliance Score */}
+                <div className="text-center">
+                  <div className={`text-6xl font-bold ${getComplianceColor(reliabilityScore.complianceScore)}`} data-testid="text-compliance-score">
+                    {reliabilityScore.complianceScore}%
+                  </div>
+                  <div className="text-sm text-muted-foreground" data-testid="text-compliance-ready">
+                    Compliance Ready
+                  </div>
+                </div>
+
+                {/* Compliance Gaps */}
+                {reliabilityScore.complianceGaps.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold flex items-center gap-2" data-testid="heading-gaps">
+                      <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      Missing Controls:
+                    </h4>
+                    <ul className="space-y-1" data-testid="list-compliance-gaps">
+                      {reliabilityScore.complianceGaps.slice(0, 10).map((gap, idx) => (
+                        <li key={idx} className="text-sm text-muted-foreground" data-testid={`compliance-gap-${idx}`}>
+                          {gap}
+                        </li>
+                      ))}
+                    </ul>
+                    {reliabilityScore.complianceGaps.length > 10 && (
+                      <p className="text-xs text-muted-foreground" data-testid="text-more-gaps">
+                        +{reliabilityScore.complianceGaps.length - 10} more gaps
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {reliabilityScore.complianceGaps.length === 0 && complianceRequirements.length > 0 && (
+                  <div className="text-center py-4 text-green-600 dark:text-green-400 flex items-center justify-center gap-2" data-testid="text-no-gaps">
+                    <CheckCircle2 className="w-5 h-5" />
+                    All compliance controls in place
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column: Facility Profile Form */}
         <Card data-testid="card-profile-form">
@@ -401,122 +502,18 @@ export default function DatacenterDashboard() {
           </CardContent>
         </Card>
 
-        {/* Right Column: Risk Analysis */}
+        {/* Right Column: Status Placeholder */}
         <div className="space-y-6">
-          {/* Uptime Risk Meter */}
-          <Card data-testid="card-uptime-risk">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2" data-testid="heading-uptime-risk">
-                <AlertTriangle className="w-5 h-5" />
-                Uptime Risk Assessment
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {scoreLoading ? (
-                <div className="text-center py-8 text-muted-foreground" data-testid="loading-score">
-                  Calculating risk...
+          {!reliabilityScore && !scoreLoading && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8 text-muted-foreground">
+                  <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Save infrastructure profile to see risk analysis</p>
                 </div>
-              ) : reliabilityScore ? (
-                <div className="space-y-4">
-                  {/* Risk Score Gauge */}
-                  <div className="text-center">
-                    <div className={`text-6xl font-bold ${getRiskColor(reliabilityScore.slaRiskLevel)}`} data-testid="text-risk-score">
-                      {reliabilityScore.riskScore}
-                    </div>
-                    <div className="text-sm text-muted-foreground" data-testid="text-risk-out-of">
-                      out of 100
-                    </div>
-                    <Badge
-                      variant={reliabilityScore.slaRiskLevel === 'Low' ? 'default' : 'destructive'}
-                      className="mt-2"
-                      data-testid="badge-risk-level"
-                    >
-                      {reliabilityScore.slaRiskLevel} Risk
-                    </Badge>
-                  </div>
-
-                  {/* Risk Factors */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold" data-testid="heading-risk-factors">Risk Factors:</h4>
-                    <ul className="space-y-1" data-testid="list-risk-factors">
-                      {reliabilityScore.riskFactors.map((factor, idx) => (
-                        <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2" data-testid={`risk-factor-${idx}`}>
-                          <span className="text-yellow-600 dark:text-yellow-400 mt-0.5">•</span>
-                          <span>{factor}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground" data-testid="text-no-profile">
-                  Save infrastructure profile to see risk analysis
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Compliance Scorecard */}
-          <Card data-testid="card-compliance">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2" data-testid="heading-compliance">
-                <Shield className="w-5 h-5" />
-                Compliance Scorecard
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {scoreLoading ? (
-                <div className="text-center py-8 text-muted-foreground" data-testid="loading-compliance">
-                  Calculating compliance...
-                </div>
-              ) : reliabilityScore ? (
-                <div className="space-y-4">
-                  {/* Compliance Score */}
-                  <div className="text-center">
-                    <div className={`text-6xl font-bold ${getComplianceColor(reliabilityScore.complianceScore)}`} data-testid="text-compliance-score">
-                      {reliabilityScore.complianceScore}%
-                    </div>
-                    <div className="text-sm text-muted-foreground" data-testid="text-compliance-ready">
-                      Compliance Ready
-                    </div>
-                  </div>
-
-                  {/* Compliance Gaps */}
-                  {reliabilityScore.complianceGaps.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold flex items-center gap-2" data-testid="heading-gaps">
-                        <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                        Missing Controls:
-                      </h4>
-                      <ul className="space-y-1" data-testid="list-compliance-gaps">
-                        {reliabilityScore.complianceGaps.slice(0, 10).map((gap, idx) => (
-                          <li key={idx} className="text-sm text-muted-foreground" data-testid={`compliance-gap-${idx}`}>
-                            {gap}
-                          </li>
-                        ))}
-                      </ul>
-                      {reliabilityScore.complianceGaps.length > 10 && (
-                        <p className="text-xs text-muted-foreground" data-testid="text-more-gaps">
-                          +{reliabilityScore.complianceGaps.length - 10} more gaps
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {reliabilityScore.complianceGaps.length === 0 && complianceRequirements.length > 0 && (
-                    <div className="text-center py-4 text-green-600 dark:text-green-400 flex items-center justify-center gap-2" data-testid="text-no-gaps">
-                      <CheckCircle2 className="w-5 h-5" />
-                      All compliance controls in place
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground" data-testid="text-no-compliance">
-                  Select compliance requirements to see gaps
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
