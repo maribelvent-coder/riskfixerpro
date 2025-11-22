@@ -37,7 +37,7 @@ interface SurveyQuestion {
   subcategory: string;
   question: string;
   standard: string;
-  type: "condition" | "measurement" | "yes-no" | "rating" | "text" | "checklist" | "multiple-choice";
+  type: "condition" | "measurement" | "yes-no" | "rating" | "text" | "checklist" | "multiple-choice" | "number";
   response?: any;
   notes?: string;
   evidence?: string[];
@@ -678,6 +678,26 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
               <SelectItem value="5">5 - Excellent</SelectItem>
             </SelectContent>
           </Select>
+        );
+
+      case "number":
+        return (
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor={`${question.templateId}-number`} className="text-xs sm:text-sm">
+              Assessment Response
+            </Label>
+            <Input
+              id={`${question.templateId}-number`}
+              type="number"
+              step="1"
+              min="0"
+              value={question.response || ""}
+              onChange={(e) => updateQuestion(question.templateId, "response", e.target.value)}
+              placeholder="Enter number"
+              className="text-xs sm:text-sm"
+              data-testid={`input-${question.templateId}-number`}
+            />
+          </div>
         );
 
       case "text":
