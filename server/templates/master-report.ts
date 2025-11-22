@@ -399,6 +399,82 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
     ` : ''}
   </div>
 
+  <!-- Technical Report - Tabular Audit Format -->
+  <div class="section">
+    <h2 class="section-title">Technical Report: Control Audit Findings</h2>
+    <p style="margin-bottom: 20px; font-size: 10pt; color: #64748b;">
+      Engineering checklist format presenting specific security control gaps, technical requirements, and standards compliance.
+    </p>
+    
+    <table class="risk-matrix-table">
+      <thead>
+        <tr>
+          <th style="width: 20%;">Control Domain</th>
+          <th style="width: 30%;">Specific Gap Identified</th>
+          <th style="width: 30%;">Technical Requirement</th>
+          <th style="width: 20%;">Standards Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${risks.map(risk => {
+          // Determine control domain from threat type
+          const domainMap: Record<string, string> = {
+            'human': 'Access Control & Perimeter',
+            'natural': 'Environmental Protection',
+            'technical': 'Technical Safeguards',
+            'environmental': 'Environmental Controls'
+          };
+          const domain = domainMap[risk.threatType || 'human'] || 'General Security';
+          
+          // Extract gap from vulnerability description or generate from scenario
+          const gap = risk.vulnerabilityDescription 
+            ? risk.vulnerabilityDescription.substring(0, 150) + (risk.vulnerabilityDescription.length > 150 ? '...' : '')
+            : `${risk.scenario || 'Security vulnerability'} - inadequate controls`;
+          
+          // Generate technical requirement based on risk level
+          const requirement = risk.controlRecommendations 
+            ? risk.controlRecommendations.substring(0, 150) + (risk.controlRecommendations.length > 150 ? '...' : '')
+            : (risk.riskLevel === 'Critical' || risk.riskLevel === 'High')
+            ? 'Implement immediate corrective controls to mitigate exposure'
+            : 'Enhance existing controls or implement compensating measures';
+          
+          // Map to relevant standards
+          const standards = [];
+          if (domain.includes('Access')) standards.push('ASIS PSC.1-2012 §4.1');
+          if (domain.includes('Technical')) standards.push('NIST SP 800-53');
+          if (domain.includes('Environmental')) standards.push('FM 3-19.30');
+          if (risk.threatType === 'natural') standards.push('FEMA 426');
+          const standardsRef = standards.length > 0 ? standards.join(', ') : 'Industry Best Practice';
+          
+          return `
+            <tr>
+              <td><strong>${domain}</strong></td>
+              <td>${gap}</td>
+              <td>${requirement}</td>
+              <td style="font-size: 9pt;">${standardsRef}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    
+    ${risks.length === 0 ? `
+      <p style="text-align: center; padding: 40px; color: #64748b;">
+        No technical control gaps identified during assessment.
+      </p>
+    ` : ''}
+    
+    <div style="margin-top: 30px; padding: 20px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+      <p style="font-size: 9pt; color: #1e40af; line-height: 1.6;">
+        <strong>Standards Key:</strong><br>
+        • ASIS PSC.1-2012: ASIS International Physical Security Professional Competency Standard<br>
+        • NIST SP 800-53: Security and Privacy Controls for Information Systems<br>
+        • FM 3-19.30: U.S. Army Field Manual - Physical Security<br>
+        • FEMA 426: Reference Manual to Mitigate Potential Terrorist Attacks
+      </p>
+    </div>
+  </div>
+
   <!-- Template-Specific Financial Impact Section -->
   ${renderTemplateMetrics(assessment.templateId, templateMetrics)}
 </body>

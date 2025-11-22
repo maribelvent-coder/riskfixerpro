@@ -2934,7 +2934,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const scenarios = await storage.getRiskScenarios(id);
-      res.json(scenarios);
+      
+      // Lazy migration: Convert legacy 5-25 scale scenarios to normalized 0-100 scale
+      const migratedScenarios = await Promise.all(scenarios.map(async (scenario) => {
+        // Detect legacy data: inherentRisk <= 25 AND residualRisk <= 25 AND impactScore <= 5
+        // The additional residualRisk check ensures we don't reprocess already-normalized low-risk scenarios
+        const isLegacyData = (scenario.inherentRisk ?? 0) <= 25 
+          && (scenario.residualRisk ?? 0) <= 25 
+          && (scenario.impactScore ?? 5) <= 5;
+        
+        if (isLegacyData && scenario.id) {
+          // Convert old 5-25 scale to normalized 0-100 scale
+          const oldResidualScore = scenario.residualRisk ?? scenario.inherentRisk ?? 9;
+          const normalizedResidualRisk = Math.round((oldResidualScore / 25) * 100);
+          
+          // Also convert inherentRisk (which was L×I on 5-25 scale) to L×V×I on 0-100 scale
+          const likelihood = scenario.likelihoodScore ?? 3;
+          const vulnerability = scenario.vulnerabilityScore ?? 3;
+          const impact = scenario.impactScore ?? 3;
+          const normalizedInherentRisk = likelihood * vulnerability * impact; // Store as raw triple product
+          
+          // Determine risk level based on 0-100 thresholds
+          let riskLevel = 'Low';
+          if (normalizedResidualRisk >= 75) riskLevel = 'Critical';
+          else if (normalizedResidualRisk >= 50) riskLevel = 'High';
+          else if (normalizedResidualRisk >= 25) riskLevel = 'Medium';
+          
+          // Update scenario in database with normalized values
+          const updatedScenario = {
+            ...scenario,
+            inherentRisk: normalizedInherentRisk,
+            residualRisk: normalizedResidualRisk,
+            riskLevel,
+          };
+          
+          await storage.updateRiskScenario(scenario.id, updatedScenario);
+          return updatedScenario;
+        }
+        
+        return scenario;
+      }));
+      
+      res.json(migratedScenarios);
     } catch (error) {
       console.error("Error fetching risk scenarios:", error);
       res.status(500).json({ error: "Failed to fetch risk scenarios" });

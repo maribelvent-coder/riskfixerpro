@@ -353,23 +353,42 @@ export function LossPreventionROICalculator({
           </div>
         )}
 
-        {/* Net Benefit Summary */}
-        <div className="rounded-lg bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-green-900 dark:text-green-100">
-                3-Year Net Benefit
+        {/* Net Benefit Summary - Adaptive Styling Based on ROI */}
+        {isPositiveROI ? (
+          <div className="rounded-lg bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-green-900 dark:text-green-100">
+                  3-Year Net Benefit
+                </div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-300" data-testid="text-net-benefit">
+                  {formatCurrency((projectedSavings * 3) - totalControlCost)}
+                </div>
+                <div className="text-xs text-green-700/70 dark:text-green-300/70">
+                  Total savings minus investment over 3 years
+                </div>
               </div>
-              <div className="text-2xl font-bold text-green-700 dark:text-green-300" data-testid="text-net-benefit">
-                {formatCurrency((projectedSavings * 3) - totalControlCost)}
-              </div>
-              <div className="text-xs text-green-700/70 dark:text-green-300/70">
-                Total savings minus investment over 3 years
-              </div>
+              <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
-            <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
-        </div>
+        ) : (
+          <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-slate-500/10 border border-blue-500/20 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Compliance Investment
+                </div>
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300" data-testid="text-compliance-investment">
+                  {formatCurrency(totalControlCost)}
+                </div>
+                <div className="text-xs text-blue-700/70 dark:text-blue-300/70">
+                  Necessary investment for regulatory compliance & duty of care
+                </div>
+              </div>
+              <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
