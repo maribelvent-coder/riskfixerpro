@@ -1,7 +1,13 @@
 import type { ComprehensiveReportData } from './comprehensiveReportGenerator';
 
+// Extend ComprehensiveReportData to include template-specific metrics
+interface ExtendedReportData extends ComprehensiveReportData {
+  templateMetrics?: Record<string, any>;
+  templateId?: string | null;
+}
+
 // Normalize report data with defensive programming
-function normalizeReportData(data: ComprehensiveReportData) {
+function normalizeReportData(data: ExtendedReportData) {
   return {
     assessment: {
       id: data.assessment?.id || '',
@@ -77,11 +83,13 @@ function normalizeReportData(data: ComprehensiveReportData) {
             timeframe: rec.timeframe || 'N/A',
           }))
       : [],
+    templateMetrics: data.templateMetrics || {},
+    templateId: (data.assessment as any)?.templateId || null,
   };
 }
 
 // Generate HTML report
-export async function generateHTMLReport(data: ComprehensiveReportData): Promise<string> {
+export async function generateHTMLReport(data: ExtendedReportData): Promise<string> {
   const normalizedData = normalizeReportData(data);
   const generatedDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -529,6 +537,7 @@ export async function generateHTMLReport(data: ComprehensiveReportData): Promise
       <div class="nav-links">
         <a href="#executive-summary" class="nav-link">Executive Summary</a>
         <a href="#risk-analysis" class="nav-link">Risk Analysis</a>
+        ${normalizedData.templateId && Object.keys(normalizedData.templateMetrics).length > 0 ? '<a href="#template-metrics" class="nav-link">Financial Analysis</a>' : ''}
         ${normalizedData.geoIntel?.riskIntelligence ? '<a href="#geointel" class="nav-link">GeoIntel</a>' : ''}
         ${normalizedData.recommendations.length > 0 ? '<a href="#recommendations" class="nav-link">Recommendations</a>' : ''}
         ${normalizedData.photoEvidence.length > 0 ? '<a href="#photos" class="nav-link">Photos</a>' : ''}
@@ -658,6 +667,8 @@ export async function generateHTMLReport(data: ComprehensiveReportData): Promise
           : ''
       }
     </section>
+
+    ${renderTemplateMetrics(normalizedData.templateId, normalizedData.templateMetrics)}
 
     ${
       normalizedData.geoIntel?.riskIntelligence
@@ -806,6 +817,345 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Helper function to format currency
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+// Render template-specific metrics sections
+function renderTemplateMetrics(templateId: string | null, metrics: Record<string, any>): string {
+  if (!templateId || !metrics || Object.keys(metrics).length === 0) {
+    return '';
+  }
+
+  switch (templateId) {
+    case 'warehouse-distribution':
+      return renderWarehouseMetrics(metrics);
+    case 'retail-store':
+      return renderRetailMetrics(metrics);
+    case 'manufacturing-facility':
+      return renderManufacturingMetrics(metrics);
+    case 'executive-protection':
+      return renderExecutiveProtectionMetrics(metrics);
+    case 'data-center':
+      return renderDataCenterMetrics(metrics);
+    case 'office-building':
+      return renderOfficeMetrics(metrics);
+    default:
+      return '';
+  }
+}
+
+// Warehouse metrics: Cargo Theft ROI
+function renderWarehouseMetrics(metrics: Record<string, any>): string {
+  const roi = metrics.cargoTheftROI;
+  const heatmap = metrics.loadingDockHeatmap;
+  
+  if (!roi) return '';
+  
+  return `
+    <section id="template-metrics" class="section">
+      <h2 class="section-title">Financial Impact Analysis</h2>
+      
+      <div class="card">
+        <h3 class="card-title">Cargo Theft ROI Calculator</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(roi.estimatedAnnualLoss || 0)}</div>
+            <div class="stat-label">Estimated Annual Loss</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(roi.preventionInvestment || 0)}</div>
+            <div class="stat-label">Prevention Investment</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(roi.potentialSavings || 0)}</div>
+            <div class="stat-label">Potential Savings</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${((roi.roi || 0) * 100).toFixed(0)}%</div>
+            <div class="stat-label">ROI</div>
+          </div>
+        </div>
+      </div>
+      
+      ${heatmap ? `
+      <div class="card">
+        <h3 class="card-title">Loading Dock Security Heatmap</h3>
+        <div class="table-container">
+          <table>
+            <tbody>
+              <tr>
+                <td>Total Loading Docks</td>
+                <td><strong>${heatmap.totalDocks || 0}</strong></td>
+              </tr>
+              <tr>
+                <td>Daily Truck Volume</td>
+                <td><strong>${heatmap.dailyTruckVolume || 0}</strong></td>
+              </tr>
+              <tr>
+                <td>High-Risk Docks</td>
+                <td><strong style="color: var(--high-risk);">${heatmap.highRiskDocks || 0}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        ${heatmap.recommendations?.length > 0 ? `
+        <h4 class="section-subtitle">Recommendations</h4>
+        <ul class="insight-list">
+          ${heatmap.recommendations.map((rec: string) => `<li class="insight-item">${escapeHtml(rec)}</li>`).join('')}
+        </ul>
+        ` : ''}
+      </div>
+      ` : ''}
+    </section>
+  `;
+}
+
+// Retail metrics: Shrinkage Analysis
+function renderRetailMetrics(metrics: Record<string, any>): string {
+  const shrinkage = metrics.shrinkageAnalysis;
+  const roi = metrics.lossPreventionROI;
+  
+  if (!shrinkage) return '';
+  
+  return `
+    <section id="template-metrics" class="section">
+      <h2 class="section-title">Loss Prevention Analysis</h2>
+      
+      <div class="card">
+        <h3 class="card-title">Shrinkage Analysis</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(shrinkage.shrinkageDollars || 0)}</div>
+            <div class="stat-label">Annual Shrinkage</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(shrinkage.shrinkageRate || 0).toFixed(2)}%</div>
+            <div class="stat-label">Shrinkage Rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(shrinkage.industryBenchmark || 0).toFixed(2)}%</div>
+            <div class="stat-label">Industry Benchmark</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(shrinkage.excessLoss || 0)}</div>
+            <div class="stat-label">Excess Loss</div>
+          </div>
+        </div>
+      </div>
+      
+      ${roi ? `
+      <div class="card">
+        <h3 class="card-title">Loss Prevention ROI</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(roi.recommendedInvestment || 0)}</div>
+            <div class="stat-label">Recommended Investment</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(roi.potentialRecovery || 0)}</div>
+            <div class="stat-label">Potential Recovery</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(roi.netBenefit || 0)}</div>
+            <div class="stat-label">Net Benefit</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${((roi.roi || 0) * 100).toFixed(0)}%</div>
+            <div class="stat-label">ROI</div>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+    </section>
+  `;
+}
+
+// Manufacturing metrics: Downtime Calculator
+function renderManufacturingMetrics(metrics: Record<string, any>): string {
+  const downtime = metrics.downtimeCostCalculator;
+  
+  if (!downtime) return '';
+  
+  return `
+    <section id="template-metrics" class="section">
+      <h2 class="section-title">Downtime Impact Analysis</h2>
+      
+      <div class="card">
+        <h3 class="card-title">Downtime Cost Calculator</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(downtime.annualProductionValue || 0)}</div>
+            <div class="stat-label">Annual Production Value</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${formatCurrency(downtime.valuePerHour || 0)}</div>
+            <div class="stat-label">Value Per Hour</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${downtime.avgIncidentDowntime || 0}h</div>
+            <div class="stat-label">Avg Incident Downtime</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--high-risk);">${formatCurrency(downtime.potentialLossPerIncident || 0)}</div>
+            <div class="stat-label">Loss Per Incident</div>
+          </div>
+        </div>
+        ${downtime.mitigationRecommendations?.length > 0 ? `
+        <h4 class="section-subtitle">Mitigation Recommendations</h4>
+        <ul class="insight-list">
+          ${downtime.mitigationRecommendations.map((rec: string) => `<li class="insight-item">${escapeHtml(rec)}</li>`).join('')}
+        </ul>
+        ` : ''}
+      </div>
+    </section>
+  `;
+}
+
+// Executive Protection metrics: Exposure Factor
+function renderExecutiveProtectionMetrics(metrics: Record<string, any>): string {
+  const exposure = metrics.exposureFactor;
+  const radar = metrics.threatRadar;
+  
+  if (!exposure) return '';
+  
+  return `
+    <section id="template-metrics" class="section">
+      <h2 class="section-title">Threat Intelligence Analysis</h2>
+      
+      <div class="card">
+        <h3 class="card-title">Exposure Factor</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" style="color: ${exposure.level === 'High' ? 'var(--high-risk)' : exposure.level === 'Medium' ? 'var(--medium-risk)' : 'var(--low-risk)'};">
+              ${(exposure.score || 0).toFixed(0)}
+            </div>
+            <div class="stat-label">Exposure Score (${exposure.level || 'Low'})</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${exposure.kidnappingRisks || 0}</div>
+            <div class="stat-label">Kidnapping Risks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${exposure.stalkingRisks || 0}</div>
+            <div class="stat-label">Stalking Risks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${exposure.digitalExposureRisks || 0}</div>
+            <div class="stat-label">Digital Exposure Risks</div>
+          </div>
+        </div>
+      </div>
+      
+      ${radar ? `
+      <div class="card">
+        <h3 class="card-title">Threat Radar</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Count</th>
+                <th>Severity</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${radar.categories?.map((cat: any) => `
+                <tr>
+                  <td>${escapeHtml(cat.name)}</td>
+                  <td><strong>${cat.count}</strong></td>
+                  <td><span class="badge badge-${cat.severity}">${escapeHtml(cat.severity)}</span></td>
+                </tr>
+              `).join('') || ''}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      ` : ''}
+    </section>
+  `;
+}
+
+// Data Center metrics: SLA Gap Analysis
+function renderDataCenterMetrics(metrics: Record<string, any>): string {
+  const sla = metrics.slaGapAnalysis;
+  
+  if (!sla) return '';
+  
+  return `
+    <section id="template-metrics" class="section">
+      <h2 class="section-title">SLA & Compliance Analysis</h2>
+      
+      <div class="card">
+        <h3 class="card-title">SLA Gap Analysis</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${(sla.uptimeTarget || 0).toFixed(2)}%</div>
+            <div class="stat-label">Uptime Target</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${(sla.allowedDowntimeHours || 0).toFixed(2)}h</div>
+            <div class="stat-label">Allowed Downtime/Year</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${sla.slaBreachRisks || 0}</div>
+            <div class="stat-label">SLA Breach Risks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--high-risk);">${formatCurrency(sla.potentialPenaltyPerHour || 0)}</div>
+            <div class="stat-label">Penalty Per Hour</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+// Office Building metrics: Safety Score
+function renderOfficeMetrics(metrics: Record<string, any>): string {
+  const safety = metrics.safetyScore;
+  
+  if (!safety) return '';
+  
+  const gradeColor = safety.grade === 'A' ? 'var(--success)' : 
+                     safety.grade === 'B' ? 'var(--low-risk)' :
+                     safety.grade === 'C' ? 'var(--medium-risk)' : 'var(--high-risk)';
+  
+  return `
+    <section id="template-metrics" class="section">
+      <h2 class="section-title">Workplace Safety Analysis</h2>
+      
+      <div class="card">
+        <h3 class="card-title">Safety Score</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" style="color: ${gradeColor};">${safety.overall || 0}</div>
+            <div class="stat-label">Overall Score (Grade: ${safety.grade || 'F'})</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${escapeHtml(safety.violencePreparedness || 'N/A')}</div>
+            <div class="stat-label">Violence Preparedness</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${escapeHtml(safety.dataSecurityPosture || 'N/A')}</div>
+            <div class="stat-label">Data Security Posture</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${escapeHtml(safety.employeeCount || 'N/A')}</div>
+            <div class="stat-label">Employee Count</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 // Export HTML report and open in new tab with download option

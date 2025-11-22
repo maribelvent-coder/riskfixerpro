@@ -16,6 +16,7 @@ import {
 } from "@shared/riskCalculations";
 import { generateRiskIntelligenceReport } from "./riskIntelligence";
 import type { RiskIntelligenceReport, ThreatIntelligence } from "./riskIntelligence";
+import { calculateTemplateMetrics } from "./reporting/template-metrics";
 
 export interface ComprehensiveReportData {
   // Core Assessment Data
@@ -64,6 +65,9 @@ export interface ComprehensiveReportData {
     risk: string;
     timeframe?: string;
   }>;
+  
+  // Template-Specific Metrics ("Killer Features")
+  templateMetrics: Record<string, any>;
 }
 
 export async function aggregateReportData(
@@ -180,13 +184,17 @@ export async function aggregateReportData(
   // Generate prioritized recommendations (handles missing data)
   const recommendations = generateRecommendations(assessment, geoIntel);
 
+  // Calculate template-specific metrics
+  const templateMetrics = calculateTemplateMetrics(assessment, assessment.riskScenarios || []);
+  
   return {
     assessment,
     site,
     riskSummary,
     geoIntel,
     photoEvidence,
-    recommendations
+    recommendations,
+    templateMetrics
   };
 }
 
