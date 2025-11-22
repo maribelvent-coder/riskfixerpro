@@ -426,11 +426,12 @@ export const riskScenarios = pgTable("risk_scenarios", {
   currentRiskLevel: text("current_risk_level"),
   
   // "NO BS" NUMERIC RISK CALCULATIONS
-  likelihoodScore: real("likelihood_score"), // L: 1-5 numeric scale
+  likelihoodScore: real("likelihood_score"), // L (Threat): 1-5 numeric scale
+  vulnerabilityScore: real("vulnerability_score"), // V: 1-5 numeric scale (from security gaps)
   impactScore: real("impact_score"), // I: 1-5 numeric scale (from asset criticality)
-  inherentRisk: real("inherent_risk"), // R_inh = L × I (range 1-25)
+  inherentRisk: real("inherent_risk"), // R_inh = L × V × I (range 1-125, normalized to 0-100)
   controlEffectiveness: real("control_effectiveness"), // Ce: 0.0 - 0.95 (sum of control weights × fidelity)
-  residualRisk: real("residual_risk"), // R_res = R_inh × (1 - Ce)
+  residualRisk: real("residual_risk"), // R_res = (L × V × I) × (1 - Ce), normalized to 0-100
   
   // Decision and treatment
   decision: text("decision").default("undecided"), // "undecided", "accept", "transfer", "remediate"

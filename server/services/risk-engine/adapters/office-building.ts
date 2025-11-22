@@ -233,9 +233,9 @@ export class OfficeBuildingAdapter implements RiskEngineAdapter {
     // Risk = (T × V) × I × (1 - C_e)
     
     const inherentRisk = likelihood * vulnerability * impact;
-    const risk = inherentRisk * (1 - controlEffectiveness);
-
-    return Math.round(risk);
+    const residualRisk = inherentRisk * (1 - controlEffectiveness);
+    // Normalize to 0-100 scale (max raw score is 5×5×5 = 125)
+    return Math.round((residualRisk / 125) * 100);
   }
 
   async generateRecommendations(

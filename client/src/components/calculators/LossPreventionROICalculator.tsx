@@ -8,7 +8,8 @@ import {
   Clock, 
   Target,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Shield
 } from "lucide-react";
 
 export interface ProposedControl {
@@ -21,6 +22,13 @@ export interface LossPreventionROICalculatorProps {
   assessmentData: {
     annualRevenue: number;
     shrinkageRate: number; // e.g., 2.5 for 2.5%
+    // TCOR - Total Cost of Risk fields (optional)
+    employeeCount?: number;
+    annualTurnoverRate?: number;
+    avgHiringCost?: number;
+    annualLiabilityEstimates?: number;
+    securityIncidentsPerYear?: number;
+    brandDamageEstimate?: number;
   };
   proposedControls: ProposedControl[];
 }
@@ -36,28 +44,47 @@ export function LossPreventionROICalculator({
   // 1. Current Annual Loss from Shrinkage
   const annualShrinkageLoss = assessmentData.annualRevenue * (assessmentData.shrinkageRate / 100);
   
-  // 2. Total Cost of Proposed Controls
+  // 2. TCOR - Total Cost of Risk (Indirect Costs)
+  const employeeCount = assessmentData.employeeCount || 0;
+  const turnoverRate = (assessmentData.annualTurnoverRate || 0) / 100;
+  const hiringCost = assessmentData.avgHiringCost || 0;
+  
+  // 20% of turnover is security-related (shrinkage, workplace violence, etc.)
+  const securityRelatedTurnoverCost = employeeCount * turnoverRate * hiringCost * 0.20;
+  
+  const liabilityCost = assessmentData.annualLiabilityEstimates || 0;
+  const incidentCost = (assessmentData.securityIncidentsPerYear || 0) * 5000; // $5K per incident for retail
+  const brandDamageCost = assessmentData.brandDamageEstimate || 0;
+  
+  // Total Annual Exposure = Direct Loss + TCOR Indirect Costs
+  const totalAnnualExposure = annualShrinkageLoss + securityRelatedTurnoverCost + liabilityCost + incidentCost + brandDamageCost;
+  
+  // 3. Total Cost of Proposed Controls
   const totalControlCost = proposedControls.reduce(
     (sum, control) => sum + control.estimatedCost, 
     0
   );
   
-  // 3. Total Reduction Percentage (capped at 85%)
+  // 4. Total Reduction Percentage (capped at 85%)
   const totalReduction = Math.min(
     0.85,
     proposedControls.reduce((sum, control) => sum + (control.reductionPercentage / 100), 0)
   );
   
-  // 4. Projected Annual Savings
-  const projectedSavings = annualShrinkageLoss * totalReduction;
+  // 5. Projected Annual Savings (applied to total exposure, not just shrinkage)
+  const projectedSavings = totalAnnualExposure * totalReduction;
   
-  // 5. Payback Period (in years)
-  const paybackPeriod = totalControlCost > 0 ? totalControlCost / projectedSavings : 0;
+  // 6. Payback Period (in years)
+  const paybackPeriod = totalControlCost > 0 && projectedSavings > 0 ? totalControlCost / projectedSavings : Infinity;
   
-  // 6. Three-Year ROI Percentage
+  // 7. Three-Year ROI Percentage
   const threeYearROI = totalControlCost > 0
     ? (((projectedSavings * 3) - totalControlCost) / totalControlCost) * 100
     : 0;
+  
+  // 8. Determine Presentation Mode
+  const isPositiveROI = threeYearROI >= 0;
+  const presentationMode = isPositiveROI ? 'financial' : 'risk-mitigation';
   
   // Industry Benchmarks
   const industryAverage = 1.5; // 1.5%
@@ -103,7 +130,7 @@ export function LossPreventionROICalculator({
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-red-500" />
               <span className="text-sm font-medium text-muted-foreground">
-                Current Annual Shrinkage Loss
+                Total Annual Risk Exposure
               </span>
             </div>
             <Badge variant="destructive" className="gap-1" data-testid="badge-current-shrinkage">
@@ -112,10 +139,15 @@ export function LossPreventionROICalculator({
             </Badge>
           </div>
           <div className="text-4xl font-bold text-red-600" data-testid="text-annual-loss">
-            {formatCurrency(annualShrinkageLoss)}
+            {formatCurrency(totalAnnualExposure)}
           </div>
-          <div className="text-xs text-muted-foreground">
-            Based on ${formatCurrency(assessmentData.annualRevenue)} annual revenue
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>Direct Loss: {formatCurrency(annualShrinkageLoss)} (shrinkage)</div>
+            {(securityRelatedTurnoverCost + liabilityCost + incidentCost + brandDamageCost) > 0 && (
+              <div className="text-orange-600 dark:text-orange-400">
+                + Indirect Costs: {formatCurrency(securityRelatedTurnoverCost + liabilityCost + incidentCost + brandDamageCost)} (TCOR)
+              </div>
+            )}
           </div>
         </div>
 
@@ -158,54 +190,87 @@ export function LossPreventionROICalculator({
                 </span>
               </div>
               <div className="text-3xl font-bold" data-testid="text-payback-period">
-                {paybackPeriod.toFixed(1)}
-                <span className="text-lg font-normal text-muted-foreground ml-1">years</span>
+                {isFinite(paybackPeriod) ? (
+                  <>
+                    {paybackPeriod.toFixed(1)}
+                    <span className="text-lg font-normal text-muted-foreground ml-1">years</span>
+                  </>
+                ) : (
+                  <span className="text-xl">N/A</span>
+                )}
               </div>
-              {paybackPeriod < 1 && (
+              {isFinite(paybackPeriod) && paybackPeriod < 1 && (
                 <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
                   Excellent ROI
                 </Badge>
               )}
-              {paybackPeriod >= 1 && paybackPeriod < 2 && (
+              {isFinite(paybackPeriod) && paybackPeriod >= 1 && paybackPeriod < 2 && (
                 <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
                   Good ROI
                 </Badge>
               )}
-              {paybackPeriod >= 2 && (
+              {isFinite(paybackPeriod) && paybackPeriod >= 2 && (
                 <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-500/20">
                   Long-term Investment
+                </Badge>
+              )}
+              {!isFinite(paybackPeriod) && (
+                <Badge variant="outline" className="bg-gray-500/10 text-gray-700 border-gray-500/20">
+                  Risk Reduction
                 </Badge>
               )}
             </CardContent>
           </Card>
 
-          {/* 3-Year ROI */}
+          {/* 3-Year ROI - Dual Mode Presentation */}
           <Card className="border-2">
             <CardContent className="p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  3-Year ROI
-                </span>
-              </div>
-              <div className="text-3xl font-bold" data-testid="text-3yr-roi">
-                {threeYearROI > 0 ? '+' : ''}{threeYearROI.toFixed(0)}
-                <span className="text-lg font-normal text-muted-foreground ml-1">%</span>
-              </div>
-              {threeYearROI >= 200 && (
-                <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
-                  Strong Return
-                </Badge>
-              )}
-              {threeYearROI >= 100 && threeYearROI < 200 && (
-                <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
-                  Positive Return
-                </Badge>
-              )}
-              {threeYearROI < 100 && (
-                <Badge variant="outline" className="bg-gray-500/10 text-gray-700 border-gray-500/20">
-                  Moderate Return
-                </Badge>
+              {presentationMode === 'financial' ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      3-Year ROI
+                    </span>
+                  </div>
+                  <div className="text-3xl font-bold" data-testid="text-3yr-roi">
+                    {threeYearROI > 0 ? '+' : ''}{threeYearROI.toFixed(0)}
+                    <span className="text-lg font-normal text-muted-foreground ml-1">%</span>
+                  </div>
+                  {threeYearROI >= 200 && (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
+                      Strong Return
+                    </Badge>
+                  )}
+                  {threeYearROI >= 100 && threeYearROI < 200 && (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
+                      Positive Return
+                    </Badge>
+                  )}
+                  {threeYearROI >= 0 && threeYearROI < 100 && (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
+                      Moderate Return
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Risk Mitigation Value
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600" data-testid="text-risk-mitigation">
+                    Compliance
+                  </div>
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
+                    Regulatory & Safety
+                  </Badge>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Investment justifiable for:<br/>• Legal compliance<br/>• Duty of care<br/>• Liability reduction
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

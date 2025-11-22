@@ -282,10 +282,20 @@ export class DatacenterAdapter {
   /**
    * Standard T×V×I risk calculation for datacenter scenarios
    */
-  async calculateRisk(assessment: Assessment): Promise<number> {
-    // Placeholder for standard risk calculation
-    // Would typically calculate Threat × Vulnerability × Impact
-    return 0;
+  calculateRisk(
+    likelihood: number,
+    vulnerability: number,
+    impact: number,
+    exposure?: number,
+    controlEffectiveness: number = 0
+  ): number {
+    // Standard T×V×I formula for datacenters
+    // Risk = (T × V × I) × (1 - C_e)
+    
+    const inherentRisk = likelihood * vulnerability * impact;
+    const residualRisk = inherentRisk * (1 - controlEffectiveness);
+    // Normalize to 0-100 scale (max raw score is 5×5×5 = 125)
+    return Math.round((residualRisk / 125) * 100);
   }
 }
 

@@ -41,16 +41,16 @@ interface RiskAssessmentNBSProps {
 // ============================================================================
 
 function getRiskColor(riskScore: number): string {
-  if (riskScore >= 20) return "bg-red-500/20 border-red-500/40 text-red-300";
-  if (riskScore >= 12) return "bg-orange-500/20 border-orange-500/40 text-orange-300";
-  if (riskScore >= 6) return "bg-yellow-500/20 border-yellow-500/40 text-yellow-300";
+  if (riskScore >= 75) return "bg-red-500/20 border-red-500/40 text-red-300";
+  if (riskScore >= 50) return "bg-orange-500/20 border-orange-500/40 text-orange-300";
+  if (riskScore >= 25) return "bg-yellow-500/20 border-yellow-500/40 text-yellow-300";
   return "bg-green-500/20 border-green-500/40 text-green-300";
 }
 
 function getRiskLabel(riskScore: number): string {
-  if (riskScore >= 20) return "Critical";
-  if (riskScore >= 12) return "High";
-  if (riskScore >= 6) return "Medium";
+  if (riskScore >= 75) return "Critical";
+  if (riskScore >= 50) return "High";
+  if (riskScore >= 25) return "Medium";
   return "Low";
 }
 
@@ -255,6 +255,14 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Calculate default normalized residual risk: (3×3×3×(1-0) / 125) × 100 = 22
+  const defaultLikelihood = scenario?.likelihoodScore || 3;
+  const defaultVulnerability = scenario?.vulnerabilityScore || 3;
+  const defaultImpact = scenario?.impactScore || 3;
+  const defaultEffectiveness = scenario?.controlEffectiveness || 0;
+  const defaultRawRiskTriple = defaultLikelihood * defaultVulnerability * defaultImpact; // 27
+  const defaultResidualRisk = scenario?.residualRisk ?? Math.round((defaultRawRiskTriple * (1 - defaultEffectiveness) / 125) * 100); // 22
+  
   const [formData, setFormData] = useState<Partial<InsertRiskScenario>>({
     assessmentId,
     assetId: scenario?.assetId || "",
@@ -265,24 +273,34 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
     vulnerabilityDescription: scenario?.vulnerabilityDescription || "",
     likelihood: scenario?.likelihood || "medium",
     impact: scenario?.impact || "moderate",
-    riskLevel: scenario?.riskLevel || "Medium",
-    likelihoodScore: scenario?.likelihoodScore || 3,
-    impactScore: scenario?.impactScore || 3,
-    inherentRisk: scenario?.inherentRisk || 9,
-    controlEffectiveness: scenario?.controlEffectiveness || 0,
-    residualRisk: scenario?.residualRisk || 9,
+    riskLevel: scenario?.riskLevel || getRiskLabel(defaultResidualRisk),
+    likelihoodScore: defaultLikelihood,
+    vulnerabilityScore: defaultVulnerability,
+    impactScore: defaultImpact,
+    inherentRisk: scenario?.inherentRisk || defaultRawRiskTriple, // Store L×V×I (27)
+    controlEffectiveness: defaultEffectiveness,
+    residualRisk: defaultResidualRisk, // Normalized 0-100 (22)
   });
 
-  // Auto-calculate risk when likelihood or impact changes
-  const updateRiskCalculations = (likelihood: number, impact: number, effectiveness: number = formData.controlEffectiveness || 0) => {
-    const inherent = likelihood * impact;
-    const residual = inherent * (1 - effectiveness);
+  // Auto-calculate risk when likelihood, vulnerability, or impact changes
+  const updateRiskCalculations = (
+    likelihood: number, 
+    vulnerability: number, 
+    impact: number, 
+    effectiveness: number = formData.controlEffectiveness || 0
+  ) => {
+    // Raw risk triple product: L×V×I (max 125)
+    const rawRiskTriple = likelihood * vulnerability * impact;
+    // Apply control effectiveness and normalize to 0-100 scale
+    const rawRiskAfterControls = rawRiskTriple * (1 - effectiveness);
+    const residual = Math.round((rawRiskAfterControls / 125) * 100);
     
     setFormData(prev => ({
       ...prev,
       likelihoodScore: likelihood,
+      vulnerabilityScore: vulnerability,
       impactScore: impact,
-      inherentRisk: inherent,
+      inherentRisk: rawRiskTriple, // Store L×V×I triple product
       residualRisk: residual,
       controlEffectiveness: effectiveness,
       riskLevel: getRiskLabel(residual),
@@ -359,7 +377,11 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
                     asset: asset?.name || "",
                     impactScore: asset?.criticality || 3
                   });
-                  updateRiskCalculations(formData.likelihoodScore || 3, asset?.criticality || 3);
+                  updateRiskCalculations(
+                    formData.likelihoodScore || 3, 
+                    formData.vulnerabilityScore || 3, 
+                    asset?.criticality || 3
+                  );
                 }}
               >
                 <SelectTrigger id="scenario-asset" data-testid="select-scenario-asset">
@@ -448,7 +470,7 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
                   max={5}
                   step={1}
                   value={[formData.likelihoodScore || 3]}
-                  onValueChange={([value]) => updateRiskCalculations(value, formData.impactScore || 3)}
+                  onValueChange={([value]) => updateRiskCalculations(value, formData.vulnerabilityScore || 3, formData.impactScore || 3)}
                   className="py-4"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -457,6 +479,30 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
                   <span>Possible</span>
                   <span>Likely</span>
                   <span>Almost Certain</span>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="scenario-vulnerability">
+                  Vulnerability: {formData.vulnerabilityScore}
+                  <span className="text-xs text-muted-foreground ml-2">(1=Resilient, 5=Highly Vulnerable)</span>
+                </Label>
+                <Slider
+                  id="scenario-vulnerability"
+                  data-testid="slider-scenario-vulnerability"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={[formData.vulnerabilityScore || 3]}
+                  onValueChange={([value]) => updateRiskCalculations(formData.likelihoodScore || 3, value, formData.impactScore || 3)}
+                  className="py-4"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Resilient</span>
+                  <span>Protected</span>
+                  <span>Moderate</span>
+                  <span>Weak</span>
+                  <span>Exposed</span>
                 </div>
               </div>
 
@@ -472,7 +518,7 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
                   max={5}
                   step={1}
                   value={[formData.impactScore || 3]}
-                  onValueChange={([value]) => updateRiskCalculations(formData.likelihoodScore || 3, value)}
+                  onValueChange={([value]) => updateRiskCalculations(formData.likelihoodScore || 3, formData.vulnerabilityScore || 3, value)}
                   className="py-4"
                   disabled={!!selectedAsset}
                 />
@@ -488,16 +534,18 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
               <Card className={`${getRiskColor(formData.residualRisk || 0)} border-2`}>
                 <CardContent className="pt-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Inherent Risk (L × I):</span>
-                    <span className="font-mono font-bold">{formData.inherentRisk?.toFixed(1)}</span>
+                    <span className="text-sm font-medium">Raw Risk (L × V × I):</span>
+                    <span className="font-mono font-bold">
+                      {formData.likelihoodScore || 3} × {formData.vulnerabilityScore || 3} × {formData.impactScore || 3} = {formData.inherentRisk || 27}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Control Effectiveness:</span>
                     <span className="font-mono font-bold">{((formData.controlEffectiveness || 0) * 100).toFixed(0)}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Residual Risk:</span>
-                    <span className="font-mono font-bold text-lg">{formData.residualRisk?.toFixed(1)} ({formData.riskLevel})</span>
+                    <span className="text-sm font-medium">Residual Risk (0-100):</span>
+                    <span className="font-mono font-bold text-lg">{formData.residualRisk != null ? formData.residualRisk.toFixed(0) : 22}% ({formData.riskLevel})</span>
                   </div>
                 </CardContent>
               </Card>
@@ -609,18 +657,24 @@ function ScenariosList({ assessmentId, scenarios, assets, onEdit, onDelete }: Sc
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-4 gap-4 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Likelihood:</span>
-                      <span className="ml-2 font-mono font-medium">{scenario.likelihoodScore}/5</span>
+                      <span className="text-muted-foreground">Likelihood (L):</span>
+                      <span className="ml-2 font-mono font-medium">{scenario.likelihoodScore ?? 3}/5</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Impact:</span>
-                      <span className="ml-2 font-mono font-medium">{scenario.impactScore}/5</span>
+                      <span className="text-muted-foreground">Vulnerability (V):</span>
+                      <span className="ml-2 font-mono font-medium">{scenario.vulnerabilityScore ?? 3}/5</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Inherent Risk:</span>
-                      <span className="ml-2 font-mono font-medium">{scenario.inherentRisk?.toFixed(1)}</span>
+                      <span className="text-muted-foreground">Impact (I):</span>
+                      <span className="ml-2 font-mono font-medium">{scenario.impactScore ?? 3}/5</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Score:</span>
+                      <span className="ml-2 font-mono font-medium">
+                        {scenario.residualRisk != null ? `${scenario.residualRisk.toFixed(0)}%` : `${Math.round(((scenario.likelihoodScore ?? 3) * (scenario.vulnerabilityScore ?? 3) * (scenario.impactScore ?? 3) / 125) * 100)}%`}
+                      </span>
                     </div>
                   </div>
 
