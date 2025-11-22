@@ -35,6 +35,12 @@ const pgPool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Add error handler to prevent unhandled pool errors from crashing the app
+pgPool.on('error', (err) => {
+  console.error('Unexpected database pool error:', err);
+  // Pool will automatically try to reconnect
+});
+
 // Configure session middleware with PostgreSQL store
 app.use(
   session({
