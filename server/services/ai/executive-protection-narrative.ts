@@ -66,10 +66,14 @@ export async function generateExecutiveProtectionRiskNarrative(
           role: "system",
           content: `You are a Senior Executive Protection Specialist with 20+ years of experience in close protection, threat assessment, and high-net-worth individual security. You specialize in kidnapping prevention, stalking mitigation, travel security, and OSINT-driven threat analysis following ASIS International and Protective Security Advisor (PSA) standards.
 
+Your primary goal is **Life Safety and Risk Mitigation**. Financials are secondary context only.
+
 Your writing style is:
 - Professional and authoritative
 - Data-driven with specific threat intelligence
-- Focused on personal safety, family security, and reputation protection
+- Focused on personal safety, family security, and operational risk mitigation
+- Security gaps and protective measures come first
+- Resource implications are mentioned briefly, only after security analysis
 - Sensitive to privacy and discretion requirements
 - Concise yet comprehensive
 - Uses executive protection terminology appropriately`
@@ -171,25 +175,30 @@ ${scenario.vulnerabilityDescription}`;
   }
   
   // Construct the full prompt
-  return `Write a professional, 3-paragraph security risk analysis for this executive protection scenario.
+  return `Write a professional, 4-paragraph security risk analysis for this executive protection scenario using a Security-First approach.
 
 ${executiveContext}
 
 ${riskDetails}${vulnerabilityDetails}
 
-**Instructions:**
+**Instructions - Security Professional Perspective:**
 
-**Paragraph 1 - Context & Threat Definition (3-4 sentences):**
-Define this specific risk in the context of THIS executive's profile. Reference the public exposure level, travel frequency, or family considerations to establish why this threat is material to the executive's safety. For kidnapping scenarios, emphasize the ransom potential and targeting methodology. For stalking scenarios, emphasize the pattern recognition and escalation indicators. For exposure scenarios (doxxing, OSINT), emphasize the digital footprint and privacy implications.
+**Paragraph 1 - Threat Landscape (3-4 sentences):**
+Who or what is the threat? Define the specific threat actor(s) or conditions that create this risk. For kidnapping, identify the criminal methodology and targeting criteria. For stalking, describe the perpetrator profile and escalation patterns. For digital exposure, explain how adversaries weaponize publicly available information. Reference THIS executive's specific threat landscape (public profile, industry, geopolitical factors).
 
-**Paragraph 2 - Vulnerability Analysis (3-4 sentences):**
-Explain WHY the risk level is ${(scenario.riskLevel || 'elevated').toLowerCase()} based on the specific security gaps identified in the vulnerability assessment. Reference the actual findings (e.g., predictable routines, insufficient advance work, no protective detail, inadequate digital hygiene, exposed family information, missing counter-surveillance measures). Connect these vulnerabilities to how they enable the threat.
+**Paragraph 2 - Vulnerability Assessment (3-4 sentences):**
+Where is the executive exposed? Identify critical security gaps that enable the threat. Focus on physical vulnerabilities (predictable routes, inadequate residence security, no protective detail), digital vulnerabilities (public home address, exposed travel patterns, social media oversharing), and operational vulnerabilities (static schedules, insufficient advance work, untrained family members). Reference the actual assessment findings.
 
-**Paragraph 3 - Impact Assessment (3-4 sentences):**
-Describe the potential personal, family, and organizational consequences if this risk materializes. For kidnapping, focus on ransom demands, family trauma, business disruption, and long-term psychological impact. For stalking, focus on escalation to violence, restraining order limitations, family anxiety, and career disruption. For exposure risks, focus on identity theft, family targeting, extortion opportunities, and reputation damage. Use specific context when available (public profile level, family members, travel patterns).
+**Paragraph 3 - Operational Recommendations (3-4 sentences):**
+What do we do? Provide specific, actionable protective measures. For travel security: route randomization, advance security work, secure communications. For residence: hardening measures, alarm systems, panic room with independent communications. For digital privacy: scrubbing services, social media protocols, OSINT monitoring. Prioritize life safety measures over cost considerations.
+
+**Paragraph 4 - Resource Implications (2-3 sentences, BRIEF):**
+Briefly mention what resources are required to implement these protections. Frame budget allocation as enabling critical security capabilities, not as the primary justification. Keep this section concise - security professionals understand that executive protection is a duty-of-care obligation, not just an ROI calculation.
 
 **Formatting:**
 - Write in third person
+- Act as a Protection Specialist, not a CFO
+- Lead with danger, not dollars
 - Use specific data from the assessment
 - Avoid generic security platitudes
 - Focus on THIS executive's specific context

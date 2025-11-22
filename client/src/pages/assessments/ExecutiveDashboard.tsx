@@ -22,7 +22,10 @@ import {
   Eye,
   Car,
   Home,
-  Users
+  Users,
+  Target,
+  MapPin,
+  ListChecks
 } from "lucide-react";
 
 interface ExecutiveProfileData {
@@ -244,6 +247,123 @@ export default function ExecutiveDashboard() {
         </Badge>
       </div>
 
+      {/* SECURITY-FIRST TOP ROW - Threat Assessment Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Threat Profile */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Target className="h-4 w-4" />
+              Threat Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Risk Level</span>
+                <Badge variant={
+                  riskLevel === 'Critical' || riskLevel === 'High' ? 'destructive' :
+                  riskLevel === 'Medium' ? 'secondary' : 'outline'
+                }>
+                  {riskLevel || 'Not Analyzed'}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Primary Threat</span>
+                <Badge variant={
+                  publicProfile === 'very_high' || publicProfile === 'high' ? 'destructive' :
+                  publicProfile === 'medium' ? 'secondary' : 'outline'
+                }>
+                  {publicProfile === 'very_high' || publicProfile === 'high' ? 'Kidnapping/Ransom' :
+                   publicProfile === 'medium' ? 'Harassment/Stalking' : 'General Security'}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Exposure Factor</span>
+                <span className="font-semibold text-primary">
+                  {exposureFactor > 0 ? `${exposureFactor.toFixed(1)}x` : 'Not Analyzed'}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Vulnerability Map */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MapPin className="h-4 w-4" />
+              Vulnerability Map
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Travel Security</span>
+                <span className={`font-medium ${hasArmoredVehicle ? 'text-green-500' : 'text-orange-500'}`}>
+                  {hasArmoredVehicle ? 'Protected' : 'Vulnerable'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Residence Security</span>
+                <span className={`font-medium ${hasPanicRoom ? 'text-green-500' : 'text-orange-500'}`}>
+                  {hasPanicRoom ? 'Hardened' : 'Exposed'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Personal Detail</span>
+                <span className={`font-medium ${hasPersonalProtection ? 'text-green-500' : 'text-red-500'}`}>
+                  {hasPersonalProtection ? 'Active' : 'None'}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Items */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ListChecks className="h-4 w-4" />
+              Action Items
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {!hasPersonalProtection && (
+                <div className="flex items-center gap-2 text-sm text-orange-600">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Personal protection needed</span>
+                </div>
+              )}
+              {!hasArmoredVehicle && (publicProfile === 'very_high' || publicProfile === 'high') && (
+                <div className="flex items-center gap-2 text-sm text-orange-600">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Secure transport recommended</span>
+                </div>
+              )}
+              {!hasPanicRoom && (
+                <div className="flex items-center gap-2 text-sm text-orange-600">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Safe haven needed</span>
+                </div>
+              )}
+              {hasPersonalProtection && hasArmoredVehicle && hasPanicRoom && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Core protections in place</span>
+                </div>
+              )}
+              <div className="pt-2 border-t mt-2">
+                <div className="text-xs text-muted-foreground">
+                  {activeScenarioCount > 0 ? `${activeScenarioCount} scenarios analyzed` : 'Save profile to generate scenarios'}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LEFT COLUMN - Profile Form */}
@@ -426,14 +546,14 @@ export default function ExecutiveDashboard() {
               </div>
             </div>
 
-            {/* EP-Specific Financials (TCOR) */}
+            {/* Resource Requirements */}
             <div className="space-y-4 pt-4 border-t">
               <h3 className="font-medium flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Protection Financials
+                Resource Requirements
               </h3>
               <p className="text-xs text-muted-foreground">
-                Cost-Benefit Analysis inputs for executive protection investment decisions
+                Budget allocation for protection program implementation
               </p>
 
               <div className="space-y-2">
@@ -619,14 +739,14 @@ export default function ExecutiveDashboard() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Cost-Benefit Analysis Calculator */}
-          <ExecutiveCostBenefitCalculator 
-            profile={data?.profile || null} 
-            tcor={data?.tcor || null}
-          />
         </div>
       </div>
+
+      {/* BOTTOM ROW - Resource Justification */}
+      <ExecutiveCostBenefitCalculator 
+        profile={data?.profile || null} 
+        tcor={data?.tcor || null}
+      />
     </div>
   );
 }
