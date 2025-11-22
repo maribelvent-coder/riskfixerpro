@@ -257,12 +257,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set session
       req.session.userId = user.id;
+      console.log('🔐 Login - Setting session userId:', user.id);
+      console.log('🔐 Login - Session ID:', req.sessionID);
 
       // Save session explicitly before sending response
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
+          if (err) {
+            console.error('❌ Login - Session save error:', err);
+            reject(err);
+          } else {
+            console.log('✅ Login - Session saved successfully');
+            resolve();
+          }
         });
       });
 
@@ -404,15 +411,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", async (req, res) => {
     try {
+      console.log('🔍 Auth check - Session ID:', req.sessionID);
+      console.log('🔍 Auth check - Session userId:', req.session.userId);
+      console.log('🔍 Auth check - Session data:', JSON.stringify(req.session));
+      
       if (!req.session.userId) {
+        console.log('❌ Auth check - No userId in session');
         return res.status(401).json({ error: "Not authenticated" });
       }
 
       const user = await storage.getUser(req.session.userId);
       if (!user) {
+        console.log('❌ Auth check - User not found for ID:', req.session.userId);
         return res.status(401).json({ error: "User not found" });
       }
 
+      console.log('✅ Auth check - User authenticated:', user.username);
       // Return user without password
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
