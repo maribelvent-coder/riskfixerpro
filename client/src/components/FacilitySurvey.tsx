@@ -891,7 +891,7 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
               </p>
             </div>
             <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">
-              Phase 1 of 2
+              Survey
             </Badge>
           </div>
         </CardHeader>

@@ -1885,10 +1885,10 @@ export function RiskAssessmentNBS({ assessmentId, onComplete }: RiskAssessmentNB
             <Button
               onClick={() => recalculateMutation.mutate()}
               disabled={recalculateMutation.isPending || scenarios.length === 0}
-              data-testid="button-complete-phase2"
+              data-testid="button-complete-risk-assessment"
               className="w-full"
             >
-              {recalculateMutation.isPending ? "Completing..." : "Complete Phase 2"}
+              {recalculateMutation.isPending ? "Completing..." : "Complete Risk Assessment"}
             </Button>
             {scenarios.length === 0 && (
               <p className="text-xs text-muted-foreground mt-2 text-center">

@@ -272,8 +272,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     return {
       tabs: baseTabs,
       phases: [
-        { label: `Phase 1: ${surveyTypeLabel} Survey`, completed: assessmentData?.facilitySurveyCompleted || false },
-        { label: "Phase 2: Risk Assessment", completed: assessmentData?.riskAssessmentCompleted || false },
+        { label: `${surveyTypeLabel} Survey`, completed: assessmentData?.facilitySurveyCompleted || false },
+        { label: "Risk Assessment", completed: assessmentData?.riskAssessmentCompleted || false },
         { label: "Reports", completed: false }
       ]
     };
@@ -592,13 +592,13 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </TabsList>
         </div>
 
-        {/* Phase 1: Facility Physical Security Survey */}
+        {/* Facility Physical Security Survey */}
         <TabsContent value="facility-survey" className="space-y-4">
           <Card>
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                Phase 1: {getSurveyTypeLabel(assessmentData?.templateId || undefined)} Survey
+                {getSurveyTypeLabel(assessmentData?.templateId || undefined)} Survey
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground">
                 Professional assessment of existing physical security controls following ASIS and ANSI standards.
@@ -614,7 +614,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </Card>
         </TabsContent>
 
-        {/* Phase 2: ASIS Risk Assessment - Quantitative framework for facility assessments */}
+        {/* ASIS Risk Assessment - Quantitative framework for facility assessments */}
         <TabsContent value="risk-assessment" className="space-y-4">
           {assessmentData.surveyParadigm === "facility" ? (
             <RiskAssessmentNBS 
@@ -626,7 +626,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               <CardHeader className="p-4 sm:p-6">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Phase 2: Security Risk Assessment
+                  Security Risk Assessment
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Systematic identification and analysis of security risks using ASIS International methodology.
