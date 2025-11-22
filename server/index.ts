@@ -52,14 +52,16 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    name: 'connect.sid',
+    name: 'sessionId',
     cookie: {
       secure: false, // Replit handles HTTPS at the proxy level
       httpOnly: true,
       sameSite: 'lax',
+      domain: undefined, // Let browser set the domain
       path: '/',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
+    proxy: true, // Trust the reverse proxy
   })
 );
 
