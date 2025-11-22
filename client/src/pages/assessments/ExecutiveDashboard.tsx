@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
+import { ExecutiveCostBenefitCalculator } from "@/components/calculators/ExecutiveCostBenefitCalculator";
 import { 
   Shield, 
   AlertTriangle, 
@@ -41,6 +42,15 @@ interface ExecutiveProfileData {
   dailyLossOfValue?: number;
 }
 
+interface TCORBreakdown {
+  ransomExposure: number;
+  incapacitationCost: number;
+  directSecurityCost: number;
+  totalPotentialLoss: number;
+  totalAnnualExposure: number;
+  costBenefitRatio: number;
+}
+
 interface ExecutiveDashboardResponse {
   assessment: {
     id: string;
@@ -53,6 +63,7 @@ interface ExecutiveDashboardResponse {
     riskLevel: string;
     activeScenarioCount: number;
   };
+  tcor?: TCORBreakdown | null;
 }
 
 const PUBLIC_PROFILE_OPTIONS = [
@@ -608,6 +619,12 @@ export default function ExecutiveDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Cost-Benefit Analysis Calculator */}
+          <ExecutiveCostBenefitCalculator 
+            profile={data?.profile || null} 
+            tcor={data?.tcor || null}
+          />
         </div>
       </div>
     </div>

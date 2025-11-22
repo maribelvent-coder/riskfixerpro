@@ -100,12 +100,14 @@ export interface RiskEngineAdapter {
    * @param responses - Interview responses
    * @param threatId - Threat identifier
    * @param riskScore - Calculated risk score
+   * @param profile - Optional profile data for context-aware recommendations
    * @returns Array of recommendations
    */
   generateRecommendations(
     responses: Map<string, InterviewResponse>,
     threatId: string,
-    riskScore: number
+    riskScore: number,
+    profile?: any
   ): Promise<string[]>;
 }
 

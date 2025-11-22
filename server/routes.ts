@@ -2260,10 +2260,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate risk metrics from profile and scenarios
       const analysis = await calculateRiskMetrics(assessmentId, profile, storage);
       
+      // Calculate TCOR for EP assessments (if any financial field is defined)
+      let tcor = null;
+      if (profile.annualProtectionBudget !== undefined || 
+          profile.insuranceDeductible !== undefined || 
+          profile.dailyLossOfValue !== undefined) {
+        const { calculateTCOR } = await import('./services/risk-engine/adapters/executive-protection');
+        tcor = calculateTCOR({
+          annualProtectionBudget: profile.annualProtectionBudget,
+          insuranceDeductible: profile.insuranceDeductible,
+          dailyLossOfValue: profile.dailyLossOfValue,
+          netWorthRange: profile.netWorthRange
+        });
+      }
+      
       res.json({
         assessment: req.assessment,
         profile,
         analysis,
+        tcor,
       });
     } catch (error) {
       console.error("Error fetching executive profile:", error);
@@ -2289,10 +2304,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasPersonalProtection: z.boolean().default(false),
         hasPanicRoom: z.boolean().default(false),
         hasArmoredVehicle: z.boolean().default(false),
-        // EP-Specific TCOR Fields
-        annualProtectionBudget: z.number().optional(),
-        insuranceDeductible: z.number().optional(),
-        dailyLossOfValue: z.number().optional(),
+        // EP-Specific TCOR Fields (coerce to number, reject NaN)
+        annualProtectionBudget: z.coerce.number().nonnegative().optional(),
+        insuranceDeductible: z.coerce.number().nonnegative().optional(),
+        dailyLossOfValue: z.coerce.number().nonnegative().optional(),
       });
       
       const validatedProfile = executiveProfileSchema.parse(profileData);
@@ -2328,10 +2343,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate risk metrics from profile and scenarios
         const analysis = await calculateRiskMetrics(assessmentId, profile, storage);
         
+        // Calculate TCOR for EP assessments (if any financial field is defined)
+        let tcor = null;
+        if (profile.annualProtectionBudget !== undefined || 
+            profile.insuranceDeductible !== undefined || 
+            profile.dailyLossOfValue !== undefined) {
+          const { calculateTCOR } = await import('./services/risk-engine/adapters/executive-protection');
+          tcor = calculateTCOR({
+            annualProtectionBudget: profile.annualProtectionBudget,
+            insuranceDeductible: profile.insuranceDeductible,
+            dailyLossOfValue: profile.dailyLossOfValue,
+            netWorthRange: profile.netWorthRange
+          });
+        }
+        
         // Return profile with scenario generation metadata and analysis
         res.json({
           profile,
           analysis,
+          tcor,
           _scenarioGeneration: scenarioResult
         });
       } catch (genError) {
