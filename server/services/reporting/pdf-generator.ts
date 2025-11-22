@@ -88,8 +88,9 @@ export async function generateAssessmentReport(
 /**
  * Generate fallback executive summary when AI summary is not available
  * This provides a basic data-driven summary based on risk scenario counts
+ * Exported for reuse in preview endpoint to ensure parity with PDF generation
  */
-async function fetchExecutiveSummary(assessmentId: string): Promise<string> {
+export async function fetchExecutiveSummary(assessmentId: string): Promise<string> {
   try {
     // Generate a data-driven summary based on risk counts as fallback
     const riskCount = await db

@@ -3873,6 +3873,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HTML Preview endpoint - returns the same HTML template used for PDF generation
+  app.get("/api/assessments/:id/preview-report-html", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      
+      console.log(`👁️ Generating HTML preview for assessment ${id}...`);
+      
+      // Fetch assessment with authorization check
+      const assessment = await db
+        .select()
+        .from(assessments)
+        .where(
+          and(
+            eq(assessments.id, id),
+            eq(assessments.userId, userId)
+          )
+        )
+        .limit(1)
+        .then(rows => rows[0]);
+      
+      if (!assessment) {
+        return res.status(404).json({ error: 'Assessment not found or access denied' });
+      }
+      
+      // Fetch risk scenarios ordered by severity
+      const risks = await db
+        .select()
+        .from(riskScenarios)
+        .where(eq(riskScenarios.assessmentId, id))
+        .orderBy(desc(riskScenarios.inherentRisk));
+      
+      // Fetch photo evidence
+      const photos: any[] = [];
+      
+      // Use AI-generated Executive Summary from assessment record or generate fallback
+      // Uses the same fetchExecutiveSummary function as PDF generation for parity
+      const { fetchExecutiveSummary } = await import('./services/reporting/pdf-generator');
+      const executiveSummary = assessment.executiveSummary || await fetchExecutiveSummary(id);
+      
+      // Calculate template-specific metrics
+      const { calculateTemplateMetrics } = await import('./services/reporting/template-metrics');
+      const templateMetrics = calculateTemplateMetrics(assessment, risks);
+      
+      // Render the same HTML used for PDF generation
+      const { renderReportHTML } = await import('./templates/master-report');
+      const htmlContent = await renderReportHTML({
+        assessment,
+        risks,
+        photos,
+        executiveSummary,
+        templateMetrics
+      });
+      
+      // Return HTML content for iframe preview
+      res.setHeader('Content-Type', 'text/html');
+      res.send(htmlContent);
+      
+    } catch (error) {
+      console.error("Error generating HTML preview:", error);
+      res.status(500).json({ 
+        error: "Failed to generate preview",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.get("/api/reports/:id/download", async (req, res) => {
     try {
       const { id } = req.params;

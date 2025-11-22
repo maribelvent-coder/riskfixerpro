@@ -9,8 +9,6 @@ import { FileText, Download, Eye, Share, Mail, AlertCircle, Loader2 } from "luci
 import { generateExecutiveSummaryPDF } from "@/lib/executiveSummaryPDF";
 import { generateTechnicalReportPDF } from "@/lib/technicalReportPDF";
 import { canExportPDF, getUpgradeMessage, type AccountTier } from "@shared/tierLimits";
-import { generateHTMLReport } from "@/lib/htmlReportGenerator";
-import { apiRequest } from "@/lib/queryClient";
 
 interface ReportConfig {
   id: string;
@@ -96,18 +94,17 @@ export function ReportGenerator({
     setPreviewError(null);
     
     try {
-      // Fetch comprehensive report data
-      const response = await apiRequest('GET', `/api/assessments/${assessmentId}/comprehensive-report-data`);
-      const reportData = await response.json();
+      // Fetch the actual PDF template HTML (same as what gets rendered to PDF)
+      const response = await fetch(`/api/assessments/${assessmentId}/preview-report-html`, {
+        credentials: 'include',
+      });
       
-      // Basic validation before passing to generator
-      // Note: generateHTMLReport has defensive normalization for malformed data
-      if (!reportData || typeof reportData !== 'object') {
-        throw new Error('Invalid report data received from server');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Preview generation failed: ${errorText || response.statusText}`);
       }
       
-      // Generate HTML report (generator handles missing fields via normalizeReportData)
-      const htmlContent = await generateHTMLReport(reportData);
+      const htmlContent = await response.text();
       
       if (!htmlContent || typeof htmlContent !== 'string') {
         throw new Error('HTML generation failed - no content produced');
@@ -380,10 +377,10 @@ export function ReportGenerator({
             </div>
           ) : previewHTML ? (
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-              <div className="flex-1 overflow-hidden px-6 py-4">
+              <div className="flex-1 overflow-auto bg-neutral-100 dark:bg-neutral-900">
                 <iframe
                   srcDoc={previewHTML}
-                  className="w-full h-full border rounded-md bg-white"
+                  className="w-full h-full bg-white"
                   title="Report Preview"
                   sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
                   data-testid="iframe-report-preview"
