@@ -11,6 +11,7 @@ import { generateOfficeRiskNarrative } from './office-narrative';
 import { generateManufacturingRiskNarrative } from './manufacturing-narrative';
 import { generateDataCenterRiskNarrative } from './datacenter-narrative';
 import { generateExecutiveProtectionRiskNarrative } from './executive-protection-narrative';
+import { generateRetailRiskNarrative } from './retail-narrative';
 
 /**
  * Generate AI-powered risk narrative for any assessment template
@@ -50,8 +51,7 @@ export async function generateRiskNarrative(
       return generateExecutiveProtectionRiskNarrative(scenario, assessment, surveyResponses);
     
     case 'retail-store':
-      // TODO: Implement retail-specific narrative generator
-      throw new Error(`Narrative generation not yet implemented for template: ${templateId}`);
+      return generateRetailRiskNarrative(scenario, assessment, surveyResponses);
     
     default:
       throw new Error(`Unknown assessment template: ${templateId}`);

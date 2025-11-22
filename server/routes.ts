@@ -38,6 +38,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { emailService } from "./emailService";
 import { registerGeoIntelRoutes } from "./routes/geoIntelRoutes.js";
+import { generateAssessmentReport } from "./services/reporting/pdf-generator";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -3770,6 +3771,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error generating report:", error);
       res.status(500).json({ error: "Failed to generate report" });
+    }
+  });
+
+  // PDF Report Generation endpoint
+  app.post("/api/assessments/:id/generate-report", verifyAssessmentOwnership, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      
+      console.log(`📊 Starting PDF generation for assessment ${id}...`);
+      
+      // Generate PDF report with template-specific features
+      const pdfPath = await generateAssessmentReport(id, userId);
+      
+      // Read the generated PDF
+      const fs = await import('fs/promises');
+      const pdfBuffer = await fs.readFile(pdfPath);
+      
+      // Send PDF as download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="security-assessment-${id}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length.toString());
+      res.send(pdfBuffer);
+      
+      // Clean up temp file after sending
+      setTimeout(async () => {
+        try {
+          await fs.unlink(pdfPath);
+          console.log(`🗑️  Cleaned up temporary PDF: ${pdfPath}`);
+        } catch (error) {
+          console.error('Error cleaning up PDF:', error);
+        }
+      }, 5000);
+      
+    } catch (error) {
+      console.error("Error generating PDF report:", error);
+      res.status(500).json({ 
+        error: "Failed to generate PDF report",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

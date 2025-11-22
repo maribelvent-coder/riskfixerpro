@@ -25,6 +25,16 @@ interface ReportConfig {
 
 const mockReports: ReportConfig[] = [
   {
+    id: "comprehensive-assessment",
+    title: "Comprehensive Assessment Report",
+    description: "Complete security assessment with AI analysis, risk matrix, and template-specific insights",
+    format: "pdf",
+    sections: ["Executive Summary", "Risk Matrix", "Detailed Findings", "Financial Impact", "Template-Specific Features"],
+    status: "ready",
+    lastGenerated: "Today",
+    size: "5.2 MB"
+  },
+  {
     id: "exec-summary",
     title: "Executive Summary",
     description: "High-level overview for management with key findings and recommendations",
@@ -132,10 +142,48 @@ export function ReportGenerator({
     setGeneratingPDF(reportId);
     
     try {
-      if (reportId === 'exec-summary') {
+      if (reportId === 'comprehensive-assessment') {
+        // Use native fetch for blob response (apiRequest doesn't support blobs)
+        const response = await fetch(`/api/assessments/${assessmentId}/generate-report`, {
+          method: 'POST',
+          credentials: 'include', // Important: include session cookies
+          headers: {
+            'Accept': 'application/pdf',
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`PDF generation failed: ${errorText || response.statusText}`);
+        }
+        
+        // Download the PDF
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `security-assessment-${assessmentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Report Downloaded",
+          description: "Comprehensive assessment report generated successfully",
+        });
+      } else if (reportId === 'exec-summary') {
         await generateExecutiveSummaryPDF(assessmentId);
+        toast({
+          title: "Report Downloaded",
+          description: "Executive summary generated successfully",
+        });
       } else if (reportId === 'detailed-technical') {
         await generateTechnicalReportPDF(assessmentId);
+        toast({
+          title: "Report Downloaded",
+          description: "Technical report generated successfully",
+        });
       } else if (reportId === 'compliance-report') {
         toast({
           title: "Coming Soon",
@@ -143,11 +191,6 @@ export function ReportGenerator({
         });
         return;
       }
-      
-      toast({
-        title: "Report Downloaded",
-        description: `${reportId} has been generated and downloaded successfully`,
-      });
       
       onDownload?.(reportId);
     } catch (error) {

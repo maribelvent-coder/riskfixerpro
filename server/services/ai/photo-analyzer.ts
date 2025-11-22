@@ -23,6 +23,10 @@ import {
   analyzeExecutiveProtectionPhoto,
   type ExecutiveProtectionPhotoContext
 } from './executive-protection-photo-analysis';
+import { 
+  analyzeRetailPhoto,
+  type RetailPhotoContext
+} from './retail-photo-analysis';
 
 /**
  * Analyze a security photo using template-specific vision AI
@@ -76,9 +80,15 @@ export async function analyzeSecurityPhoto(
         caption
       );
     
-    case 'warehouse-distribution':
     case 'retail-store':
-      // TODO: Implement warehouse and retail photo analysis
+      return analyzeRetailPhoto(
+        imagePath,
+        (context as RetailPhotoContext) || 'general',
+        caption
+      );
+    
+    case 'warehouse-distribution':
+      // TODO: Implement warehouse photo analysis
       throw new Error(`Photo analysis not yet implemented for template: ${templateId}`);
     
     default:
