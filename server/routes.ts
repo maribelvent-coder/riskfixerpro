@@ -7,6 +7,7 @@ import multer from "multer";
 import { db } from "./db";
 import { assessments, riskScenarios } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 import { 
   insertAssessmentSchema,
   insertSiteSchema,
@@ -72,6 +73,7 @@ declare global {
     interface Request {
       assessment?: any;
       site?: any;
+      userId?: string;
     }
   }
 }
@@ -211,20 +213,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword,
       });
 
-      // Set session
-      req.session.userId = user.id;
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user.id },
+        process.env.SESSION_SECRET!,
+        { expiresIn: '7d' }
+      );
 
-      // Save session explicitly before sending response
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      res.status(201).json(userWithoutPassword);
+      // Return user without password + token
+      const { password, ...userWithoutPassword} = user;
+      res.status(201).json({ ...userWithoutPassword, token });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid data", details: error.errors });
@@ -255,27 +253,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid username or password" });
       }
 
-      // Set session
-      req.session.userId = user.id;
-      console.log('🔐 Login - Setting session userId:', user.id);
-      console.log('🔐 Login - Session ID:', req.sessionID);
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user.id },
+        process.env.SESSION_SECRET!,
+        { expiresIn: '7d' }
+      );
 
-      // Save session explicitly before sending response
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) {
-            console.error('❌ Login - Session save error:', err);
-            reject(err);
-          } else {
-            console.log('✅ Login - Session saved successfully');
-            resolve();
-          }
-        });
-      });
+      console.log('🔐 Login - Generated JWT token for userId:', user.id);
 
-      // Return user without password
+      // Return user without password + token
       const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      res.json({ ...userWithoutPassword, token });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid data", details: error.errors });
@@ -411,25 +400,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", async (req, res) => {
     try {
-      console.log('🔍 Auth check - Session ID:', req.sessionID);
-      console.log('🔍 Auth check - Session userId:', req.session.userId);
-      console.log('🔍 Auth check - Session data:', JSON.stringify(req.session));
-      
-      if (!req.session.userId) {
-        console.log('❌ Auth check - No userId in session');
+      // Extract token from Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const user = await storage.getUser(req.session.userId);
-      if (!user) {
-        console.log('❌ Auth check - User not found for ID:', req.session.userId);
-        return res.status(401).json({ error: "User not found" });
-      }
+      const token = authHeader.substring(7); // Remove "Bearer " prefix
+      
+      try {
+        // Verify JWT token
+        const decoded = jwt.verify(token, process.env.SESSION_SECRET!) as { userId: string };
+        
+        const user = await storage.getUser(decoded.userId);
+        if (!user) {
+          return res.status(401).json({ error: "User not found" });
+        }
 
-      console.log('✅ Auth check - User authenticated:', user.username);
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+        // Return user without password
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      } catch (jwtError) {
+        console.error("JWT verification failed:", jwtError);
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
     } catch (error) {
       console.error("Error fetching current user:", error);
       res.status(500).json({ error: "Failed to fetch user" });

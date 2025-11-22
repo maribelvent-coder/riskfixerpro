@@ -79,6 +79,9 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     try {
+      // Clear JWT token from localStorage
+      localStorage.removeItem('authToken');
+      
       await apiRequest("POST", "/api/auth/logout");
       
       setLocation("/");

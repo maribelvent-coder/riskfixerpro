@@ -52,7 +52,12 @@ export default function Login() {
       );
       return response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (data: any) => {
+      // Store JWT token in localStorage
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+      
       toast({
         title: "Welcome back",
         description: "You have successfully logged in.",
