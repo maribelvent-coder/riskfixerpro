@@ -54,14 +54,13 @@ app.use(
     saveUninitialized: false,
     name: 'sessionId',
     cookie: {
-      secure: false, // Replit handles HTTPS at the proxy level
+      secure: true, // Required for sameSite: 'none'
       httpOnly: true,
-      sameSite: 'lax',
-      domain: undefined, // Let browser set the domain
+      sameSite: 'none', // Required for cross-site/iframe contexts (Replit webview)
       path: '/',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
-    proxy: true, // Trust the reverse proxy
+    proxy: true, // Trust the reverse proxy (Replit provides HTTPS)
   })
 );
 
