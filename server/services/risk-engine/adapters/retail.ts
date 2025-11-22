@@ -11,6 +11,45 @@
 import { RiskEngineAdapter, InterviewResponse, ThreatData, LIKELIHOOD_VALUES, IMPACT_VALUES } from '../types';
 import type { MerchandiseDisplay } from '../../../shared/schema';
 
+/**
+ * Helper: Determine if EAS system absence should penalize vulnerability score
+ * Context-aware logic based on merchandise display model
+ * 
+ * @param merchandiseDisplay - How merchandise is displayed in the store
+ * @param easAnswer - Whether EAS system is present (yes/true = present, no/false = absent)
+ * @returns true if missing EAS should increase vulnerability
+ */
+function shouldPenalizeEAS(
+  merchandiseDisplay: MerchandiseDisplay | undefined,
+  easAnswer: string | number | boolean | null | undefined
+): boolean {
+  // If EAS is present, never penalize
+  if (easAnswer === 'yes' || easAnswer === true) {
+    return false;
+  }
+
+  // Missing EAS: check if it's relevant to the display model
+  const displayModel = merchandiseDisplay || 'Open Shelving'; // default to most permissive
+
+  switch (displayModel) {
+    case 'Open Shelving':
+      // EAS Critical - customers pick items freely
+      return true;
+    case 'Locked Cabinets / Tethered':
+      // EAS Moderate - items physically secured but still accessible
+      return true;
+    case 'Behind Counter / Staff Access Only':
+      // EAS Not Needed - no customer access to merchandise
+      return false;
+    case 'Service Only':
+      // EAS Not Needed - no physical goods to protect
+      return false;
+    default:
+      // Unknown model: default to penalizing (safer)
+      return true;
+  }
+}
+
 export class RetailAdapter implements RiskEngineAdapter {
   async calculateVulnerability(
     responses: Map<string, InterviewResponse>,
@@ -19,9 +58,19 @@ export class RetailAdapter implements RiskEngineAdapter {
     let vulnerabilityScore = 3;
     let riskFactorCount = 0;
 
+    // Extract merchandise display from special profile response
+    const merchandiseDisplayResponse = responses.get('__profile_merchandiseDisplay');
+    const merchandiseDisplay = merchandiseDisplayResponse?.answer as MerchandiseDisplay | undefined;
+
+    // Context-aware EAS vulnerability scoring
     const easSystemResponse = responses.get('eas_system');
-    if (easSystemResponse?.answer === 'no' || easSystemResponse?.answer === false) {
+    const easAnswer = easSystemResponse?.answer;
+    
+    if (shouldPenalizeEAS(merchandiseDisplay, easAnswer)) {
       riskFactorCount += 3;
+      console.log(`[Retail Adapter] Missing EAS penalty applied for display model: ${merchandiseDisplay || 'Open Shelving'}`);
+    } else {
+      console.log(`[Retail Adapter] EAS penalty skipped - display model "${merchandiseDisplay}" does not require EAS`);
     }
 
     const posCctvResponse = responses.get('pos_cctv');
@@ -103,9 +152,19 @@ export class RetailAdapter implements RiskEngineAdapter {
   ): Promise<string[]> {
     const recommendations: string[] = [];
 
+    // Extract merchandise display for context-aware recommendations
+    const merchandiseDisplayResponse = responses.get('__profile_merchandiseDisplay');
+    const merchandiseDisplay = merchandiseDisplayResponse?.answer as MerchandiseDisplay | undefined;
+
+    // Context-aware EAS recommendation
     const easSystemResponse = responses.get('eas_system');
-    if (easSystemResponse?.answer === 'no' || easSystemResponse?.answer === false) {
+    const easAnswer = easSystemResponse?.answer;
+    
+    if (shouldPenalizeEAS(merchandiseDisplay, easAnswer)) {
       recommendations.push('Install Electronic Article Surveillance (EAS) system at store exits');
+      console.log(`[Retail Adapter] EAS recommendation added for display model: ${merchandiseDisplay || 'Open Shelving'}`);
+    } else if (easAnswer === 'no' || easAnswer === false) {
+      console.log(`[Retail Adapter] EAS recommendation suppressed - display model "${merchandiseDisplay}" does not require EAS`);
     }
 
     const posCctvResponse = responses.get('pos_cctv');

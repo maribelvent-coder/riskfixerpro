@@ -12,7 +12,8 @@ import type { IStorage } from '../../../storage';
 import type { 
   Assessment, 
   FacilitySurveyQuestion,
-  InsertRiskScenario 
+  InsertRiskScenario,
+  MerchandiseDisplay
 } from '@shared/schema';
 
 /**
@@ -23,6 +24,7 @@ interface RetailProfile {
   shrinkageRate?: number;
   highValueMerchandise?: string[];
   storeFormat?: string;
+  merchandiseDisplay?: MerchandiseDisplay;
 }
 
 /**
@@ -138,6 +140,17 @@ export async function generateRetailRiskScenarios(
     // Step 2: Retrieve facility survey responses
     const surveyQuestions = await storage.getFacilitySurveyQuestions(assessmentId);
     const surveyMap = buildSurveyResponseMap(surveyQuestions);
+    
+    // Inject retail profile fields into surveyMap for adapter access
+    // Must wrap in object with 'answer' field to match InterviewResponse structure
+    if (retailProfile?.merchandiseDisplay) {
+      surveyMap.set('__profile_merchandiseDisplay', { answer: retailProfile.merchandiseDisplay });
+      console.log(`🏪 Merchandise Display Model: ${retailProfile.merchandiseDisplay}`);
+    } else {
+      // Default to 'Open Shelving' for backward compatibility
+      surveyMap.set('__profile_merchandiseDisplay', { answer: 'Open Shelving' });
+      console.log(`🏪 Merchandise Display Model: Open Shelving (default)`);
+    }
     
     if (surveyQuestions.length === 0) {
       errors.push('No facility survey responses found. Complete the Physical Security Survey first.');
