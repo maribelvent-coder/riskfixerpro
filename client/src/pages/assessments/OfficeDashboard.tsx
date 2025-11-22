@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -39,6 +40,12 @@ export default function OfficeDashboard() {
       visitorVolume: undefined,
       dataSensitivity: undefined,
       hasExecutivePresence: false,
+      // TCOR fields
+      annualTurnoverRate: undefined,
+      avgHiringCost: undefined,
+      annualLiabilityEstimates: undefined,
+      securityIncidentsPerYear: undefined,
+      brandDamageEstimate: undefined,
     },
   });
 
@@ -67,6 +74,12 @@ export default function OfficeDashboard() {
         visitorVolume: profile.visitorVolume,
         dataSensitivity: profile.dataSensitivity,
         hasExecutivePresence: profile.hasExecutivePresence ?? false,
+        // TCOR fields
+        annualTurnoverRate: profile.annualTurnoverRate,
+        avgHiringCost: profile.avgHiringCost,
+        annualLiabilityEstimates: profile.annualLiabilityEstimates,
+        securityIncidentsPerYear: profile.securityIncidentsPerYear,
+        brandDamageEstimate: profile.brandDamageEstimate,
       });
     } else {
       // Reset to defaults when no profile
@@ -75,6 +88,12 @@ export default function OfficeDashboard() {
         visitorVolume: undefined,
         dataSensitivity: undefined,
         hasExecutivePresence: false,
+        // TCOR fields
+        annualTurnoverRate: undefined,
+        avgHiringCost: undefined,
+        annualLiabilityEstimates: undefined,
+        securityIncidentsPerYear: undefined,
+        brandDamageEstimate: undefined,
       });
     }
   }, [assessment, form]);
@@ -94,6 +113,12 @@ export default function OfficeDashboard() {
           visitorVolume: profile.visitorVolume,
           dataSensitivity: profile.dataSensitivity,
           hasExecutivePresence: profile.hasExecutivePresence ?? false,
+          // TCOR fields
+          annualTurnoverRate: profile.annualTurnoverRate,
+          avgHiringCost: profile.avgHiringCost,
+          annualLiabilityEstimates: profile.annualLiabilityEstimates,
+          securityIncidentsPerYear: profile.securityIncidentsPerYear,
+          brandDamageEstimate: profile.brandDamageEstimate,
         });
       }
       
@@ -278,6 +303,127 @@ export default function OfficeDashboard() {
                     </FormItem>
                   )}
                 />
+
+                {/* TCOR Section */}
+                <div className="pt-4 border-t space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">Total Cost of Risk (TCOR) Factors</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Optional: Add indirect cost factors to calculate comprehensive annual risk exposure
+                    </p>
+                  </div>
+
+                  {/* Annual Turnover Rate */}
+                  <FormField
+                    control={form.control}
+                    name="annualTurnoverRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel data-testid="label-annual-turnover-rate">Annual Turnover Rate (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="1"
+                            placeholder="e.g., 30"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            data-testid="input-annual-turnover-rate"
+                          />
+                        </FormControl>
+                        <FormMessage data-testid="error-annual-turnover-rate" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Average Hiring Cost */}
+                  <FormField
+                    control={form.control}
+                    name="avgHiringCost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel data-testid="label-avg-hiring-cost">Avg Hiring Cost ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 8000"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            data-testid="input-avg-hiring-cost"
+                          />
+                        </FormControl>
+                        <FormMessage data-testid="error-avg-hiring-cost" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Annual Liability Estimates */}
+                  <FormField
+                    control={form.control}
+                    name="annualLiabilityEstimates"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel data-testid="label-annual-liability-estimates">Annual Liability/Insurance ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 25000"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            data-testid="input-annual-liability-estimates"
+                          />
+                        </FormControl>
+                        <FormMessage data-testid="error-annual-liability-estimates" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Security Incidents Per Year */}
+                  <FormField
+                    control={form.control}
+                    name="securityIncidentsPerYear"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel data-testid="label-security-incidents-per-year">Security Incidents/Year</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 2"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            data-testid="input-security-incidents-per-year"
+                          />
+                        </FormControl>
+                        <FormMessage data-testid="error-security-incidents-per-year" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Brand Damage Estimate */}
+                  <FormField
+                    control={form.control}
+                    name="brandDamageEstimate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel data-testid="label-brand-damage-estimate">Brand/Reputation Cost ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 50000"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            data-testid="input-brand-damage-estimate"
+                          />
+                        </FormControl>
+                        <FormMessage data-testid="error-brand-damage-estimate" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <Button 
                   type="submit"
