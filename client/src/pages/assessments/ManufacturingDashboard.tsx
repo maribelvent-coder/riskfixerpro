@@ -48,6 +48,14 @@ export default function ManufacturingDashboard() {
   const [shiftOperations, setShiftOperations] = useState<'1' | '2' | '24/7'>('1');
   const [selectedIpTypes, setSelectedIpTypes] = useState<string[]>([]);
   const [hazmatPresent, setHazmatPresent] = useState(false);
+  
+  // TCOR (Total Cost of Risk) fields
+  const [employeeCount, setEmployeeCount] = useState<string>('');
+  const [annualTurnoverRate, setAnnualTurnoverRate] = useState<string>('');
+  const [avgHiringCost, setAvgHiringCost] = useState<string>('');
+  const [annualLiabilityEstimates, setAnnualLiabilityEstimates] = useState<string>('');
+  const [securityIncidentsPerYear, setSecurityIncidentsPerYear] = useState<string>('');
+  const [brandDamageEstimate, setBrandDamageEstimate] = useState<string>('');
 
   const { data: assessment, isLoading } = useQuery<Assessment>({
     queryKey: [`/api/assessments/${id}`],
@@ -73,12 +81,28 @@ export default function ManufacturingDashboard() {
       setShiftOperations(profile.shiftOperations ?? '1');
       setSelectedIpTypes(profile.ipTypes ?? []);
       setHazmatPresent(profile.hazmatPresent ?? false);
+      
+      // TCOR fields
+      setEmployeeCount((profile as any).employeeCount?.toString() ?? '');
+      setAnnualTurnoverRate((profile as any).annualTurnoverRate?.toString() ?? '');
+      setAvgHiringCost((profile as any).avgHiringCost?.toString() ?? '');
+      setAnnualLiabilityEstimates((profile as any).annualLiabilityEstimates?.toString() ?? '');
+      setSecurityIncidentsPerYear((profile as any).securityIncidentsPerYear?.toString() ?? '');
+      setBrandDamageEstimate((profile as any).brandDamageEstimate?.toString() ?? '');
     } else {
       // No assessment or no profile - reset to defaults to prevent stale state
       setAnnualProductionValue('');
       setShiftOperations('1');
       setSelectedIpTypes([]);
       setHazmatPresent(false);
+      
+      // TCOR fields
+      setEmployeeCount('');
+      setAnnualTurnoverRate('');
+      setAvgHiringCost('');
+      setAnnualLiabilityEstimates('');
+      setSecurityIncidentsPerYear('');
+      setBrandDamageEstimate('');
     }
   }, [assessment]); // Run when assessment data changes (including undefined)
 
@@ -118,6 +142,14 @@ export default function ManufacturingDashboard() {
     if (!isNaN(parsedValue) && annualProductionValue.trim() !== '') {
       profileData.annualProductionValue = parsedValue;
     }
+    
+    // TCOR fields
+    (profileData as any).employeeCount = parseFloat(employeeCount) || 0;
+    (profileData as any).annualTurnoverRate = parseFloat(annualTurnoverRate) || 0;
+    (profileData as any).avgHiringCost = parseFloat(avgHiringCost) || 0;
+    (profileData as any).annualLiabilityEstimates = parseFloat(annualLiabilityEstimates) || 0;
+    (profileData as any).securityIncidentsPerYear = parseFloat(securityIncidentsPerYear) || 0;
+    (profileData as any).brandDamageEstimate = parseFloat(brandDamageEstimate) || 0;
 
     saveMutation.mutate(profileData);
   };
@@ -251,6 +283,109 @@ export default function ManufacturingDashboard() {
                       </Label>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* TCOR (Total Cost of Risk) Section */}
+              <div className="pt-6 space-y-4 border-t">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold">Total Cost of Risk (TCOR) Factors</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Optional: Add indirect cost factors to calculate comprehensive annual risk exposure
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Employee Count */}
+                  <div className="space-y-2">
+                    <Label htmlFor="employeeCount" className="text-sm font-medium">
+                      Employee Count
+                    </Label>
+                    <Input
+                      id="employeeCount"
+                      data-testid="input-employee-count"
+                      type="number"
+                      placeholder="e.g., 200"
+                      value={employeeCount}
+                      onChange={(e) => setEmployeeCount(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Annual Turnover Rate */}
+                  <div className="space-y-2">
+                    <Label htmlFor="annualTurnoverRate" className="text-sm font-medium">
+                      Annual Turnover Rate (%)
+                    </Label>
+                    <Input
+                      id="annualTurnoverRate"
+                      data-testid="input-annual-turnover-rate"
+                      type="number"
+                      step="1"
+                      placeholder="e.g., 25"
+                      value={annualTurnoverRate}
+                      onChange={(e) => setAnnualTurnoverRate(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Average Hiring Cost */}
+                  <div className="space-y-2">
+                    <Label htmlFor="avgHiringCost" className="text-sm font-medium">
+                      Avg Hiring Cost ($)
+                    </Label>
+                    <Input
+                      id="avgHiringCost"
+                      data-testid="input-avg-hiring-cost"
+                      type="number"
+                      placeholder="e.g., 6000"
+                      value={avgHiringCost}
+                      onChange={(e) => setAvgHiringCost(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Annual Liability Estimates */}
+                  <div className="space-y-2">
+                    <Label htmlFor="annualLiabilityEstimates" className="text-sm font-medium">
+                      Annual Liability/Insurance ($)
+                    </Label>
+                    <Input
+                      id="annualLiabilityEstimates"
+                      data-testid="input-annual-liability-estimates"
+                      type="number"
+                      placeholder="e.g., 150000"
+                      value={annualLiabilityEstimates}
+                      onChange={(e) => setAnnualLiabilityEstimates(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Security Incidents Per Year */}
+                  <div className="space-y-2">
+                    <Label htmlFor="securityIncidentsPerYear" className="text-sm font-medium">
+                      Security Incidents/Year
+                    </Label>
+                    <Input
+                      id="securityIncidentsPerYear"
+                      data-testid="input-security-incidents-per-year"
+                      type="number"
+                      placeholder="e.g., 8"
+                      value={securityIncidentsPerYear}
+                      onChange={(e) => setSecurityIncidentsPerYear(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Brand Damage Estimate */}
+                  <div className="space-y-2">
+                    <Label htmlFor="brandDamageEstimate" className="text-sm font-medium">
+                      Brand/Reputation Cost ($)
+                    </Label>
+                    <Input
+                      id="brandDamageEstimate"
+                      data-testid="input-brand-damage-estimate"
+                      type="number"
+                      placeholder="e.g., 100000"
+                      value={brandDamageEstimate}
+                      onChange={(e) => setBrandDamageEstimate(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
