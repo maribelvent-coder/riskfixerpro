@@ -43,15 +43,31 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
       box-sizing: border-box;
     }
     
+    @page {
+      size: Letter;
+      margin: 0;
+    }
+    
     body {
       font-family: 'Helvetica Neue', Arial, sans-serif;
       color: #1a1a1a;
       line-height: 1.6;
       font-size: 11pt;
+      background: #e5e7eb;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .page-container {
+      width: 8.5in;
+      margin: 0 auto;
+      background: white;
+      padding: 0.75in;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     
     .cover-page {
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -59,6 +75,8 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
       background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
       color: white;
       page-break-after: always;
+      margin: -0.75in;
+      padding: 0.75in;
     }
     
     .cover-page h1 {
@@ -101,7 +119,8 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
     
     .section {
       page-break-before: always;
-      padding: 40px 0;
+      padding-top: 40px;
+      padding-bottom: 40px;
     }
     
     .section-title {
@@ -117,7 +136,7 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
       font-size: 12pt;
       line-height: 1.8;
       margin-bottom: 30px;
-      text-align: justify;
+      text-align: left;
     }
     
     .stats-grid {
@@ -278,6 +297,7 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
   </style>
 </head>
 <body>
+  <div class="page-container">
   <!-- Cover Page -->
   <div class="cover-page">
     <h1>Security Assessment Report</h1>
@@ -477,6 +497,7 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
 
   <!-- Template-Specific Financial Impact Section -->
   ${renderTemplateMetrics(assessment.templateId, templateMetrics)}
+  </div><!-- /.page-container -->
 </body>
 </html>
   `;
