@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
 import { queryClient, apiRequest } from '@/lib/queryClient';
-import type { Assessment, DatacenterProfile } from '@/shared/schema';
+import type { Assessment, DatacenterProfile } from '@shared/schema';
 import { Server, Shield, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 
 // Compliance standards available
@@ -33,6 +33,14 @@ export default function DatacenterDashboard() {
   const [uptimeSLA, setUptimeSLA] = useState<string>('');
   const [complianceRequirements, setComplianceRequirements] = useState<string[]>([]);
   const [powerCapacity, setPowerCapacity] = useState<string>('');
+  
+  // TCOR (Total Cost of Risk) fields
+  const [employeeCount, setEmployeeCount] = useState<string>('');
+  const [annualTurnoverRate, setAnnualTurnoverRate] = useState<string>('');
+  const [avgHiringCost, setAvgHiringCost] = useState<string>('');
+  const [annualLiabilityEstimates, setAnnualLiabilityEstimates] = useState<string>('');
+  const [securityIncidentsPerYear, setSecurityIncidentsPerYear] = useState<string>('');
+  const [brandDamageEstimate, setBrandDamageEstimate] = useState<string>('');
 
   // Fetch assessment data
   const { data: assessment, isLoading: assessmentLoading } = useQuery<Assessment>({
@@ -54,18 +62,34 @@ export default function DatacenterDashboard() {
   // ALWAYS run on assessment change to prevent stale state during loading/navigation
   useEffect(() => {
     if (assessment?.datacenter_profile) {
-      const profile = assessment.datacenter_profile;
+      const profile = assessment.datacenter_profile as DatacenterProfile;
       // Use nullish coalescing to respect empty/cleared values
       setTierClassification(profile.tierClassification ?? '');
       setUptimeSLA(profile.uptimeSLA ?? '');
       setComplianceRequirements(profile.complianceRequirements ?? []);
       setPowerCapacity(profile.powerCapacity?.toString() ?? '');
+      
+      // TCOR fields
+      setEmployeeCount(profile.employeeCount?.toString() ?? '');
+      setAnnualTurnoverRate(profile.annualTurnoverRate?.toString() ?? '');
+      setAvgHiringCost(profile.avgHiringCost?.toString() ?? '');
+      setAnnualLiabilityEstimates(profile.annualLiabilityEstimates?.toString() ?? '');
+      setSecurityIncidentsPerYear(profile.securityIncidentsPerYear?.toString() ?? '');
+      setBrandDamageEstimate(profile.brandDamageEstimate?.toString() ?? '');
     } else {
       // No assessment or no profile - reset to defaults to prevent stale state
       setTierClassification('');
       setUptimeSLA('');
       setComplianceRequirements([]);
       setPowerCapacity('');
+      
+      // TCOR fields
+      setEmployeeCount('');
+      setAnnualTurnoverRate('');
+      setAvgHiringCost('');
+      setAnnualLiabilityEstimates('');
+      setSecurityIncidentsPerYear('');
+      setBrandDamageEstimate('');
     }
   }, [assessment]); // Run when assessment data changes (including undefined)
 
@@ -78,11 +102,19 @@ export default function DatacenterDashboard() {
     onSuccess: (response: any) => {
       // Immediately update local state from response to ensure null clears propagate instantly
       if (response?.datacenter_profile) {
-        const profile = response.datacenter_profile;
+        const profile = response.datacenter_profile as DatacenterProfile;
         setTierClassification(profile.tierClassification ?? '');
         setUptimeSLA(profile.uptimeSLA ?? '');
         setComplianceRequirements(profile.complianceRequirements ?? []);
         setPowerCapacity(profile.powerCapacity?.toString() ?? '');
+        
+        // TCOR fields
+        setEmployeeCount(profile.employeeCount?.toString() ?? '');
+        setAnnualTurnoverRate(profile.annualTurnoverRate?.toString() ?? '');
+        setAvgHiringCost(profile.avgHiringCost?.toString() ?? '');
+        setAnnualLiabilityEstimates(profile.annualLiabilityEstimates?.toString() ?? '');
+        setSecurityIncidentsPerYear(profile.securityIncidentsPerYear?.toString() ?? '');
+        setBrandDamageEstimate(profile.brandDamageEstimate?.toString() ?? '');
       }
       
       // Then invalidate queries for background refetch
@@ -118,6 +150,14 @@ export default function DatacenterDashboard() {
       // Explicitly send null (not undefined) to clear stale values - JSON serialization preserves null
       (profileData as any).powerCapacity = null;
     }
+    
+    // TCOR fields
+    profileData.employeeCount = parseFloat(employeeCount) || 0;
+    profileData.annualTurnoverRate = parseFloat(annualTurnoverRate) || 0;
+    profileData.avgHiringCost = parseFloat(avgHiringCost) || 0;
+    profileData.annualLiabilityEstimates = parseFloat(annualLiabilityEstimates) || 0;
+    profileData.securityIncidentsPerYear = parseFloat(securityIncidentsPerYear) || 0;
+    profileData.brandDamageEstimate = parseFloat(brandDamageEstimate) || 0;
 
     saveMutation.mutate(profileData);
   };
@@ -244,6 +284,109 @@ export default function DatacenterDashboard() {
               <p className="text-xs text-muted-foreground" data-testid="text-compliance-help">
                 Select all applicable compliance frameworks
               </p>
+            </div>
+
+            {/* TCOR (Total Cost of Risk) Section */}
+            <div className="pt-6 space-y-4 border-t">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold">Total Cost of Risk (TCOR) Factors</h3>
+                <p className="text-xs text-muted-foreground">
+                  Optional: Add indirect cost factors to calculate comprehensive annual risk exposure
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Employee Count */}
+                <div className="space-y-2">
+                  <Label htmlFor="employeeCount" className="text-sm font-medium">
+                    Employee Count
+                  </Label>
+                  <Input
+                    id="employeeCount"
+                    data-testid="input-employee-count"
+                    type="number"
+                    placeholder="e.g., 50"
+                    value={employeeCount}
+                    onChange={(e) => setEmployeeCount(e.target.value)}
+                  />
+                </div>
+
+                {/* Annual Turnover Rate */}
+                <div className="space-y-2">
+                  <Label htmlFor="annualTurnoverRate" className="text-sm font-medium">
+                    Annual Turnover Rate (%)
+                  </Label>
+                  <Input
+                    id="annualTurnoverRate"
+                    data-testid="input-annual-turnover-rate"
+                    type="number"
+                    step="1"
+                    placeholder="e.g., 15"
+                    value={annualTurnoverRate}
+                    onChange={(e) => setAnnualTurnoverRate(e.target.value)}
+                  />
+                </div>
+
+                {/* Average Hiring Cost */}
+                <div className="space-y-2">
+                  <Label htmlFor="avgHiringCost" className="text-sm font-medium">
+                    Avg Hiring Cost ($)
+                  </Label>
+                  <Input
+                    id="avgHiringCost"
+                    data-testid="input-avg-hiring-cost"
+                    type="number"
+                    placeholder="e.g., 10000"
+                    value={avgHiringCost}
+                    onChange={(e) => setAvgHiringCost(e.target.value)}
+                  />
+                </div>
+
+                {/* Annual Liability Estimates */}
+                <div className="space-y-2">
+                  <Label htmlFor="annualLiabilityEstimates" className="text-sm font-medium">
+                    Annual Liability/Insurance ($)
+                  </Label>
+                  <Input
+                    id="annualLiabilityEstimates"
+                    data-testid="input-annual-liability-estimates"
+                    type="number"
+                    placeholder="e.g., 200000"
+                    value={annualLiabilityEstimates}
+                    onChange={(e) => setAnnualLiabilityEstimates(e.target.value)}
+                  />
+                </div>
+
+                {/* Security Incidents Per Year */}
+                <div className="space-y-2">
+                  <Label htmlFor="securityIncidentsPerYear" className="text-sm font-medium">
+                    Security Incidents/Year
+                  </Label>
+                  <Input
+                    id="securityIncidentsPerYear"
+                    data-testid="input-security-incidents-per-year"
+                    type="number"
+                    placeholder="e.g., 3"
+                    value={securityIncidentsPerYear}
+                    onChange={(e) => setSecurityIncidentsPerYear(e.target.value)}
+                  />
+                </div>
+
+                {/* Brand Damage Estimate */}
+                <div className="space-y-2">
+                  <Label htmlFor="brandDamageEstimate" className="text-sm font-medium">
+                    Brand/Reputation Cost ($)
+                  </Label>
+                  <Input
+                    id="brandDamageEstimate"
+                    data-testid="input-brand-damage-estimate"
+                    type="number"
+                    placeholder="e.g., 250000"
+                    value={brandDamageEstimate}
+                    onChange={(e) => setBrandDamageEstimate(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Save Button */}
