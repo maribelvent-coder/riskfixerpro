@@ -2289,6 +2289,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasPersonalProtection: z.boolean().default(false),
         hasPanicRoom: z.boolean().default(false),
         hasArmoredVehicle: z.boolean().default(false),
+        // EP-Specific TCOR Fields
+        annualProtectionBudget: z.number().optional(),
+        insuranceDeductible: z.number().optional(),
+        dailyLossOfValue: z.number().optional(),
       });
       
       const validatedProfile = executiveProfileSchema.parse(profileData);

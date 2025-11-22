@@ -35,6 +35,10 @@ interface ExecutiveProfileData {
   hasPersonalProtection: boolean;
   hasPanicRoom: boolean;
   hasArmoredVehicle: boolean;
+  // EP-Specific TCOR Fields
+  annualProtectionBudget?: number;
+  insuranceDeductible?: number;
+  dailyLossOfValue?: number;
 }
 
 interface ExecutiveDashboardResponse {
@@ -108,6 +112,10 @@ export default function ExecutiveDashboard() {
   const [hasPersonalProtection, setHasPersonalProtection] = useState<boolean>(false);
   const [hasPanicRoom, setHasPanicRoom] = useState<boolean>(false);
   const [hasArmoredVehicle, setHasArmoredVehicle] = useState<boolean>(false);
+  // EP-Specific TCOR Fields
+  const [annualProtectionBudget, setAnnualProtectionBudget] = useState<string>('');
+  const [insuranceDeductible, setInsuranceDeductible] = useState<string>('');
+  const [dailyLossOfValue, setDailyLossOfValue] = useState<string>('');
 
   // Initialize form when data loads
   useEffect(() => {
@@ -123,6 +131,10 @@ export default function ExecutiveDashboard() {
       setHasPersonalProtection(profile.hasPersonalProtection || false);
       setHasPanicRoom(profile.hasPanicRoom || false);
       setHasArmoredVehicle(profile.hasArmoredVehicle || false);
+      // TCOR Fields
+      setAnnualProtectionBudget(profile.annualProtectionBudget?.toString() || '');
+      setInsuranceDeductible(profile.insuranceDeductible?.toString() || '');
+      setDailyLossOfValue(profile.dailyLossOfValue?.toString() || '');
     }
   }, [data]);
 
@@ -177,6 +189,10 @@ export default function ExecutiveDashboard() {
       hasPersonalProtection,
       hasPanicRoom,
       hasArmoredVehicle,
+      // TCOR Fields
+      annualProtectionBudget: annualProtectionBudget ? parseInt(annualProtectionBudget) : undefined,
+      insuranceDeductible: insuranceDeductible ? parseInt(insuranceDeductible) : undefined,
+      dailyLossOfValue: dailyLossOfValue ? parseInt(dailyLossOfValue) : undefined,
     };
 
     updateProfileMutation.mutate(profileData);
@@ -396,6 +412,59 @@ export default function ExecutiveDashboard() {
                     data-testid="checkbox-panic-room"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* EP-Specific Financials (TCOR) */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Protection Financials
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Cost-Benefit Analysis inputs for executive protection investment decisions
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="annualProtectionBudget">Annual Protection Budget ($)</Label>
+                <input
+                  id="annualProtectionBudget"
+                  type="number"
+                  value={annualProtectionBudget}
+                  onChange={(e) => setAnnualProtectionBudget(e.target.value)}
+                  placeholder="500000"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  data-testid="input-annual-protection-budget"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="insuranceDeductible">K&R Insurance Deductible ($)</Label>
+                <input
+                  id="insuranceDeductible"
+                  type="number"
+                  value={insuranceDeductible}
+                  onChange={(e) => setInsuranceDeductible(e.target.value)}
+                  placeholder="1000000"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  data-testid="input-insurance-deductible"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dailyLossOfValue">Daily Loss of Value ($)</Label>
+                <input
+                  id="dailyLossOfValue"
+                  type="number"
+                  value={dailyLossOfValue}
+                  onChange={(e) => setDailyLossOfValue(e.target.value)}
+                  placeholder="50000"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  data-testid="input-daily-loss-of-value"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cost to company if executive is incapacitated (per day)
+                </p>
               </div>
             </div>
 
