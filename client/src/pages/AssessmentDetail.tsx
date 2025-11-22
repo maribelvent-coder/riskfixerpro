@@ -316,11 +316,24 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       }), {});
     }
     
+    // Check if specialized template profile is saved
+    const hasProfileData = isSpecializedTemplate && !!(
+      assessmentData?.warehouse_profile ||
+      assessmentData?.retail_profile ||
+      assessmentData?.manufacturing_profile ||
+      assessmentData?.datacenter_profile ||
+      assessmentData?.office_profile
+    );
+    
     // Facility paradigm - sequential unlock
     const tabs: Record<string, boolean> = {
       "facility-survey": true,
       "risk-assessment": assessmentData?.facilitySurveyCompleted || false,
-      "reports": assessmentData?.riskAssessmentCompleted || false
+      // For specialized templates: enable Reports once profile is saved
+      // For standard templates: enable Reports once risk assessment is complete
+      "reports": isSpecializedTemplate 
+        ? (hasProfileData || false)
+        : (assessmentData?.riskAssessmentCompleted || false)
     };
     
     // Add specialized template tabs OR standard Asset Inventory (configuration-driven)
