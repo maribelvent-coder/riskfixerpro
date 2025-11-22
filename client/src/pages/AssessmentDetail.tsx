@@ -328,7 +328,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     // Facility paradigm - sequential unlock
     const tabs: Record<string, boolean> = {
       "facility-survey": true,
-      "risk-assessment": assessmentData?.facilitySurveyCompleted || false,
+      // For specialized templates: enable risk-assessment once profile is saved OR facility survey is complete
+      // For standard templates: enable risk-assessment only after facility survey is complete
+      "risk-assessment": isSpecializedTemplate
+        ? (hasProfileData || assessmentData?.facilitySurveyCompleted || false)
+        : (assessmentData?.facilitySurveyCompleted || false),
       // For specialized templates: enable Reports once profile is saved
       // For standard templates: enable Reports once risk assessment is complete
       "reports": isSpecializedTemplate 
