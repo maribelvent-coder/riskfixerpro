@@ -85,7 +85,28 @@ Analyze using professional standards and respond with JSON containing:
    - recommendation: Specific technical recommendation with standards
    - impact: 1-10 consequence if exploited
    - probability: 1-10 likelihood based on threat analysis
-3. executiveSummary: Professional executive summary
+3. executiveSummary: Board-level strategic brief using this STRICT format:
+
+### 1. Executive Risk & Financial Exposure
+Bottom Line: State the overall Risk Score and Annualized Loss Exposure (calculate based on risk scenarios).
+Primary Drivers: Identify the top 2 business threats (e.g., "Margin Erosion via Shrinkage", "Operational Disruption").
+
+### 2. Operational Vulnerability Analysis
+Root Causes: Explain the systemic failure (e.g., "Lack of Detective Controls").
+Evidence: Cite specific survey findings as business gaps. Translate technical jargon into business capabilities:
+- NEVER say: "No CCTV at POS" → ALWAYS say: "Lack of transaction auditing capability at point-of-sale"
+- NEVER say: "No K4-rated bollards" → ALWAYS say: "Perimeter lacks hostile vehicle mitigation"
+- NEVER say: "Insufficient lumens" → ALWAYS say: "Inadequate forensic identification lighting"
+- NEVER say: "No Grade 1 hardware" → ALWAYS say: "Entry points lack anti-forced entry protection"
+- NEVER say: "No 58kHz EAS" → ALWAYS say: "No electronic article surveillance system"
+
+### 3. Strategic Recommendations & ROI
+The Strategy: Summarize the remediation plan (e.g., "Implement comprehensive loss prevention technology").
+The Financials: State the Investment, Projected Savings, and Payback Period (estimate based on risk reduction).
+The Outcome: "This investment aligns security posture with industry benchmarks."
+
+TONE: Decisive, financially literate, risk-focused (Chief Risk Officer writing to Board of Directors).
+CONSTRAINT: Do NOT use technical engineering jargon. Translate into business capabilities.
 
 Apply technical standards, reference specific metrics where applicable, and provide actionable professional recommendations.`;
 
