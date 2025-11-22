@@ -631,6 +631,11 @@ export const executiveProfiles = pgTable("executive_profiles", {
   previousIncidents: text("previous_incidents"), // JSON array
   restrainingOrders: text("restraining_orders"), // JSON array
   
+  // TCOR - Total Cost of Risk (EP-Specific Financials)
+  annualProtectionBudget: integer("annual_protection_budget"), // Current annual spend on security/protection ($)
+  insuranceDeductible: integer("insurance_deductible"), // K&R (Kidnap & Ransom) insurance deductible ($)
+  dailyLossOfValue: integer("daily_loss_of_value"), // Cost to company if executive is incapacitated per day ($)
+  
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
