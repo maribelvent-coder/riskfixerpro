@@ -349,6 +349,9 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
   <!-- Detailed Findings Section -->
   <div class="section">
     <h2 class="section-title">Detailed Risk Findings</h2>
+    <p style="margin-bottom: 20px; font-size: 10pt; color: #64748b;">
+      Critical and High priority risks requiring immediate attention with professional security analysis.
+    </p>
     
     ${risks.filter(r => r.riskLevel === 'Critical' || r.riskLevel === 'High').map(risk => `
       <div class="risk-detail">
@@ -360,13 +363,23 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
         <div class="description">
           <strong>Asset at Risk:</strong> ${risk.asset || 'Not specified'}<br>
           <strong>Threat Type:</strong> ${risk.threatType || 'Not specified'}<br>
-          <strong>Vulnerability:</strong> ${risk.vulnerabilityDescription || 'No detailed description available.'}
+          <strong>Risk Score:</strong> ${risk.inherentRisk || 0} / 125
         </div>
         
-        ${risk.aiNarrative ? `
-          <div style="margin: 20px 0; padding: 15px; background: white; border-radius: 4px; border-left: 4px solid #6366f1;">
-            <h4 style="color: #6366f1; margin-bottom: 10px; font-size: 11pt;">AI Security Analysis</h4>
-            <p style="font-size: 10pt; line-height: 1.7;">${risk.aiNarrative}</p>
+        ${risk.threatDescription ? `
+          <div style="margin: 20px 0; padding: 20px; background: #f8fafc; border-radius: 6px; border-left: 5px solid #6366f1;">
+            <h4 style="color: #1e40af; margin-bottom: 15px; font-size: 11.5pt; font-weight: 600;">
+              Professional Security Analysis
+            </h4>
+            <div style="font-size: 10pt; line-height: 1.8; color: #334155; white-space: pre-wrap;">
+              ${risk.threatDescription}
+            </div>
+          </div>
+        ` : risk.vulnerabilityDescription ? `
+          <div style="margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 6px;">
+            <p style="font-size: 10pt; line-height: 1.7; color: #334155;">
+              <strong>Vulnerability:</strong> ${risk.vulnerabilityDescription}
+            </p>
           </div>
         ` : ''}
         
@@ -378,6 +391,12 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
         ` : ''}
       </div>
     `).join('')}
+    
+    ${risks.filter(r => r.riskLevel === 'Critical' || r.riskLevel === 'High').length === 0 ? `
+      <p style="text-align: center; padding: 40px; color: #64748b;">
+        No critical or high-priority risks identified. Review medium and low risks in the Risk Matrix section above.
+      </p>
+    ` : ''}
   </div>
 
   <!-- Template-Specific Financial Impact Section -->

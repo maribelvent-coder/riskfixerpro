@@ -1402,6 +1402,8 @@ export function RiskAssessmentNBS({ assessmentId, onComplete }: RiskAssessmentNB
   const [editingAsset, setEditingAsset] = useState<RiskAsset | undefined>(undefined);
   const [editingScenario, setEditingScenario] = useState<RiskScenario | undefined>(undefined);
   const [editingTreatment, setEditingTreatment] = useState<TreatmentPlan | undefined>(undefined);
+  const [batchGenerating, setBatchGenerating] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
   // Fetch data
   const { data: assets = [], isLoading: assetsLoading } = useQuery<RiskAsset[]>({
@@ -1440,6 +1442,64 @@ export function RiskAssessmentNBS({ assessmentId, onComplete }: RiskAssessmentNB
       });
     },
   });
+
+  // Batch AI generation for all scenarios
+  const handleBatchAIGeneration = async () => {
+    if (batchGenerating || scenarios.length === 0) return;
+
+    // Filter scenarios that need AI narratives (checking threatDescription field)
+    const scenariosNeedingAI = scenarios.filter(s => {
+      const hasDescription = s.threatDescription && s.threatDescription.trim().length > 100;
+      return !hasDescription;
+    });
+
+    if (scenariosNeedingAI.length === 0) {
+      toast({ 
+        title: "All scenarios already have AI analysis", 
+        description: "No scenarios need AI narrative generation." 
+      });
+      return;
+    }
+
+    setBatchGenerating(true);
+    setBatchProgress({ current: 0, total: scenariosNeedingAI.length });
+    
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < scenariosNeedingAI.length; i++) {
+      const scenario = scenariosNeedingAI[i];
+      try {
+        await apiRequest("POST", `/api/risk-scenarios/${scenario.id}/generate-narrative`);
+        successCount++;
+        setBatchProgress({ current: i + 1, total: scenariosNeedingAI.length });
+      } catch (error) {
+        console.error(`Failed to generate AI for scenario ${scenario.id}:`, error);
+        errorCount++;
+      }
+    }
+
+    setBatchGenerating(false);
+    setBatchProgress({ current: 0, total: 0 });
+
+    // Refresh scenarios data
+    queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "risk-scenarios"] });
+
+    if (errorCount === 0) {
+      toast({ 
+        title: "AI Analysis Complete", 
+        description: `Successfully generated professional narratives for ${successCount} scenarios.`,
+        duration: 5000
+      });
+    } else {
+      toast({ 
+        title: "Batch Generation Finished", 
+        description: `Generated ${successCount} narratives. ${errorCount} failed.`,
+        variant: errorCount > successCount ? "destructive" : "default",
+        duration: 5000
+      });
+    }
+  };
 
   // Delete asset mutation
   const deleteAssetMutation = useMutation({
@@ -1630,30 +1690,45 @@ export function RiskAssessmentNBS({ assessmentId, onComplete }: RiskAssessmentNB
 
         {/* Scenarios Tab */}
         <TabsContent value="scenarios" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex justify-between items-center gap-4">
+            <p className="text-sm text-muted-foreground flex-1">
               Define threat scenarios and assess likelihood and impact. Risk is calculated automatically.
             </p>
-            <Dialog open={scenarioDialogOpen} onOpenChange={setScenarioDialogOpen}>
-              <DialogTrigger asChild>
+            <div className="flex gap-2">
+              {scenarios.length > 0 && (
                 <Button 
-                  onClick={() => setEditingScenario(undefined)} 
-                  disabled={assets.length === 0}
-                  data-testid="button-add-scenario"
+                  onClick={handleBatchAIGeneration}
+                  disabled={batchGenerating || scenarios.length === 0}
+                  data-testid="button-batch-generate-ai"
+                  variant="outline"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Scenario
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {batchGenerating 
+                    ? `Generating... (${batchProgress.current}/${batchProgress.total})` 
+                    : "Generate AI Analysis for All"}
                 </Button>
-              </DialogTrigger>
-              {scenarioDialogOpen && (
-                <ScenarioDialog
-                  assessmentId={assessmentId}
-                  scenario={editingScenario}
-                  assets={assets}
-                  onClose={handleCloseScenarioDialog}
-                />
               )}
-            </Dialog>
+              <Dialog open={scenarioDialogOpen} onOpenChange={setScenarioDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    onClick={() => setEditingScenario(undefined)} 
+                    disabled={assets.length === 0}
+                    data-testid="button-add-scenario"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Scenario
+                  </Button>
+                </DialogTrigger>
+                {scenarioDialogOpen && (
+                  <ScenarioDialog
+                    assessmentId={assessmentId}
+                    scenario={editingScenario}
+                    assets={assets}
+                    onClose={handleCloseScenarioDialog}
+                  />
+                )}
+              </Dialog>
+            </div>
           </div>
 
           {assets.length === 0 ? (

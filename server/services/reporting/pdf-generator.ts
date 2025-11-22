@@ -57,8 +57,8 @@ export async function generateAssessmentReport(
     // TODO: Re-enable when photoEvidence table is available
     const photos: any[] = [];
     
-    // 4. Fetch AI Executive Summary (from analysis cache)
-    const executiveSummary = await fetchExecutiveSummary(assessmentId);
+    // 4. Use AI-generated Executive Summary from assessment record
+    const executiveSummary = assessment.executiveSummary || await fetchExecutiveSummary(assessmentId);
     
     // 5. Calculate template-specific metrics
     const templateMetrics = calculateTemplateMetrics(assessment, risks);
@@ -86,26 +86,19 @@ export async function generateAssessmentReport(
 }
 
 /**
- * Fetch AI executive summary from database or generate on-demand
+ * Generate fallback executive summary when AI summary is not available
+ * This provides a basic data-driven summary based on risk scenario counts
  */
 async function fetchExecutiveSummary(assessmentId: string): Promise<string> {
   try {
-    // Attempt to fetch existing executive summary from analysis cache
-    const analysis = await db
+    // Generate a data-driven summary based on risk counts as fallback
+    const riskCount = await db
       .select()
       .from(riskScenarios)
       .where(eq(riskScenarios.assessmentId, assessmentId))
-      .limit(1)
-      .then(rows => rows[0]);
+      .then(rows => rows.length);
     
-    // If we have risk data, generate a basic summary
-    if (analysis) {
-      const riskCount = await db
-        .select()
-        .from(riskScenarios)
-        .where(eq(riskScenarios.assessmentId, assessmentId))
-        .then(rows => rows.length);
-      
+    if (riskCount > 0) {
       const criticalCount = await db
         .select()
         .from(riskScenarios)
@@ -117,7 +110,18 @@ async function fetchExecutiveSummary(assessmentId: string): Promise<string> {
         )
         .then(rows => rows.length);
       
-      return `This comprehensive security assessment identified ${riskCount} risk scenarios, including ${criticalCount} critical-priority findings requiring immediate attention. The assessment provides data-driven analysis of vulnerabilities, threat likelihood, and potential business impact. Key recommendations focus on implementing layered security controls, enhancing monitoring capabilities, and establishing formal incident response procedures to strengthen the facility's overall security posture.`;
+      const highCount = await db
+        .select()
+        .from(riskScenarios)
+        .where(
+          and(
+            eq(riskScenarios.assessmentId, assessmentId),
+            eq(riskScenarios.riskLevel, 'High')
+          )
+        )
+        .then(rows => rows.length);
+      
+      return `This comprehensive security assessment identified ${riskCount} risk scenarios, including ${criticalCount} critical-priority and ${highCount} high-priority findings requiring attention. The assessment provides data-driven analysis of vulnerabilities, threat likelihood, and potential business impact. Key recommendations focus on implementing layered security controls, enhancing monitoring capabilities, and establishing formal incident response procedures to strengthen the facility's overall security posture.`;
     }
     
     // Fallback summary if no risk data exists
