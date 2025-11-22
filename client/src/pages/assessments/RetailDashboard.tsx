@@ -13,6 +13,7 @@ import { ExecutiveSummaryCard } from "@/components/analysis/ExecutiveSummaryCard
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
+import type { MerchandiseDisplay } from "@shared/schema";
 import { 
   ShoppingBag, 
   AlertTriangle, 
@@ -34,6 +35,7 @@ interface RetailAnalysisResponse {
       shrinkageRate?: number;
       highValueMerchandise?: string[];
       storeFormat?: string;
+      merchandiseDisplay?: MerchandiseDisplay;
     };
   };
   riskAnalysis: {
@@ -64,6 +66,29 @@ const STORE_FORMAT_OPTIONS = [
   { value: 'Shopping Center', label: 'Shopping Center' },
 ];
 
+const MERCHANDISE_DISPLAY_OPTIONS: { value: MerchandiseDisplay; label: string; description: string }[] = [
+  { 
+    value: 'Open Shelving', 
+    label: 'Open Shelving',
+    description: 'Customers pick items freely - EAS Critical'
+  },
+  { 
+    value: 'Locked Cabinets / Tethered', 
+    label: 'Locked Cabinets / Tethered',
+    description: 'High-value items secured - EAS Moderate'
+  },
+  { 
+    value: 'Behind Counter / Staff Access Only', 
+    label: 'Behind Counter / Staff Access Only',
+    description: 'No customer access - EAS Not Needed'
+  },
+  { 
+    value: 'Service Only', 
+    label: 'Service Only',
+    description: 'No physical goods - EAS Not Needed'
+  },
+];
+
 export default function RetailDashboard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -81,6 +106,7 @@ export default function RetailDashboard() {
   const [annualRevenue, setAnnualRevenue] = useState<string>('');
   const [shrinkageRate, setShrinkageRate] = useState<string>('');
   const [storeFormat, setStoreFormat] = useState<string>('');
+  const [merchandiseDisplay, setMerchandiseDisplay] = useState<MerchandiseDisplay>('Open Shelving');
   const [selectedMerchandise, setSelectedMerchandise] = useState<string[]>([]);
   
   // TCOR (Total Cost of Risk) fields
@@ -98,6 +124,7 @@ export default function RetailDashboard() {
       setAnnualRevenue(profile.annualRevenue?.toString() || '');
       setShrinkageRate(profile.shrinkageRate?.toString() || '');
       setStoreFormat(profile.storeFormat || '');
+      setMerchandiseDisplay(profile.merchandiseDisplay || 'Open Shelving');
       setSelectedMerchandise(profile.highValueMerchandise || []);
       
       // TCOR fields
@@ -138,6 +165,7 @@ export default function RetailDashboard() {
       shrinkageRate: parseFloat(shrinkageRate) || 0,
       highValueMerchandise: selectedMerchandise,
       storeFormat: storeFormat || 'Standalone',
+      merchandiseDisplay: merchandiseDisplay || 'Open Shelving',
       // TCOR fields
       employeeCount: parseFloat(employeeCount) || 0,
       annualTurnoverRate: parseFloat(annualTurnoverRate) || 0,
@@ -335,6 +363,31 @@ export default function RetailDashboard() {
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Store location and configuration type
+                </p>
+              </div>
+
+              {/* Merchandise Display Model */}
+              <div className="space-y-2">
+                <Label htmlFor="merchandiseDisplay" className="text-sm font-medium">
+                  Merchandise Display Model
+                </Label>
+                <Select value={merchandiseDisplay} onValueChange={(value) => setMerchandiseDisplay(value as MerchandiseDisplay)}>
+                  <SelectTrigger id="merchandiseDisplay" data-testid="select-merchandise-display">
+                    <SelectValue placeholder="Select display model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MERCHANDISE_DISPLAY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value} data-testid={`option-${option.value.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <div className="flex flex-col">
+                          <span>{option.label}</span>
+                          <span className="text-xs text-muted-foreground">{option.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  How merchandise is presented affects EAS system relevance
                 </p>
               </div>
 
