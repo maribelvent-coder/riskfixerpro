@@ -1550,6 +1550,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           insiderInvolvement: z.boolean().optional(),
         })).optional(),
         locationRisk: z.enum(['High', 'Medium', 'Low']).optional(),
+        // TCOR - Total Cost of Risk fields
+        employeeCount: z.number().optional(),
+        annualTurnoverRate: z.number().optional(), // percentage (e.g., 50 for 50%)
+        avgHiringCost: z.number().optional(), // dollars per hire
+        annualLiabilityEstimates: z.number().optional(), // annual legal/insurance/WC costs
+        securityIncidentsPerYear: z.number().optional(), // number of incidents
+        brandDamageEstimate: z.number().optional(), // estimated brand/reputation cost
       });
       
       const validatedProfile = warehouseProfileSchema.parse(warehouseProfileData);
@@ -1697,6 +1704,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shrinkageRate: z.number().optional(),
         highValueMerchandise: z.array(z.string()).optional(),
         storeFormat: z.string().optional(),
+        // TCOR - Total Cost of Risk fields
+        employeeCount: z.number().optional(),
+        annualTurnoverRate: z.number().optional(), // percentage (e.g., 50 for 50%)
+        avgHiringCost: z.number().optional(), // dollars per hire
+        annualLiabilityEstimates: z.number().optional(), // annual legal/insurance/WC costs
+        securityIncidentsPerYear: z.number().optional(), // number of incidents
+        brandDamageEstimate: z.number().optional(), // estimated brand/reputation cost
       });
       
       const validatedProfile = retailProfileSchema.parse(retailProfileData);

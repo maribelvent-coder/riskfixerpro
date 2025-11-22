@@ -1,0 +1,30 @@
+The user has correctly identified that the **Total Cost of Risk (TCOR)** logic—factoring in "Soft Costs" like turnover, liability, and brand damage—applies to **ALL** templates, not just Retail.
+
+**Please execute a Global TCOR Upgrade across all 6 templates.**
+
+**Step 1: Standardize the Schema**
+Update `server/db/schema.ts`.
+Ensure **EVERY** profile type (`warehouse_profile`, `office_profile`, `manufacturing_profile`, `datacenter_profile`, `executive_profile`, `retail_profile`) includes these standard financial risk fields:
+* `annualTurnoverRate` (number, %)
+* `avgHiringCost` (number, $)
+* `annualLiabilityEstimates` (number, $ - e.g. Legal/Insurance/WC)
+* `securityIncidentsPerYear` (number)
+* `brandDamageEstimate` (number, $)
+
+**Step 2: Update the Logic Adapters**
+Refactor the ROI/Risk calculation in `server/services/risk-engine/adapters/` for **ALL** templates.
+* **Formula Update:** `Total Annual Exposure` = `Direct Loss` (Shrinkage/Downtime/Theft) + `Indirect Loss`.
+* **Indirect Loss Calculation:**
+  * **Turnover Cost:** `(Employee Count * Turnover Rate * Hiring Cost) * 0.2` (Assuming 20% attrition due to poor security/safety).
+  * **Liability Cost:** `annualLiabilityEstimates`.
+  * **Incident Cost:** `securityIncidentsPerYear * (Estimated Cost Per Incident)`.
+
+**Step 3: Update the Dashboards**
+Update the "Profile/Inputs" column in **ALL 6 Dashboards**:
+* Add input fields for "Turnover Rate", "Hiring Cost", and "Liability/Insurance Costs".
+* **ROI Card Update:** Ensure the "Annual Loss" number displayed reflects this new **Total** (Direct + Indirect), making the case for security investment much stronger.
+
+**Step 4: Update the Narrative Generator**
+* Ensure the AI Narrative Service for all templates receives these new "Soft Cost" numbers so it can write arguments like: *"Beyond the $50k in theft, the facility is losing $200k annually in staff turnover due to safety concerns."*
+
+Please apply this logic globally to ensure every assessment reflects the true cost of risk.

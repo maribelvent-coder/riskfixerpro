@@ -966,6 +966,13 @@ export const manufacturingProfileSchema = z.object({
   shiftOperations: z.enum(['1', '2', '24/7']).optional(),
   ipTypes: z.array(z.string()).optional(),
   hazmatPresent: z.boolean().optional(),
+  // TCOR - Total Cost of Risk fields
+  employeeCount: z.number().optional(),
+  annualTurnoverRate: z.number().optional(), // percentage (e.g., 50 for 50%)
+  avgHiringCost: z.number().optional(), // dollars per hire
+  annualLiabilityEstimates: z.number().optional(), // annual legal/insurance/WC costs
+  securityIncidentsPerYear: z.number().optional(), // number of incidents
+  brandDamageEstimate: z.number().optional(), // estimated brand/reputation cost
 });
 
 export type ManufacturingProfile = z.infer<typeof manufacturingProfileSchema>;
@@ -976,6 +983,13 @@ export const datacenterProfileSchema = z.object({
   uptimeSLA: z.string().optional(),
   complianceRequirements: z.array(z.string()).optional(),
   powerCapacity: z.number().nullable().optional(), // kW - nullable to support clearing stale values
+  // TCOR - Total Cost of Risk fields
+  employeeCount: z.number().optional(),
+  annualTurnoverRate: z.number().optional(), // percentage (e.g., 50 for 50%)
+  avgHiringCost: z.number().optional(), // dollars per hire
+  annualLiabilityEstimates: z.number().optional(), // annual legal/insurance/WC costs
+  securityIncidentsPerYear: z.number().optional(), // number of incidents
+  brandDamageEstimate: z.number().optional(), // estimated brand/reputation cost
 });
 
 export type DatacenterProfile = z.infer<typeof datacenterProfileSchema>;
@@ -986,6 +1000,12 @@ export const officeProfileSchema = z.object({
   visitorVolume: z.enum(['Low', 'Medium', 'High']).optional(),
   dataSensitivity: z.enum(['Public', 'Internal', 'Confidential', 'Restricted']).optional(),
   hasExecutivePresence: z.boolean().optional(),
+  // TCOR - Total Cost of Risk fields
+  annualTurnoverRate: z.number().optional(), // percentage (e.g., 50 for 50%)
+  avgHiringCost: z.number().optional(), // dollars per hire
+  annualLiabilityEstimates: z.number().optional(), // annual legal/insurance/WC costs
+  securityIncidentsPerYear: z.number().optional(), // number of incidents
+  brandDamageEstimate: z.number().optional(), // estimated brand/reputation cost
 });
 
 export type OfficeProfile = z.infer<typeof officeProfileSchema>;
