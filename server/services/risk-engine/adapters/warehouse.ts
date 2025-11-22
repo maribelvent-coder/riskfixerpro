@@ -408,6 +408,13 @@ export interface WarehouseProfile {
     insiderInvolvement?: boolean;
   }>;
   locationRisk?: 'High' | 'Medium' | 'Low'; // Placeholder for future crime API integration
+  // TCOR - Total Cost of Risk fields
+  employeeCount?: number;
+  annualTurnoverRate?: number; // percentage (e.g., 50 for 50%)
+  avgHiringCost?: number; // dollars per hire
+  annualLiabilityEstimates?: number; // annual legal/insurance/WC costs
+  securityIncidentsPerYear?: number; // number of incidents
+  brandDamageEstimate?: number; // estimated brand/reputation cost
 }
 
 export interface AssessmentWithWarehouseData {
@@ -599,5 +606,86 @@ export function calculateCargoTheftVulnerabilityScore(
       incidentHistory,
       operationalVulnerabilities,
     },
+  };
+}
+
+/**
+ * TOTAL COST OF RISK (TCOR) CALCULATION
+ * Calculates comprehensive annual risk exposure including direct and indirect costs
+ */
+
+export interface TCORBreakdown {
+  directLoss: number; // Annual cargo theft/shrinkage losses
+  turnoverCost: number; // Security-related employee turnover costs
+  liabilityCost: number; // Insurance, legal, workers' comp
+  incidentCost: number; // Operational disruption from security incidents
+  brandDamageCost: number; // Reputation/brand damage
+  totalAnnualExposure: number; // Sum of all costs
+}
+
+/**
+ * Calculate Total Annual Exposure for warehouse operations
+ * 
+ * Formula:
+ * Total Annual Exposure = Direct Loss + Turnover Cost + Liability Cost + Incident Cost + Brand Damage
+ * 
+ * Where:
+ * - Direct Loss = Historical cargo theft losses (average annual loss)
+ * - Turnover Cost = (Employee Count × Turnover Rate × Hiring Cost) × 0.15
+ *   (Assumes 15% of turnover is security-related in warehouse environments)
+ * - Liability Cost = Annual liability/insurance/WC estimates
+ * - Incident Cost = Security Incidents × Average Incident Cost ($8,000 per incident baseline for warehouses)
+ * - Brand Damage = Estimated brand/reputation damage
+ */
+export function calculateTotalCostOfRisk(
+  profile: WarehouseProfile
+): TCORBreakdown {
+  // 1. DIRECT LOSS (Historical cargo theft/shrinkage)
+  let directLoss = 0;
+  if (profile.cargoTheftIncidents && Array.isArray(profile.cargoTheftIncidents)) {
+    const totalLosses = profile.cargoTheftIncidents.reduce((sum, incident) => sum + (incident.loss || 0), 0);
+    const avgYears = profile.cargoTheftIncidents.length > 0 ? Math.max(1, profile.cargoTheftIncidents.length / 12) : 1;
+    directLoss = totalLosses / avgYears; // Annualized loss
+  }
+  
+  // Fallback to shrinkage rate if no theft incidents
+  if (directLoss === 0 && profile.shrinkageRate && profile.inventoryValue) {
+    directLoss = profile.inventoryValue * (profile.shrinkageRate / 100);
+  }
+
+  // 2. TURNOVER COST
+  const employeeCount = profile.employeeCount || 0;
+  const turnoverRate = profile.annualTurnoverRate || 0;
+  const avgHiringCost = profile.avgHiringCost || 0;
+  // Assume 15% of turnover is security-related (theft, violence, unsafe conditions)
+  const securityRelatedTurnoverFactor = 0.15;
+  const turnoverCost = employeeCount * (turnoverRate / 100) * avgHiringCost * securityRelatedTurnoverFactor;
+
+  // 3. LIABILITY COST
+  const liabilityCost = profile.annualLiabilityEstimates || 0;
+
+  // 4. INCIDENT COST
+  const incidentsPerYear = profile.securityIncidentsPerYear || 0;
+  const avgIncidentCost = 8000; // $8K baseline (higher than retail due to larger operations, truck delays, cargo value)
+  const incidentCost = incidentsPerYear * avgIncidentCost;
+
+  // 5. BRAND DAMAGE COST
+  const brandDamageCost = profile.brandDamageEstimate || 0;
+
+  // TOTAL ANNUAL EXPOSURE
+  const totalAnnualExposure = 
+    directLoss + 
+    turnoverCost + 
+    liabilityCost + 
+    incidentCost + 
+    brandDamageCost;
+
+  return {
+    directLoss,
+    turnoverCost,
+    liabilityCost,
+    incidentCost,
+    brandDamageCost,
+    totalAnnualExposure,
   };
 }

@@ -288,3 +288,76 @@ export class DatacenterAdapter {
     return 0;
   }
 }
+
+/**
+ * TOTAL COST OF RISK (TCOR) CALCULATION
+ * Calculates comprehensive annual risk exposure including direct and indirect costs
+ */
+
+export interface TCORBreakdown {
+  directLoss: number; // Downtime costs based on SLA penalties
+  turnoverCost: number; // Security-related employee turnover costs
+  liabilityCost: number; // Insurance, legal, workers' comp
+  incidentCost: number; // Operational disruption from security incidents
+  brandDamageCost: number; // Reputation/brand damage
+  totalAnnualExposure: number; // Sum of all costs
+}
+
+/**
+ * Calculate Total Annual Exposure for datacenter operations
+ * 
+ * Formula:
+ * Total Annual Exposure = Direct Loss + Turnover Cost + Liability Cost + Incident Cost + Brand Damage
+ * 
+ * Where:
+ * - Direct Loss = Estimated SLA penalty costs from downtime
+ * - Turnover Cost = (Employee Count × Turnover Rate × Hiring Cost) × 0.15
+ *   (Assumes 15% of turnover is security-related in datacenter environments)
+ * - Liability Cost = Annual liability/insurance/WC estimates
+ * - Incident Cost = Security Incidents × Average Incident Cost ($50,000 per incident baseline for datacenters)
+ * - Brand Damage = Estimated brand/reputation damage
+ */
+export function calculateTotalCostOfRisk(
+  profile: DatacenterProfile,
+  estimatedDowntimeCost: number = 0
+): TCORBreakdown {
+  // 1. DIRECT LOSS (SLA penalties and downtime costs)
+  // Use provided downtime cost estimate, or baseline of $100K/year for critical facilities
+  const directLoss = estimatedDowntimeCost || 100000;
+
+  // 2. TURNOVER COST
+  const employeeCount = profile.employeeCount || 0;
+  const turnoverRate = profile.annualTurnoverRate || 0;
+  const avgHiringCost = profile.avgHiringCost || 0;
+  // Assume 15% of turnover is security-related (clearance issues, insider threat concerns)
+  const securityRelatedTurnoverFactor = 0.15;
+  const turnoverCost = employeeCount * (turnoverRate / 100) * avgHiringCost * securityRelatedTurnoverFactor;
+
+  // 3. LIABILITY COST
+  const liabilityCost = profile.annualLiabilityEstimates || 0;
+
+  // 4. INCIDENT COST
+  const incidentsPerYear = profile.securityIncidentsPerYear || 0;
+  const avgIncidentCost = 50000; // $50K baseline (highest due to critical nature, client SLAs, regulatory)
+  const incidentCost = incidentsPerYear * avgIncidentCost;
+
+  // 5. BRAND DAMAGE COST
+  const brandDamageCost = profile.brandDamageEstimate || 0;
+
+  // TOTAL ANNUAL EXPOSURE
+  const totalAnnualExposure = 
+    directLoss + 
+    turnoverCost + 
+    liabilityCost + 
+    incidentCost + 
+    brandDamageCost;
+
+  return {
+    directLoss,
+    turnoverCost,
+    liabilityCost,
+    incidentCost,
+    brandDamageCost,
+    totalAnnualExposure,
+  };
+}

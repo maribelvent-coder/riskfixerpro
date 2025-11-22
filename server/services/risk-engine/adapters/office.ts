@@ -291,3 +291,85 @@ export class OfficeAdapter {
     return 0;
   }
 }
+
+/**
+ * TOTAL COST OF RISK (TCOR) CALCULATION
+ * Calculates comprehensive annual risk exposure including direct and indirect costs
+ */
+
+export interface TCORBreakdown {
+  directLoss: number; // Direct losses from security incidents
+  turnoverCost: number; // Security-related employee turnover costs
+  liabilityCost: number; // Insurance, legal, workers' comp
+  incidentCost: number; // Operational disruption from security incidents
+  brandDamageCost: number; // Reputation/brand damage
+  totalAnnualExposure: number; // Sum of all costs
+}
+
+/**
+ * Calculate Total Annual Exposure for office environments
+ * 
+ * Formula:
+ * Total Annual Exposure = Direct Loss + Turnover Cost + Liability Cost + Incident Cost + Brand Damage
+ * 
+ * Where:
+ * - Direct Loss = Baseline estimate for office theft/property damage ($25K baseline)
+ * - Turnover Cost = (Employee Count × Turnover Rate × Hiring Cost) × 0.25
+ *   (Assumes 25% of turnover is security-related in office environments - higher due to workplace violence/harassment)
+ * - Liability Cost = Annual liability/insurance/WC estimates
+ * - Incident Cost = Security Incidents × Average Incident Cost ($15,000 per incident baseline for offices)
+ * - Brand Damage = Estimated brand/reputation damage
+ */
+export function calculateTotalCostOfRisk(
+  profile: OfficeProfile
+): TCORBreakdown {
+  // 1. DIRECT LOSS (Office theft/property damage baseline)
+  const directLoss = 25000; // Baseline estimate for office environments
+
+  // 2. TURNOVER COST
+  // Office environments use categorical employee count, convert to numbers
+  let employeeCount = 0;
+  if (profile.employeeCount === '1000+') {
+    employeeCount = 1500; // Estimate midpoint
+  } else if (profile.employeeCount === '201-1000') {
+    employeeCount = 600; // Estimate midpoint
+  } else if (profile.employeeCount === '51-200') {
+    employeeCount = 125; // Estimate midpoint
+  } else if (profile.employeeCount === '1-50') {
+    employeeCount = 25; // Estimate midpoint
+  }
+
+  const turnoverRate = profile.annualTurnoverRate || 0;
+  const avgHiringCost = profile.avgHiringCost || 0;
+  // Assume 25% of turnover is security-related (workplace violence, harassment, unsafe conditions)
+  const securityRelatedTurnoverFactor = 0.25;
+  const turnoverCost = employeeCount * (turnoverRate / 100) * avgHiringCost * securityRelatedTurnoverFactor;
+
+  // 3. LIABILITY COST
+  const liabilityCost = profile.annualLiabilityEstimates || 0;
+
+  // 4. INCIDENT COST
+  const incidentsPerYear = profile.securityIncidentsPerYear || 0;
+  const avgIncidentCost = 15000; // $15K baseline (higher due to workplace violence, legal costs)
+  const incidentCost = incidentsPerYear * avgIncidentCost;
+
+  // 5. BRAND DAMAGE COST
+  const brandDamageCost = profile.brandDamageEstimate || 0;
+
+  // TOTAL ANNUAL EXPOSURE
+  const totalAnnualExposure = 
+    directLoss + 
+    turnoverCost + 
+    liabilityCost + 
+    incidentCost + 
+    brandDamageCost;
+
+  return {
+    directLoss,
+    turnoverCost,
+    liabilityCost,
+    incidentCost,
+    brandDamageCost,
+    totalAnnualExposure,
+  };
+}

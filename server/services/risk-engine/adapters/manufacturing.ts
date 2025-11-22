@@ -13,6 +13,13 @@ export interface ManufacturingProfile {
   shiftOperations?: '1' | '2' | '24/7';
   ipTypes?: string[]; // e.g., ['Patents', 'Trade Secrets', 'Proprietary Processes']
   hazmatPresent?: boolean;
+  // TCOR - Total Cost of Risk fields
+  employeeCount?: number;
+  annualTurnoverRate?: number; // percentage (e.g., 50 for 50%)
+  avgHiringCost?: number; // dollars per hire
+  annualLiabilityEstimates?: number; // annual legal/insurance/WC costs
+  securityIncidentsPerYear?: number; // number of incidents
+  brandDamageEstimate?: number; // estimated brand/reputation cost
 }
 
 export class ManufacturingAdapter {
@@ -137,4 +144,78 @@ export class ManufacturingAdapter {
     const risk = inherentRisk * (1 - controlEffectiveness);
     return Math.round(risk);
   }
+}
+
+/**
+ * TOTAL COST OF RISK (TCOR) CALCULATION
+ * Calculates comprehensive annual risk exposure including direct and indirect costs
+ */
+
+export interface TCORBreakdown {
+  directLoss: number; // Production downtime costs
+  turnoverCost: number; // Security-related employee turnover costs
+  liabilityCost: number; // Insurance, legal, workers' comp
+  incidentCost: number; // Operational disruption from security incidents
+  brandDamageCost: number; // Reputation/brand damage
+  totalAnnualExposure: number; // Sum of all costs
+}
+
+/**
+ * Calculate Total Annual Exposure for manufacturing operations
+ * 
+ * Formula:
+ * Total Annual Exposure = Direct Loss + Turnover Cost + Liability Cost + Incident Cost + Brand Damage
+ * 
+ * Where:
+ * - Direct Loss = Estimated production downtime costs (based on daily downtime cost)
+ * - Turnover Cost = (Employee Count × Turnover Rate × Hiring Cost) × 0.10
+ *   (Assumes 10% of turnover is security-related in manufacturing environments)
+ * - Liability Cost = Annual liability/insurance/WC estimates
+ * - Incident Cost = Security Incidents × Average Incident Cost ($10,000 per incident baseline for manufacturing)
+ * - Brand Damage = Estimated brand/reputation damage
+ */
+export function calculateTotalCostOfRisk(
+  profile: ManufacturingProfile,
+  estimatedDailyDowntimeCost: number = 0
+): TCORBreakdown {
+  // 1. DIRECT LOSS (Production downtime)
+  // Assume 2-3 days of downtime risk per year from security incidents
+  const assumedDowntimeDays = 2.5;
+  const directLoss = estimatedDailyDowntimeCost * assumedDowntimeDays;
+
+  // 2. TURNOVER COST
+  const employeeCount = profile.employeeCount || 0;
+  const turnoverRate = profile.annualTurnoverRate || 0;
+  const avgHiringCost = profile.avgHiringCost || 0;
+  // Assume 10% of turnover is security-related (theft, violence, safety issues)
+  const securityRelatedTurnoverFactor = 0.10;
+  const turnoverCost = employeeCount * (turnoverRate / 100) * avgHiringCost * securityRelatedTurnoverFactor;
+
+  // 3. LIABILITY COST
+  const liabilityCost = profile.annualLiabilityEstimates || 0;
+
+  // 4. INCIDENT COST
+  const incidentsPerYear = profile.securityIncidentsPerYear || 0;
+  const avgIncidentCost = 10000; // $10K baseline (higher than retail/warehouse due to production impact)
+  const incidentCost = incidentsPerYear * avgIncidentCost;
+
+  // 5. BRAND DAMAGE COST
+  const brandDamageCost = profile.brandDamageEstimate || 0;
+
+  // TOTAL ANNUAL EXPOSURE
+  const totalAnnualExposure = 
+    directLoss + 
+    turnoverCost + 
+    liabilityCost + 
+    incidentCost + 
+    brandDamageCost;
+
+  return {
+    directLoss,
+    turnoverCost,
+    liabilityCost,
+    incidentCost,
+    brandDamageCost,
+    totalAnnualExposure,
+  };
 }
