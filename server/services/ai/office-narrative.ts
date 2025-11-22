@@ -65,10 +65,14 @@ export async function generateOfficeRiskNarrative(
           role: "system",
           content: `You are a Senior Corporate Security Consultant with 20+ years of experience in workplace violence prevention, data security, and office building physical security. You specialize in life safety programs, insider threat mitigation, and executive protection following ASIS International standards.
 
+Your primary goal is **Operational Risk Mitigation**. Prioritize security vulnerabilities and protective measures. Use financial data only as supporting evidence, not the primary headline.
+
 Your writing style is:
 - Professional and authoritative
-- Data-driven with specific metrics
-- Focused on employee safety and business continuity
+- Data-driven with specific security metrics
+- Focused on employee safety, threat analysis, and operational vulnerabilities
+- Vulnerability gaps and control measures come first
+- Business impact is mentioned briefly, only after security analysis
 - Sensitive to workplace culture and employee wellbeing
 - Concise yet comprehensive
 - Uses security industry terminology appropriately`
@@ -166,22 +170,25 @@ ${scenario.vulnerabilityDescription}`;
   }
   
   // Construct the full prompt
-  return `Write a professional, 3-paragraph security risk analysis for this office building security scenario.
+  return `Write a professional, 4-paragraph security risk analysis for this office building security scenario using a Security-First approach.
 
 ${facilityContext}
 
 ${riskDetails}${vulnerabilityDetails}
 
-**Instructions:**
+**Instructions - Security Professional Perspective:**
 
-**Paragraph 1 - Context & Threat Definition (3-4 sentences):**
-Define this specific risk in the context of THIS office facility. MUST reference the employee count range (${employeeCountMap[employeeCount]}) to establish life safety impact scale, and MUST reference data sensitivity level (${dataSensitivity}) to establish IP/compliance impact. For workplace violence scenarios, emphasize the life safety implications given the employee population. For data security scenarios, emphasize the IP/compliance impact given the sensitivity level.
+**Paragraph 1 - Security Posture (3-4 sentences):**
+State the risk level (${scenario.riskLevel || 'Not Assessed'}) and identify the primary threats to this facility. MUST reference employee count (${employeeCountMap[employeeCount]}) and data sensitivity (${dataSensitivity}) to establish threat landscape. For workplace violence, emphasize employee vulnerability given the population. For data security, emphasize IP/compliance exposure.
 
 **Paragraph 2 - Vulnerability Analysis (3-4 sentences):**
-Explain WHY the risk level is ${(scenario.riskLevel || 'elevated').toLowerCase()} based on the specific security gaps identified in the vulnerability assessment. Reference the actual findings (e.g., lack of visitor management, no clean desk policy, missing panic buttons, inadequate access control, no threat assessment team). Connect these vulnerabilities to how they enable the threat.
+Identify the specific security gaps that create this risk level. Reference actual findings from the assessment (e.g., lack of visitor management, no panic buttons, missing access control, inadequate CCTV, no threat assessment team, weak clean desk policy). Explain HOW these gaps enable the threat - this is the "Why" of the risk.
 
-**Paragraph 3 - Impact Assessment (3-4 sentences):**
-Describe the potential consequences if this risk materializes. For workplace violence, focus on employee safety, business continuity, legal liability, and organizational reputation. For data security, focus on IP loss, regulatory penalties (GDPR, HIPAA, etc.), customer trust, and competitive advantage. Use specific metrics when available (employee count, data sensitivity level, executive presence).
+**Paragraph 3 - Recommendations (3-4 sentences):**
+Provide actionable security measures to close the gaps. For workplace violence: visitor screening, panic systems, threat assessment teams, employee training. For data security: access control upgrades, clean desk enforcement, DLP systems, security awareness. Prioritize operational fixes over ROI calculations.
+
+**Paragraph 4 - Business Impact (2-3 sentences, BRIEF):**
+Briefly mention consequences if risk materializes. For workplace violence: employee safety, business continuity, liability. For data security: IP loss, regulatory penalties, customer trust. Keep this section concise - security professionals understand the stakes.
 
 **Formatting:**
 - Write in third person
