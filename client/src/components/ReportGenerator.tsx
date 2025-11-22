@@ -349,8 +349,8 @@ export function ReportGenerator({
       </Card>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-report-preview">
-          <DialogHeader>
+        <DialogContent className="max-w-7xl h-[95vh] overflow-hidden flex flex-col p-0" data-testid="dialog-report-preview">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               {previewReport?.title} - Preview
@@ -358,14 +358,14 @@ export function ReportGenerator({
           </DialogHeader>
           
           {loadingPreview ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-12 flex-1">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">Generating preview...</p>
               </div>
             </div>
           ) : previewError ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-12 flex-1">
               <div className="flex flex-col items-center gap-3">
                 <AlertCircle className="h-8 w-8 text-destructive" />
                 <p className="text-sm text-destructive">{previewError}</p>
@@ -379,15 +379,17 @@ export function ReportGenerator({
               </div>
             </div>
           ) : previewHTML ? (
-            <div className="flex-1 overflow-hidden flex flex-col gap-4">
-              <iframe
-                srcDoc={previewHTML}
-                className="w-full flex-1 border rounded-md"
-                title="Report Preview"
-                sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
-                data-testid="iframe-report-preview"
-              />
-              <div className="flex gap-2 justify-end border-t pt-4">
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+              <div className="flex-1 overflow-hidden px-6 py-4">
+                <iframe
+                  srcDoc={previewHTML}
+                  className="w-full h-full border rounded-md bg-white"
+                  title="Report Preview"
+                  sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+                  data-testid="iframe-report-preview"
+                />
+              </div>
+              <div className="flex gap-2 justify-end border-t px-6 py-4 bg-background">
                 <Button
                   variant="outline"
                   onClick={() => setPreviewOpen(false)}
@@ -408,7 +410,7 @@ export function ReportGenerator({
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-12 flex-1">
               <div className="flex flex-col items-center gap-3">
                 <AlertCircle className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">No preview available</p>
