@@ -24,7 +24,8 @@ export const organizations = pgTable("organizations", {
   maxMembers: integer("max_members").notNull().default(2), // Basic: 2, Pro: 10, Enterprise: unlimited (-1)
   maxSites: integer("max_sites").notNull().default(2), // Basic: 2, Pro: 10, Enterprise: unlimited (-1)
   maxAssessments: integer("max_assessments").notNull().default(5), // Basic: 5, Pro: 50, Enterprise: unlimited (-1)
-  createdAt: timestamp("created_at").default(sql`now()`),
+  30
+  ,
 });
 
 export const users = pgTable("users", {
