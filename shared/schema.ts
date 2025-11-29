@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -218,7 +218,9 @@ export const executiveInterviewResponses = pgTable("executive_interview_response
   textResponse: text("text_response"),
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
-});
+}, (table) => ({
+  assessmentQuestionUnique: uniqueIndex("assessment_question_unique").on(table.assessmentId, table.questionId),
+}));
 
 export const identifiedThreats = pgTable("identified_threats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
