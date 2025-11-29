@@ -2983,6 +2983,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assessments", async (req, res) => {
     try {
+      // Debug: Log authentication state
+      console.log("[POST /api/assessments] Auth debug:", {
+        hasUser: !!req.user,
+        userId: req.user?.id,
+        hasSession: !!req.session,
+        sessionUserId: req.session?.userId,
+        hasAuthHeader: !!req.headers.authorization
+      });
+      
       // Support both JWT (req.user) and session-based auth (req.session.userId)
       const userId = req.user?.id || req.session?.userId;
       if (!userId) {
