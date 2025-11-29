@@ -25,8 +25,10 @@ import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 /**
  * TenantStorage - Multi-tenant data access layer
  * 
- * Security Model:
- * - All READ operations filter by joining users table and verifying organizationId
+ * Security Model (Hybrid Filtering Approach):
+ * - Sites: Direct filtering on sites.organizationId (performant, uses index)
+ * - Assessments/Risk entities: Implicit joins through users table (assessments lack organizationId column)
+ * - All CREATE operations explicitly set organizationId where applicable
  * - Ownership verification ensures data isolation between tenants
  * - Does not include admin/global user management methods
  */
@@ -57,17 +59,16 @@ export class TenantStorage {
   }
 
   /**
-   * Helper: Verify a site belongs to a user within the tenant
+   * Helper: Verify a site belongs to this tenant (direct check on sites.organizationId)
    */
   private async verifySiteOwnership(siteId: string): Promise<boolean> {
     const result = await this.db
       .select({ id: sites.id })
       .from(sites)
-      .innerJoin(users, eq(sites.userId, users.id))
       .where(
         and(
           eq(sites.id, siteId),
-          eq(users.organizationId, this.tenantId)
+          eq(sites.organizationId, this.tenantId)
         )
       );
     return result.length > 0;
@@ -79,38 +80,12 @@ export class TenantStorage {
 
   async getSite(id: string): Promise<Site | undefined> {
     const result = await this.db
-      .select({
-        id: sites.id,
-        userId: sites.userId,
-        organizationId: sites.organizationId,
-        name: sites.name,
-        address: sites.address,
-        city: sites.city,
-        state: sites.state,
-        zipCode: sites.zipCode,
-        country: sites.country,
-        facilityType: sites.facilityType,
-        contactName: sites.contactName,
-        contactPhone: sites.contactPhone,
-        contactEmail: sites.contactEmail,
-        notes: sites.notes,
-        latitude: sites.latitude,
-        longitude: sites.longitude,
-        geocodeProvider: sites.geocodeProvider,
-        geocodeStatus: sites.geocodeStatus,
-        geocodeTimestamp: sites.geocodeTimestamp,
-        normalizedAddress: sites.normalizedAddress,
-        county: sites.county,
-        timezone: sites.timezone,
-        createdAt: sites.createdAt,
-        updatedAt: sites.updatedAt
-      })
+      .select()
       .from(sites)
-      .innerJoin(users, eq(sites.userId, users.id))
       .where(
         and(
           eq(sites.id, id),
-          eq(users.organizationId, this.tenantId)
+          eq(sites.organizationId, this.tenantId)
         )
       );
     return result[0];
@@ -118,39 +93,16 @@ export class TenantStorage {
 
   async getAllSites(): Promise<Site[]> {
     return this.db
-      .select({
-        id: sites.id,
-        userId: sites.userId,
-        organizationId: sites.organizationId,
-        name: sites.name,
-        address: sites.address,
-        city: sites.city,
-        state: sites.state,
-        zipCode: sites.zipCode,
-        country: sites.country,
-        facilityType: sites.facilityType,
-        contactName: sites.contactName,
-        contactPhone: sites.contactPhone,
-        contactEmail: sites.contactEmail,
-        notes: sites.notes,
-        latitude: sites.latitude,
-        longitude: sites.longitude,
-        geocodeProvider: sites.geocodeProvider,
-        geocodeStatus: sites.geocodeStatus,
-        geocodeTimestamp: sites.geocodeTimestamp,
-        normalizedAddress: sites.normalizedAddress,
-        county: sites.county,
-        timezone: sites.timezone,
-        createdAt: sites.createdAt,
-        updatedAt: sites.updatedAt
-      })
+      .select()
       .from(sites)
-      .innerJoin(users, eq(sites.userId, users.id))
-      .where(eq(users.organizationId, this.tenantId));
+      .where(eq(sites.organizationId, this.tenantId));
   }
 
   async createSite(site: InsertSite): Promise<Site> {
-    const [created] = await this.db.insert(sites).values(site).returning();
+    const [created] = await this.db
+      .insert(sites)
+      .values({ ...site, organizationId: this.tenantId })
+      .returning();
     return created;
   }
 
