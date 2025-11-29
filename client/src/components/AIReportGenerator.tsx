@@ -93,12 +93,18 @@ export function AIReportGenerator({
 
   const downloadPDFMutation = useMutation({
     mutationFn: async (reportId: string) => {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Accept': 'application/pdf',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`/api/assessments/${assessmentId}/reports/${reportId}/pdf`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Accept': 'application/pdf',
-        }
+        headers
       });
       
       if (!response.ok) {
@@ -135,13 +141,19 @@ export function AIReportGenerator({
   const generateAndDownloadPDFMutation = useMutation({
     mutationFn: async (recipeId: string) => {
       setIsGenerating(true);
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/pdf',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`/api/assessments/${assessmentId}/reports/generate-pdf`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/pdf',
-        },
+        headers,
         body: JSON.stringify({ recipeId })
       });
       
