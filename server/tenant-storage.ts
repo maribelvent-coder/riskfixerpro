@@ -155,11 +155,11 @@ export class TenantStorage {
         riskAssessmentCompleted: assessments.riskAssessmentCompleted,
         riskAssessmentCompletedAt: assessments.riskAssessmentCompletedAt,
         executiveSummary: assessments.executiveSummary,
-        warehouse_profile: assessments.warehouse_profile,
-        retail_profile: assessments.retail_profile,
-        manufacturing_profile: assessments.manufacturing_profile,
-        datacenter_profile: assessments.datacenter_profile,
-        office_profile: assessments.office_profile
+        warehouseProfile: assessments.warehouseProfile,
+        retailProfile: assessments.retailProfile,
+        manufacturingProfile: assessments.manufacturingProfile,
+        datacenterProfile: assessments.datacenterProfile,
+        officeProfile: assessments.officeProfile
       })
       .from(assessments)
       .innerJoin(users, eq(assessments.userId, users.id))
@@ -197,11 +197,11 @@ export class TenantStorage {
         riskAssessmentCompleted: assessments.riskAssessmentCompleted,
         riskAssessmentCompletedAt: assessments.riskAssessmentCompletedAt,
         executiveSummary: assessments.executiveSummary,
-        warehouse_profile: assessments.warehouse_profile,
-        retail_profile: assessments.retail_profile,
-        manufacturing_profile: assessments.manufacturing_profile,
-        datacenter_profile: assessments.datacenter_profile,
-        office_profile: assessments.office_profile
+        warehouseProfile: assessments.warehouseProfile,
+        retailProfile: assessments.retailProfile,
+        manufacturingProfile: assessments.manufacturingProfile,
+        datacenterProfile: assessments.datacenterProfile,
+        officeProfile: assessments.officeProfile
       })
       .from(assessments)
       .innerJoin(users, eq(assessments.userId, users.id))
@@ -310,7 +310,6 @@ export class TenantStorage {
         currentImpact: riskScenarios.currentImpact,
         currentRiskLevel: riskScenarios.currentRiskLevel,
         likelihoodScore: riskScenarios.likelihoodScore,
-        vulnerabilityScore: riskScenarios.vulnerabilityScore,
         impactScore: riskScenarios.impactScore,
         inherentRisk: riskScenarios.inherentRisk,
         controlEffectiveness: riskScenarios.controlEffectiveness,

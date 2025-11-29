@@ -2983,12 +2983,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assessments", async (req, res) => {
     try {
-      const userId = req.session.userId;
+      // Support both JWT (req.user) and session-based auth (req.session.userId)
+      const userId = req.user?.id || req.session?.userId;
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const user = await storage.getUser(userId);
+      // Use req.user if available (already fetched by attachTenantContext), otherwise fetch
+      const user = req.user || await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
@@ -5211,7 +5213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Statistics/Dashboard routes
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
-      const userId = req.session.userId;
+      // Support both JWT (req.user) and session-based auth (req.session.userId)
+      const userId = req.user?.id || req.session?.userId;
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
