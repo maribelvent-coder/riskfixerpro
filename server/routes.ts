@@ -283,6 +283,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/login", async (req, res) => {
+    console.log("📥 Login route hit - request body:", JSON.stringify(req.body));
+    console.log("📥 Login route - headers:", JSON.stringify(req.headers));
     try {
       const loginSchema = z.object({
         username: z.string().min(1, "Username is required"),
