@@ -1001,3 +1001,90 @@ export type RetailProfile = z.infer<typeof retailProfileSchema>;
 export type ManufacturingProfile = z.infer<typeof manufacturingProfileSchema>;
 export type DatacenterProfile = z.infer<typeof datacenterProfileSchema>;
 export type OfficeProfile = z.infer<typeof officeProfileSchema>;
+
+export const reportRecipes = pgTable("report_recipes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  reportType: text("report_type").notNull(),
+  assessmentTypes: jsonb("assessment_types").notNull(),
+  sections: jsonb("sections").notNull(),
+  toneSetting: text("tone_setting").notNull().default("executive"),
+  branding: jsonb("branding"),
+  pageLayout: jsonb("page_layout"),
+  isActive: boolean("is_active").notNull().default(true),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const narrativePrompts = pgTable("narrative_prompts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionId: text("section_id").notNull(),
+  systemPrompt: text("system_prompt").notNull(),
+  userPromptTemplate: text("user_prompt_template").notNull(),
+  outputConstraints: jsonb("output_constraints"),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
+export const generatedReports = pgTable("generated_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  recipeId: varchar("recipe_id").references(() => reportRecipes.id),
+  reportType: text("report_type").notNull(),
+  status: text("status").notNull().default("pending"),
+  pdfUrl: text("pdf_url"),
+  dataSnapshot: jsonb("data_snapshot"),
+  generationLog: jsonb("generation_log"),
+  generatedAt: timestamp("generated_at"),
+  generatedBy: varchar("generated_by").references(() => users.id),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const interviewFindings = pgTable("interview_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  source: text("source").notNull(),
+  sourceRole: text("source_role"),
+  interviewDate: timestamp("interview_date"),
+  finding: text("finding").notNull(),
+  directQuote: text("direct_quote"),
+  linkedVulnerabilityId: varchar("linked_vulnerability_id"),
+  linkedThreatDomainId: varchar("linked_threat_domain_id"),
+  severity: text("severity").notNull().default("medium"),
+  usedInReport: boolean("used_in_report").notNull().default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const documentedIncidents = pgTable("documented_incidents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id),
+  description: text("description").notNull(),
+  incidentDate: timestamp("incident_date"),
+  source: text("source"),
+  sourceRole: text("source_role"),
+  threatDomainId: varchar("threat_domain_id"),
+  severity: text("severity").notNull().default("medium"),
+  actionTaken: text("action_taken"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertReportRecipeSchema = createInsertSchema(reportRecipes).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertNarrativePromptSchema = createInsertSchema(narrativePrompts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertGeneratedReportSchema = createInsertSchema(generatedReports).omit({ id: true, createdAt: true });
+export const insertInterviewFindingSchema = createInsertSchema(interviewFindings).omit({ id: true, createdAt: true });
+export const insertDocumentedIncidentSchema = createInsertSchema(documentedIncidents).omit({ id: true, createdAt: true });
+
+export type InsertReportRecipe = z.infer<typeof insertReportRecipeSchema>;
+export type InsertNarrativePrompt = z.infer<typeof insertNarrativePromptSchema>;
+export type InsertGeneratedReport = z.infer<typeof insertGeneratedReportSchema>;
+export type InsertInterviewFinding = z.infer<typeof insertInterviewFindingSchema>;
+export type InsertDocumentedIncident = z.infer<typeof insertDocumentedIncidentSchema>;
+
+export type ReportRecipe = typeof reportRecipes.$inferSelect;
+export type NarrativePrompt = typeof narrativePrompts.$inferSelect;
+export type GeneratedReport = typeof generatedReports.$inferSelect;
+export type InterviewFinding = typeof interviewFindings.$inferSelect;
+export type DocumentedIncident = typeof documentedIncidents.$inferSelect;
