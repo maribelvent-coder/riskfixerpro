@@ -82,6 +82,7 @@ export default function Login() {
   });
 
   const onSubmit = (values: LoginFormValues) => {
+    console.log("🔐 Form submitted with values:", values);
     loginMutation.mutate(values);
   };
 
