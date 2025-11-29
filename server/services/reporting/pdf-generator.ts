@@ -10,9 +10,11 @@ import { db } from '../../db';
 import { assessments, riskScenarios } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { renderReportHTML } from '../../templates/master-report';
+import { renderExecutiveSummaryHTML } from '../../templates/executive-summary-template';
 import fs from 'fs/promises';
 import path from 'path';
 import { calculateTemplateMetrics } from './template-metrics';
+import type { GeneratedReportResult } from './report-generator';
 
 /**
  * Generate a comprehensive PDF report for an assessment
@@ -190,6 +192,107 @@ async function convertHTMLToPDF(htmlContent: string, assessmentId: string): Prom
     await fs.writeFile(filePath, pdfBuffer);
     
     return filePath;
+    
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Generate a PDF from a GeneratedReportResult using the appropriate template
+ * 
+ * @param report - The generated report result with sections and data
+ * @param templateType - The template type to use for rendering
+ * @returns PDF buffer
+ */
+export async function generateReportPDF(
+  report: GeneratedReportResult,
+  templateType: 'executive-summary' | 'comprehensive'
+): Promise<Buffer> {
+  console.log(`📄 Generating PDF using ${templateType} template...`);
+  
+  let htmlContent: string;
+  
+  switch (templateType) {
+    case 'executive-summary':
+      htmlContent = renderExecutiveSummaryHTML(report);
+      break;
+    case 'comprehensive':
+      const assessment = {
+        id: report.assessmentId,
+        title: report.dataSnapshot.principal?.name || report.dataSnapshot.facility?.name || 'Security Assessment',
+        templateId: report.dataSnapshot.assessmentType,
+        createdAt: report.generatedAt
+      };
+      const threatDomains = report.dataSnapshot.threatDomains || [];
+      const risks = threatDomains.map(td => ({
+        scenario: td.name || 'Unknown Threat',
+        asset: td.category || 'General',
+        threatType: td.category || 'General',
+        riskLevel: td.priority ? td.priority.charAt(0).toUpperCase() + td.priority.slice(1) : 'Medium',
+        inherentRisk: td.riskScore || 0,
+        threatDescription: td.description || '',
+        vulnerabilityDescription: Array.isArray(td.vulnerabilities) ? td.vulnerabilities.join(', ') : '',
+        controlRecommendations: Array.isArray(td.mitigatingControls) ? td.mitigatingControls.join(', ') : ''
+      }));
+      const executiveSummary = report.sections.find(s => s.id === 'the-assessment')?.narrativeContent || '';
+      const templateMetrics = {};
+      htmlContent = await renderReportHTML({
+        assessment,
+        risks,
+        photos: [],
+        executiveSummary,
+        templateMetrics
+      });
+      break;
+    default:
+      throw new Error(`Unknown template type: ${templateType}`);
+  }
+  
+  const pdfBuffer = await convertHTMLToPDFBuffer(htmlContent);
+  
+  console.log(`✅ PDF generated successfully (${pdfBuffer.length} bytes)`);
+  
+  return pdfBuffer;
+}
+
+/**
+ * Convert HTML content to PDF buffer using Puppeteer (without saving to file)
+ */
+async function convertHTMLToPDFBuffer(htmlContent: string): Promise<Buffer> {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
+      '--window-size=1920x1080',
+      '--disable-web-security',
+    ],
+    ...(process.env.PUPPETEER_EXECUTABLE_PATH && { 
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH 
+    })
+  });
+  
+  try {
+    const page = await browser.newPage();
+    
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      margin: {
+        top: '0.75in',
+        right: '0.75in',
+        bottom: '0.75in',
+        left: '0.75in'
+      }
+    });
+    
+    return Buffer.from(pdfBuffer);
     
   } finally {
     await browser.close();

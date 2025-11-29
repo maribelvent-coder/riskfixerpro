@@ -17,6 +17,7 @@ import { FacilitySurvey } from "@/components/FacilitySurvey";
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
+import { AIReportGenerator } from "@/components/AIReportGenerator";
 import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
 import OfficeBuildingInterview from "@/components/OfficeBuildingInterview";
@@ -693,14 +694,20 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         {/* Professional Reports */}
         <TabsContent value="reports" className="space-y-4">
+          <AIReportGenerator
+            assessmentId={assessmentId}
+            assessmentName={assessmentData?.title || 'Assessment'}
+            assessmentType={assessmentData?.templateId || 'executive-protection'}
+          />
+          
           <Card>
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
-                Professional Security Assessment Reports
+                Additional Report Options
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Generate comprehensive reports for stakeholders, compliance, and remediation planning.
+                Generate additional reports using pre-built templates
               </p>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">

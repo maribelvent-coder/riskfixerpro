@@ -5328,7 +5328,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify the assessment belongs to the user's organization
-      const tenantStorage = new TenantStorage(organizationId);
+      if (!organizationId) {
+        return res.status(403).json({ error: "Organization context required" });
+      }
+      const tenantStorage = new TenantStorage(db as any, organizationId);
       const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
@@ -5381,7 +5384,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = req.organizationId;
 
       // Verify the assessment belongs to the user's organization
-      const tenantStorage = new TenantStorage(organizationId);
+      if (!organizationId) {
+        return res.status(403).json({ error: "Organization context required" });
+      }
+      const tenantStorage = new TenantStorage(db as any, organizationId);
       const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
@@ -5402,7 +5408,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = req.organizationId;
 
       // Verify the assessment belongs to the user's organization
-      const tenantStorage = new TenantStorage(organizationId);
+      if (!organizationId) {
+        return res.status(403).json({ error: "Organization context required" });
+      }
+      const tenantStorage = new TenantStorage(db as any, organizationId);
       const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
@@ -5422,6 +5431,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching report:", error);
       res.status(500).json({ error: "Failed to fetch report" });
+    }
+  });
+
+  // Import PDF generator for report PDF endpoints
+  const { generateReportPDF } = await import("./services/reporting/pdf-generator");
+
+  // Generate and download PDF from existing report (protected)
+  app.post("/api/assessments/:id/reports/:reportId/pdf", requireOrganizationPermission, async (req, res) => {
+    try {
+      const { id, reportId } = req.params;
+      const organizationId = req.organizationId;
+
+      // Verify the assessment belongs to the user's organization
+      if (!organizationId) {
+        return res.status(403).json({ error: "Organization context required" });
+      }
+      const tenantStorage = new TenantStorage(db as any, organizationId);
+      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found or access denied" });
+      }
+
+      // Fetch the generated report
+      const report = await getGeneratedReport(reportId);
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      if (report.assessmentId !== id) {
+        return res.status(404).json({ error: "Report not found for this assessment" });
+      }
+
+      // Reconstruct the GeneratedReportResult from stored data with robust defaults
+      const dataSnapshot = report.dataSnapshot as any || {};
+      const reportResult = {
+        recipeId: report.recipeId,
+        assessmentId: report.assessmentId,
+        generatedAt: report.generatedAt || new Date(),
+        sections: dataSnapshot?.sections || [],
+        dataSnapshot: {
+          assessmentType: dataSnapshot?.assessmentType || 'unknown',
+          principal: dataSnapshot?.principal || null,
+          facility: dataSnapshot?.facility || null,
+          riskScores: dataSnapshot?.riskScores || { overallScore: 0 },
+          threatDomains: dataSnapshot?.threatDomains || [],
+          generatedAt: dataSnapshot?.generatedAt || report.generatedAt || new Date(),
+          ...dataSnapshot
+        },
+        generationLog: report.generationLog as any[] || [],
+        totalTokensUsed: 0,
+        totalNarrativeWords: 0
+      };
+
+      // Determine template type based on report type
+      const templateType = report.reportType === 'comprehensive' ? 'comprehensive' : 'executive-summary';
+
+      console.log(`[API] Generating PDF for report ${reportId}`);
+      const pdfBuffer = await generateReportPDF(reportResult as any, templateType as 'executive-summary' | 'comprehensive');
+
+      // Set response headers for PDF download
+      const fileName = `report-${reportId.substring(0, 8)}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to generate PDF", message });
+    }
+  });
+
+  // Generate report and immediately return PDF (one-step) (protected)
+  app.post("/api/assessments/:id/reports/generate-pdf", requireOrganizationPermission, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { recipeId } = req.body;
+      const organizationId = req.organizationId;
+
+      if (!recipeId) {
+        return res.status(400).json({ error: "recipeId is required" });
+      }
+
+      // Verify the assessment belongs to the user's organization
+      if (!organizationId) {
+        return res.status(403).json({ error: "Organization context required" });
+      }
+      const tenantStorage = new TenantStorage(db as any, organizationId);
+      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found or access denied" });
+      }
+
+      if (!isAnthropicConfigured()) {
+        return res.status(503).json({ 
+          error: "Report generation unavailable", 
+          message: "Anthropic API key is not configured" 
+        });
+      }
+
+      console.log(`[API] Generating report and PDF for assessment ${id} with recipe ${recipeId}`);
+
+      // Generate the report
+      const result = await generateReport(id, recipeId);
+      
+      // Save to database
+      const userId = req.session?.userId || req.user?.id;
+      const savedReportId = await saveGeneratedReport(result, userId);
+
+      // Determine template type based on recipe
+      const recipe = await getRecipe(recipeId);
+      const templateType = recipe?.reportType === 'comprehensive' ? 'comprehensive' : 'executive-summary';
+
+      // Generate PDF
+      const pdfBuffer = await generateReportPDF(result, templateType as 'executive-summary' | 'comprehensive');
+
+      // Set response headers for PDF download
+      const fileName = `report-${savedReportId.substring(0, 8)}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('X-Report-Id', savedReportId);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating report PDF:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to generate report PDF", message });
     }
   });
 
