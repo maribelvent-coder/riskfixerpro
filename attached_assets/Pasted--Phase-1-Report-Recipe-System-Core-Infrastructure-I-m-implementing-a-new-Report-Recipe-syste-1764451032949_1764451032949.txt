@@ -1,0 +1,151 @@
+## Phase 1: Report Recipe System - Core Infrastructure
+
+I'm implementing a new "Report Recipe" system for generating professional security assessment reports. This is Phase 1 of a multi-phase implementation. Use Anthropic Claude (not OpenAI) for all AI narrative generation.
+
+### Task 1.1: Create TypeScript Type Definitions
+
+Create `server/types/report-recipe.ts` with these interfaces:
+
+```typescript
+// Report Recipe Types
+export type AssessmentType = 
+  | 'executive-protection'
+  | 'office-building'
+  | 'retail-store'
+  | 'warehouse'
+  | 'data-center'
+  | 'manufacturing';
+
+export type ReportType = 'executive-summary' | 'comprehensive' | 'client-dashboard';
+export type ToneSetting = 'executive' | 'technical' | 'hybrid';
+export type ContentType = 'narrative' | 'table' | 'visualization' | 'mixed';
+
+export interface ReportRecipe {
+  id: string;
+  name: string;
+  description: string;
+  reportType: ReportType;
+  assessmentTypes: AssessmentType[];
+  sections: SectionDefinition[];
+  toneSetting: ToneSetting;
+  branding?: BrandingConfig;
+  pageLayout?: PageLayoutConfig;
+}
+
+export interface SectionDefinition {
+  id: string;
+  title: string;
+  order: number;
+  required: boolean;
+  pageBreakBefore: boolean;
+  contentType: ContentType;
+  requiredData: string[];
+  optionalData?: string[];
+  narrativePromptId?: string;
+  maxWords?: number;
+  minWords?: number;
+  tableConfig?: TableConfiguration;
+  visualizationId?: string;
+  displayCondition?: DisplayCondition;
+}
+
+export interface DisplayCondition {
+  field: string;
+  operator: 'exists' | 'equals' | 'greaterThan' | 'lessThan' | 'contains';
+  value?: any;
+}
+
+export interface NarrativePrompt {
+  id: string;
+  sectionId: string;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  outputConstraints?: OutputConstraints;
+}
+
+export interface OutputConstraints {
+  maxWords?: number;
+  minWords?: number;
+  prohibitedPhrases?: string[];
+  requiredElements?: string[];
+  preferredStructure?: string;
+}
+
+export interface TableConfiguration {
+  id: string;
+  columns: ColumnDefinition[];
+  dataSource: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  highlightRows?: RowHighlightConfig;
+  footerRow?: Record<string, string>;
+  footerStyle?: 'bold' | 'italic' | 'normal';
+}
+
+export interface ColumnDefinition {
+  header: string;
+  field: string;
+  width: string;
+  bold?: boolean;
+  format?: 'text' | 'date' | 'number' | 'multiplier' | 'severity-badge' | 'priority-badge' | 'comma-list' | 'percentage';
+}
+
+export interface RowHighlightConfig {
+  condition: {
+    field: string;
+    operator: 'greaterThan' | 'lessThan' | 'equals';
+    value: any;
+  };
+  style: 'bold' | 'highlight' | 'warning';
+}
+
+export interface BrandingConfig {
+  logoUrl?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  fontFamily: string;
+}
+
+export interface PageLayoutConfig {
+  pageSize: 'Letter' | 'A4';
+  margins: { top: string; right: string; bottom: string; left: string };
+  headerHeight?: string;
+  footerHeight?: string;
+}
+```
+
+### Task 1.2: Create Report Data Package Types
+
+Create `server/types/report-data.ts` with interfaces for: ReportDataPackage, PrincipalProfile, FacilityProfile, ThreatDomain, DocumentedIncident, ActivistGroup, SiteWalkFinding, InterviewFinding, CAPIndexData, and Recommendation. Include all fields needed for executive protection assessments.
+
+### Task 1.3: Create Anthropic Service for Narrative Generation
+
+Create `server/services/anthropic-service.ts` that:
+- Uses the @anthropic-ai/sdk package
+- Exports generateNarrative(systemPrompt, userPrompt, options) function
+- Exports generateSectionNarrative(promptId, data, prompts) for template-based generation
+- Uses claude-sonnet-4-20250514 model
+- Handles word count limits via max_tokens
+
+### Task 1.4: Add Database Schema Extensions
+
+Add to `shared/schema.ts`:
+- reportRecipes table (id, name, description, reportType, assessmentTypes jsonb, sections jsonb, toneSetting, branding jsonb, pageLayout jsonb, isActive, version, timestamps)
+- narrativePrompts table (id, sectionId, systemPrompt, userPromptTemplate, outputConstraints jsonb, version, timestamps)
+- generatedReports table (id, assessmentId FK, recipeId FK, reportType, status, pdfUrl, dataSnapshot jsonb, generationLog jsonb, generatedAt, generatedBy)
+- interviewFindings table (id, assessmentId FK, source, sourceRole, interviewDate, finding, directQuote, linkedVulnerabilityId, linkedThreatDomainId, severity, usedInReport, createdAt)
+- documentedIncidents table (id, assessmentId FK, description, incidentDate, source, sourceRole, threatDomainId, severity, actionTaken, createdAt)
+
+### Task 1.5: Install Anthropic SDK and Add Secret
+
+Run: npm install @anthropic-ai/sdk
+
+Add ANTHROPIC_API_KEY to secrets (I will provide the key value after you create the secret placeholder).
+
+### Task 1.6: Run Database Migration
+
+After adding schema, run migration to create the new tables.
+
+---
+
+After completing these tasks, show me the created files for review. Do NOT proceed to Phase 2 yet.
