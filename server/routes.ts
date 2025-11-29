@@ -46,6 +46,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { emailService } from "./emailService";
+import { sendInvitationEmail } from "./services/email";
 import { registerGeoIntelRoutes } from "./routes/geoIntelRoutes.js";
 import { generateAssessmentReport } from "./services/reporting/pdf-generator";
 
@@ -463,6 +464,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error resetting password:", error);
       res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  // Accept invitation - create account and join organization (public route)
+  app.post("/api/auth/accept-invite", async (req, res) => {
+    try {
+      const acceptInviteSchema = z.object({
+        token: z.string().min(1, "Token is required"),
+        username: z.string().min(3, "Username must be at least 3 characters"),
+        password: z.string().min(8, "Password must be at least 8 characters"),
+        email: z.string().email("Please enter a valid email address"),
+      });
+
+      const validatedData = acceptInviteSchema.parse(req.body);
+
+      // Get invitation by token
+      const invitation = await storage.getInvitationByToken(validatedData.token);
+      
+      if (!invitation) {
+        return res.status(400).json({ error: "Invalid invitation token" });
+      }
+
+      // Check if invitation is pending
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ error: "This invitation has already been used" });
+      }
+
+      // Check if invitation is expired
+      if (new Date() > new Date(invitation.expiresAt)) {
+        return res.status(400).json({ error: "This invitation has expired" });
+      }
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already taken" });
+      }
+
+      // Check if email already exists
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      if (existingEmail) {
+        return res.status(400).json({ error: "Email already in use" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+
+      // Create new user
+      const newUser = await storage.createUser({
+        username: validatedData.username,
+        email: validatedData.email,
+        password: hashedPassword,
+      });
+
+      // Accept invitation (updates user's organizationId and organizationRole, marks invitation as accepted)
+      await storage.acceptInvitation(validatedData.token, newUser.id);
+
+      // Get updated user with organization info
+      const updatedUser = await storage.getUser(newUser.id);
+
+      // Create session for the new user
+      req.session.userId = newUser.id;
+
+      // Return user without password
+      if (updatedUser) {
+        const { password: _, ...userWithoutPassword } = updatedUser;
+        res.status(201).json(userWithoutPassword);
+      } else {
+        res.status(201).json({ message: "Account created and invitation accepted" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ error: "Failed to accept invitation" });
     }
   });
 
