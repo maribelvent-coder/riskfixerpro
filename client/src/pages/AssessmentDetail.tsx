@@ -319,11 +319,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     
     // Check if specialized template profile is saved
     const hasProfileData = isSpecializedTemplate && !!(
-      assessmentData?.warehouse_profile ||
-      assessmentData?.retail_profile ||
-      assessmentData?.manufacturing_profile ||
-      assessmentData?.datacenter_profile ||
-      assessmentData?.office_profile
+      assessmentData?.warehouseProfile ||
+      assessmentData?.retailProfile ||
+      assessmentData?.manufacturingProfile ||
+      assessmentData?.datacenterProfile ||
+      assessmentData?.officeProfile
     );
     
     // Facility paradigm - sequential unlock
@@ -334,11 +334,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       "risk-assessment": isSpecializedTemplate
         ? (hasProfileData || assessmentData?.facilitySurveyCompleted || false)
         : (assessmentData?.facilitySurveyCompleted || false),
-      // For specialized templates: enable Reports once profile is saved
-      // For standard templates: enable Reports once risk assessment is complete
-      "reports": isSpecializedTemplate 
-        ? (hasProfileData || false)
-        : (assessmentData?.riskAssessmentCompleted || false)
+      // AI Reports tab is always available - allows report generation at any stage
+      "reports": true
     };
     
     // Add specialized template tabs OR standard Asset Inventory (configuration-driven)
