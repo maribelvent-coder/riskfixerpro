@@ -89,39 +89,39 @@ declare global {
   }
 }
 
-// Middleware to verify assessment ownership or organization access
+// Middleware to verify assessment ownership or organization access (using TenantStorage)
 async function verifyAssessmentOwnership(req: any, res: any, next: any) {
   try {
-    const userId = req.session.userId;
-    if (!userId) {
+    // Check for auth error first (invalid JWT)
+    if (req.authError) {
+      return res.status(401).json({ error: "Authentication failed", details: req.authError.message });
+    }
+
+    // Check for missing user (not authenticated at all)
+    if (!req.user) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    // Use tenant context from attachTenantContext middleware
+    if (!req.organizationId) {
+      return res.status(403).json({ 
+        error: "Organization context required",
+        code: "ONBOARDING_REQUIRED",
+        message: "Please complete onboarding to access this resource"
+      });
+    }
+
     const assessmentId = req.params.id;
-    const assessment = await storage.getAssessmentWithQuestions(assessmentId);
+    const tenantStorage = new TenantStorage(db as any, req.organizationId);
+    const assessment = await tenantStorage.getAssessment(assessmentId);
 
     if (!assessment) {
       return res.status(404).json({ error: "Assessment not found" });
     }
 
-    // Allow access if user owns the assessment
-    if (assessment.userId === userId) {
-      req.assessment = assessment;
-      return next();
-    }
-
-    // Allow access if user is in the same organization (multi-tenancy)
-    const user = await storage.getUser(userId);
-    if (
-      user &&
-      user.organizationId &&
-      assessment.organizationId === user.organizationId
-    ) {
-      req.assessment = assessment;
-      return next();
-    }
-
-    return res.status(403).json({ error: "Access denied" });
+    // Assessment found means it belongs to the tenant (TenantStorage enforces this)
+    req.assessment = assessment;
+    return next();
   } catch (error) {
     console.error("Error verifying assessment ownership:", error);
     res.status(500).json({ error: "Failed to verify access" });
@@ -152,40 +152,40 @@ async function verifyAdminAccess(req: any, res: any, next: any) {
   }
 }
 
-// Middleware to verify site ownership or organization access
+// Middleware to verify site ownership or organization access (using TenantStorage)
 async function verifySiteOwnership(req: any, res: any, next: any) {
   try {
-    const userId = req.session.userId;
-    if (!userId) {
+    // Check for auth error first (invalid JWT)
+    if (req.authError) {
+      return res.status(401).json({ error: "Authentication failed", details: req.authError.message });
+    }
+
+    // Check for missing user (not authenticated at all)
+    if (!req.user) {
       return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Use tenant context from attachTenantContext middleware
+    if (!req.organizationId) {
+      return res.status(403).json({ 
+        error: "Organization context required",
+        code: "ONBOARDING_REQUIRED",
+        message: "Please complete onboarding to access this resource"
+      });
     }
 
     // Support both :id and :siteId parameter names
     const siteId = req.params.id || req.params.siteId;
-    const site = await storage.getSite(siteId);
+    const tenantStorage = new TenantStorage(db as any, req.organizationId);
+    const site = await tenantStorage.getSite(siteId);
 
     if (!site) {
       return res.status(404).json({ error: "Site not found" });
     }
 
-    // Allow access if user owns the site
-    if (site.userId === userId) {
-      req.site = site;
-      return next();
-    }
-
-    // Allow access if user is in the same organization (multi-tenancy)
-    const user = await storage.getUser(userId);
-    if (
-      user &&
-      user.organizationId &&
-      site.organizationId === user.organizationId
-    ) {
-      req.site = site;
-      return next();
-    }
-
-    return res.status(403).json({ error: "Access denied" });
+    // Site found means it belongs to the tenant (TenantStorage enforces this)
+    req.site = site;
+    return next();
   } catch (error) {
     console.error("Error verifying site ownership:", error);
     res.status(500).json({ error: "Failed to verify access" });
@@ -1246,40 +1246,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Site routes
-  app.get("/api/sites", async (req, res) => {
+  // Site routes (tenant-scoped)
+  app.get("/api/sites", requireOrganizationPermission, async (req, res) => {
     try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(401).json({ error: "User not found" });
-      }
-
-      let sites = await storage.getAllSites(userId);
-
-      // If user is in an organization, include sites from organization members
-      if (user.organizationId) {
-        const members = await storage.getOrganizationMembers(
-          user.organizationId,
-        );
-        const memberIds = members
-          .map((m) => m.id)
-          .filter((id) => id !== userId);
-
-        for (const memberId of memberIds) {
-          const memberSites = await storage.getAllSites(memberId);
-          // Only include sites that have the organization ID
-          const orgSites = memberSites.filter(
-            (s) => s.organizationId === user.organizationId,
-          );
-          sites = [...sites, ...orgSites];
-        }
-      }
-
+      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+      const sites = await tenantStorage.getAllSites();
       res.json(sites);
     } catch (error) {
       console.error("Error fetching sites:", error);
@@ -1287,31 +1258,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/sites/:id", verifySiteOwnership, async (req, res) => {
+  app.get("/api/sites/:id", requireOrganizationPermission, async (req, res) => {
     try {
-      // Site already verified and stored in req.site by middleware
-      res.json(req.site);
+      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+      const site = await tenantStorage.getSite(req.params.id);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+      res.json(site);
     } catch (error) {
       console.error("Error fetching site:", error);
       res.status(500).json({ error: "Failed to fetch site" });
     }
   });
 
-  app.post("/api/sites", async (req, res) => {
+  app.post("/api/sites", requireOrganizationPermission, async (req, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(401).json({ error: "User not found" });
-      }
-
       // Check tier site limit
-      const existingSites = await storage.getAllSites(userId);
-      const tier = user.accountTier as AccountTier;
+      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+      const existingSites = await tenantStorage.getAllSites();
+      const tier = req.accountTier as AccountTier;
 
       if (!canCreateSite(tier, existingSites.length)) {
         return res.status(403).json({
@@ -1326,10 +1297,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertSiteSchema.parse({
         ...bodyData,
         userId,
-        organizationId: user.organizationId || null,
       });
 
-      const site = await storage.createSite(validatedData);
+      const site = await tenantStorage.createSite(validatedData);
       res.status(201).json(site);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1342,13 +1312,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/sites/:id", verifySiteOwnership, async (req, res) => {
+  app.put("/api/sites/:id", requireOrganizationPermission, async (req, res) => {
     try {
       const { id } = req.params;
+      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+      
       // Sanitize: Remove ownership fields from update payload to prevent tampering
       const { userId, organizationId, ...updateData } = req.body;
-      const updated = await storage.updateSite(id, updateData);
+      const updated = await tenantStorage.updateSite(id, updateData);
 
+      if (!updated) {
+        return res.status(404).json({ error: "Site not found" });
+      }
       res.json(updated);
     } catch (error) {
       console.error("Error updating site:", error);
@@ -1356,10 +1331,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/sites/:id", verifySiteOwnership, async (req, res) => {
+  app.delete("/api/sites/:id", requireOrganizationPermission, async (req, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteSite(id);
+      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+      const deleted = await tenantStorage.deleteSite(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Site not found" });
+      }
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting site:", error);
@@ -1638,40 +1618,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assessment routes
-  app.get("/api/assessments", async (req, res) => {
+  // Assessment routes (tenant-scoped)
+  app.get("/api/assessments", requireOrganizationPermission, async (req, res) => {
     try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(401).json({ error: "User not found" });
-      }
-
-      let assessments = await storage.getAllAssessments(userId);
-
-      // If user is in an organization, include assessments from organization members
-      if (user.organizationId) {
-        const members = await storage.getOrganizationMembers(
-          user.organizationId,
-        );
-        const memberIds = members
-          .map((m) => m.id)
-          .filter((id) => id !== userId);
-
-        for (const memberId of memberIds) {
-          const memberAssessments = await storage.getAllAssessments(memberId);
-          // Only include assessments that have the organization ID
-          const orgAssessments = memberAssessments.filter(
-            (a) => a.organizationId === user.organizationId,
-          );
-          assessments = [...assessments, ...orgAssessments];
-        }
-      }
-
+      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+      const assessments = await tenantStorage.getAllAssessments();
       res.json(assessments);
     } catch (error) {
       console.error("Error fetching assessments:", error);
@@ -1679,28 +1630,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get(
-    "/api/assessments/:id",
-    verifyAssessmentOwnership,
-    async (req, res) => {
-      try {
-        // Assessment already verified and stored in req.assessment by middleware
-        res.json(req.assessment);
-      } catch (error) {
-        console.error("Error fetching assessment:", error);
-        res.status(500).json({ error: "Failed to fetch assessment" });
+  app.get("/api/assessments/:id", requireOrganizationPermission, async (req, res) => {
+    try {
+      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+      const assessment = await tenantStorage.getAssessment(req.params.id);
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found" });
       }
-    },
-  );
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error fetching assessment:", error);
+      res.status(500).json({ error: "Failed to fetch assessment" });
+    }
+  });
 
   // Get comprehensive report data for an assessment
   app.get(
     "/api/assessments/:id/comprehensive-report-data",
-    verifyAssessmentOwnership,
+    requireOrganizationPermission,
     async (req, res) => {
       try {
         const userId = req.session.userId!;
         const assessmentId = req.params.id;
+        const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+
+        // Verify assessment belongs to tenant
+        const assessment = await tenantStorage.getAssessment(assessmentId);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
 
         // Import the report data aggregator
         const { aggregateReportData } = await import(
@@ -1728,11 +1686,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get warehouse-specific analysis including cargo theft vulnerability score
   app.get(
     "/api/assessments/:id/warehouse-analysis",
-    verifyAssessmentOwnership,
+    requireOrganizationPermission,
     async (req, res) => {
       try {
         const assessmentId = req.params.id;
-        const assessment = req.assessment; // Verified by middleware
+        const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+        const assessment = await tenantStorage.getAssessment(assessmentId);
+        
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
 
         // Import the cargo theft vulnerability scoring function
         const { calculateCargoTheftVulnerabilityScore } = await import(
