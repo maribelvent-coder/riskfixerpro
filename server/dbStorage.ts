@@ -147,6 +147,30 @@ export class DbStorage implements IStorage {
     return results.length > 0;
   }
 
+  async acceptInvitation(token: string, userId: string): Promise<void> {
+    // Get the invitation by token
+    const invitation = await this.getInvitationByToken(token);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+
+    // Update the user with organization info
+    await db.update(schema.users)
+      .set({ 
+        organizationId: invitation.organizationId, 
+        organizationRole: invitation.role 
+      })
+      .where(eq(schema.users.id, userId));
+
+    // Update the invitation status
+    await db.update(schema.organizationInvitations)
+      .set({ 
+        status: 'accepted', 
+        acceptedAt: new Date() 
+      })
+      .where(eq(schema.organizationInvitations.token, token));
+  }
+
   // User methods
   async getUser(id: string): Promise<User | undefined> {
     const results = await db.select().from(schema.users).where(eq(schema.users.id, id));
