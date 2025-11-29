@@ -45,12 +45,19 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
-      const response = await apiRequest(
-        "POST",
-        "/api/auth/login",
-        values
-      );
-      return response.json();
+      console.log("🔐 Frontend: Attempting login with:", values.username);
+      try {
+        const response = await apiRequest(
+          "POST",
+          "/api/auth/login",
+          values
+        );
+        console.log("🔐 Frontend: Login response status:", response.status);
+        return response.json();
+      } catch (error) {
+        console.error("🔐 Frontend: Login error:", error);
+        throw error;
+      }
     },
     onSuccess: async (data: any) => {
       // Store JWT token in localStorage
