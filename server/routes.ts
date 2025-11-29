@@ -5261,6 +5261,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // Report Generation Routes (Phase 3)
+  // ==========================================
+  
+  // Import report generation services
+  const { 
+    generateReport, 
+    saveGeneratedReport, 
+    getGeneratedReports, 
+    getGeneratedReport, 
+    getAllRecipes,
+    getRecipe
+  } = await import("./services/reporting/report-generator");
+  const { isAnthropicConfigured } = await import("./services/anthropic-service");
+
+  // Check if Anthropic API is configured (public - no auth needed)
+  app.get("/api/reports/status", async (_req, res) => {
+    try {
+      const configured = isAnthropicConfigured();
+      res.json({ 
+        anthropicConfigured: configured,
+        message: configured ? 'Ready to generate reports' : 'Anthropic API key not configured'
+      });
+    } catch (error) {
+      console.error("Error checking report status:", error);
+      res.status(500).json({ error: "Failed to check report status" });
+    }
+  });
+
+  // Get all available report recipes (protected - requires authentication)
+  app.get("/api/reports/recipes", requireOrganizationPermission, async (_req, res) => {
+    try {
+      const recipes = await getAllRecipes();
+      res.json(recipes);
+    } catch (error) {
+      console.error("Error fetching recipes:", error);
+      res.status(500).json({ error: "Failed to fetch report recipes" });
+    }
+  });
+
+  // Get a specific recipe (protected - requires authentication)
+  app.get("/api/reports/recipes/:recipeId", requireOrganizationPermission, async (req, res) => {
+    try {
+      const { recipeId } = req.params;
+      const recipe = await getRecipe(recipeId);
+      if (!recipe) {
+        return res.status(404).json({ error: "Recipe not found" });
+      }
+      res.json(recipe);
+    } catch (error) {
+      console.error("Error fetching recipe:", error);
+      res.status(500).json({ error: "Failed to fetch recipe" });
+    }
+  });
+
+  // Generate a new report for an assessment (protected - requires org permission + assessment ownership)
+  app.post("/api/assessments/:id/reports/generate", requireOrganizationPermission, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { recipeId } = req.body;
+      const organizationId = req.organizationId;
+
+      if (!recipeId) {
+        return res.status(400).json({ error: "recipeId is required" });
+      }
+
+      // Verify the assessment belongs to the user's organization
+      const tenantStorage = new TenantStorage(organizationId);
+      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found or access denied" });
+      }
+
+      if (!isAnthropicConfigured()) {
+        return res.status(503).json({ 
+          error: "Report generation unavailable", 
+          message: "Anthropic API key is not configured" 
+        });
+      }
+
+      console.log(`[API] Generating report for assessment ${id} with recipe ${recipeId}`);
+
+      const result = await generateReport(id, recipeId);
+      
+      // Get userId from session if available
+      const userId = req.session?.userId || req.user?.id;
+      const savedReportId = await saveGeneratedReport(result, userId);
+
+      res.json({
+        reportId: savedReportId,
+        recipeId: result.recipeId,
+        assessmentId: result.assessmentId,
+        generatedAt: result.generatedAt,
+        sectionsGenerated: result.sections.length,
+        totalTokensUsed: result.totalTokensUsed,
+        totalNarrativeWords: result.totalNarrativeWords,
+        sections: result.sections.map(s => ({
+          id: s.id,
+          title: s.title,
+          order: s.order,
+          hasNarrative: !!s.narrativeContent,
+          hasTable: !!s.tableContent,
+          wordCount: s.generationMetadata?.wordCount
+        })),
+        generationLog: result.generationLog
+      });
+    } catch (error) {
+      console.error("Error generating report:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to generate report", message });
+    }
+  });
+
+  // Get all generated reports for an assessment (protected - requires org permission + assessment ownership)
+  app.get("/api/assessments/:id/reports", requireOrganizationPermission, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = req.organizationId;
+
+      // Verify the assessment belongs to the user's organization
+      const tenantStorage = new TenantStorage(organizationId);
+      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found or access denied" });
+      }
+
+      const reports = await getGeneratedReports(id);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      res.status(500).json({ error: "Failed to fetch reports" });
+    }
+  });
+
+  // Get a specific generated report (protected - requires org permission + assessment ownership)
+  app.get("/api/assessments/:id/reports/:reportId", requireOrganizationPermission, async (req, res) => {
+    try {
+      const { id, reportId } = req.params;
+      const organizationId = req.organizationId;
+
+      // Verify the assessment belongs to the user's organization
+      const tenantStorage = new TenantStorage(organizationId);
+      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found or access denied" });
+      }
+
+      const report = await getGeneratedReport(reportId);
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      // Additional check: ensure report belongs to the requested assessment
+      if (report.assessmentId !== id) {
+        return res.status(404).json({ error: "Report not found for this assessment" });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching report:", error);
+      res.status(500).json({ error: "Failed to fetch report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
