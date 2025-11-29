@@ -784,7 +784,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Organization Invitation Routes
+  // Organization Invite - uses tenant context from middleware
+  app.post("/api/organization/invite", requireOrganizationPermission, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const organizationId = req.organizationId;
+
+      // Only owners and admins can invite
+      if (user.organizationRole !== "owner" && user.organizationRole !== "admin") {
+        return res.status(403).json({ error: "Only owners and admins can invite members" });
+      }
+
+      const inviteSchema = z.object({
+        email: z.string().email("Please enter a valid email address"),
+        role: z.enum(["member", "admin"]).default("member"),
+      });
+
+      const validatedData = inviteSchema.parse(req.body);
+
+      // Cannot invite owners
+      if (validatedData.role === "owner") {
+        return res.status(400).json({ error: "Cannot invite users as owners" });
+      }
+
+      // Check if user already exists in this organization
+      const existingUser = await storage.getUserByEmail(validatedData.email);
+      if (existingUser && existingUser.organizationId === organizationId) {
+        return res.status(400).json({ error: "User is already a member of this organization" });
+      }
+
+      // Check for existing pending invitation
+      const existingInvitations = await storage.listOrganizationInvitations(organizationId);
+      const pendingInvite = existingInvitations.find(
+        (inv) => inv.email === validatedData.email && inv.status === "pending"
+      );
+      if (pendingInvite) {
+        return res.status(400).json({ error: "Invitation already sent to this email" });
+      }
+
+      // Generate cryptographically strong token
+      const token = randomBytes(32).toString("hex");
+
+      // Set expiration to 7 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const invitation = await storage.createInvitation({
+        organizationId,
+        email: validatedData.email,
+        role: validatedData.role,
+        invitedBy: user.id,
+        status: "pending",
+        token,
+        expiresAt,
+      });
+
+      // Send invitation email using the new simple email service
+      await sendInvitationEmail(validatedData.email, token);
+
+      // Return invitation without token for security
+      const { token: _token, ...safeInvitation } = invitation;
+      res.status(201).json(safeInvitation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ error: "Failed to create invitation" });
+    }
+  });
+
+  // Organization Invitation Routes (Legacy - uses session and :id param)
   app.post("/api/organizations/:id/invitations", async (req, res) => {
     try {
       if (!req.session.userId) {
