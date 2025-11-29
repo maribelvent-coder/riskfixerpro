@@ -854,6 +854,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get organization invitations - uses tenant context from middleware
+  app.get("/api/organization/invites", requireOrganizationPermission, async (req: any, res) => {
+    try {
+      const organizationId = req.organizationId;
+
+      const invitations = await storage.listOrganizationInvitations(organizationId);
+
+      // Exclude token field for security
+      const safeInvitations = invitations.map(({ token, ...invitation }) => invitation);
+
+      res.json(safeInvitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ error: "Failed to fetch invitations" });
+    }
+  });
+
+  // Get organization members - uses tenant context from middleware
+  app.get("/api/organization/members", requireOrganizationPermission, async (req: any, res) => {
+    try {
+      const organizationId = req.organizationId;
+
+      const members = await storage.getOrganizationMembers(organizationId);
+
+      // Exclude password field for security
+      const safeMembers = members.map(({ password, ...member }) => member);
+
+      res.json(safeMembers);
+    } catch (error) {
+      console.error("Error fetching organization members:", error);
+      res.status(500).json({ error: "Failed to fetch organization members" });
+    }
+  });
+
   // Organization Invitation Routes (Legacy - uses session and :id param)
   app.post("/api/organizations/:id/invitations", async (req, res) => {
     try {
