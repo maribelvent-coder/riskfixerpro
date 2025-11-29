@@ -74,12 +74,14 @@ export default function Settings() {
       return response.json();
     },
     onSuccess: () => {
+      // Clear JWT token from localStorage
+      localStorage.removeItem('authToken');
       queryClient.clear();
       toast({
         title: "Logged out",
         description: "You have been logged out successfully.",
       });
-      setLocation("/");
+      setLocation("/auth");
     },
     onError: () => {
       toast({
