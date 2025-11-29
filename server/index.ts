@@ -5,6 +5,7 @@ import pg from "pg";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { loadFlagsFromEnv } from "@shared/featureFlags";
+import { attachTenantContext } from "./tenantMiddleware";
 
 // Initialize feature flags from environment variables
 loadFlagsFromEnv();
@@ -63,6 +64,9 @@ app.use(
     proxy: true, // Trust the reverse proxy (Replit provides HTTPS)
   })
 );
+
+// Attach tenant context after session middleware
+app.use(attachTenantContext);
 
 app.use((req, res, next) => {
   const start = Date.now();

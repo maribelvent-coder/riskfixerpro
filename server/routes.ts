@@ -6,6 +6,8 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
 import { db } from "./db";
 import { assessments, riskScenarios } from "@shared/schema";
+import { TenantStorage } from "./tenant-storage";
+import { attachTenantContext, requireOrganizationPermission, requireTenantContext } from "./tenantMiddleware";
 import { eq, and, desc } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import {
