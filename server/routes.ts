@@ -323,6 +323,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Invalid data", details: error.errors });
       }
       console.error("Error during login:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
       res.status(500).json({ error: "Failed to login" });
     }
   });
