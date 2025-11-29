@@ -14,7 +14,18 @@ The platform utilizes React 18 with TypeScript for the frontend, styled with Tai
 **Template Dashboard Architecture (November 2025):** All assessment template dashboards follow the mandated react-hook-form + zodResolver + shadcn Form component pattern. The Office Building dashboard serves as the reference implementation, featuring schema-driven validation, controlled form components, synchronous state updates via form.reset(), and comprehensive data-testid coverage for QA automation. This pattern eliminates ad-hoc state management and ensures type-safe form handling across all templates.
 
 ### Technical Implementations
-The backend is built with Express.js and Node.js ESM modules in TypeScript. PostgreSQL is used as the database, integrated via Drizzle ORM which also shares TypeScript schemas. The API follows a RESTful design with JSON responses. Authentication is session-based using `express-session` and `connect-pg-simple`, with bcrypt for password hashing and role-based access control (RBAC) across free, pro, and enterprise tiers. A multi-layered security model includes session authentication, ownership verification, payload sanitization, and filtered data access to prevent unauthorized access and privilege escalation, supported by a feature flag system and tenant context for multi-tenancy. Admin features include user management and a secure, token-based password reset system.
+The backend is built with Express.js and Node.js ESM modules in TypeScript. PostgreSQL is used as the database, integrated via Drizzle ORM which also shares TypeScript schemas. The API follows a RESTful design with JSON responses. Authentication supports both JWT tokens (7-day expiration, sent via Authorization header) and session-based fallback using `express-session` and `connect-pg-simple`, with bcrypt for password hashing and role-based access control (RBAC) across free, pro, and enterprise tiers.
+
+**Phase 1 Security Architecture (November 2025):** Multi-tenant data isolation implemented via TenantStorage class with hybrid filtering approach. Sites use direct organizationId filtering (performant, uses index), while Assessments use implicit joins through users table. Key middleware components:
+- `attachTenantContext`: Decodes JWT from Authorization header or falls back to session, populates req.user, req.organizationId, req.accountTier
+- `requireOrganizationPermission`: Enforces tenant context with allowlist for onboarding/auth routes
+- `verifyAssessmentOwnership` and `verifySiteOwnership`: Use TenantStorage for tenant-scoped ownership verification
+
+Error handling distinguishes between:
+- 401 Unauthorized: Auth failure (invalid/expired JWT) or not authenticated
+- 403 Forbidden with ONBOARDING_REQUIRED code: User needs to complete onboarding to set organizationId
+
+Admin features include user management and a secure, token-based password reset system.
 
 A multi-paradigm assessment system supports dynamic workflows (e.g., "facility" or "executive") with template-driven questions loaded dynamically from the database, enforcing template selection and auto-populating assessment questions. A modular risk calculation engine uses an adapter pattern for template-specific implementations, supporting various assessment types like Executive Protection, Office Building, Retail Store, Warehouse, Manufacturing Facility, and Data Center, with compound reduction models for control effectiveness.
 
