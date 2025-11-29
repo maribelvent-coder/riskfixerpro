@@ -19,12 +19,24 @@ import type {
 } from "@shared/schema";
 
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
+  // Build headers with JWT token for authentication
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  // Add Authorization header if we have a token
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`/api${url}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...headers,
       ...options.headers,
     },
+    credentials: 'include',
   });
 
   if (!response.ok) {
