@@ -230,12 +230,13 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           { id: "physical-security", label: "Physical Security Review", icon: Building },
           { id: "risk-analysis", label: "Risk Analysis", icon: Shield },
           { id: "treatment-plan", label: "Security Treatment Plan", icon: FileText },
-          { id: "executive-summary", label: "Executive Summary", icon: CheckCircle }
+          { id: "executive-summary", label: "Executive Summary", icon: CheckCircle },
+          { id: "reports", label: "AI Reports", icon: FileText }
         ],
         phases: [
           { label: "Profile & Threats", completed: false },
           { label: "Analysis", completed: false },
-          { label: "Treatment & Summary", completed: false }
+          { label: "Treatment & Reports", completed: false }
         ]
       };
     }
