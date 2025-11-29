@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const token = authHeader.substring(7);
       const decoded = jwt.verify(token, process.env.SESSION_SECRET!) as {
-        userId: number;
+        userId: string;
       };
 
       const user = await storage.getUser(decoded.userId);
