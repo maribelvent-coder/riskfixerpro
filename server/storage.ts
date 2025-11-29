@@ -77,6 +77,7 @@ export interface IStorage {
   listOrganizationInvitations(organizationId: string): Promise<OrganizationInvitation[]>;
   updateInvitation(id: string, updates: Partial<OrganizationInvitation>): Promise<OrganizationInvitation | undefined>;
   deleteInvitation(id: string): Promise<boolean>;
+  acceptInvitation(token: string, userId: string): Promise<void>;
 
   // User methods
   getUser(id: string): Promise<User | undefined>;
@@ -404,6 +405,26 @@ export class MemStorage implements IStorage {
 
   async deleteInvitation(id: string): Promise<boolean> {
     return this.organizationInvitations.delete(id);
+  }
+
+  async acceptInvitation(token: string, userId: string): Promise<void> {
+    const invitation = await this.getInvitationByToken(token);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+
+    // Update user with organization info
+    const user = this.users.get(userId);
+    if (user) {
+      user.organizationId = invitation.organizationId;
+      user.organizationRole = invitation.role;
+      this.users.set(userId, user);
+    }
+
+    // Update invitation status
+    invitation.status = 'accepted';
+    invitation.acceptedAt = new Date();
+    this.organizationInvitations.set(invitation.id, invitation);
   }
 
   // User methods
