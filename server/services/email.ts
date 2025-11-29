@@ -5,12 +5,12 @@
 
 export async function sendInvitationEmail(email: string, token: string): Promise<boolean> {
   try {
-    // Build the invitation URL
+    // Build the invitation URL - matches frontend AcceptInvitation page route
     const baseUrl = process.env.REPL_SLUG 
-      ? `https://${process.env.REPL_SLUG}.repl.co`
+      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER || ''}.repl.co`
       : 'http://localhost:5000';
     
-    const inviteUrl = `${baseUrl}/register?token=${token}`;
+    const inviteUrl = `${baseUrl}/accept-invitation/${token}`;
     
     // Development: Log the invitation instead of sending email
     console.log('='.repeat(60));

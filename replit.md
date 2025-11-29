@@ -25,6 +25,13 @@ Error handling distinguishes between:
 - 401 Unauthorized: Auth failure (invalid/expired JWT) or not authenticated
 - 403 Forbidden with ONBOARDING_REQUIRED code: User needs to complete onboarding to set organizationId
 
+**Invitation System (November 2025):** Secure organization member invitation with one-time token-based acceptance:
+- `POST /api/organization/invite`: Protected route requiring owner/admin role, generates 7-day expiring tokens
+- `POST /api/auth/accept-invite`: Public route for new user registration via invitation token
+- `storage.acceptInvitation(token, userId)`: Updates both users table (organizationId, organizationRole) and organizationInvitations table (status='accepted', acceptedAt)
+- Token replay prevention: Checks invitation status ('pending') and expiration before processing
+- Email service logs invite URLs to console (development mode), links to `/accept-invitation/${token}`
+
 Admin features include user management and a secure, token-based password reset system.
 
 A multi-paradigm assessment system supports dynamic workflows (e.g., "facility" or "executive") with template-driven questions loaded dynamically from the database, enforcing template selection and auto-populating assessment questions. A modular risk calculation engine uses an adapter pattern for template-specific implementations, supporting various assessment types like Executive Protection, Office Building, Retail Store, Warehouse, Manufacturing Facility, and Data Center, with compound reduction models for control effectiveness.
