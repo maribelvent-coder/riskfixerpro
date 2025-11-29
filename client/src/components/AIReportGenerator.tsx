@@ -54,7 +54,7 @@ export function AIReportGenerator({
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const { data: reportStatus } = useQuery<{ anthropicConfigured: boolean; message: string }>({
+  const { data: reportStatus, isLoading: statusLoading } = useQuery<{ anthropicConfigured: boolean; message: string }>({
     queryKey: ['/api/reports/status'],
   });
 
@@ -242,7 +242,17 @@ export function AIReportGenerator({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!isAIReady ? (
+          {statusLoading ? (
+            <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <div>
+                <p className="font-medium">Checking AI Configuration...</p>
+                <p className="text-sm text-muted-foreground">
+                  Verifying API connection status.
+                </p>
+              </div>
+            </div>
+          ) : !isAIReady ? (
             <div className="flex items-center gap-2 p-4 bg-destructive/10 rounded-lg">
               <AlertCircle className="h-5 w-5 text-destructive" />
               <div>
