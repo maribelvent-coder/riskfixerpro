@@ -33,6 +33,24 @@ app.use((req, res, next) => {
   next();
 });
 
+// CORS middleware - handle preflight OPTIONS requests for cross-origin requests
+// This is needed because Replit's webview may be considered cross-origin
+app.use((req, res, next) => {
+  // Allow requests from any origin in development
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    console.log(`🌐 CORS PREFLIGHT: ${req.path}`);
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
