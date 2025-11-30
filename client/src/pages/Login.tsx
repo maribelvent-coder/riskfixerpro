@@ -46,14 +46,23 @@ export default function Login() {
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
       console.log("🔐 Frontend: Attempting login with:", values.username);
+      console.log("🔐 Frontend: About to call fetch...");
       try {
-        const response = await apiRequest(
-          "POST",
-          "/api/auth/login",
-          values
-        );
-        console.log("🔐 Frontend: Login response status:", response.status);
-        return response.json();
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+          credentials: "include",
+        });
+        console.log("🔐 Frontend: Fetch completed, status:", response.status);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("🔐 Frontend: Server error:", errorText);
+          throw new Error(`${response.status}: ${errorText}`);
+        }
+        const data = await response.json();
+        console.log("🔐 Frontend: Login successful, user:", data.username);
+        return data;
       } catch (error) {
         console.error("🔐 Frontend: Login error:", error);
         throw error;
