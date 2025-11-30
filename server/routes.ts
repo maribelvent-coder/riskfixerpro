@@ -5423,8 +5423,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all available report recipes (protected - requires authentication)
-  app.get("/api/reports/recipes", requireOrganizationPermission, async (_req, res) => {
+  // Get all available report recipes (global config - no tenant context needed)
+  app.get("/api/reports/recipes", async (_req, res) => {
     try {
       const recipes = await getAllRecipes();
       res.json(recipes);
@@ -5434,8 +5434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get a specific recipe (protected - requires authentication)
-  app.get("/api/reports/recipes/:recipeId", requireOrganizationPermission, async (req, res) => {
+  // Get a specific recipe (global config - no tenant context needed)
+  app.get("/api/reports/recipes/:recipeId", async (req, res) => {
     try {
       const { recipeId } = req.params;
       const recipe = await getRecipe(recipeId);
