@@ -300,6 +300,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
+    // Simple POST test endpoint - no auth, no session
+    app.post("/api/test-post", (req, res) => {
+      console.log("🧪 TEST POST received:", JSON.stringify(req.body));
+      res.json({ 
+        success: true, 
+        received: req.body,
+        timestamp: new Date().toISOString()
+      });
+    });
+    
     // JSON API endpoint
     app.get("/api/test-session", async (req, res) => {
       try {
