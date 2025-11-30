@@ -40,6 +40,11 @@ pgPool.on('error', (err) => {
   // Pool will automatically try to reconnect
 });
 
+// Environment-aware cookie configuration
+// Development: relaxed settings for local browser testing
+// Production: strict settings for cross-site/iframe contexts (Replit webview)
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 // Configure session middleware with PostgreSQL store
 app.use(
   session({
@@ -53,9 +58,9 @@ app.use(
     saveUninitialized: false,
     name: 'sessionId',
     cookie: {
-      secure: true, // Required for sameSite: 'none'
+      secure: !isDevelopment, // false in dev (allows HTTP), true in prod (requires HTTPS)
       httpOnly: true,
-      sameSite: 'none', // Required for cross-site/iframe contexts (Replit webview)
+      sameSite: isDevelopment ? 'lax' : 'none', // 'lax' in dev, 'none' in prod for cross-site
       path: '/',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
