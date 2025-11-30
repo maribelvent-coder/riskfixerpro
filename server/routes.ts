@@ -4860,7 +4860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     verifyAssessmentOwnership,
     async (req, res) => {
       try {
-        const userId = req.session.userId;
+        // Support both session and JWT authentication
+        const userId = req.session?.userId || req.user?.id;
         if (!userId) {
           return res.status(401).json({ error: "Not authenticated" });
         }
@@ -4981,7 +4982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.get("/api/reports/:id/download", async (req, res) => {
+  app.get("/api/reports/:id/download", requireOrganizationPermission, async (req, res) => {
     try {
       const { id } = req.params;
       const report = await storage.getReport(id);
