@@ -256,20 +256,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // JWT-based auth check endpoint
+  // Development-only test session endpoint for QA testing
+  if (process.env.NODE_ENV === 'development') {
+    app.get("/api/dev/test-session", async (req, res) => {
+      try {
+        const user = await storage.getUserByUsername("mcadmin");
+        if (!user) {
+          return res.status(404).json({ error: "mcadmin user not found" });
+        }
+        
+        req.session.userId = user.id;
+        
+        // Force session save
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ error: "Failed to save session" });
+          }
+          
+          console.log("🧪 DEV: Test session created for mcadmin, userId:", user.id);
+          res.json({ 
+            success: true, 
+            message: "Test session created for mcadmin",
+            userId: user.id,
+            sessionId: req.sessionID
+          });
+        });
+      } catch (error) {
+        console.error("Test session error:", error);
+        res.status(500).json({ error: "Failed to create test session" });
+      }
+    });
+  }
+
+  // Session-based auth check endpoint
   app.get("/api/auth/me", async (req, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      // Use session-based auth
+      const userId = req.session?.userId;
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, process.env.SESSION_SECRET!) as {
-        userId: string;
-      };
-
-      const user = await storage.getUser(decoded.userId);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
@@ -278,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Auth check error:", error);
-      res.status(401).json({ error: "Invalid or expired token" });
+      res.status(401).json({ error: "Invalid or expired session" });
     }
   });
 
