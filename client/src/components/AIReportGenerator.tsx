@@ -61,11 +61,41 @@ export function AIReportGenerator({
   const { data: recipes, isLoading: recipesLoading } = useQuery<ReportRecipe[]>({
     queryKey: ['/api/reports/recipes'],
     enabled: !!reportStatus?.anthropicConfigured,
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch('/api/reports/recipes', {
+        credentials: 'include',
+        headers
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch recipes');
+      }
+      return response.json();
+    }
   });
 
   const { data: existingReports, isLoading: reportsLoading } = useQuery<GeneratedReport[]>({
     queryKey: ['/api/assessments', assessmentId, 'reports'],
     enabled: !!assessmentId,
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`/api/assessments/${assessmentId}/reports`, {
+        credentials: 'include',
+        headers
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch reports');
+      }
+      return response.json();
+    }
   });
 
   const generateReportMutation = useMutation({
