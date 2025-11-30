@@ -354,62 +354,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/login", async (req, res) => {
-    console.log("📥 Login route hit - request body:", JSON.stringify(req.body));
-    console.log("📥 Login route - headers:", JSON.stringify(req.headers));
+    console.log("═══════════════════════════════════════════════════════════");
+    console.log("🔐 LOGIN ATTEMPT - Step 1: Request received");
+    console.log("   📥 Body:", JSON.stringify(req.body));
+    console.log("   📥 Content-Type:", req.headers['content-type']);
+    console.log("   📥 Origin:", req.headers['origin']);
+    console.log("   📥 User-Agent:", req.headers['user-agent']?.substring(0, 50));
+    
     try {
+      // Step 2: Validate input
+      console.log("🔐 LOGIN - Step 2: Validating input schema...");
       const loginSchema = z.object({
         username: z.string().min(1, "Username is required"),
         password: z.string().min(1, "Password is required"),
       });
 
       const validatedData = loginSchema.parse(req.body);
+      console.log("   ✅ Schema validation passed for username:", validatedData.username);
 
-      // Find user by username
+      // Step 3: Find user by username
+      console.log("🔐 LOGIN - Step 3: Looking up user in database...");
       const user = await storage.getUserByUsername(validatedData.username);
       if (!user) {
+        console.log("   ❌ User not found:", validatedData.username);
         return res.status(401).json({ error: "Invalid username or password" });
       }
+      console.log("   ✅ User found:", user.id, user.username);
 
-      // Verify password
+      // Step 4: Verify password
+      console.log("🔐 LOGIN - Step 4: Verifying password with bcrypt...");
       const isValidPassword = await bcrypt.compare(
         validatedData.password,
         user.password,
       );
       if (!isValidPassword) {
+        console.log("   ❌ Password mismatch for user:", user.username);
         return res.status(401).json({ error: "Invalid username or password" });
       }
+      console.log("   ✅ Password verified successfully");
 
-      // Set session userId for session-based auth
+      // Step 5: Set session userId
+      console.log("🔐 LOGIN - Step 5: Setting session...");
+      console.log("   Session ID before:", req.sessionID);
+      console.log("   Session exists:", !!req.session);
       req.session.userId = user.id;
+      console.log("   ✅ Session userId set:", req.session.userId);
       
-      // Debug: Log session info for troubleshooting
-      console.log("🔐 Session Debug:", {
-        sessionID: req.sessionID,
-        userId: req.session.userId,
-        secure: req.secure,
-        protocol: req.protocol,
-        xForwardedProto: req.headers['x-forwarded-proto'],
+      // Step 6: Session save check
+      console.log("🔐 LOGIN - Step 6: Saving session...");
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.log("   ❌ Session save error:", err);
+            reject(err);
+          } else {
+            console.log("   ✅ Session saved successfully");
+            resolve();
+          }
+        });
       });
 
-      // Generate JWT token
+      // Step 7: Generate JWT token
+      console.log("🔐 LOGIN - Step 7: Generating JWT token...");
       const token = jwt.sign({ userId: user.id }, process.env.SESSION_SECRET!, {
         expiresIn: "7d",
       });
+      console.log("   ✅ JWT token generated");
 
-      console.log("🔐 Login - Generated JWT token for userId:", user.id);
-
-      // Return user without password + token
+      // Step 8: Send response
+      console.log("🔐 LOGIN - Step 8: Sending success response...");
       const { password, ...userWithoutPassword } = user;
+      console.log("   Response payload:", JSON.stringify({ ...userWithoutPassword, token: "[REDACTED]" }));
+      console.log("═══════════════════════════════════════════════════════════");
       res.json({ ...userWithoutPassword, token });
     } catch (error) {
+      console.log("═══════════════════════════════════════════════════════════");
+      console.log("🔐 LOGIN - ❌ EXCEPTION CAUGHT");
       if (error instanceof z.ZodError) {
+        console.log("   Error type: Zod validation error");
+        console.log("   Details:", JSON.stringify(error.errors));
         return res
           .status(400)
           .json({ error: "Invalid data", details: error.errors });
       }
-      console.error("Error during login:", error);
-      console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
-      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      console.error("   Error type:", error?.constructor?.name);
+      console.error("   Error message:", error instanceof Error ? error.message : String(error));
+      console.error("   Error stack:", error instanceof Error ? error.stack : "No stack");
+      console.log("═══════════════════════════════════════════════════════════");
       res.status(500).json({ error: "Failed to login" });
     }
   });
