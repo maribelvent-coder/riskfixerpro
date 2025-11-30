@@ -85,9 +85,9 @@ export default function Login() {
     },
   });
 
-  const onSubmit = (values: LoginFormValues) => {
+  const onSubmit = async (values: LoginFormValues) => {
     console.log("🔐 Form submitted with values:", values);
-    loginMutation.mutate(values);
+    await loginMutation.mutateAsync(values);
   };
 
   return (
