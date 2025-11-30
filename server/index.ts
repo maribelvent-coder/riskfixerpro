@@ -66,10 +66,13 @@ pgPool.on('error', (err) => {
   // Pool will automatically try to reconnect
 });
 
-// Environment-aware cookie configuration
-// Development: relaxed settings for local browser testing
-// Production: strict settings for cross-site/iframe contexts (Replit webview)
-const isDevelopment = process.env.NODE_ENV === 'development';
+// Replit runs behind a proxy with HTTPS, even in development
+// The webview uses cross-origin iframe, requiring:
+// - secure: true (Replit provides HTTPS via proxy)
+// - sameSite: 'none' (allows cross-origin cookie sending)
+// - proxy: true (trust the X-Forwarded-Proto header)
+console.log("🍪 Cookie config: secure=true, sameSite=none (Replit cross-origin webview)");
+console.log("🌍 NODE_ENV:", process.env.NODE_ENV);
 
 // Configure session middleware with PostgreSQL store
 app.use(
@@ -84,9 +87,9 @@ app.use(
     saveUninitialized: false,
     name: 'sessionId',
     cookie: {
-      secure: !isDevelopment, // false in dev (allows HTTP), true in prod (requires HTTPS)
+      secure: true, // Required: Replit provides HTTPS via proxy
       httpOnly: true,
-      sameSite: isDevelopment ? 'lax' : 'none', // 'lax' in dev, 'none' in prod for cross-site
+      sameSite: 'none', // Required: Replit webview is cross-origin iframe
       path: '/',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
