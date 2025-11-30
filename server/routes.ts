@@ -258,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Development-only test session endpoint for QA testing
   if (process.env.NODE_ENV === 'development') {
-    app.get("/api/dev/test-session", async (req, res) => {
+    app.get("/api/test-session", async (req, res) => {
       try {
         const user = await storage.getUserByUsername("mcadmin");
         if (!user) {
