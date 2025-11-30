@@ -19,17 +19,11 @@ export async function apiRequest(
     headers["Content-Type"] = "application/json";
   }
   
-  // Add Authorization header if we have a token
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  
   const res = await fetch(url, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: "include", // Send session cookies
   });
 
   await throwIfResNotOk(res);
@@ -42,17 +36,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const headers: Record<string, string> = {};
-    
-    // Add Authorization header if we have a token
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    
     const res = await fetch(queryKey.join("/") as string, {
-      headers,
-      credentials: "include",
+      credentials: "include", // Send session cookies
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
