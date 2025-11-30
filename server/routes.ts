@@ -5339,7 +5339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Organization context required" });
       }
       const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      const assessment = await tenantStorage.getAssessment(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
       }
@@ -5395,7 +5395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Organization context required" });
       }
       const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      const assessment = await tenantStorage.getAssessment(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
       }
@@ -5419,7 +5419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Organization context required" });
       }
       const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      const assessment = await tenantStorage.getAssessment(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
       }
@@ -5455,7 +5455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Organization context required" });
       }
       const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      const assessment = await tenantStorage.getAssessment(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
       }
@@ -5527,7 +5527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Organization context required" });
       }
       const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessmentWithTenantCheck(id);
+      const assessment = await tenantStorage.getAssessment(id);
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found or access denied" });
       }
