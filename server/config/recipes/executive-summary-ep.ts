@@ -5,7 +5,7 @@ export const executiveSummaryRecipe: ReportRecipe = {
   name: 'Executive Protection Summary',
   description: 'Strategic, story-driven executive summary for executive protection assessments',
   reportType: 'executive-summary',
-  assessmentTypes: ['executive-protection'],
+  assessmentTypes: ['executive-protection', 'office-building', 'retail-store', 'warehouse-distribution', 'data-center', 'manufacturing-facility'],
   toneSetting: 'executive',
   sections: [
     {
