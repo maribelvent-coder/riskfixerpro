@@ -3960,6 +3960,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Generate risk scenarios from interview data
+  app.post(
+    "/api/assessments/:id/risk-scenarios/generate",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id: assessmentId } = req.params;
+        const { forceRegenerate } = req.body;
+
+        // Check if risk scenarios already exist
+        const existingScenarios = await storage.getRiskScenarios(assessmentId);
+
+        if (existingScenarios.length > 0 && !forceRegenerate) {
+          return res.status(409).json({
+            error: "Risk scenarios already exist for this assessment",
+            message: "Set forceRegenerate: true to delete existing scenarios and regenerate",
+            existingCount: existingScenarios.length
+          });
+        }
+
+        // Delete existing scenarios if forceRegenerate is true
+        if (existingScenarios.length > 0 && forceRegenerate) {
+          await storage.bulkUpsertRiskScenarios(assessmentId, []); // Deletes all existing
+          console.log(`[RiskScenarios] Deleted ${existingScenarios.length} existing scenarios for assessment ${assessmentId}`);
+        }
+
+        // Import and call the risk scenario generator
+        const { generateRiskScenariosForAssessment } = await import("./services/office-interview-risk-mapper-corrected");
+        const result = await generateRiskScenariosForAssessment(assessmentId);
+
+        if (!result.success) {
+          return res.status(400).json({
+            error: "Failed to generate risk scenarios",
+            message: "No interview responses found for this assessment"
+          });
+        }
+
+        res.status(201).json({
+          success: true,
+          message: `Generated ${result.generatedScenarios} risk scenarios`,
+          ...result
+        });
+      } catch (error) {
+        console.error("Error generating risk scenarios:", error);
+        res.status(500).json({ error: "Failed to generate risk scenarios" });
+      }
+    }
+  );
+
   app.put("/api/risk-scenarios/:id", async (req, res) => {
     try {
       const userId = req.session.userId;
