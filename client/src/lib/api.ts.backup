@@ -19,10 +19,16 @@ import type {
 } from "@shared/schema";
 
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
-  // Build headers for session-based authentication
+  // Build headers with JWT token for authentication
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+  
+  // Add Authorization header if we have a token
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   
   const response = await fetch(`/api${url}`, {
     ...options,
@@ -30,7 +36,7 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
       ...headers,
       ...options.headers,
     },
-    credentials: 'include', // Send session cookies
+    credentials: 'include',
   });
 
   if (!response.ok) {

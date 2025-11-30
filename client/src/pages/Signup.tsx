@@ -59,11 +59,6 @@ export default function Signup() {
       return response.json();
     },
     onSuccess: async (data: any) => {
-      // Store JWT token in localStorage
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-      }
-      
       toast({
         title: "Account created",
         description: "Your account has been created successfully.",
