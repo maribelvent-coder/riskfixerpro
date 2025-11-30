@@ -21,11 +21,9 @@ if (!process.env.SESSION_SECRET) {
 
 const app = express();
 
-// Trust proxy in production for secure cookies
-const isProduction = process.env.NODE_ENV === "production";
-if (isProduction) {
-  app.set('trust proxy', 1);
-}
+// Always trust proxy - Replit runs behind HTTPS proxy in all environments
+// This is REQUIRED for secure cookies and session persistence
+app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

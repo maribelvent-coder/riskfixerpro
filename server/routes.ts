@@ -310,6 +310,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set session userId for session-based auth
       req.session.userId = user.id;
+      
+      // Debug: Log session info for troubleshooting
+      console.log("🔐 Session Debug:", {
+        sessionID: req.sessionID,
+        userId: req.session.userId,
+        secure: req.secure,
+        protocol: req.protocol,
+        xForwardedProto: req.headers['x-forwarded-proto'],
+      });
 
       // Generate JWT token
       const token = jwt.sign({ userId: user.id }, process.env.SESSION_SECRET!, {
