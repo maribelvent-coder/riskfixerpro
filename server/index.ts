@@ -21,17 +21,17 @@ if (!process.env.SESSION_SECRET) {
 
 const app = express();
 
-// Always trust proxy - Replit runs behind HTTPS proxy in all environments
-// This is REQUIRED for secure cookies and session persistence
-app.set('trust proxy', 1);
-
-// FIRST middleware: Log ALL incoming requests before any processing
+// VERY FIRST: Log EVERY single request to the server, no filtering
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) {
-    console.log(`🌐 INCOMING REQUEST: ${req.method} ${req.path} from ${req.ip}`);
+    console.log(`🚀 [RAW] ${req.method} ${req.path} Origin: ${req.headers.origin || 'none'}`);
   }
   next();
 });
+
+// Always trust proxy - Replit runs behind HTTPS proxy in all environments
+// This is REQUIRED for secure cookies and session persistence
+app.set('trust proxy', 1);
 
 // CORS middleware - handle preflight OPTIONS requests for cross-origin requests
 // This is needed because Replit's webview may be considered cross-origin
