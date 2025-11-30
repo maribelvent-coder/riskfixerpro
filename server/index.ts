@@ -25,6 +25,14 @@ const app = express();
 // This is REQUIRED for secure cookies and session persistence
 app.set('trust proxy', 1);
 
+// FIRST middleware: Log ALL incoming requests before any processing
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    console.log(`🌐 INCOMING REQUEST: ${req.method} ${req.path} from ${req.ip}`);
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
