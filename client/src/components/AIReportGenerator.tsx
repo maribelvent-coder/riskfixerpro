@@ -59,9 +59,12 @@ export function AIReportGenerator({
   });
 
   const { data: recipes, isLoading: recipesLoading } = useQuery<ReportRecipe[]>({
-    queryKey: ['/api/reports/recipes'],
+    queryKey: ['/api/reports/recipes', 'v2'],
     enabled: !!reportStatus?.anthropicConfigured,
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: async () => {
+      console.log('Fetching recipes from API...');
       const token = localStorage.getItem('authToken');
       const headers: HeadersInit = {};
       if (token) {
@@ -71,10 +74,13 @@ export function AIReportGenerator({
         credentials: 'include',
         headers
       });
+      console.log('Recipes API response status:', response.status);
       if (!response.ok) {
         throw new Error('Failed to fetch recipes');
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Recipes API response data:', data);
+      return data;
     }
   });
 
@@ -253,9 +259,19 @@ export function AIReportGenerator({
     downloadPDFMutation.mutate(reportId);
   };
 
-  const filteredRecipes = recipes?.filter(r => 
-    r.isActive && r.assessmentTypes.includes(assessmentType)
-  ) || [];
+  const filteredRecipes = recipes?.filter(r => {
+    console.log('Recipe filter check:', { 
+      id: r.id, 
+      isActive: r.isActive, 
+      assessmentTypes: r.assessmentTypes, 
+      assessmentType,
+      includes: r.assessmentTypes?.includes(assessmentType)
+    });
+    return r.isActive && r.assessmentTypes?.includes(assessmentType);
+  }) || [];
+  
+  console.log('Recipes raw data:', recipes);
+  console.log('Filtered recipes:', filteredRecipes.length, 'for assessmentType:', assessmentType);
 
   const isAIReady = reportStatus?.anthropicConfigured;
 
