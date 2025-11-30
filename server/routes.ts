@@ -259,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Development-only bypass auth endpoint for QA testing
   if (process.env.NODE_ENV === 'development') {
     // HTML page that sets session and redirects to app
-    app.get("/api/dev/bypass-auth", async (req, res) => {
+    app.get("/bypass", async (req, res) => {
       try {
         const user = await storage.getUserByUsername("mcadmin");
         if (!user) {
