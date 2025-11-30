@@ -166,6 +166,7 @@ export default function Login() {
                 className="w-full text-xs sm:text-sm min-h-10 sm:min-h-11"
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
+                onClick={() => console.log("🔘 Button clicked!")}
               >
                 {loginMutation.isPending ? "Logging in..." : "Log in"}
               </Button>
