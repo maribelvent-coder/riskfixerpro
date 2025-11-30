@@ -256,8 +256,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Development-only test session endpoint for QA testing
+  // Development-only bypass auth endpoint for QA testing
   if (process.env.NODE_ENV === 'development') {
+    // HTML page that sets session and redirects to app
+    app.get("/api/dev/bypass-auth", async (req, res) => {
+      try {
+        const user = await storage.getUserByUsername("mcadmin");
+        if (!user) {
+          return res.status(404).send("mcadmin user not found");
+        }
+        
+        req.session.userId = user.id;
+        
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).send("Failed to save session");
+          }
+          
+          console.log("🧪 DEV: Bypass auth for mcadmin, userId:", user.id);
+          
+          // Return HTML that redirects to /app
+          res.send(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Auth Bypass</title>
+                <meta http-equiv="refresh" content="1;url=/app">
+              </head>
+              <body style="font-family: system-ui; padding: 40px; background: #1a1a1a; color: #fff;">
+                <h2>✅ Session Created</h2>
+                <p>Logged in as: <strong>mcadmin</strong></p>
+                <p>User ID: ${user.id}</p>
+                <p>Redirecting to <a href="/app" style="color: #4ade80;">/app</a> in 1 second...</p>
+                <script>setTimeout(() => window.location.href = '/app', 1000);</script>
+              </body>
+            </html>
+          `);
+        });
+      } catch (error) {
+        console.error("Bypass auth error:", error);
+        res.status(500).send("Failed to create session");
+      }
+    });
+    
+    // JSON API endpoint
     app.get("/api/test-session", async (req, res) => {
       try {
         const user = await storage.getUserByUsername("mcadmin");
@@ -267,7 +310,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         req.session.userId = user.id;
         
-        // Force session save
         req.session.save((err) => {
           if (err) {
             console.error("Session save error:", err);
