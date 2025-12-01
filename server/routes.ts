@@ -2617,7 +2617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               assetId: personnelAsset?.id,
               asset: "Personnel",
               scenario: "Workplace Violence - Active Threat",
-              threatLibraryId: "81aeb117-b2bf-4fed-94c3-0277aeedbf37", // Active Shooter
+              threatLibraryId: null, // Will be resolved if threat lookup is needed
               threatType: "human",
               threatDescription:
                 "Armed individual enters facility with intent to cause harm",
@@ -2640,7 +2640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               assetId: personnelAsset?.id,
               asset: "Personnel",
               scenario: "Workplace Violence - Domestic Spillover",
-              threatLibraryId: "b6006880-4c3e-4b0d-8ffb-d1b086afb6dd", // Domestic Violence Spillover
+              threatLibraryId: null, // Will be resolved if threat lookup is needed
               threatType: "human",
               threatDescription:
                 "Personal conflict extends into workplace environment",
@@ -2663,7 +2663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               assetId: facilityAsset?.id,
               asset: "Facility",
               scenario: "Unauthorized Facility Access",
-              threatLibraryId: "5fdfc173-f4cd-45bb-b754-f9f5bd1515cd", // Unescorted Visitor Access
+              threatLibraryId: null, // Will be resolved if threat lookup is needed
               threatType: "human",
               threatDescription: "Intruder gains access to restricted areas",
               vulnerabilityDescription:
@@ -2685,7 +2685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               assetId: dataAsset?.id,
               asset: "Data & Information",
               scenario: "Data Breach - Physical Document Exposure",
-              threatLibraryId: "93b74046-e3b9-40d6-975a-57eca178b22a", // Document Theft - Clean Desk Violation
+              threatLibraryId: null, // Will be resolved if threat lookup is needed
               threatType: "operational",
               threatDescription:
                 "Sensitive documents left unsecured or improperly disposed",
@@ -2708,7 +2708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               assetId: dataAsset?.id,
               asset: "Data & Information",
               scenario: "Social Engineering Attack",
-              threatLibraryId: "d16ede3a-a8a1-45a3-95b0-031c11ff9362", // Credential Theft - Phishing
+              threatLibraryId: null, // Will be resolved if threat lookup is needed
               threatType: "human",
               threatDescription:
                 "Attacker manipulates staff to gain sensitive information",
