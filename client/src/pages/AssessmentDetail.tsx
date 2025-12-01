@@ -34,7 +34,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Assessment } from "@shared/schema";
+import type { Assessment, RiskScenario } from "@shared/schema";
 import { generateComprehensiveReport } from "@/lib/comprehensiveReportGenerator";
 import { generateDOCXReport } from "@/lib/docxReportGenerator";
 import { exportHTMLReport } from "@/lib/htmlReportGenerator";
@@ -85,6 +85,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   // Fetch assessment data with proper typing
   const { data: assessmentData, isLoading, error } = useQuery<Assessment>({
     queryKey: ["/api/assessments", assessmentId],
+    enabled: !!assessmentId
+  });
+
+  // Fetch risk scenarios to determine if risk-assessment tab should be enabled
+  const { data: riskScenarios } = useQuery<RiskScenario[]>({
+    queryKey: ["/api/assessments", assessmentId, "risk-scenarios"],
     enabled: !!assessmentId
   });
 
@@ -327,14 +333,19 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       assessmentData?.officeProfile
     );
     
+    // Check if risk scenarios already exist for this assessment
+    const hasScenariosData = (riskScenarios && riskScenarios.length > 0) || false;
+    
     // Facility paradigm - sequential unlock
     const tabs: Record<string, boolean> = {
       "facility-survey": true,
-      // For specialized templates: enable risk-assessment once profile is saved OR facility survey is complete
-      // For standard templates: enable risk-assessment only after facility survey is complete
+      // Enable risk-assessment tab if:
+      // 1. Profile data is saved (specialized templates), OR
+      // 2. Facility survey is completed, OR
+      // 3. Risk scenarios already exist (allows access to view existing data)
       "risk-assessment": isSpecializedTemplate
-        ? (hasProfileData || assessmentData?.facilitySurveyCompleted || false)
-        : (assessmentData?.facilitySurveyCompleted || false),
+        ? (hasProfileData || assessmentData?.facilitySurveyCompleted || hasScenariosData || false)
+        : (assessmentData?.facilitySurveyCompleted || hasScenariosData || false),
       // AI Reports tab is always available - allows report generation at any stage
       "reports": true
     };
