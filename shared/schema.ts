@@ -982,8 +982,8 @@ export const datacenterProfileSchema = z.object({
 
 export const officeProfileSchema = z.object({
   squareFootage: z.number().optional(),
-  employeeCount: z.number().optional(),
-  visitorVolume: z.number().optional(),
+  employeeCount: z.string().optional(),
+  visitorVolume: z.string().optional(),
   floorCount: z.number().optional(),
   hasExecutivePresence: z.boolean().optional(),
   dataSensitivity: z.string().optional(),
