@@ -128,8 +128,8 @@ function AssetDialog({ assessmentId, asset, onClose }: AssetDialogProps) {
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <DialogContent className="max-w-2xl" data-testid="dialog-asset">
+    <DialogContent className="max-w-2xl" data-testid="dialog-asset">
+      <form onSubmit={handleSubmit}>
         <DialogHeader>
           <DialogTitle>{asset ? "Edit Asset" : "Add Asset"}</DialogTitle>
           <DialogDescription>
@@ -235,8 +235,8 @@ function AssetDialog({ assessmentId, asset, onClose }: AssetDialogProps) {
             {isLoading ? "Saving..." : asset ? "Update Asset" : "Create Asset"}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </form>
+      </form>
+    </DialogContent>
   );
 }
 
@@ -354,8 +354,8 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
   const selectedAsset = assets.find(a => a.id === formData.assetId);
 
   return (
-    <form onSubmit={handleSubmit}>
-      <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-scenario">
+    <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-scenario">
+      <form onSubmit={handleSubmit}>
         <DialogHeader>
           <DialogTitle>{scenario ? "Edit Risk Scenario" : "Add Risk Scenario"}</DialogTitle>
           <DialogDescription>
@@ -561,8 +561,8 @@ function ScenarioDialog({ assessmentId, scenario, assets, onClose }: ScenarioDia
             {isLoading ? "Saving..." : scenario ? "Update Scenario" : "Create Scenario"}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </form>
+      </form>
+    </DialogContent>
   );
 }
 
