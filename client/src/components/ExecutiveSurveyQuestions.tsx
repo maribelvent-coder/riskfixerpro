@@ -23,9 +23,40 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateSurveyFindingsPDF } from "@/lib/surveyFindingsPDF";
 import { EvidenceUploader } from "./EvidenceUploader";
 
+// Executive Protection Part 1 - Executive Interview (35 questions, 8 sections)
+export const EP_PART1_CATEGORIES = [
+  'Threat Assessment & Personal Concerns',
+  'Public Profile & Media Exposure',
+  'Daily Routines & Predictability',
+  'Family Vulnerability Assessment',
+  'Current Security Posture',
+  'Travel Security',
+  'Digital Security Hygiene',
+  'Incident History & Response',
+];
+
+// Executive Protection Part 2 - Professional Assessment (77 questions, 13 sections)
+export const EP_PART2_CATEGORIES = [
+  'Residential Security - Perimeter',
+  'Residential Security - Exterior',
+  'Residential Security - Interior',
+  'Residential Security - Safe Room',
+  'Residential Security - Lighting',
+  'Residential Security - Surveillance',
+  'Residential Security - Alarms',
+  'Residential Security - Staff',
+  'Residential Security - Emergency',
+  'Residential Security - Landscaping',
+  'Residential Security - Vehicles',
+  'Residential Security - Communications',
+  'Residential Security - Technical',
+  'Additional Observations',
+];
+
 interface ExecutiveSurveyQuestionsProps {
   assessmentId: string;
-  sectionCategory?: string; // Optional filter by category
+  sectionCategory?: string; // Optional filter by single category
+  sectionCategories?: string[]; // Optional filter by multiple categories (for Part filtering)
   onComplete?: () => void;
 }
 
@@ -49,7 +80,7 @@ const getImportanceBadge = (importance: string | null) => {
   );
 };
 
-export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory, onComplete }: ExecutiveSurveyQuestionsProps) {
+export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory, sectionCategories, onComplete }: ExecutiveSurveyQuestionsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
@@ -90,10 +121,19 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
     enabled: !!assessment,
   });
 
-  // Filter by section category if provided
-  const filteredQuestions = questions?.filter(q => 
-    !sectionCategory || q.category === sectionCategory
-  ) || [];
+  // Filter by section category/categories if provided
+  const filteredQuestions = questions?.filter(q => {
+    // If sectionCategories array is provided, filter by it
+    if (sectionCategories && sectionCategories.length > 0) {
+      return sectionCategories.includes(q.category || '');
+    }
+    // If single sectionCategory is provided, filter by it
+    if (sectionCategory) {
+      return q.category === sectionCategory;
+    }
+    // No filter - return all questions
+    return true;
+  }) || [];
 
   // Group questions by category and subcategory
   const groupedQuestions = filteredQuestions.reduce((acc, question) => {

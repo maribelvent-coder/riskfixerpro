@@ -18,7 +18,7 @@ import { AssessmentForm } from "@/components/AssessmentForm";
 import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { AIReportGenerator } from "@/components/AIReportGenerator";
-import ExecutiveSurveyQuestions from "@/components/ExecutiveSurveyQuestions";
+import ExecutiveSurveyQuestions, { EP_PART1_CATEGORIES, EP_PART2_CATEGORIES } from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
 import OfficeBuildingInterview from "@/components/OfficeBuildingInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
@@ -739,8 +739,34 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               assessmentStatus={assessmentData?.status}
               onComplete={() => setActiveTab('executive-profile')}
             />
+          ) : assessmentData?.templateId === 'executive-protection' ? (
+            // Executive Protection Part 1 - Executive Interview (35 questions, 8 sections)
+            <>
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Part 1: Executive Interview
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Comprehensive interview with the principal covering threat perception, public profile, daily routines, 
+                    family vulnerabilities, current security posture, travel patterns, digital security, and incident history.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="outline">35 Questions</Badge>
+                    <Badge variant="outline">8 Sections</Badge>
+                  </div>
+                </CardHeader>
+              </Card>
+              
+              <ExecutiveSurveyQuestions 
+                assessmentId={assessmentId}
+                sectionCategories={EP_PART1_CATEGORIES}
+                onComplete={() => setActiveTab('physical-security')}
+              />
+            </>
           ) : (
-            // Standard Executive Protection Interview
+            // Legacy Executive Templates - Old Interview Component
             <>
               <Card>
                 <CardHeader className="p-4 sm:p-6">
@@ -790,48 +816,109 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         </TabsContent>
 
         <TabsContent value="digital-footprint" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                Digital Footprint Analysis
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                OSINT assessment, social media analysis, PII exposure, and dark web monitoring for the executive and their family.
-              </p>
-            </CardHeader>
-          </Card>
-          
-          <ExecutiveSurveyQuestions 
-            assessmentId={assessmentId} 
-            sectionCategory="OSINT & Digital Footprint Analysis"
-            onComplete={() => setActiveTab('physical-security')}
-          />
+          {assessmentData?.templateId === 'executive-protection' ? (
+            // For EP template, digital footprint is covered in Part 1 - redirect to physical security
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Digital Security Assessment
+                </CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Digital security and OSINT analysis is covered in Part 1: Executive Interview under the 
+                  "Digital Security Hygiene" and "Public Profile & Media Exposure" sections.
+                </p>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setActiveTab('executive-interview')}
+                  className="w-full sm:w-auto"
+                  data-testid="button-goto-executive-interview"
+                >
+                  Go to Executive Interview
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            // Legacy templates
+            <>
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Digital Footprint Analysis
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    OSINT assessment, social media analysis, PII exposure, and dark web monitoring for the executive and their family.
+                  </p>
+                </CardHeader>
+              </Card>
+              
+              <ExecutiveSurveyQuestions 
+                assessmentId={assessmentId} 
+                sectionCategory="OSINT & Digital Footprint Analysis"
+                onComplete={() => setActiveTab('physical-security')}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="physical-security" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                Physical Security Review
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Assessment of residential security, executive office protection, travel routes, and pattern-of-life analysis.
-              </p>
-            </CardHeader>
-          </Card>
-          
-          <ExecutiveSurveyQuestions 
-            assessmentId={assessmentId} 
-            sectionCategory="Residential Security Assessment"
-          />
-          
-          <ExecutiveSurveyQuestions 
-            assessmentId={assessmentId} 
-            sectionCategory="Executive Office & Corporate Security"
-            onComplete={() => setActiveTab('risk-analysis')}
-          />
+          {assessmentData?.templateId === 'executive-protection' ? (
+            // Executive Protection Part 2 - Professional Assessment (77 questions, 13 sections)
+            <>
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Building className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Part 2: Professional Security Assessment
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Comprehensive residential security evaluation covering perimeter, exterior, interior, safe room, 
+                    lighting, surveillance, alarms, staff vetting, emergency planning, landscaping (CPTED), 
+                    vehicle security, communications, and technical counter-surveillance (TSCM).
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="outline">78 Questions</Badge>
+                    <Badge variant="outline">14 Sections</Badge>
+                  </div>
+                </CardHeader>
+              </Card>
+              
+              <ExecutiveSurveyQuestions 
+                assessmentId={assessmentId}
+                sectionCategories={EP_PART2_CATEGORIES}
+                onComplete={() => setActiveTab('risk-analysis')}
+              />
+            </>
+          ) : (
+            // Legacy templates - old category filtering
+            <>
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Building className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Physical Security Review
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Assessment of residential security, executive office protection, travel routes, and pattern-of-life analysis.
+                  </p>
+                </CardHeader>
+              </Card>
+              
+              <ExecutiveSurveyQuestions 
+                assessmentId={assessmentId} 
+                sectionCategory="Residential Security Assessment"
+              />
+              
+              <ExecutiveSurveyQuestions 
+                assessmentId={assessmentId} 
+                sectionCategory="Executive Office & Corporate Security"
+                onComplete={() => setActiveTab('risk-analysis')}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="risk-analysis" className="space-y-4">
