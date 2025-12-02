@@ -20,23 +20,31 @@ interface CSVRowV2 {
 function inferQuestionType(questionText: string, importance: string): string {
   const lowerQuestion = questionText.toLowerCase();
   
+  if (lowerQuestion.includes('scale of 1-10') || 
+      lowerQuestion.includes('on a scale')) {
+    return 'rating';
+  }
+  
   if (lowerQuestion.includes('what') || 
       lowerQuestion.includes('describe') ||
-      lowerQuestion.includes('how are') ||
-      lowerQuestion.includes('how is')) {
+      lowerQuestion.includes('how would you describe') ||
+      lowerQuestion.includes('which')) {
     return 'text';
   }
   
   if (lowerQuestion.includes('visible') || 
       lowerQuestion.includes('imagery') ||
       lowerQuestion.includes('inspect') ||
-      lowerQuestion.includes('physical')) {
+      lowerQuestion.includes('photograph')) {
     return 'photo-text';
   }
   
-  if (lowerQuestion.includes('is there') ||
+  if (lowerQuestion.includes('do you') ||
+      lowerQuestion.includes('have you') ||
+      lowerQuestion.includes('is there') ||
       lowerQuestion.includes('does the') ||
       lowerQuestion.includes('are there') ||
+      lowerQuestion.includes('are you') ||
       lowerQuestion.includes('has a')) {
     return 'yes-no';
   }
@@ -48,76 +56,67 @@ function inferQuestionType(questionText: string, importance: string): string {
   return 'yes-no';
 }
 
-function parseSection(questionId: string): { section: number; category: string } {
-  const sectionNum = parseInt(questionId.charAt(0));
-  
-  if (questionId === '1.1.1' || questionId === '1.1.3' || questionId.startsWith('1.2')) {
-    return {
-      section: 1,
-      category: 'Digital Footprint Analysis'
-    };
-  }
-  
-  if (questionId === '1.1.2') {
-    return {
-      section: 2,
-      category: 'Residential Security Assessment'
-    };
-  }
-  
-  if (sectionNum === 1) {
-    return {
-      section: 1,
-      category: 'Travel Assessment'
-    };
-  } else if (sectionNum === 2) {
-    return {
-      section: 2,
-      category: 'Residential Security Assessment'
-    };
-  } else if (sectionNum === 3) {
-    return {
-      section: 3,
-      category: 'Executive Office & Corporate Security'
-    };
-  }
-  
-  return { section: 0, category: 'Unknown' };
-}
+// Part 1 Section mappings (P1.S1 - P1.S8)
+const part1SectionCategories: { [key: string]: { category: string; subcategory: string } } = {
+  'S1': { category: 'Threat Assessment & Personal Concerns', subcategory: 'Baseline Threat Perception' },
+  'S2': { category: 'Public Profile & Media Exposure', subcategory: 'Digital Footprint Analysis' },
+  'S3': { category: 'Daily Routines & Predictability', subcategory: 'Pattern of Life Analysis' },
+  'S4': { category: 'Family Vulnerability Assessment', subcategory: 'Extended Attack Surface' },
+  'S5': { category: 'Current Security Posture', subcategory: 'Personal Security Baseline' },
+  'S6': { category: 'Travel Security', subcategory: 'Business Travel Patterns' },
+  'S7': { category: 'Digital Security Hygiene', subcategory: 'Cyber Security Practices' },
+  'S8': { category: 'Incident History & Response', subcategory: 'Historical Threat Analysis' },
+};
 
-function getSubcategory(questionId: string): string {
-  if (questionId === '1.1.1' || questionId === '1.1.3') {
-    return 'PII & Dark Web Exposure';
+// Part 2 Section mappings (P2.S9 - P2.S21)
+const part2SectionCategories: { [key: string]: { category: string; subcategory: string } } = {
+  'S9': { category: 'Residential Security - Perimeter', subcategory: 'Property Boundaries & Access Control' },
+  'S10': { category: 'Residential Security - Exterior', subcategory: 'Building Envelope & Entry Points' },
+  'S11': { category: 'Residential Security - Interior', subcategory: 'Interior Security Systems' },
+  'S12': { category: 'Residential Security - Safe Room', subcategory: 'Emergency Refuge Planning' },
+  'S13': { category: 'Residential Security - Lighting', subcategory: 'Security Lighting Assessment' },
+  'S14': { category: 'Residential Security - Surveillance', subcategory: 'CCTV & Monitoring Systems' },
+  'S15': { category: 'Residential Security - Alarms', subcategory: 'Intrusion Detection Systems' },
+  'S16': { category: 'Residential Security - Staff', subcategory: 'Household Staff Vetting' },
+  'S17': { category: 'Residential Security - Emergency', subcategory: 'Emergency Response Planning' },
+  'S18': { category: 'Residential Security - Landscaping', subcategory: 'CPTED & Natural Surveillance' },
+  'S19': { category: 'Residential Security - Vehicles', subcategory: 'Garage & Vehicle Security' },
+  'S20': { category: 'Residential Security - Communications', subcategory: 'Secure Communications' },
+  'S21': { category: 'Residential Security - Technical', subcategory: 'TSCM & Counter-Surveillance' },
+};
+
+function parseSection(questionId: string): { part: number; section: string; category: string; subcategory: string } {
+  // Parse P#.S#.Q# format
+  const match = questionId.match(/^P(\d+)\.S(\d+)\.Q(\d+)$/);
+  if (!match) {
+    return { part: 0, section: 'Unknown', category: 'Unknown', subcategory: '' };
   }
   
-  if (questionId.startsWith('1.2')) {
-    return 'Social Media Review (Executive & Family)';
+  const partNum = parseInt(match[1]);
+  const sectionKey = `S${match[2]}`;
+  
+  if (partNum === 1 && part1SectionCategories[sectionKey]) {
+    return {
+      part: 1,
+      section: sectionKey,
+      ...part1SectionCategories[sectionKey]
+    };
   }
   
-  if (questionId === '1.1.2') {
-    return 'Residential Physical Security';
+  if (partNum === 2 && part2SectionCategories[sectionKey]) {
+    return {
+      part: 2,
+      section: sectionKey,
+      ...part2SectionCategories[sectionKey]
+    };
   }
   
-  if (questionId.startsWith('1.1')) return 'Open-Source Intelligence (OSINT)';
-  if (questionId.startsWith('1.3')) return 'Personal Practices & Pattern of Life';
-  if (questionId.startsWith('1.4')) return 'Travel Security & Advance Work';
-  if (questionId.startsWith('1.5')) return 'Secure Transportation Protocols';
-  if (questionId.startsWith('1.6')) return 'Travel Digital Security Hygiene';
-  
-  if (questionId.startsWith('2.1')) return 'Perimeter Security (CPTED & Landscaping)';
-  if (questionId.startsWith('2.2')) return 'Perimeter Security (Physical Barriers & Lighting)';
-  if (questionId.startsWith('2.3')) return 'Access Control & Physical Hardening';
-  if (questionId.startsWith('2.4')) return 'Interior Security Systems (Alarm, CCTV, PIDS)';
-  if (questionId.startsWith('2.5')) return 'Specialized Residential Protections';
-  if (questionId.startsWith('2.6')) return 'Residential Emergency & Response Planning';
-  
-  if (questionId.startsWith('3.1')) return 'Executive Floor Physical Security & CPTED';
-  if (questionId.startsWith('3.2')) return 'Executive Access Control (RBAC)';
-  if (questionId.startsWith('3.3')) return 'Visitor Management & Control Protocols';
-  if (questionId.startsWith('3.4')) return 'Secure Communications & Information Handling';
-  if (questionId.startsWith('3.5')) return 'Executive Emergency Evacuation & Shelter-in-Place';
-  
-  return '';
+  return { 
+    part: partNum, 
+    section: sectionKey, 
+    category: `Part ${partNum} - ${sectionKey}`, 
+    subcategory: '' 
+  };
 }
 
 async function seedExecutiveSurveyQuestionsV2() {
@@ -177,8 +176,7 @@ async function seedExecutiveSurveyQuestionsV2() {
         continue;
       }
       
-      const { category } = parseSection(questionId);
-      const subcategory = getSubcategory(questionId);
+      const { part, category, subcategory } = parseSection(questionId);
       const questionType = inferQuestionType(questionText, importance);
       
       questionsToInsert.push({
@@ -199,7 +197,7 @@ async function seedExecutiveSurveyQuestionsV2() {
     
     questionsToInsert.push({
       templateId: 'executive-protection',
-      questionId: '4.1.1',
+      questionId: 'P3.S1.Q1',
       category: 'Additional Observations',
       subcategory: 'Ad-Hoc Interview Notes',
       question: 'Document any additional observations, concerns, or topics discussed during the assessment that were not covered in the structured framework above.',
@@ -214,16 +212,25 @@ async function seedExecutiveSurveyQuestionsV2() {
       await db.insert(templateQuestions).values(questionsToInsert);
       console.log(`✅ Successfully inserted ${questionsToInsert.length} Executive Protection questions`);
       
-      const section1Count = questionsToInsert.filter(q => q.questionId.startsWith('1.')).length;
-      const section2Count = questionsToInsert.filter(q => q.questionId.startsWith('2.')).length;
-      const section3Count = questionsToInsert.filter(q => q.questionId.startsWith('3.')).length;
-      const section4Count = questionsToInsert.filter(q => q.questionId.startsWith('4.')).length;
+      const part1Count = questionsToInsert.filter(q => q.questionId.startsWith('P1.')).length;
+      const part2Count = questionsToInsert.filter(q => q.questionId.startsWith('P2.')).length;
+      const part3Count = questionsToInsert.filter(q => q.questionId.startsWith('P3.')).length;
       
-      console.log(`\n📊 Breakdown by section:`);
-      console.log(`   Section 1 (OSINT & Digital/Travel): ${section1Count} questions`);
-      console.log(`   Section 2 (Residential Security): ${section2Count} questions`);
-      console.log(`   Section 3 (Executive Office): ${section3Count} questions`);
-      console.log(`   Section 4 (Additional Observations): ${section4Count} questions`);
+      console.log(`\n📊 Breakdown by part:`);
+      console.log(`   Part 1 (Executive Interview): ${part1Count} questions`);
+      console.log(`   Part 2 (Residential Security): ${part2Count} questions`);
+      console.log(`   Part 3 (Additional Observations): ${part3Count} questions`);
+      
+      // Show category breakdown
+      const categoryBreakdown: { [key: string]: number } = {};
+      questionsToInsert.forEach(q => {
+        categoryBreakdown[q.category] = (categoryBreakdown[q.category] || 0) + 1;
+      });
+      
+      console.log(`\n📋 Category breakdown:`);
+      Object.entries(categoryBreakdown).forEach(([cat, count]) => {
+        console.log(`   ${cat}: ${count} questions`);
+      });
       
       const typeBreakdown: { [key: string]: number } = {};
       questionsToInsert.forEach(q => {
