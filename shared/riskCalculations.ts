@@ -238,3 +238,180 @@ export function calculateResidualRisk(
     impactReduction, // Float value, UI can format with toFixed(1)
   };
 }
+
+/**
+ * ===================================================================
+ * "No BS" Security Framework - Survey-Driven Risk Calculation
+ * ===================================================================
+ * 
+ * Simpler model that uses survey responses to automatically calculate
+ * control effectiveness rather than manual control entry.
+ * 
+ * Formula:
+ * - R_inherent = Likelihood × Impact (1-25 scale)
+ * - C_effectiveness = Σ(Control_Weight × Answer_Fidelity), capped at 0.95
+ * - R_residual = R_inherent × (1 - C_effectiveness)
+ */
+
+export type AnswerValue = "yes" | "no" | "partial" | "compliant" | "non-compliant" | "n-a" | null | undefined;
+export type RiskDirection = "positive" | "negative";
+
+/**
+ * Map survey answer to fidelity score for control effectiveness calculation
+ * 
+ * @param answer - Survey response value
+ * @param riskDirection - 'positive' (Yes = Good) or 'negative' (Yes = Bad, e.g., incidents/threats)
+ * @returns Fidelity score 0.0 to 1.0
+ */
+export function mapAnswerToFidelity(
+  answer: AnswerValue, 
+  riskDirection: RiskDirection = "positive"
+): number {
+  if (!answer || answer === "n-a" || answer === null || answer === undefined) {
+    return 0.0; // Missing/N/A = no fidelity
+  }
+  
+  const answerLower = answer.toLowerCase();
+  
+  // For NEGATIVE direction questions (incidents/threats), invert the logic
+  // "Yes" to "Have you had theft incidents?" should score as BAD (0.0)
+  // "No" to "Have you had theft incidents?" should score as GOOD (1.0)
+  if (riskDirection === "negative") {
+    switch (answerLower) {
+      case "yes":
+      case "compliant":
+        return 0.0; // Yes to negative event = high risk, no fidelity
+      case "partial":
+        return 0.5; // Partial negative event = moderate risk
+      case "no":
+      case "non-compliant":
+        return 1.0; // No negative events = safe, full fidelity
+      default:
+        return 0.0; // Unknown = no fidelity
+    }
+  }
+  
+  // For POSITIVE direction questions (controls), use standard logic
+  // "Yes" to "Do you have cameras?" should score as GOOD (1.0)
+  switch (answerLower) {
+    case "yes":
+    case "compliant":
+      return 1.0; // Full fidelity
+    case "partial":
+      return 0.5; // Partial fidelity
+    case "no":
+    case "non-compliant":
+      return 0.0; // No fidelity
+    default:
+      return 0.0; // Unknown = no fidelity
+  }
+}
+
+/**
+ * Calculate inherent risk (before controls)
+ */
+export function calculateInherentRisk(
+  likelihood: number, // 1-5 scale
+  impact: number // 1-5 scale
+): number {
+  return likelihood * impact; // 1-25 scale
+}
+
+/**
+ * Survey response with control link
+ */
+export interface SurveyResponseWithControl {
+  answer: AnswerValue;
+  controlWeight: number; // From control_library.weight
+}
+
+/**
+ * Calculate control effectiveness from survey responses
+ * 
+ * @param responses - Survey responses linked to controls via question_threat_map
+ * @returns Control effectiveness (0.0 to 0.95 max)
+ */
+export function calculateControlEffectiveness(
+  responses: SurveyResponseWithControl[]
+): number {
+  if (responses.length === 0) {
+    return 0.0; // No controls = no effectiveness
+  }
+  
+  // Sum up weighted fidelity scores
+  const totalEffectiveness = responses.reduce((sum, response) => {
+    const fidelity = mapAnswerToFidelity(response.answer);
+    const contribution = response.controlWeight * fidelity;
+    return sum + contribution;
+  }, 0.0);
+  
+  // Cap at 0.95 (95%) - can never eliminate risk entirely
+  return Math.min(totalEffectiveness, 0.95);
+}
+
+/**
+ * Calculate residual risk after applying controls
+ */
+export function calculateResidualRiskNBS(
+  inherentRisk: number,
+  controlEffectiveness: number
+): number {
+  const residualRisk = inherentRisk * (1 - controlEffectiveness);
+  
+  // Floor at 0.1 to avoid showing exactly zero risk
+  return Math.max(residualRisk, 0.1);
+}
+
+/**
+ * Complete risk calculation for a scenario using survey responses
+ */
+export interface RiskCalculationResult {
+  inherentRisk: number; // L × I (1-25 scale)
+  controlEffectiveness: number; // 0.0 to 0.95
+  residualRisk: number; // R_inh × (1 - Ce)
+  riskReduction: number; // Percentage reduction
+  inherentRiskLevel: string; // "Very Low" to "Critical"
+  residualRiskLevel: string; // "Very Low" to "Critical"
+}
+
+export function calculateScenarioRisk(
+  likelihood: number, // 1-5 scale
+  impact: number, // 1-5 scale
+  surveyResponses: SurveyResponseWithControl[]
+): RiskCalculationResult {
+  // Step 1: Calculate inherent risk
+  const inherentRisk = calculateInherentRisk(likelihood, impact);
+  
+  // Step 2: Calculate control effectiveness from survey
+  const controlEffectiveness = calculateControlEffectiveness(surveyResponses);
+  
+  // Step 3: Calculate residual risk
+  const residualRisk = calculateResidualRiskNBS(inherentRisk, controlEffectiveness);
+  
+  // Step 4: Calculate risk reduction percentage
+  const riskReduction = ((inherentRisk - residualRisk) / inherentRisk) * 100;
+  
+  // Step 5: Map to risk level labels
+  const inherentRiskLevel = getRiskLevel(inherentRisk);
+  const residualRiskLevel = getRiskLevel(residualRisk);
+  
+  return {
+    inherentRisk,
+    controlEffectiveness,
+    residualRisk,
+    riskReduction,
+    inherentRiskLevel,
+    residualRiskLevel,
+  };
+}
+
+/**
+ * Map numeric risk score to risk level label
+ */
+function getRiskLevel(riskScore: number): string {
+  if (riskScore <= 3) return "Very Low";
+  if (riskScore <= 6) return "Low";
+  if (riskScore <= 12) return "Medium";
+  if (riskScore <= 16) return "High";
+  return "Critical";
+}

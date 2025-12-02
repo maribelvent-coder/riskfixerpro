@@ -5,6 +5,10 @@ import {
   type InsertPasswordResetToken,
   type Site,
   type InsertSite,
+  type FacilityZone,
+  type InsertFacilityZone,
+  type LoadingDock,
+  type InsertLoadingDock,
   type Assessment,
   type InsertAssessment,
   type TemplateQuestion,
@@ -34,7 +38,23 @@ import {
   type InsertReport,
   type AssessmentWithQuestions,
   type Organization,
-  type InsertOrganization
+  type InsertOrganization,
+  type OrganizationInvitation,
+  type InsertOrganizationInvitation,
+  type ThreatLibrary,
+  type InsertThreatLibrary,
+  type ControlLibrary,
+  type InsertControlLibrary,
+  type PointOfInterest,
+  type InsertPointOfInterest,
+  type CrimeSource,
+  type InsertCrimeSource,
+  type CrimeObservation,
+  type InsertCrimeObservation,
+  type SiteIncident,
+  type InsertSiteIncident,
+  type ExecutiveProfile,
+  type InsertExecutiveProfile
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -42,11 +62,22 @@ export interface IStorage {
   // Organization methods
   getOrganization(id: string): Promise<Organization | undefined>;
   getOrganizationByOwnerId(ownerId: string): Promise<Organization | undefined>;
+  getAllOrganizations(): Promise<Organization[]>;
   createOrganization(organization: InsertOrganization): Promise<Organization>;
   updateOrganization(id: string, organization: Partial<Organization>): Promise<Organization | undefined>;
+  deleteOrganization(id: string): Promise<boolean>;
   getOrganizationMembers(organizationId: string): Promise<User[]>;
   addUserToOrganization(userId: string, organizationId: string, role: string): Promise<void>;
   removeUserFromOrganization(userId: string): Promise<void>;
+
+  // Organization Invitation methods
+  createInvitation(invitation: InsertOrganizationInvitation): Promise<OrganizationInvitation>;
+  getInvitation(id: string): Promise<OrganizationInvitation | undefined>;
+  getInvitationByToken(token: string): Promise<OrganizationInvitation | undefined>;
+  listOrganizationInvitations(organizationId: string): Promise<OrganizationInvitation[]>;
+  updateInvitation(id: string, updates: Partial<OrganizationInvitation>): Promise<OrganizationInvitation | undefined>;
+  deleteInvitation(id: string): Promise<boolean>;
+  acceptInvitation(token: string, userId: string): Promise<void>;
 
   // User methods
   getUser(id: string): Promise<User | undefined>;
@@ -73,6 +104,27 @@ export interface IStorage {
   createSite(site: InsertSite): Promise<Site>;
   updateSite(id: string, site: Partial<Site>): Promise<Site | undefined>;
   deleteSite(id: string): Promise<boolean>;
+
+  // Facility Zone methods
+  getFacilityZone(id: string): Promise<FacilityZone | undefined>;
+  getFacilityZonesBySite(siteId: string): Promise<FacilityZone[]>;
+  createFacilityZone(zone: InsertFacilityZone): Promise<FacilityZone>;
+  updateFacilityZone(id: string, zone: Partial<FacilityZone>): Promise<FacilityZone | undefined>;
+  deleteFacilityZone(id: string): Promise<boolean>;
+
+  // Loading Dock methods (Warehouse Framework v2.0)
+  getLoadingDock(id: string): Promise<LoadingDock | undefined>;
+  getLoadingDocksByAssessment(assessmentId: string): Promise<LoadingDock[]>;
+  createLoadingDock(dock: InsertLoadingDock): Promise<LoadingDock>;
+  updateLoadingDock(id: string, dock: Partial<LoadingDock>): Promise<LoadingDock | undefined>;
+  deleteLoadingDock(id: string): Promise<boolean>;
+
+  // Executive Profile methods (Executive Protection Framework)
+  getExecutiveProfile(id: string): Promise<ExecutiveProfile | undefined>;
+  getExecutiveProfileByAssessment(assessmentId: string): Promise<ExecutiveProfile | undefined>;
+  createExecutiveProfile(profile: InsertExecutiveProfile): Promise<ExecutiveProfile>;
+  updateExecutiveProfile(id: string, profile: Partial<ExecutiveProfile>): Promise<ExecutiveProfile | undefined>;
+  deleteExecutiveProfile(id: string): Promise<boolean>;
 
   // Assessment methods
   getAssessment(id: string): Promise<Assessment | undefined>;
@@ -161,13 +213,54 @@ export interface IStorage {
   getReport(id: string): Promise<Report | undefined>;
   createReport(report: InsertReport): Promise<Report>;
   updateReport(id: string, report: Partial<Report>): Promise<Report | undefined>;
+
+  // Threat Library methods
+  getThreatLibrary(): Promise<ThreatLibrary[]>;
+  getThreatLibraryByCategory(category: string): Promise<ThreatLibrary[]>;
+  getThreatLibraryItem(id: string): Promise<ThreatLibrary | undefined>;
+
+  // Control Library methods
+  getControlLibrary(): Promise<ControlLibrary[]>;
+  getControlLibraryByCategory(category: string): Promise<ControlLibrary[]>;
+  getControlLibraryItem(id: string): Promise<ControlLibrary | undefined>;
+  
+  // Risk Calculation methods
+  getSurveyResponsesWithControlWeights(assessmentId: string, threatId: string): Promise<{answer: any, controlWeight: number}[]>;
+
+  // Geographic Intelligence - Points of Interest methods
+  getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]>;
+  getPointOfInterest(id: string): Promise<PointOfInterest | undefined>;
+  createPointOfInterest(poi: InsertPointOfInterest): Promise<PointOfInterest>;
+  updatePointOfInterest(id: string, poi: Partial<PointOfInterest>): Promise<PointOfInterest | undefined>;
+  deletePointOfInterest(id: string): Promise<boolean>;
+
+  // Geographic Intelligence - Crime Data methods
+  getCrimeSource(id: string): Promise<CrimeSource | undefined>;
+  getCrimeSources(siteId?: string, assessmentId?: string): Promise<CrimeSource[]>;
+  createCrimeSource(source: InsertCrimeSource): Promise<CrimeSource>;
+  deleteCrimeSource(id: string): Promise<boolean>;
+
+  getCrimeObservation(id: string): Promise<CrimeObservation | undefined>;
+  getCrimeObservationsBySource(crimeSourceId: string): Promise<CrimeObservation[]>;
+  createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation>;
+
+  // Site Incidents methods
+  getSiteIncidents(siteId: string): Promise<SiteIncident[]>;
+  getSiteIncident(id: string): Promise<SiteIncident | undefined>;
+  createSiteIncident(incident: InsertSiteIncident): Promise<SiteIncident>;
+  bulkCreateSiteIncidents(incidents: InsertSiteIncident[]): Promise<SiteIncident[]>;
+  deleteSiteIncident(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
   private organizations: Map<string, Organization>;
   private users: Map<string, User>;
   private passwordResetTokens: Map<string, PasswordResetToken>;
+  private organizationInvitations: Map<string, OrganizationInvitation>;
   private sites: Map<string, Site>;
+  private facilityZones: Map<string, FacilityZone>;
+  private loadingDocks: Map<string, LoadingDock>;
+  private executiveProfiles: Map<string, ExecutiveProfile>;
   private assessments: Map<string, Assessment>;
   private facilitySurveyQuestions: Map<string, FacilitySurveyQuestion>;
   private assessmentQuestions: Map<string, AssessmentQuestion>;
@@ -184,7 +277,11 @@ export class MemStorage implements IStorage {
     this.organizations = new Map();
     this.users = new Map();
     this.passwordResetTokens = new Map();
+    this.organizationInvitations = new Map();
     this.sites = new Map();
+    this.facilityZones = new Map();
+    this.loadingDocks = new Map();
+    this.executiveProfiles = new Map();
     this.assessments = new Map();
     this.facilitySurveyQuestions = new Map();
     this.assessmentQuestions = new Map();
@@ -207,6 +304,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.organizations.values()).find(
       (org) => org.ownerId === ownerId,
     );
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    return Array.from(this.organizations.values());
   }
 
   async createOrganization(insertOrganization: InsertOrganization): Promise<Organization> {
@@ -235,6 +336,10 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
+  async deleteOrganization(id: string): Promise<boolean> {
+    return this.organizations.delete(id);
+  }
+
   async getOrganizationMembers(organizationId: string): Promise<User[]> {
     return Array.from(this.users.values()).filter(
       (user) => user.organizationId === organizationId
@@ -257,6 +362,69 @@ export class MemStorage implements IStorage {
       user.organizationRole = 'member';
       this.users.set(userId, user);
     }
+  }
+
+  // Organization Invitation methods
+  async createInvitation(insertInvitation: InsertOrganizationInvitation): Promise<OrganizationInvitation> {
+    const id = randomUUID();
+    const createdAt = new Date();
+    const invitation: OrganizationInvitation = {
+      ...insertInvitation,
+      id,
+      createdAt,
+      acceptedAt: null,
+    };
+    this.organizationInvitations.set(id, invitation);
+    return invitation;
+  }
+
+  async getInvitation(id: string): Promise<OrganizationInvitation | undefined> {
+    return this.organizationInvitations.get(id);
+  }
+
+  async getInvitationByToken(token: string): Promise<OrganizationInvitation | undefined> {
+    return Array.from(this.organizationInvitations.values()).find(
+      (inv) => inv.token === token
+    );
+  }
+
+  async listOrganizationInvitations(organizationId: string): Promise<OrganizationInvitation[]> {
+    return Array.from(this.organizationInvitations.values()).filter(
+      (inv) => inv.organizationId === organizationId
+    );
+  }
+
+  async updateInvitation(id: string, updates: Partial<OrganizationInvitation>): Promise<OrganizationInvitation | undefined> {
+    const invitation = this.organizationInvitations.get(id);
+    if (!invitation) return undefined;
+    
+    const updated = { ...invitation, ...updates };
+    this.organizationInvitations.set(id, updated);
+    return updated;
+  }
+
+  async deleteInvitation(id: string): Promise<boolean> {
+    return this.organizationInvitations.delete(id);
+  }
+
+  async acceptInvitation(token: string, userId: string): Promise<void> {
+    const invitation = await this.getInvitationByToken(token);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+
+    // Update user with organization info
+    const user = this.users.get(userId);
+    if (user) {
+      user.organizationId = invitation.organizationId;
+      user.organizationRole = invitation.role;
+      this.users.set(userId, user);
+    }
+
+    // Update invitation status
+    invitation.status = 'accepted';
+    invitation.acceptedAt = new Date();
+    this.organizationInvitations.set(invitation.id, invitation);
   }
 
   // User methods
@@ -398,6 +566,7 @@ export class MemStorage implements IStorage {
     const site: Site = {
       ...insertSite,
       id,
+      organizationId: insertSite.organizationId ?? null,
       address: insertSite.address ?? null,
       city: insertSite.city ?? null,
       state: insertSite.state ?? null,
@@ -428,6 +597,101 @@ export class MemStorage implements IStorage {
 
   async deleteSite(id: string): Promise<boolean> {
     return this.sites.delete(id);
+  }
+
+  // Facility Zone methods
+  async getFacilityZone(id: string): Promise<FacilityZone | undefined> {
+    return this.facilityZones.get(id);
+  }
+
+  async getFacilityZonesBySite(siteId: string): Promise<FacilityZone[]> {
+    return Array.from(this.facilityZones.values()).filter(zone => zone.siteId === siteId);
+  }
+
+  async createFacilityZone(zone: InsertFacilityZone): Promise<FacilityZone> {
+    const newZone: FacilityZone = {
+      id: randomUUID(),
+      ...zone,
+      createdAt: new Date(),
+    };
+    this.facilityZones.set(newZone.id, newZone);
+    return newZone;
+  }
+
+  async updateFacilityZone(id: string, zone: Partial<FacilityZone>): Promise<FacilityZone | undefined> {
+    const existing = this.facilityZones.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...zone };
+    this.facilityZones.set(id, updated);
+    return updated;
+  }
+
+  async deleteFacilityZone(id: string): Promise<boolean> {
+    return this.facilityZones.delete(id);
+  }
+
+  // Loading Dock methods (Warehouse Framework v2.0)
+  async getLoadingDock(id: string): Promise<LoadingDock | undefined> {
+    return this.loadingDocks.get(id);
+  }
+
+  async getLoadingDocksByAssessment(assessmentId: string): Promise<LoadingDock[]> {
+    return Array.from(this.loadingDocks.values()).filter(dock => dock.assessmentId === assessmentId);
+  }
+
+  async createLoadingDock(dock: InsertLoadingDock): Promise<LoadingDock> {
+    const newDock: LoadingDock = {
+      id: randomUUID(),
+      ...dock,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.loadingDocks.set(newDock.id, newDock);
+    return newDock;
+  }
+
+  async updateLoadingDock(id: string, updateData: Partial<LoadingDock>): Promise<LoadingDock | undefined> {
+    const existing = this.loadingDocks.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updateData, updatedAt: new Date() };
+    this.loadingDocks.set(id, updated);
+    return updated;
+  }
+
+  async deleteLoadingDock(id: string): Promise<boolean> {
+    return this.loadingDocks.delete(id);
+  }
+
+  // Executive Profile methods (Executive Protection Framework)
+  async getExecutiveProfile(id: string): Promise<ExecutiveProfile | undefined> {
+    return this.executiveProfiles.get(id);
+  }
+
+  async getExecutiveProfileByAssessment(assessmentId: string): Promise<ExecutiveProfile | undefined> {
+    return Array.from(this.executiveProfiles.values()).find(profile => profile.assessmentId === assessmentId);
+  }
+
+  async createExecutiveProfile(profile: InsertExecutiveProfile): Promise<ExecutiveProfile> {
+    const newProfile: ExecutiveProfile = {
+      id: randomUUID(),
+      ...profile,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.executiveProfiles.set(newProfile.id, newProfile);
+    return newProfile;
+  }
+
+  async updateExecutiveProfile(id: string, updateData: Partial<ExecutiveProfile>): Promise<ExecutiveProfile | undefined> {
+    const existing = this.executiveProfiles.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updateData, updatedAt: new Date() };
+    this.executiveProfiles.set(id, updated);
+    return updated;
+  }
+
+  async deleteExecutiveProfile(id: string): Promise<boolean> {
+    return this.executiveProfiles.delete(id);
   }
 
   // Assessment methods
@@ -480,6 +744,7 @@ export class MemStorage implements IStorage {
     const assessment: Assessment = {
       ...insertAssessment,
       id,
+      organizationId: insertAssessment.organizationId ?? null,
       siteId: insertAssessment.siteId ?? null,
       templateId: insertAssessment.templateId ?? null,
       surveyParadigm: insertAssessment.surveyParadigm || "facility",
@@ -1111,6 +1376,108 @@ export class MemStorage implements IStorage {
     };
     this.reports.set(id, updated);
     return updated;
+  }
+
+  // Threat Library methods (not supported in MemStorage)
+  async getThreatLibrary(): Promise<ThreatLibrary[]> {
+    throw new Error("Threat Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getThreatLibraryByCategory(category: string): Promise<ThreatLibrary[]> {
+    throw new Error("Threat Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getThreatLibraryItem(id: string): Promise<ThreatLibrary | undefined> {
+    throw new Error("Threat Library not supported in MemStorage - use DbStorage");
+  }
+
+  // Control Library methods (not supported in MemStorage)
+  async getControlLibrary(): Promise<ControlLibrary[]> {
+    throw new Error("Control Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getControlLibraryByCategory(category: string): Promise<ControlLibrary[]> {
+    throw new Error("Control Library not supported in MemStorage - use DbStorage");
+  }
+
+  async getControlLibraryItem(id: string): Promise<ControlLibrary | undefined> {
+    throw new Error("Control Library not supported in MemStorage - use DbStorage");
+  }
+  
+  async getSurveyResponsesWithControlWeights(assessmentId: string, threatId: string): Promise<{answer: any, controlWeight: number}[]> {
+    throw new Error("Risk calculation not supported in MemStorage - use DbStorage");
+  }
+
+  // Geographic Intelligence - Points of Interest methods
+  async getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]> {
+    // MemStorage is only used for testing, return empty array
+    return [];
+  }
+
+  async getPointOfInterest(id: string): Promise<PointOfInterest | undefined> {
+    return undefined;
+  }
+
+  async createPointOfInterest(poi: InsertPointOfInterest): Promise<PointOfInterest> {
+    throw new Error("MemStorage not fully implemented for GeoIntel features");
+  }
+
+  async updatePointOfInterest(id: string, poi: Partial<PointOfInterest>): Promise<PointOfInterest | undefined> {
+    return undefined;
+  }
+
+  async deletePointOfInterest(id: string): Promise<boolean> {
+    return false;
+  }
+
+  // Geographic Intelligence - Crime Data methods
+  async getCrimeSource(id: string): Promise<CrimeSource | undefined> {
+    return undefined;
+  }
+
+  async getCrimeSources(siteId?: string, assessmentId?: string): Promise<CrimeSource[]> {
+    return [];
+  }
+
+  async createCrimeSource(source: InsertCrimeSource): Promise<CrimeSource> {
+    throw new Error("MemStorage not fully implemented for GeoIntel features");
+  }
+
+  async deleteCrimeSource(id: string): Promise<boolean> {
+    return false;
+  }
+
+  async getCrimeObservation(id: string): Promise<CrimeObservation | undefined> {
+    return undefined;
+  }
+
+  async getCrimeObservationsBySource(crimeSourceId: string): Promise<CrimeObservation[]> {
+    return [];
+  }
+
+  async createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation> {
+    throw new Error("MemStorage not fully implemented for GeoIntel features");
+  }
+
+  // Site Incidents methods
+  async getSiteIncidents(siteId: string): Promise<SiteIncident[]> {
+    return [];
+  }
+
+  async getSiteIncident(id: string): Promise<SiteIncident | undefined> {
+    return undefined;
+  }
+
+  async createSiteIncident(incident: InsertSiteIncident): Promise<SiteIncident> {
+    throw new Error("MemStorage not fully implemented for site incidents");
+  }
+
+  async bulkCreateSiteIncidents(incidents: InsertSiteIncident[]): Promise<SiteIncident[]> {
+    throw new Error("MemStorage not fully implemented for site incidents");
+  }
+
+  async deleteSiteIncident(id: string): Promise<boolean> {
+    return false;
   }
 }
 

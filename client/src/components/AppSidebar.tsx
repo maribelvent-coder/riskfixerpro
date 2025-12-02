@@ -45,6 +45,19 @@ const navigationItems = [
   },
 ];
 
+const libraryItems = [
+  {
+    title: "Threat Library",
+    url: "/app/libraries/threats",
+    icon: AlertTriangle,
+  },
+  {
+    title: "Control Library",
+    url: "/app/libraries/controls",
+    icon: ShieldCheck,
+  },
+];
+
 const managementItems = [
   {
     title: "Team Members",
@@ -66,6 +79,9 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     try {
+      // Clear JWT token from localStorage
+      localStorage.removeItem('authToken');
+      
       await apiRequest("POST", "/api/auth/logout");
       
       setLocation("/");
@@ -102,6 +118,27 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    data-testid={`nav-${item.title.toLowerCase().replace(' ', '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Reference</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {libraryItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 

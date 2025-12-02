@@ -128,39 +128,39 @@ export default function Pricing() {
     <div className="min-h-screen flex flex-col">
       <MarketingHeader />
       
-      <main className="flex-1 bg-light-gray-bg py-12">
+      <main className="flex-1 bg-light-gray-bg py-8 sm:py-12">
         <div className="container mx-auto px-4">
           {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="font-heading text-5xl mb-4 text-foreground" data-testid="heading-pricing">
+          <div className="text-center mb-8 sm:mb-12">
+            <h1 className="font-heading text-xl sm:text-2xl md:text-3xl lg:text-4xl mb-3 sm:mb-4 text-foreground" data-testid="heading-pricing">
               Simple, Transparent Pricing
             </h1>
-            <p className="font-sans text-xl text-muted-foreground mb-8" data-testid="text-pricing-subtitle">
+            <p className="font-sans text-xs sm:text-sm md:text-base lg:text-lg text-muted-foreground mb-6 sm:mb-8" data-testid="text-pricing-subtitle">
               Choose the plan that fits your security assessment needs
             </p>
             
             {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4">
-              <span className={`text-sm ${!isAnnual ? 'font-semibold' : 'text-muted-foreground'}`}>
+            <div className="flex items-center justify-center gap-3 sm:gap-4">
+              <span className={`text-xs sm:text-sm ${!isAnnual ? 'font-semibold' : 'text-muted-foreground'}`}>
                 Monthly
               </span>
               <button
                 onClick={() => setIsAnnual(!isAnnual)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors ${
                   isAnnual ? 'bg-primary' : 'bg-muted'
                 }`}
                 data-testid="toggle-billing"
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isAnnual ? 'translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                    isAnnual ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
-              <span className={`text-sm ${isAnnual ? 'font-semibold' : 'text-muted-foreground'}`}>
+              <span className={`text-xs sm:text-sm ${isAnnual ? 'font-semibold' : 'text-muted-foreground'}`}>
                 Annual
                 {isAnnual && (
-                  <Badge variant="secondary" className="ml-2 bg-accent-green text-white">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 bg-accent-green text-white text-[10px] sm:text-xs">
                     Save 2 months
                   </Badge>
                 )}
@@ -169,40 +169,40 @@ export default function Pricing() {
           </div>
 
           {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-12 sm:mb-16">
             {pricingTiers.map((tier) => (
               <Card
                 key={tier.name}
-                className={`relative ${
+                className={`relative p-4 sm:p-6 ${
                   tier.popular ? 'border-primary border-2 shadow-lg' : ''
                 } ${tier.comingSoon ? 'opacity-60' : ''}`}
                 data-testid={`card-tier-${tier.name.toLowerCase()}`}
               >
                 {tier.popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
+                  <Badge className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] sm:text-xs">
                     Most Popular
                   </Badge>
                 )}
                 {tier.comingSoon && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-muted text-muted-foreground">
+                  <Badge className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-muted text-muted-foreground text-[10px] sm:text-xs">
                     Coming Soon
                   </Badge>
                 )}
                 
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl mb-2">{tier.name}</CardTitle>
+                <CardHeader className="text-center p-0 pb-3 sm:pb-4">
+                  <CardTitle className="text-xl sm:text-2xl mb-1 sm:mb-2">{tier.name}</CardTitle>
                   {tier.comingSoon ? (
-                    <div className="text-3xl font-bold mb-2">Coming Soon</div>
+                    <div className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Coming Soon</div>
                   ) : (
                     <>
-                      <div className="text-4xl font-bold mb-2">
+                      <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">
                         ${isAnnual ? tier.price.annual : tier.price.monthly}
-                        <span className="text-lg font-normal text-muted-foreground">
+                        <span className="text-sm sm:text-base font-normal text-muted-foreground">
                           /{isAnnual ? 'year' : 'month'}
                         </span>
                       </div>
                       {isAnnual && (
-                        <CardDescription className="text-sm">
+                        <CardDescription className="text-xs sm:text-sm">
                           ${Math.round(tier.price.annual / 12)}/month billed annually
                         </CardDescription>
                       )}
@@ -210,9 +210,9 @@ export default function Pricing() {
                   )}
                 </CardHeader>
 
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6 p-0">
                   <Button
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm"
                     variant={tier.popular ? "default" : "outline"}
                     onClick={() => setLocation(tier.cta.action)}
                     disabled={tier.comingSoon}
@@ -221,38 +221,38 @@ export default function Pricing() {
                     {tier.cta.text}
                   </Button>
 
-                  <div className="space-y-3 pt-4 border-t">
-                    <h4 className="font-semibold text-sm">Core Features</h4>
-                    <ul className="space-y-2 text-sm">
+                  <div className="space-y-2 sm:space-y-3 pt-3 sm:pt-4 border-t">
+                    <h4 className="font-semibold text-xs sm:text-sm">Core Features</h4>
+                    <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                       <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                        <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         <span><strong>{tier.features.assessments}</strong> assessments</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                        <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         <span><strong>{tier.features.sites}</strong> sites</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                        <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         <span><strong>{tier.features.users}</strong> users included</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                        <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         <span>Risk Register</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                        <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         <span>Basic Reporting</span>
                       </li>
                     </ul>
 
-                    <h4 className="font-semibold text-sm pt-2">Advanced Features</h4>
-                    <ul className="space-y-2 text-sm">
+                    <h4 className="font-semibold text-xs sm:text-sm pt-1.5 sm:pt-2">Advanced Features</h4>
+                    <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                       <li className="flex items-start gap-2">
                         {tier.features.projectIntegrations ? (
-                          <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                          <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         ) : (
-                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <X className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         )}
                         <span className={!tier.features.projectIntegrations ? 'text-muted-foreground' : ''}>
                           Project Integrations
@@ -260,9 +260,9 @@ export default function Pricing() {
                       </li>
                       <li className="flex items-start gap-2">
                         {tier.features.advancedRiskModeling ? (
-                          <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                          <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         ) : (
-                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <X className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         )}
                         <span className={!tier.features.advancedRiskModeling ? 'text-muted-foreground' : ''}>
                           Advanced Risk Modeling
@@ -270,9 +270,9 @@ export default function Pricing() {
                       </li>
                       <li className="flex items-start gap-2">
                         {tier.features.customizableDashboards ? (
-                          <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                          <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                         ) : (
-                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <X className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         )}
                         <span className={!tier.features.customizableDashboards ? 'text-muted-foreground' : ''}>
                           Customizable Dashboards
@@ -282,14 +282,14 @@ export default function Pricing() {
 
                     {tier.name === "Enterprise" && (
                       <>
-                        <h4 className="font-semibold text-sm pt-2">Enterprise Grade</h4>
-                        <ul className="space-y-2 text-sm">
+                        <h4 className="font-semibold text-xs sm:text-sm pt-1.5 sm:pt-2">Enterprise Grade</h4>
+                        <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                           <li className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                            <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                             <span>Single Sign-On (SSO)</span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-chart-2 mt-0.5 flex-shrink-0" />
+                            <Check className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 mt-0.5 flex-shrink-0" />
                             <span>Role-Based Access Control</span>
                           </li>
                         </ul>
@@ -302,23 +302,23 @@ export default function Pricing() {
           </div>
 
           {/* Feature Comparison Table */}
-          <div className="mt-16">
-            <h2 className="text-3xl font-bold text-center mb-8">Compare All Features</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-white rounded-lg shadow">
+          <div className="mt-12 sm:mt-16">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6 sm:mb-8">Compare All Features</h2>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full border-collapse bg-white rounded-lg shadow min-w-[320px]">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-4 font-semibold">Feature</th>
+                    <th className="text-left p-2 sm:p-3 md:p-4 font-semibold text-xs sm:text-sm">Feature</th>
                     {pricingTiers.map((tier) => (
                       <th
                         key={tier.name}
-                        className={`text-center p-4 font-semibold ${
+                        className={`text-center p-2 sm:p-3 md:p-4 font-semibold text-xs sm:text-sm ${
                           tier.comingSoon ? 'opacity-60' : ''
                         }`}
                       >
                         {tier.name}
                         {tier.popular && (
-                          <Badge className="ml-2 bg-primary text-primary-foreground text-xs">
+                          <Badge className="ml-1 sm:ml-2 bg-primary text-primary-foreground text-[10px] sm:text-xs">
                             Popular
                           </Badge>
                         )}
@@ -328,26 +328,26 @@ export default function Pricing() {
                 </thead>
                 <tbody>
                   <tr className="border-b bg-muted/30">
-                    <td colSpan={4} className="p-3 font-semibold text-sm">
+                    <td colSpan={4} className="p-2 sm:p-3 font-semibold text-xs sm:text-sm">
                       Core Features
                     </td>
                   </tr>
                   {featureRows.slice(0, 5).map((row) => (
                     <tr key={row.key} className="border-b hover:bg-muted/20">
-                      <td className="p-4">{row.label}</td>
+                      <td className="p-2 sm:p-3 md:p-4 text-xs sm:text-sm">{row.label}</td>
                       {pricingTiers.map((tier) => (
                         <td
                           key={`${tier.name}-${row.key}`}
-                          className={`text-center p-4 ${tier.comingSoon ? 'opacity-60' : ''}`}
+                          className={`text-center p-2 sm:p-3 md:p-4 ${tier.comingSoon ? 'opacity-60' : ''}`}
                         >
                           {row.type === "boolean" ? (
                             tier.features[row.key] ? (
-                              <Check className="h-5 w-5 text-chart-2 mx-auto" />
+                              <Check className="h-4 w-4 sm:h-5 sm:w-5 text-chart-2 mx-auto" />
                             ) : (
-                              <X className="h-5 w-5 text-muted-foreground mx-auto" />
+                              <X className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mx-auto" />
                             )
                           ) : (
-                            <span className="font-medium">{tier.features[row.key]}</span>
+                            <span className="font-medium text-xs sm:text-sm">{tier.features[row.key]}</span>
                           )}
                         </td>
                       ))}
@@ -355,22 +355,22 @@ export default function Pricing() {
                   ))}
                   
                   <tr className="border-b bg-muted/30">
-                    <td colSpan={4} className="p-3 font-semibold text-sm">
+                    <td colSpan={4} className="p-2 sm:p-3 font-semibold text-xs sm:text-sm">
                       Advanced Features
                     </td>
                   </tr>
                   {featureRows.slice(5, 8).map((row) => (
                     <tr key={row.key} className="border-b hover:bg-muted/20">
-                      <td className="p-4">{row.label}</td>
+                      <td className="p-2 sm:p-3 md:p-4 text-xs sm:text-sm">{row.label}</td>
                       {pricingTiers.map((tier) => (
                         <td
                           key={`${tier.name}-${row.key}`}
-                          className={`text-center p-4 ${tier.comingSoon ? 'opacity-60' : ''}`}
+                          className={`text-center p-2 sm:p-3 md:p-4 ${tier.comingSoon ? 'opacity-60' : ''}`}
                         >
                           {tier.features[row.key] ? (
-                            <Check className="h-5 w-5 text-chart-2 mx-auto" />
+                            <Check className="h-4 w-4 sm:h-5 sm:w-5 text-chart-2 mx-auto" />
                           ) : (
-                            <X className="h-5 w-5 text-muted-foreground mx-auto" />
+                            <X className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mx-auto" />
                           )}
                         </td>
                       ))}
@@ -378,22 +378,22 @@ export default function Pricing() {
                   ))}
 
                   <tr className="border-b bg-muted/30">
-                    <td colSpan={4} className="p-3 font-semibold text-sm">
+                    <td colSpan={4} className="p-2 sm:p-3 font-semibold text-xs sm:text-sm">
                       Enterprise Grade
                     </td>
                   </tr>
                   {featureRows.slice(8).map((row) => (
                     <tr key={row.key} className="border-b hover:bg-muted/20">
-                      <td className="p-4">{row.label}</td>
+                      <td className="p-2 sm:p-3 md:p-4 text-xs sm:text-sm">{row.label}</td>
                       {pricingTiers.map((tier) => (
                         <td
                           key={`${tier.name}-${row.key}`}
-                          className={`text-center p-4 ${tier.comingSoon ? 'opacity-60' : ''}`}
+                          className={`text-center p-2 sm:p-3 md:p-4 ${tier.comingSoon ? 'opacity-60' : ''}`}
                         >
                           {tier.features[row.key] ? (
-                            <Check className="h-5 w-5 text-chart-2 mx-auto" />
+                            <Check className="h-4 w-4 sm:h-5 sm:w-5 text-chart-2 mx-auto" />
                           ) : (
-                            <X className="h-5 w-5 text-muted-foreground mx-auto" />
+                            <X className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mx-auto" />
                           )}
                         </td>
                       ))}
@@ -405,17 +405,18 @@ export default function Pricing() {
           </div>
 
           {/* FAQ or Additional Info */}
-          <div className="mt-16 text-center">
-            <Card className="max-w-2xl mx-auto">
-              <CardHeader>
-                <CardTitle>Need Help Choosing?</CardTitle>
+          <div className="mt-12 sm:mt-16 text-center">
+            <Card className="max-w-2xl mx-auto p-4 sm:p-6">
+              <CardHeader className="p-0 pb-3 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg">Need Help Choosing?</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-left">
-                <p className="text-muted-foreground">
+              <CardContent className="space-y-3 sm:space-y-4 text-left p-0">
+                <p className="text-muted-foreground text-xs sm:text-sm">
                   Our team is here to help you find the right plan for your organization's security assessment needs.
                 </p>
                 <Button
                   variant="outline"
+                  className="text-xs sm:text-sm"
                   onClick={() => setLocation("/contact")}
                   data-testid="button-contact-sales"
                 >

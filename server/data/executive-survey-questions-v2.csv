@@ -1,0 +1,113 @@
+Question ID,Question Text,Best Practice,Rationale,Importance
+P1.S1.Q1,On a scale of 1-10 how concerned are you about your personal safety?,,Understanding baseline threat perception,High
+P1.S1.Q2,Have you ever received direct threats (verbal written or digital)?,,Identifying documented threat history,Critical
+P1.S1.Q3,Do you have any active restraining orders or protective orders in place?,,Legal protection measures assessment,High
+P1.S1.Q4,In your view are there any individuals or groups who may pose a threat to you or your family?,,Threat actor identification,Critical
+P1.S1.Q5,What types of threats concern you most?,,Understanding perceived threat vectors,High
+P1.S1.Q6,Are you involved in any controversial matters or litigation that might increase your threat exposure?,,Contextual threat assessment,High
+P1.S2.Q7,In your view how would you describe your public profile?,,Public visibility assessment,High
+P1.S2.Q8,How frequently do you engage with media or give public statements?,,Media exposure frequency,Medium
+P1.S2.Q9,Have you been the subject of negative media coverage or public controversy?,,Reputational threat assessment,High
+P1.S2.Q10,Which social media platforms are you active on?,,Digital footprint mapping,Medium
+P1.S2.Q11,In your view how much personal information or location data do you share on social media?,,Information disclosure assessment,High
+P1.S3.Q12,How would you describe the predictability of your daily schedule?,,Pattern analysis for vulnerability,Critical
+P1.S3.Q13,Do you typically vary your routes between home and work?,,Route predictability assessment,High
+P1.S3.Q14,Do you have regular evening or weekend routines?,,Routine vulnerability identification,High
+P1.S3.Q15,How often do you attend public events or high-profile gatherings?,,Public exposure frequency,Medium
+P1.S4.Q16,Do you have family members who could be vulnerable to targeting?,,Family vulnerability assessment,Critical
+P1.S4.Q17,Do you have specific concerns about the safety of any family members?,,Family threat perception,High
+P1.S4.Q18,If you have children how predictable are their schedules?,,Children's routine vulnerability,Critical
+P1.S4.Q19,Do any family members have a public profile or media exposure?,,Family member visibility,High
+P1.S5.Q20,How would you describe your current level of personal security?,,Current security posture,High
+P1.S5.Q21,Do you currently have personal protection or security detail?,,Existing protection assessment,High
+P1.S5.Q22,What security measures do you have in place at your residence?,,Home security inventory,High
+P1.S5.Q23,Have you received any security awareness training?,,Security preparedness level,Medium
+P1.S5.Q24,Do you carry any personal safety devices?,,Personal protection tools,Medium
+P1.S6.Q25,How do you typically commute?,,Transportation method assessment,High
+P1.S6.Q26,How often do you travel for business or personal reasons?,,Travel frequency assessment,Medium
+P1.S6.Q27,Do you travel internationally to locations you consider high-risk?,,International travel risk,High
+P1.S6.Q28,When traveling do you share travel plans publicly or on social media?,,Travel OPSEC assessment,Critical
+P1.S7.Q29,What personal information about you is publicly available?,,Digital footprint assessment,High
+P1.S7.Q30,Do you actively manage your online presence and digital footprint?,,Digital hygiene practices,High
+P1.S7.Q31,How would you describe your family members' digital footprint?,,Family digital exposure,Medium
+P1.S8.Q32,Do you have emergency contact protocols established?,,Emergency preparedness,High
+P1.S8.Q33,Has your family received emergency or security awareness training?,,Family security training,Medium
+P1.S8.Q34,Do you have duress codes or signals established?,,Emergency communication systems,High
+P1.S8.Q35,Overall how secure do you feel in your daily life?,,Baseline security perception,Medium
+P2.S9.Q1,Estimated net worth range per public records,,Executive profile assessment,High
+P2.S9.Q2,Primary industry sector association,,Industry-specific risk factors,Medium
+P2.S9.Q3,Verified media coverage level,,Public exposure verification,High
+P2.S9.Q4,Publicly available personal information discovered,,PII exposure assessment,High
+P2.S9.Q5,Social media exposure assessment,,Digital footprint verification,High
+P2.S9.Q6,Family members digital footprint assessment,,Family digital exposure,Medium
+P2.S10.Q7,Residential property type,,Property vulnerability baseline,High
+P2.S10.Q8,Neighborhood classification,,Environmental risk context,Medium
+P2.S10.Q9,Crime environment score for this location,,Area crime assessment,Critical
+P2.S10.Q10,Property visibility from neighboring properties,,Natural surveillance evaluation,High
+P2.S10.Q11,Estimated police response time to this location,,Response time assessment,Critical
+P2.S10.Q12,Security incidents at or near this property in past 24 months,,Historical incident analysis,High
+P2.S11.Q13,Property boundary definition,,Territorial reinforcement,High
+P2.S11.Q14,Perimeter fence type and height if present,,Physical barrier assessment,High
+P2.S11.Q15,Perimeter fence or barrier condition,,Maintenance evaluation,Medium
+P2.S11.Q16,Gate or controlled entry point,,Access control assessment,High
+P2.S11.Q17,Security warning signs displayed,,Deterrent presence,Medium
+P2.S11.Q18,Clear zone maintained around structure,,Natural surveillance,High
+P2.S11.Q19,Perimeter intrusion detection systems,,Electronic security layer,High
+P2.S12.Q20,Lighting at all entry points,,Entry point illumination,Critical
+P2.S12.Q21,Exterior lighting type installed,,Lighting system type,Medium
+P2.S12.Q22,Overall perimeter lighting coverage rating,,Lighting adequacy,High
+P2.S12.Q23,Driveway and parking area lighting,,Parking security,Medium
+P2.S12.Q24,Exterior light fixtures protected from tampering,,Light fixture security,Medium
+P2.S13.Q25,Vegetation near entry points that could conceal intruder,,Concealment risk,High
+P2.S13.Q26,Clear sightline from street to front door,,Visual access,High
+P2.S13.Q27,Trees trimmed to prevent access to upper floors,,Climbing prevention,High
+P2.S13.Q28,Defensive landscaping used,,Natural barriers,Medium
+P2.S13.Q29,Objects near structure that could be used as climbing aids,,Physical security,High
+P2.S14.Q30,Number of exterior doors,,Access point inventory,Medium
+P2.S14.Q31,Front door construction material,,Door strength assessment,Critical
+P2.S14.Q32,Front door lock type,,Lock security level,Critical
+P2.S14.Q33,Deadbolt throw length,,Lock effectiveness,High
+P2.S14.Q34,Reinforced strike plate with 3-inch screws,,Strike plate security,High
+P2.S14.Q35,Door frame condition,,Frame integrity,High
+P2.S14.Q36,Glass in or near door that could allow lock access,,Glass vulnerability,Critical
+P2.S14.Q37,Front door peephole or video doorbell,,Visitor identification,Medium
+P2.S15.Q38,All ground-floor windows secured with locks,,Window security,Critical
+P2.S15.Q39,Window lock types installed,,Lock quality assessment,High
+P2.S15.Q40,Security film applied to accessible windows,,Glass reinforcement,Medium
+P2.S15.Q41,Window bars grilles or security screens,,Window barriers,High
+P2.S15.Q42,Sliding glass doors properly secured,,Sliding door security,Critical
+P2.S16.Q43,Garage type,,Garage vulnerability,High
+P2.S16.Q44,Interior door from attached garage secured,,Garage-home barrier,Critical
+P2.S16.Q45,Garage door opener security,,Opener security,High
+P2.S16.Q46,Emergency release cord secured against fishing attacks,,Release cord protection,Medium
+P2.S16.Q47,Garage windows covered or frosted,,Garage privacy,Medium
+P2.S16.Q48,Typical vehicle parking location,,Vehicle exposure,Medium
+P2.S16.Q49,Vehicle security features,,Vehicle protection,High
+P2.S17.Q50,Alarm system installed,,Intrusion detection,Critical
+P2.S17.Q51,Alarm system sensors included,,Sensor coverage,High
+P2.S17.Q52,All entry points covered by sensors,,Sensor comprehensiveness,Critical
+P2.S17.Q53,Alarm system regularly armed,,System usage,High
+P2.S17.Q54,Alarm system has cellular or radio backup,,Communication redundancy,Critical
+P2.S17.Q55,Alarm control panel location,,Panel security,Medium
+P2.S17.Q56,Alarm system last tested or serviced,,System maintenance,High
+P2.S18.Q57,Video surveillance system installed,,Visual monitoring,High
+P2.S18.Q58,Camera coverage areas,,Camera placement,High
+P2.S18.Q59,Video recording retention period,,Evidence retention,Medium
+P2.S18.Q60,Cameras viewable remotely,,Remote monitoring,High
+P2.S18.Q61,Cameras protected from tampering,,Camera security,Medium
+P2.S18.Q62,Cameras have adequate night vision capability,,Night visibility,High
+P2.S19.Q63,Safe or secure storage for valuables,,Asset protection,High
+P2.S19.Q64,Master bedroom doors reinforced or lockable,,Safe room capability,High
+P2.S19.Q65,Firearms stored securely if applicable,,Weapon security,Critical
+P2.S19.Q66,Valuables visible from windows,,Visual security,Medium
+P2.S19.Q67,Home automation or smart home system,,Technology integration,Medium
+P2.S20.Q68,Designated safe room or shelter-in-place location,,Emergency refuge,High
+P2.S20.Q69,Safe room has independent communication,,Emergency communication,Critical
+P2.S20.Q70,Emergency supplies readily accessible,,Emergency preparedness,High
+P2.S20.Q71,Smoke detectors and CO detectors installed and functional,,Life safety systems,Critical
+P2.S21.Q72,Monitoring service level in place,,Professional monitoring,Critical
+P2.S21.Q73,Emergency contact and verification procedures established,,Emergency protocols,High
+P2.S21.Q74,Duress code or panic procedure verified,,Duress signaling,High
+P2.S21.Q75,Household staff background checks if applicable,,Personnel vetting,High
+P2.S21.Q76,Family emergency or evacuation plan documented and practiced,,Evacuation preparedness,High
+P2.S21.Q77,Go bag or emergency supplies maintained,,Emergency readiness,High

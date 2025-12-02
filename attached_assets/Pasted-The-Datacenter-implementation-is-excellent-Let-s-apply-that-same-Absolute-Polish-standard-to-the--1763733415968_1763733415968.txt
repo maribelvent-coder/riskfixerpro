@@ -1,0 +1,34 @@
+The Datacenter implementation is excellent. Let's apply that same "Absolute Polish" standard to the final template: **Office Building**.
+
+This template focuses on **Workplace Violence** (Human Safety) and **Data Security** (IP Protection).
+
+**Step 1: Database & Seeding (The Foundation)**
+1.  **Schema:** Update `server/db/schema.ts` to add `office_profile` JSONB to `assessments`.
+    * **Strict Zod Schema:**
+        * `employeeCount` (enum: '1-50', '51-200', '201-1000', '1000+').
+        * `visitorVolume` (enum: 'Low', 'Medium', 'High').
+        * `dataSensitivity` (enum: 'Public', 'Internal', 'Confidential', 'Restricted').
+        * `hasExecutivePresence` (boolean).
+2.  **Seed Data:** Create `server/db/seed-data/office-data.ts`.
+    * Seed 15 specific Threats (e.g., 'Active Shooter', 'Domestic Violence Spillover', 'Social Engineering').
+    * Seed 60+ specific Controls (e.g., 'Panic Buttons', 'Mass Notification', 'Clean Desk Policy').
+    * **Execute:** Run the seed.
+
+**Step 2: Logic Adapter (The "Human Safety" Brain)**
+Create `server/services/risk-engine/adapters/office.ts`.
+* **Workplace Violence Risk:**
+    * If `employeeCount` > '200' AND `control_gaps` include 'Active Shooter Training' -> Critical Risk.
+* **Data Leakage Risk:**
+    * If `dataSensitivity` == 'Restricted' AND `control_gaps` include 'Clean Desk Policy' -> High Risk.
+* **Output:** Return `{ riskScore, violenceRiskLevel, dataRiskLevel, keyVulnerabilities }`.
+
+**Step 3: The Dashboard UI (The Interface)**
+Create `client/src/pages/assessments/OfficeDashboard.tsx`.
+* **Left Column:** Form for Office Profile.
+* **Right Column:**
+    * **Safety Meter:** Visual gauge for Workplace Violence preparedness.
+    * **Data Security Scorecard:** List of IP protection gaps.
+    * **Visitor Traffic Analysis:** Simple metric card.
+* **Navigation:** Update `AssessmentLayout` to show the **"Corporate Operations"** tab (Building icon).
+
+**Constraint:** Use the same strict type checking and dynamic control scanning logic you used in the Datacenter module.

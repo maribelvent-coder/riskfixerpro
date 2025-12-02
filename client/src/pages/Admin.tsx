@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database, AlertTriangle } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit } from "lucide-react";
 
 type User = {
   id: string;
@@ -41,15 +41,32 @@ type User = {
   createdAt: string;
 };
 
+type Organization = {
+  id: string;
+  name: string;
+  accountTier: string;
+  maxMembers: number;
+  maxSites: number;
+  maxAssessments: number;
+  createdAt: string;
+};
+
 export default function Admin() {
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showSeedConfirm, setShowSeedConfirm] = useState(false);
+  const [showOrgLimitsDialog, setShowOrgLimitsDialog] = useState(false);
+  const [orgLimits, setOrgLimits] = useState({ maxMembers: 0, maxSites: 0, maxAssessments: 0 });
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+  });
+
+  const { data: organizations, isLoading: orgsLoading } = useQuery<Organization[]>({
+    queryKey: ["/api/admin/organizations"],
   });
 
   const resetPasswordMutation = useMutation({
@@ -99,6 +116,33 @@ export default function Admin() {
       toast({
         title: "Tier update failed",
         description: error.message || "Failed to update tier. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateOrgLimitsMutation = useMutation({
+    mutationFn: async ({ orgId, limits }: { orgId: string; limits: { maxMembers: number; maxSites: number; maxAssessments: number } }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/admin/organizations/${orgId}/limits`,
+        limits
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Organization limits updated",
+        description: "The organization limits have been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      setShowOrgLimitsDialog(false);
+      setSelectedOrg(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update limits",
+        description: error.message || "Failed to update organization limits. Please try again.",
         variant: "destructive",
       });
     },
@@ -178,55 +222,73 @@ export default function Admin() {
     changeTierMutation.mutate({ userId, tier });
   };
 
+  const handleEditOrgLimits = (org: Organization) => {
+    setSelectedOrg(org);
+    setOrgLimits({
+      maxMembers: org.maxMembers,
+      maxSites: org.maxSites,
+      maxAssessments: org.maxAssessments,
+    });
+    setShowOrgLimitsDialog(true);
+  };
+
+  const handleUpdateLimits = () => {
+    if (!selectedOrg) return;
+    updateOrgLimitsMutation.mutate({
+      orgId: selectedOrg.id,
+      limits: orgLimits,
+    });
+  };
+
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-heading" data-testid="heading-admin">
+    <div className="p-3 sm:p-6 lg:p-8">
+      <div className="mb-4 sm:mb-6 lg:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+          <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading" data-testid="heading-admin">
             Admin Panel
           </h1>
         </div>
-        <p className="text-muted-foreground" data-testid="text-admin-subtitle">
+        <p className="text-muted-foreground text-xs sm:text-sm" data-testid="text-admin-subtitle">
           Manage users and system settings
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="p-3 sm:p-6">
+        <CardHeader className="p-0 pb-3 sm:pb-4">
           <div className="flex items-center gap-2">
-            <UserCog className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>User Management</CardTitle>
+            <UserCog className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <CardTitle className="text-base sm:text-lg">User Management</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             View and manage all users in the system
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
               Loading users...
             </div>
           ) : !users || users.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
               No users found
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Account Tier</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="text-xs sm:text-sm">
+                    <TableHead className="text-xs sm:text-sm">Username</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Account Tier</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Role</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Created</TableHead>
+                    <TableHead className="text-xs sm:text-sm text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                      <TableCell className="font-medium">
+                    <TableRow key={user.id} data-testid={`row-user-${user.id}`} className="text-xs sm:text-sm">
+                      <TableCell className="font-medium text-xs sm:text-sm">
                         {user.username}
                       </TableCell>
                       <TableCell>
@@ -235,7 +297,7 @@ export default function Admin() {
                           onValueChange={(tier) => handleChangeTier(user.id, tier)}
                           disabled={changeTierMutation.isPending}
                         >
-                          <SelectTrigger className="w-[140px]" data-testid={`select-tier-${user.id}`}>
+                          <SelectTrigger className="w-[100px] sm:w-[140px] text-xs sm:text-sm h-8 sm:h-9" data-testid={`select-tier-${user.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -246,26 +308,27 @@ export default function Admin() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         {user.isAdmin && (
-                          <Badge variant="secondary" className="bg-accent-orange text-white">
-                            <Shield className="h-3 w-3 mr-1" />
+                          <Badge variant="secondary" className="bg-accent-orange text-white text-[10px] sm:text-xs">
+                            <Shield className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
                             Admin
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-xs sm:text-sm hidden md:table-cell">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
+                      <TableCell className="text-right">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="text-xs sm:text-sm"
                           onClick={() => handleResetPassword(user)}
                           data-testid={`button-reset-${user.id}`}
                         >
-                          <Key className="h-4 w-4 mr-2" />
-                          Reset Password
+                          <Key className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Reset Password</span>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -277,31 +340,106 @@ export default function Admin() {
         </CardContent>
       </Card>
 
-      <Card className="mt-8">
-        <CardHeader>
+      <Card className="mt-4 sm:mt-6 lg:mt-8 p-3 sm:p-6">
+        <CardHeader className="p-0 pb-3 sm:pb-4">
           <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>Database Management</CardTitle>
+            <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <CardTitle className="text-base sm:text-lg">Organization Management</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
+            Customize organization limits for any tier
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {orgsLoading ? (
+            <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
+              Loading organizations...
+            </div>
+          ) : !organizations || organizations.length === 0 ? (
+            <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
+              No organizations found
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-xs sm:text-sm">
+                    <TableHead className="text-xs sm:text-sm">Name</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Tier</TableHead>
+                    <TableHead className="text-xs sm:text-sm text-center hidden sm:table-cell">Members</TableHead>
+                    <TableHead className="text-xs sm:text-sm text-center hidden sm:table-cell">Sites</TableHead>
+                    <TableHead className="text-xs sm:text-sm text-center hidden md:table-cell">Assessments</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Created</TableHead>
+                    <TableHead className="text-xs sm:text-sm text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {organizations.map((org) => (
+                    <TableRow key={org.id} data-testid={`row-org-${org.id}`} className="text-xs sm:text-sm">
+                      <TableCell className="font-medium text-xs sm:text-sm">{org.name}</TableCell>
+                      <TableCell>
+                        <Badge className={`${org.accountTier === 'enterprise' ? 'bg-purple-500' : org.accountTier === 'pro' ? 'bg-blue-500' : 'bg-green-500'} text-[10px] sm:text-xs`}>
+                          {org.accountTier}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-xs sm:text-sm hidden sm:table-cell">
+                        {org.maxMembers === -1 ? '∞' : org.maxMembers}
+                      </TableCell>
+                      <TableCell className="text-center text-xs sm:text-sm hidden sm:table-cell">
+                        {org.maxSites === -1 ? '∞' : org.maxSites}
+                      </TableCell>
+                      <TableCell className="text-center text-xs sm:text-sm hidden md:table-cell">
+                        {org.maxAssessments === -1 ? '∞' : org.maxAssessments}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs sm:text-sm hidden lg:table-cell">
+                        {new Date(org.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs sm:text-sm"
+                          onClick={() => handleEditOrgLimits(org)}
+                          data-testid={`button-edit-limits-${org.id}`}
+                        >
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Edit Limits</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4 sm:mt-6 lg:mt-8 p-3 sm:p-6">
+        <CardHeader className="p-0 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <CardTitle className="text-base sm:text-lg">Database Management</CardTitle>
+          </div>
+          <CardDescription className="text-xs sm:text-sm">
             Seed the production database with template questions
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+        <CardContent className="p-0">
+          <div className="space-y-3 sm:space-y-4">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               This will populate the database with all template questions including:
             </p>
-            <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+            <ul className="text-xs sm:text-sm text-muted-foreground list-disc list-inside space-y-1">
               <li>34 Executive Interview questions</li>
               <li>39 Executive Survey questions (includes facility survey templates)</li>
             </ul>
-            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3">
-              <p className="text-sm font-medium text-destructive flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-2 sm:p-3">
+              <p className="text-xs sm:text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
                 Warning: Destructive Operation
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 This will replace all existing template questions. Any associated facility survey data may be deleted.
               </p>
             </div>
@@ -310,8 +448,9 @@ export default function Admin() {
               disabled={seedProductionMutation.isPending}
               data-testid="button-seed-production"
               variant="destructive"
+              className="text-xs sm:text-sm"
             >
-              <Database className="h-4 w-4 mr-2" />
+              <Database className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               {seedProductionMutation.isPending ? "Seeding..." : "Seed Production Database"}
             </Button>
           </div>
@@ -361,6 +500,84 @@ export default function Admin() {
               data-testid="button-confirm-reset"
             >
               {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Organization Limits Dialog */}
+      <Dialog open={showOrgLimitsDialog} onOpenChange={setShowOrgLimitsDialog}>
+        <DialogContent data-testid="dialog-edit-org-limits">
+          <DialogHeader>
+            <DialogTitle>Edit Organization Limits</DialogTitle>
+            <DialogDescription>
+              Customize limits for: <strong>{selectedOrg?.name}</strong> (Enterprise)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="max-members">Max Members</Label>
+              <Input
+                id="max-members"
+                type="number"
+                min="-1"
+                placeholder="Enter max members (-1 for unlimited)"
+                value={orgLimits.maxMembers}
+                onChange={(e) => setOrgLimits({ ...orgLimits, maxMembers: parseInt(e.target.value) || 0 })}
+                data-testid="input-max-members"
+              />
+              <p className="text-sm text-muted-foreground">
+                Use -1 for unlimited members
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max-sites">Max Sites</Label>
+              <Input
+                id="max-sites"
+                type="number"
+                min="-1"
+                placeholder="Enter max sites (-1 for unlimited)"
+                value={orgLimits.maxSites}
+                onChange={(e) => setOrgLimits({ ...orgLimits, maxSites: parseInt(e.target.value) || 0 })}
+                data-testid="input-max-sites"
+              />
+              <p className="text-sm text-muted-foreground">
+                Use -1 for unlimited sites
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max-assessments">Max Assessments</Label>
+              <Input
+                id="max-assessments"
+                type="number"
+                min="-1"
+                placeholder="Enter max assessments (-1 for unlimited)"
+                value={orgLimits.maxAssessments}
+                onChange={(e) => setOrgLimits({ ...orgLimits, maxAssessments: parseInt(e.target.value) || 0 })}
+                data-testid="input-max-assessments"
+              />
+              <p className="text-sm text-muted-foreground">
+                Use -1 for unlimited assessments
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowOrgLimitsDialog(false);
+                setSelectedOrg(null);
+              }}
+              data-testid="button-cancel-limits"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateLimits}
+              disabled={updateOrgLimitsMutation.isPending}
+              data-testid="button-save-limits"
+            >
+              {updateOrgLimitsMutation.isPending ? "Saving..." : "Save Limits"}
             </Button>
           </DialogFooter>
         </DialogContent>

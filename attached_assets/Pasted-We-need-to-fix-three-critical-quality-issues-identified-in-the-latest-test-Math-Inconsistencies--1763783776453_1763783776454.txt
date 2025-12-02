@@ -1,0 +1,27 @@
+We need to fix three critical quality issues identified in the latest test: **Math Inconsistencies**, **Negative ROI Presentation**, and the **"Generic" Technical Report**.
+
+**Step 1: Standardize Risk Scoring (The Math Fix)**
+The current scoring is confusing (showing /125 in PDF, but weird jumps in Dashboard).
+* **Update Logic:** In `server/services/risk-engine/`, ensure ALL templates calculate a **Raw Score** (e.g., T*V*I = 125) but **Normalize** it to a 0-100 scale for all UI and PDF outputs.
+    * Formula: `Math.round((RawScore / MaxPossibleScore) * 100)`
+* **Update UI:** In `RiskScenarioCard.tsx`, display the **Vulnerability** score alongside Likelihood and Impact so the math is transparent to the user. (e.g., "L:4 x I:5 x V:5 = 100").
+
+**Step 2: Overhaul the Technical Report (The Content Fix)**
+The current Technical Report is just a copy of the Executive Summary.
+* **Update `server/templates/technical-report.tsx`:**
+* **Change Format:** Switch from "Narrative" to **"Tabular Audit"**.
+* **Table Columns:**
+    1. **Control Domain** (e.g., Access Control)
+    2. **Specific Gap** (e.g., "No CCTV at POS")
+    3. **Technical Requirement** (e.g., "Install IP Camera, Min 1080p, WDR")
+    4. **Standards Reference** (e.g., "ASIS PSC.1")
+* **Source:** Pull data from the `suggestedControls` and `control_library`, specifically displaying the `implementationNotes` or `technicalSpecs` fields if available.
+
+**Step 3: Fix "Negative ROI" Presentation (The Business Fix)**
+* **Update Logic:** In `LossPreventionROICalculator` (and counterparts):
+    * IF `projectedSavings < investmentCost`:
+        * **Switch Mode:** Do not show negative red numbers.
+        * **Action:** Change the recommendation text to emphasize **"Risk Mitigation & Compliance"** rather than "Financial Return."
+        * **Hidden Costs:** Factor in `annualTurnoverRate` and `liabilityClaims` (Soft Costs) more aggressively in the "Total Loss" calculation to try and find a positive ROI justification.
+
+Please execute these changes to make the numbers add up and the reports distinct and valuable.

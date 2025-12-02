@@ -1,0 +1,145 @@
+## Phase 3: Report Generation Engine
+
+Now implement Phase 3: Build the report generation engine that assembles data, generates narratives using Anthropic Claude, and produces the final report.
+
+### Task 3.1: Create Report Data Assembler Service
+
+Create `server/services/reporting/report-data-assembler.ts`:
+
+This service fetches all assessment data and transforms it into a ReportDataPackage. It should:
+
+1. Import types from `server/types/report-data.ts`
+2. Export `async function assembleReportData(assessmentId: number): Promise<ReportDataPackage>`
+3. Fetch assessment details from the database
+4. Fetch associated risk scenarios (threats)
+5. Fetch interview findings from the new `interview_findings` table
+6. Fetch documented incidents from the new `documented_incidents` table
+7. Get risk calculation scores (use existing riskCalculations.ts logic)
+8. Build threat domains array (map existing threat data to TorchStone 8 Domains format)
+9. Build site walk findings from assessment data
+10. Determine risk level from overall score (CRITICAL >100, HIGH >75, ELEVATED >50, MODERATE >25, LOW <=25)
+11. Generate justification strings for threat, vulnerability, and impact scores
+12. Build prioritized recommendations from existing control recommendations
+13. Return complete ReportDataPackage
+
+Key helper functions to include:
+- `mapToThreatDomains(scenarios)` - Maps risk scenarios to the 8 TorchStone domains
+- `calculateRiskLevel(score)` - Returns risk level string
+- `buildRecommendations(controls)` - Transforms controls to Recommendation format
+
+### Task 3.2: Create Narrative Generator Service
+
+Create `server/services/reporting/narrative-generator.ts`:
+
+This service generates narrative content using Anthropic Claude. It should:
+
+1. Import the anthropic-service we created in Phase 1
+2. Import Handlebars for template compilation
+3. Export `async function generateSectionNarrative(promptId: string, data: ReportDataPackage): Promise<string>`
+4. Fetch the narrative prompt from the database by promptId
+5. Compile the userPromptTemplate using Handlebars with the data
+6. Call the Anthropic service with systemPrompt and compiled userPrompt
+7. Apply output constraints (check word count, remove prohibited phrases)
+8. Return the generated narrative
+
+Also create Handlebars helpers:
+- `{{#each}}` - already built-in
+- `{{#if}}` - already built-in
+- Custom helper for formatting dates
+- Custom helper for joining arrays
+
+### Task 3.3: Create Main Report Generator Service
+
+Create `server/services/reporting/report-generator.ts`:
+
+This is the main orchestrator. It should:
+
+1. Import ReportRecipe types and the data assembler/narrative generator
+2. Export `async function generateReport(assessmentId: number, recipeId: string): Promise<GeneratedReportResult>`
+3. Fetch the recipe from the database
+4. Call assembleReportData to get the data package
+5. Validate that all required data exists for each section
+6. For each section in the recipe (in order):
+   - Check displayCondition if present
+   - If contentType is 'narrative', call generateSectionNarrative
+   - If contentType is 'table', render table data
+   - If contentType is 'mixed', do both
+7. Return assembled sections with their content
+
+Interface for result:
+```typescript
+interface GeneratedReportResult {
+  recipeId: string;
+  assessmentId: number;
+  generatedAt: Date;
+  sections: GeneratedSection[];
+  dataSnapshot: ReportDataPackage;
+}
+
+interface GeneratedSection {
+  id: string;
+  title: string;
+  order: number;
+  narrativeContent?: string;
+  tableContent?: any;
+  pageBreakBefore: boolean;
+}
+```
+
+### Task 3.4: Create Table Renderer Service
+
+Create `server/services/reporting/table-renderer.ts`:
+
+Simple service to format table data:
+1. Export `function renderTable(config: TableConfiguration, data: ReportDataPackage): RenderedTable`
+2. Extract data from the dataSource path
+3. Apply sorting if specified
+4. Apply row highlighting conditions
+5. Format cells according to column format specifications
+6. Return structured table data ready for HTML/PDF rendering
+
+### Task 3.5: Add API Route for Report Generation
+
+Add to `server/routes.ts` (or create `server/routes/reports.ts`):
+
+```typescript
+// Generate a new report
+app.post('/api/assessments/:id/reports/generate', async (req, res) => {
+  const { id } = req.params;
+  const { recipeId } = req.body; // e.g., 'executive-summary-ep-v1'
+  
+  // Call generateReport service
+  // Save to generated_reports table
+  // Return the generated report data
+});
+
+// Get generated reports for an assessment
+app.get('/api/assessments/:id/reports', async (req, res) => {
+  // Return list of generated reports
+});
+
+// Get a specific generated report
+app.get('/api/assessments/:id/reports/:reportId', async (req, res) => {
+  // Return full report with sections
+});
+```
+
+### Task 3.6: Test the Generation Pipeline
+
+After creating all services:
+1. Write a simple test that calls generateReport with an existing assessment ID and the 'executive-summary-ep-v1' recipe
+2. Log the output to verify sections are being generated
+3. Verify the Anthropic API is being called successfully
+
+---
+
+IMPORTANT: Make sure to:
+- Actually run the code to test imports work
+- Handle errors gracefully (missing data, API failures)
+- Add console.log statements for debugging
+- Verify the Anthropic service can connect
+
+After completing Phase 3, show me:
+1. The generated test output (or any errors)
+2. Confirmation that routes are registered
+3. Do NOT proceed to Phase 4 yet

@@ -1,0 +1,34 @@
+The user wants to refine the **AI Executive Summary** logic in `server/services/ai/summary-generator.ts`.
+
+**The Goal:** Create a "Blended" CSO-level narrative that is **Evidence-Based** but **Jargon-Free**. It must cite specific gaps (e.g., "No EAS") without getting lost in technical specs (e.g., "No 58kHz AM System").
+
+**Please refactor the `generateExecutiveSummary` prompt logic:**
+
+**1. System Prompt Update:**
+   "You are the Chief Risk Officer (CRO) writing a strategic brief for the Board of Directors.
+   * **Tone:** Decisive, financially literate, risk-focused.
+   * **Constraint:** Do NOT use technical engineering jargon (e.g., 'Px/ft', 'Lumens', 'Grade 1 Hardware', 'UL Standards'). Translate these into business capabilities (e.g., 'Forensic Identification', 'Safety Lighting', 'Anti-Forced Entry')."
+
+**2. Output Structure (Strict Markdown):**
+
+   **### 1. Executive Risk & Financial Exposure**
+   * **Bottom Line:** State the overall Risk Score and the *Annualized Loss Exposure* (e.g., $168k).
+   * **Primary Drivers:** Identify the top 2 business threats (e.g., "Margin Erosion via Shrinkage" or "Operational Disruption").
+
+   **### 2. Operational Vulnerability Analysis**
+   * **Root Causes:** Explain the *systemic* failure (e.g., "Lack of Detective Controls").
+   * **Evidence:** Cite specific survey findings as business gaps.
+       * *Bad:* "No CCTV at POS."
+       * *Good:* "Lack of transaction auditing capability at point-of-sale."
+       * *Bad:* "No K4-rated bollards."
+       * *Good:* "Perimeter lacks hostile vehicle mitigation."
+
+   **### 3. Strategic Recommendations & ROI**
+   * **The Strategy:** Summarize the remediation plan (e.g., "Implement comprehensive loss prevention technology").
+   * **The Financials:** State the *Investment*, *Projected Savings*, and *Payback Period*.
+   * **The Outcome:** "This investment aligns security posture with industry benchmarks."
+
+**3. Integration:**
+   * Ensure this new text generation logic is used when the "Executive Summary" card is loaded on the Dashboard.
+
+Please update the generator to produce this high-level, evidence-backed business case.

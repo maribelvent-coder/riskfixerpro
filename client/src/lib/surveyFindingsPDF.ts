@@ -56,7 +56,7 @@ export async function generateSurveyFindingsPDF(assessmentId: string): Promise<v
     const totalQuestions = facilityQuestions.length;
     const completionRate = totalQuestions > 0 ? Math.round((answeredQuestions.length / totalQuestions) * 100) : 0;
 
-    addText(doc, `This report presents findings from a comprehensive physical security assessment conducted in accordance with ASIS International standards and Army FM guidelines.`, SPACING.margin, yPos, { maxWidth: 170 });
+    addText(doc, `This report presents findings from a comprehensive physical security assessment conducted in accordance with ASIS and ANSI standards.`, SPACING.margin, yPos, { maxWidth: 170 });
     yPos += SPACING.lineHeight * 2;
     
     addText(doc, `Assessment Completion: ${completionRate}% (${answeredQuestions.length} of ${totalQuestions} questions answered)`, SPACING.margin, yPos);

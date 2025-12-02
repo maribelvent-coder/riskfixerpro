@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { insertUserSchema } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,11 +58,12 @@ export default function Signup() {
       );
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (data: any) => {
       toast({
         title: "Account created",
         description: "Your account has been created successfully.",
       });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       setLocation("/app");
     },
     onError: (error: any) => {
@@ -79,43 +80,44 @@ export default function Signup() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md space-y-4">
+    <div className="flex min-h-screen items-center justify-center p-4 sm:p-6 bg-background">
+      <div className="w-full max-w-md space-y-3 sm:space-y-4">
         <button
           onClick={() => setLocation("/")}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors"
           data-testid="link-back-home"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           Back to Home
         </button>
         <Card className="w-full">
-        <CardHeader className="space-y-1">
+        <CardHeader className="space-y-1 p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl">Create an account</CardTitle>
+            <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            <CardTitle className="text-xl sm:text-2xl">Create an account</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Enter your details below to create your account
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
               <FormField
                 control={form.control}
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Username</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Enter your username"
+                        className="text-xs sm:text-sm"
                         data-testid="input-username"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
@@ -124,16 +126,17 @@ export default function Signup() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         placeholder="your.email@example.com"
+                        className="text-xs sm:text-sm"
                         data-testid="input-email"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
@@ -142,16 +145,17 @@ export default function Signup() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Password</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
                         placeholder="Enter your password"
+                        className="text-xs sm:text-sm"
                         data-testid="input-password"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
@@ -160,22 +164,23 @@ export default function Signup() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
+                    <FormLabel className="text-xs sm:text-sm">Confirm Password</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
                         placeholder="Confirm your password"
+                        className="text-xs sm:text-sm"
                         data-testid="input-confirm-password"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full text-xs sm:text-sm min-h-10 sm:min-h-11"
                 disabled={signupMutation.isPending}
                 data-testid="button-signup"
               >
@@ -183,11 +188,11 @@ export default function Signup() {
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+          <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-muted-foreground">
             Already have an account?{" "}
             <button
               onClick={() => setLocation("/login")}
-              className="text-primary hover:underline"
+              className="text-xs sm:text-sm text-primary hover:underline"
               data-testid="link-login"
             >
               Log in

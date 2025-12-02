@@ -14,6 +14,8 @@ import Analytics from "@/pages/Analytics";
 import Templates from "@/pages/Templates";
 import AssessmentDetail from "@/pages/AssessmentDetail";
 import Sites from "@/pages/Sites";
+import ThreatLibrary from "@/pages/ThreatLibrary";
+import ControlLibrary from "@/pages/ControlLibrary";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
 import TeamMembers from "@/pages/TeamMembers";
@@ -21,11 +23,14 @@ import Signup from "@/pages/Signup";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import AcceptInvitation from "@/pages/AcceptInvitation";
 import Landing from "@/pages/Landing";
 import Pricing from "@/pages/Pricing";
 import Classes from "@/pages/Classes";
 import Consulting from "@/pages/Consulting";
 import Contact from "@/pages/Contact";
+import WarehouseDashboard from "@/pages/assessments/WarehouseDashboard";
+import RetailDashboard from "@/pages/assessments/RetailDashboard";
 import NotFound from "@/pages/not-found";
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
@@ -65,6 +70,9 @@ function App() {
           <Route path="/login" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/accept-invitation/:token">
+            {(params) => <AcceptInvitation token={params.token} />}
+          </Route>
           <Route path="/pricing" component={Pricing} />
           <Route path="/classes" component={Classes} />
           <Route path="/consulting" component={Consulting} />
@@ -103,6 +111,22 @@ function App() {
             )}
           </Route>
           
+          <Route path="/app/assessments/:id/warehouse">
+            {(params) => (
+              <ProtectedAppLayout>
+                <WarehouseDashboard />
+              </ProtectedAppLayout>
+            )}
+          </Route>
+          
+          <Route path="/app/assessments/:id/retail">
+            {(params) => (
+              <ProtectedAppLayout>
+                <RetailDashboard />
+              </ProtectedAppLayout>
+            )}
+          </Route>
+          
           <Route path="/app/analytics">
             <ProtectedAppLayout>
               <Analytics />
@@ -118,6 +142,18 @@ function App() {
           <Route path="/app/sites">
             <ProtectedAppLayout>
               <Sites />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/libraries/threats">
+            <ProtectedAppLayout>
+              <ThreatLibrary />
+            </ProtectedAppLayout>
+          </Route>
+          
+          <Route path="/app/libraries/controls">
+            <ProtectedAppLayout>
+              <ControlLibrary />
             </ProtectedAppLayout>
           </Route>
           

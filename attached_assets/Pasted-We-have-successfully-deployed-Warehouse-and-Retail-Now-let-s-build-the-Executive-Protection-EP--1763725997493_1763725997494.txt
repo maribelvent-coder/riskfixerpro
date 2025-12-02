@@ -1,0 +1,43 @@
+We have successfully deployed Warehouse and Retail. Now, let's build the **Executive Protection (EP)** template using the same "Golden Master" architecture.
+
+This template is unique because it focuses on **People**, not Buildings, and uses a modified risk formula ($T \times V \times I \times E$).
+
+**Step 1: Database & Seeding (The Foundation)**
+* **Check/Update Schema:** Ensure `executive_profile` table exists and is linked to `assessments`.
+* **Seed Data:** Create/Update `server/db/seed-data/ep-data.ts`.
+    * **Threats:** Seed the 14 specific EP Threats (e.g., 'Kidnapping for Ransom', 'Stalking', 'Assassination', 'Doxxing').
+    * **Controls:** Seed the 40+ EP Controls (e.g., 'Close Protection Team', 'Armored Vehicle', 'Social Media Lockdown').
+    * **Execute:** Run the seed to ensure these exist in the DB with real IDs.
+
+**Step 2: Logic Adapter (The T×V×I×E Formula)**
+Create `server/services/risk-engine/adapters/executive-protection.ts`.
+Implement `calculateExecutiveRiskScore(assessment)` based on Section 4.2 of the EP Framework.
+* **Calculate Exposure Factor (E):** (Range 1.0 - 5.0)
+    * If `public_profile` is 'Very High', add +2.0.
+    * If `routine_predictability` is 'High', add +1.5.
+    * If `social_media` is 'Active Public', add +1.0.
+* **Calculate Risk Score:**
+    * `Score = Threat (T) * Vulnerability (V) * Impact (I) * Exposure (E)`.
+    * *Note:* Normalize the final result to a 0-100 scale for the Dashboard Gauge.
+* **Return:** `{ score, riskLevel, exposureFactor, breakdown }`.
+
+**Step 3: The Risk Generator (The Bridge)**
+Create `server/services/risk-engine/generators/executive-protection.ts`.
+* Implement `generateExecutiveRiskScenarios(assessment)`.
+* **Logic:**
+    * IF `netWorth` > $50M -> Create "Kidnapping for Ransom" Scenario (Critical).
+    * IF `social_media` == 'Public' -> Create "Stalking/Doxxing" Scenario (High).
+    * IF `commute_pattern` == 'Predictable' -> Create "Vehicular Ambush" Scenario.
+* **Output:** Upsert these into the `risk_scenarios` table.
+
+**Step 4: The UI & Integration (The Interface)**
+1.  **Route:** Add `PATCH /api/assessments/:id/executive-profile`. Ensure it calls the *Generator* from Step 3 after saving.
+2.  **Navigation:** Update `AssessmentLayout` to show the **"Principal Profile"** tab (User/Shield icon) when `templateType === 'executive_protection'`.
+3.  **Dashboard:** Create `client/src/pages/assessments/ExecutiveDashboard.tsx`.
+    * **Left Column:** Form for Principal details (Net Worth, Public Profile, Family Status).
+    * **Right Column:**
+        * **Threat Radar:** Display the **Exposure Factor** (e.g., "4.2x Multiplier") prominently.
+        * **Risk Meter:** (0-100 Score).
+    * **Skip Asset List:** Ensure this template skips the generic "Assets" tab.
+
+Please implement these components to activate the Executive Protection module.

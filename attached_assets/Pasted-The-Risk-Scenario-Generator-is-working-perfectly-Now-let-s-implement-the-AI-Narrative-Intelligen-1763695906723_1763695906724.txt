@@ -1,0 +1,33 @@
+The Risk Scenario Generator is working perfectly. Now, let's implement the **AI Narrative Intelligence** layer.
+
+We need a service that can take a generated Risk Scenario and rewrite its description into a professional security consultant's narrative.
+
+**Step 1: Create the Narrative Service**
+Create a new file: `server/services/ai/warehouse-narrative.ts`.
+
+Implement a function `generateWarehouseRiskNarrative(scenario, assessment)` that:
+1.  **Constructs a Prompt** for OpenAI GPT-4.
+2.  **Context to include:**
+    * **Threat:** `scenario.threatName`
+    * **Score:** `scenario.inherentRisk` (1-125) and `scenario.riskLevel`
+    * **Facility Context:** `assessment.warehouse_profile` (e.g., Inventory Value, High-Value Products).
+    * **Specific Vulnerabilities:** Extract relevant findings from `assessment.responses` (e.g., if this is a Cargo Theft scenario, mention the "No Seal Verification" answer).
+3.  **Prompt Instruction:** "Act as a Senior Security Consultant. Write a concise, 3-paragraph analysis of this risk.
+    * **Paragraph 1 (Context):** Define the risk in the context of this specific facility (mentioning the high-value goods).
+    * **Paragraph 2 (Vulnerability):** Explain *why* the risk is high based on the specific survey gaps (e.g., lack of seals/CCTV).
+    * **Paragraph 3 (Impact):** Describe the potential financial or operational impact."
+4.  **Output:** Return the generated text string.
+
+**Step 2: Create the API Endpoint**
+Update `server/routes.ts` to add:
+* `POST /api/risk-scenarios/:id/generate-narrative`
+* **Logic:**
+    1.  Fetch the scenario and its parent assessment.
+    2.  Call `generateWarehouseRiskNarrative`.
+    3.  Update `risk_scenarios.description` (or `ai_narrative` column if available) with the result.
+    4.  Return the updated scenario.
+
+**Step 3: Update the UI**
+In the **Risk Assessment Tab** (RiskAssessment.tsx or similar):
+* Add a "Generate AI Analysis" button (use the `Sparkles` icon) to each risk card.
+* When clicked, call the API and refresh the text area with the AI's response.

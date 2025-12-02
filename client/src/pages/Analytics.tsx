@@ -73,11 +73,11 @@ export default function Analytics() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">Risk Analytics</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-4 sm:space-y-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Risk Analytics</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-muted animate-pulse rounded-md" />
+            <div key={i} className="h-24 sm:h-32 bg-muted animate-pulse rounded-md" />
           ))}
         </div>
       </div>
@@ -85,65 +85,65 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-6" data-testid="page-analytics">
+    <div className="space-y-4 sm:space-y-6" data-testid="page-analytics">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-analytics">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="heading-analytics">
           Risk Analytics
         </h1>
-        <p className="text-muted-foreground mt-1" data-testid="text-analytics-description">
+        <p className="text-muted-foreground mt-1 text-xs sm:text-sm" data-testid="text-analytics-description">
           Comprehensive insights into your security risk assessments
         </p>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card data-testid="card-total-assessments">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assessments</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card data-testid="card-total-assessments" className="p-3 sm:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Assessments</CardTitle>
+            <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="metric-total">{stats.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="metric-total">{stats.total}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               Across all sites
             </p>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-completion-rate">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card data-testid="card-completion-rate" className="p-3 sm:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">Completion Rate</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="metric-completion-rate">{completionRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="metric-completion-rate">{completionRate}%</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               {stats.completed} of {stats.total} completed
             </p>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-in-progress">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+        <Card data-testid="card-in-progress" className="p-3 sm:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">In Progress</CardTitle>
+            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="metric-in-progress">{stats.inProgress}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="metric-in-progress">{stats.inProgress}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               Active assessments
             </p>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-draft">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Draft</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+        <Card data-testid="card-draft" className="p-3 sm:p-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-2 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm font-medium">Draft</CardTitle>
+            <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="metric-draft">{stats.draft}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="p-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="metric-draft">{stats.draft}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               Not yet started
             </p>
           </CardContent>
@@ -151,15 +151,15 @@ export default function Analytics() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Risk Distribution Pie Chart */}
-        <Card data-testid="card-risk-distribution">
-          <CardHeader>
-            <CardTitle>Risk Level Distribution</CardTitle>
+        <Card data-testid="card-risk-distribution" className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Risk Level Distribution</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {riskDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
                     data={riskDistribution}
@@ -167,7 +167,7 @@ export default function Analytics() {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -179,7 +179,7 @@ export default function Analytics() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground text-xs sm:text-sm">
                 No risk data available
               </div>
             )}
@@ -187,16 +187,16 @@ export default function Analytics() {
         </Card>
 
         {/* Status Distribution Bar Chart */}
-        <Card data-testid="card-status-distribution">
-          <CardHeader>
-            <CardTitle>Assessment Status</CardTitle>
+        <Card data-testid="card-status-distribution" className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Assessment Status</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-0">
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={statusData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="status" />
-                <YAxis />
+                <XAxis dataKey="status" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
                 <Bar dataKey="count" fill="hsl(var(--primary))" />
               </BarChart>
@@ -206,18 +206,18 @@ export default function Analytics() {
       </div>
 
       {/* Monthly Trend */}
-      <Card data-testid="card-monthly-trend">
-        <CardHeader>
-          <CardTitle>Assessment Creation Trend</CardTitle>
+      <Card data-testid="card-monthly-trend" className="p-3 sm:p-6">
+        <CardHeader className="p-0 pb-3 sm:pb-4">
+          <CardTitle className="text-base sm:text-lg">Assessment Creation Trend</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+        <CardContent className="p-0">
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="count" fill="hsl(var(--chart-1))" name="Assessments Created" />
             </BarChart>
           </ResponsiveContainer>
@@ -226,24 +226,24 @@ export default function Analytics() {
 
       {/* Risk Level Breakdown */}
       {riskDistribution.length > 0 && (
-        <Card data-testid="card-risk-breakdown">
-          <CardHeader>
-            <CardTitle>Risk Level Breakdown</CardTitle>
+        <Card data-testid="card-risk-breakdown" className="p-3 sm:p-6">
+          <CardHeader className="p-0 pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Risk Level Breakdown</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-0">
+            <div className="space-y-3 sm:space-y-4">
               {riskDistribution.map((risk) => (
-                <div key={risk.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div key={risk.name} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <div 
-                      className="w-4 h-4 rounded-sm" 
+                      className="w-3 h-3 sm:w-4 sm:h-4 rounded-sm flex-shrink-0" 
                       style={{ backgroundColor: risk.color }}
                     />
-                    <span className="font-medium">{risk.name}</span>
+                    <span className="font-medium text-xs sm:text-sm">{risk.name}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="secondary">{risk.value} assessments</Badge>
-                    <span className="text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs">{risk.value} assessments</Badge>
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       {stats.total > 0 ? Math.round((risk.value / stats.total) * 100) : 0}%
                     </span>
                   </div>

@@ -1,17 +1,21 @@
 import { db } from "./db";
-import { eq, and, gt, sql } from "drizzle-orm";
+import { eq, and, gt, sql, desc } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import type { IStorage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import type {
   Organization,
   InsertOrganization,
+  OrganizationInvitation,
+  InsertOrganizationInvitation,
   User,
   InsertUser,
   PasswordResetToken,
   InsertPasswordResetToken,
   Site,
   InsertSite,
+  FacilityZone,
+  InsertFacilityZone,
   Assessment,
   InsertAssessment,
   TemplateQuestion,
@@ -38,7 +42,17 @@ import type {
   InsertRiskInsight,
   Report,
   InsertReport,
-  AssessmentWithQuestions
+  AssessmentWithQuestions,
+  ThreatLibrary,
+  ControlLibrary,
+  PointOfInterest,
+  InsertPointOfInterest,
+  CrimeSource,
+  InsertCrimeSource,
+  CrimeObservation,
+  InsertCrimeObservation,
+  SiteIncident,
+  InsertSiteIncident
 } from "@shared/schema";
 
 export class DbStorage implements IStorage {
@@ -53,6 +67,10 @@ export class DbStorage implements IStorage {
     return results[0];
   }
 
+  async getAllOrganizations(): Promise<Organization[]> {
+    return await db.select().from(schema.organizations);
+  }
+
   async createOrganization(insertOrganization: InsertOrganization): Promise<Organization> {
     const results = await db.insert(schema.organizations).values(insertOrganization).returning();
     return results[0];
@@ -64,6 +82,13 @@ export class DbStorage implements IStorage {
       .where(eq(schema.organizations.id, id))
       .returning();
     return results[0];
+  }
+
+  async deleteOrganization(id: string): Promise<boolean> {
+    const results = await db.delete(schema.organizations)
+      .where(eq(schema.organizations.id, id))
+      .returning();
+    return results.length > 0;
   }
 
   async getOrganizationMembers(organizationId: string): Promise<User[]> {
@@ -82,6 +107,68 @@ export class DbStorage implements IStorage {
     await db.update(schema.users)
       .set({ organizationId: null, organizationRole: 'member' })
       .where(eq(schema.users.id, userId));
+  }
+
+  // Organization Invitation methods
+  async createInvitation(invitation: InsertOrganizationInvitation): Promise<OrganizationInvitation> {
+    const results = await db.insert(schema.organizationInvitations).values(invitation).returning();
+    return results[0];
+  }
+
+  async getInvitation(id: string): Promise<OrganizationInvitation | undefined> {
+    const results = await db.select().from(schema.organizationInvitations)
+      .where(eq(schema.organizationInvitations.id, id));
+    return results[0];
+  }
+
+  async getInvitationByToken(token: string): Promise<OrganizationInvitation | undefined> {
+    const results = await db.select().from(schema.organizationInvitations)
+      .where(eq(schema.organizationInvitations.token, token));
+    return results[0];
+  }
+
+  async listOrganizationInvitations(organizationId: string): Promise<OrganizationInvitation[]> {
+    return await db.select().from(schema.organizationInvitations)
+      .where(eq(schema.organizationInvitations.organizationId, organizationId));
+  }
+
+  async updateInvitation(id: string, updates: Partial<OrganizationInvitation>): Promise<OrganizationInvitation | undefined> {
+    const results = await db.update(schema.organizationInvitations)
+      .set(updates)
+      .where(eq(schema.organizationInvitations.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteInvitation(id: string): Promise<boolean> {
+    const results = await db.delete(schema.organizationInvitations)
+      .where(eq(schema.organizationInvitations.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  async acceptInvitation(token: string, userId: string): Promise<void> {
+    // Get the invitation by token
+    const invitation = await this.getInvitationByToken(token);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+
+    // Update the user with organization info
+    await db.update(schema.users)
+      .set({ 
+        organizationId: invitation.organizationId, 
+        organizationRole: invitation.role 
+      })
+      .where(eq(schema.users.id, userId));
+
+    // Update the invitation status
+    await db.update(schema.organizationInvitations)
+      .set({ 
+        status: 'accepted', 
+        acceptedAt: new Date() 
+      })
+      .where(eq(schema.organizationInvitations.token, token));
   }
 
   // User methods
@@ -216,6 +303,66 @@ export class DbStorage implements IStorage {
   async deleteSite(id: string): Promise<boolean> {
     const results = await db.delete(schema.sites)
       .where(eq(schema.sites.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  // Facility Zone methods
+  async getFacilityZone(id: string): Promise<FacilityZone | undefined> {
+    const results = await db.select().from(schema.facilityZones).where(eq(schema.facilityZones.id, id));
+    return results[0];
+  }
+
+  async getFacilityZonesBySite(siteId: string): Promise<FacilityZone[]> {
+    return await db.select().from(schema.facilityZones).where(eq(schema.facilityZones.siteId, siteId));
+  }
+
+  async createFacilityZone(zone: InsertFacilityZone): Promise<FacilityZone> {
+    const results = await db.insert(schema.facilityZones).values(zone).returning();
+    return results[0];
+  }
+
+  async updateFacilityZone(id: string, zone: Partial<FacilityZone>): Promise<FacilityZone | undefined> {
+    const results = await db.update(schema.facilityZones)
+      .set(zone)
+      .where(eq(schema.facilityZones.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteFacilityZone(id: string): Promise<boolean> {
+    const results = await db.delete(schema.facilityZones)
+      .where(eq(schema.facilityZones.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  // Loading Dock methods (Warehouse Framework v2.0)
+  async getLoadingDock(id: string): Promise<LoadingDock | undefined> {
+    const results = await db.select().from(schema.loadingDocks).where(eq(schema.loadingDocks.id, id));
+    return results[0];
+  }
+
+  async getLoadingDocksByAssessment(assessmentId: string): Promise<LoadingDock[]> {
+    return await db.select().from(schema.loadingDocks).where(eq(schema.loadingDocks.assessmentId, assessmentId));
+  }
+
+  async createLoadingDock(dock: InsertLoadingDock): Promise<LoadingDock> {
+    const results = await db.insert(schema.loadingDocks).values(dock).returning();
+    return results[0];
+  }
+
+  async updateLoadingDock(id: string, updateData: Partial<LoadingDock>): Promise<LoadingDock | undefined> {
+    const results = await db.update(schema.loadingDocks)
+      .set(updateData)
+      .where(eq(schema.loadingDocks.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteLoadingDock(id: string): Promise<boolean> {
+    const results = await db.delete(schema.loadingDocks)
+      .where(eq(schema.loadingDocks.id, id))
       .returning();
     return results.length > 0;
   }
@@ -436,9 +583,41 @@ export class DbStorage implements IStorage {
   }
 
   // Facility Survey methods
-  async getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]> {
-    return await db.select().from(schema.facilitySurveyQuestions)
-      .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId));
+  async getFacilitySurveyQuestions(assessmentId: string): Promise<any[]> {
+    // LEFT JOIN with template_questions to include riskDirection for proper scoring
+    const results = await db
+      .select({
+        id: schema.facilitySurveyQuestions.id,
+        assessmentId: schema.facilitySurveyQuestions.assessmentId,
+        templateQuestionId: schema.facilitySurveyQuestions.templateQuestionId,
+        category: schema.facilitySurveyQuestions.category,
+        subcategory: schema.facilitySurveyQuestions.subcategory,
+        question: schema.facilitySurveyQuestions.question,
+        standard: schema.facilitySurveyQuestions.standard,
+        type: schema.facilitySurveyQuestions.type,
+        response: schema.facilitySurveyQuestions.response,
+        notes: schema.facilitySurveyQuestions.notes,
+        evidence: schema.facilitySurveyQuestions.evidence,
+        recommendations: schema.facilitySurveyQuestions.recommendations,
+        bestPractice: schema.facilitySurveyQuestions.bestPractice,
+        rationale: schema.facilitySurveyQuestions.rationale,
+        importance: schema.facilitySurveyQuestions.importance,
+        orderIndex: schema.facilitySurveyQuestions.orderIndex,
+        conditionalOnQuestionId: schema.facilitySurveyQuestions.conditionalOnQuestionId,
+        showWhenAnswer: schema.facilitySurveyQuestions.showWhenAnswer,
+        createdAt: schema.facilitySurveyQuestions.createdAt,
+        // Include options from facility_survey_questions for checklist rendering
+        options: schema.facilitySurveyQuestions.options,
+      })
+      .from(schema.facilitySurveyQuestions)
+      .leftJoin(
+        schema.templateQuestions,
+        eq(schema.facilitySurveyQuestions.templateQuestionId, schema.templateQuestions.questionId)
+      )
+      .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId))
+      .orderBy(schema.facilitySurveyQuestions.orderIndex, schema.facilitySurveyQuestions.templateQuestionId);
+    
+    return results;
   }
 
   async getFacilitySurveyQuestion(questionId: string): Promise<FacilitySurveyQuestion | null> {
@@ -764,5 +943,209 @@ export class DbStorage implements IStorage {
       .where(eq(schema.reports.id, id))
       .returning();
     return results[0];
+  }
+
+  // Threat Library methods
+  async getThreatLibrary(): Promise<ThreatLibrary[]> {
+    return await db.select().from(schema.threatLibrary).where(eq(schema.threatLibrary.active, true));
+  }
+
+  async getThreatLibraryByCategory(category: string): Promise<ThreatLibrary[]> {
+    return await db.select().from(schema.threatLibrary)
+      .where(and(eq(schema.threatLibrary.category, category), eq(schema.threatLibrary.active, true)));
+  }
+
+  async getThreatLibraryItem(id: string): Promise<ThreatLibrary | undefined> {
+    const results = await db.select().from(schema.threatLibrary)
+      .where(and(eq(schema.threatLibrary.id, id), eq(schema.threatLibrary.active, true)));
+    return results[0];
+  }
+
+  // Control Library methods
+  async getControlLibrary(): Promise<ControlLibrary[]> {
+    return await db.select().from(schema.controlLibrary).where(eq(schema.controlLibrary.active, true));
+  }
+
+  async getControlLibraryByCategory(category: string): Promise<ControlLibrary[]> {
+    return await db.select().from(schema.controlLibrary)
+      .where(and(eq(schema.controlLibrary.category, category), eq(schema.controlLibrary.active, true)));
+  }
+
+  async getControlLibraryItem(id: string): Promise<ControlLibrary | undefined> {
+    const results = await db.select().from(schema.controlLibrary)
+      .where(and(eq(schema.controlLibrary.id, id), eq(schema.controlLibrary.active, true)));
+    return results[0];
+  }
+  
+  // Risk Calculation methods
+  async getSurveyResponsesWithControlWeights(assessmentId: string, threatId: string): Promise<{answer: any, controlWeight: number}[]> {
+    // Query: Get survey responses with their linked control weights for a specific threat
+    // This joins facility_survey_questions → template_questions → question_threat_map → control_library
+    const results = await db
+      .select({
+        answer: schema.facilitySurveyQuestions.response,
+        controlWeight: schema.controlLibrary.weight,
+      })
+      .from(schema.facilitySurveyQuestions)
+      .innerJoin(
+        schema.templateQuestions,
+        eq(schema.facilitySurveyQuestions.templateQuestionId, schema.templateQuestions.id)
+      )
+      .innerJoin(
+        schema.questionThreatMap,
+        eq(schema.templateQuestions.id, schema.questionThreatMap.questionId)
+      )
+      .innerJoin(
+        schema.controlLibrary,
+        eq(schema.templateQuestions.controlLibraryId, schema.controlLibrary.id)
+      )
+      .where(
+        and(
+          eq(schema.facilitySurveyQuestions.assessmentId, assessmentId),
+          eq(schema.questionThreatMap.threatId, threatId)
+        )
+      );
+    
+    return results.map(row => ({
+      answer: row.answer,
+      controlWeight: row.controlWeight || 0,
+    }));
+  }
+
+  // Geographic Intelligence - Points of Interest methods
+  async getPointsOfInterest(siteId?: string, assessmentId?: string): Promise<PointOfInterest[]> {
+    const conditions = [];
+    
+    if (siteId !== undefined) {
+      conditions.push(eq(schema.pointsOfInterest.siteId, siteId));
+    }
+    
+    if (assessmentId !== undefined) {
+      conditions.push(eq(schema.pointsOfInterest.assessmentId, assessmentId));
+    }
+    
+    if (conditions.length === 0) {
+      return await db.select().from(schema.pointsOfInterest);
+    }
+    
+    if (conditions.length === 1) {
+      return await db.select().from(schema.pointsOfInterest).where(conditions[0]);
+    }
+    
+    return await db.select().from(schema.pointsOfInterest).where(and(...conditions));
+  }
+
+  async getPointOfInterest(id: string): Promise<PointOfInterest | undefined> {
+    const results = await db.select().from(schema.pointsOfInterest)
+      .where(eq(schema.pointsOfInterest.id, id));
+    return results[0];
+  }
+
+  async createPointOfInterest(poi: InsertPointOfInterest): Promise<PointOfInterest> {
+    const results = await db.insert(schema.pointsOfInterest).values(poi).returning();
+    return results[0];
+  }
+
+  async updatePointOfInterest(id: string, poi: Partial<PointOfInterest>): Promise<PointOfInterest | undefined> {
+    const results = await db.update(schema.pointsOfInterest)
+      .set({ ...poi, updatedAt: new Date() })
+      .where(eq(schema.pointsOfInterest.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deletePointOfInterest(id: string): Promise<boolean> {
+    const results = await db.update(schema.pointsOfInterest)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(schema.pointsOfInterest.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  // Geographic Intelligence - Crime Data methods
+  async getCrimeSource(id: string): Promise<CrimeSource | undefined> {
+    const results = await db.select().from(schema.crimeSources)
+      .where(eq(schema.crimeSources.id, id));
+    return results[0];
+  }
+
+  async getCrimeSources(siteId?: string, assessmentId?: string): Promise<CrimeSource[]> {
+    const conditions = [];
+    
+    if (siteId !== undefined) {
+      conditions.push(eq(schema.crimeSources.siteId, siteId));
+    }
+    
+    if (assessmentId !== undefined) {
+      conditions.push(eq(schema.crimeSources.assessmentId, assessmentId));
+    }
+    
+    if (conditions.length === 0) {
+      return await db.select().from(schema.crimeSources);
+    }
+    
+    if (conditions.length === 1) {
+      return await db.select().from(schema.crimeSources).where(conditions[0]);
+    }
+    
+    return await db.select().from(schema.crimeSources).where(and(...conditions));
+  }
+
+  async createCrimeSource(source: InsertCrimeSource): Promise<CrimeSource> {
+    const results = await db.insert(schema.crimeSources).values(source).returning();
+    return results[0];
+  }
+
+  async deleteCrimeSource(id: string): Promise<boolean> {
+    const results = await db.delete(schema.crimeSources)
+      .where(eq(schema.crimeSources.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  async getCrimeObservation(id: string): Promise<CrimeObservation | undefined> {
+    const results = await db.select().from(schema.crimeObservations)
+      .where(eq(schema.crimeObservations.id, id));
+    return results[0];
+  }
+
+  async getCrimeObservationsBySource(crimeSourceId: string): Promise<CrimeObservation[]> {
+    return await db.select().from(schema.crimeObservations)
+      .where(eq(schema.crimeObservations.crimeSourceId, crimeSourceId));
+  }
+
+  async createCrimeObservation(observation: InsertCrimeObservation): Promise<CrimeObservation> {
+    const results = await db.insert(schema.crimeObservations).values(observation).returning();
+    return results[0];
+  }
+
+  // Site Incidents methods
+  async getSiteIncidents(siteId: string): Promise<SiteIncident[]> {
+    return await db.select().from(schema.siteIncidents)
+      .where(eq(schema.siteIncidents.siteId, siteId))
+      .orderBy(desc(schema.siteIncidents.incidentDate));
+  }
+
+  async getSiteIncident(id: string): Promise<SiteIncident | undefined> {
+    const results = await db.select().from(schema.siteIncidents)
+      .where(eq(schema.siteIncidents.id, id));
+    return results[0];
+  }
+
+  async createSiteIncident(incident: InsertSiteIncident): Promise<SiteIncident> {
+    const results = await db.insert(schema.siteIncidents).values(incident).returning();
+    return results[0];
+  }
+
+  async bulkCreateSiteIncidents(incidents: InsertSiteIncident[]): Promise<SiteIncident[]> {
+    if (incidents.length === 0) return [];
+    return await db.insert(schema.siteIncidents).values(incidents).returning();
+  }
+
+  async deleteSiteIncident(id: string): Promise<boolean> {
+    const results = await db.delete(schema.siteIncidents)
+      .where(eq(schema.siteIncidents.id, id))
+      .returning();
+    return results.length > 0;
   }
 }

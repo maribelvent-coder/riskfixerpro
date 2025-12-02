@@ -19,12 +19,18 @@ import type {
 } from "@shared/schema";
 
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
+  // Build headers for session-based authentication
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
   const response = await fetch(`/api${url}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...headers,
       ...options.headers,
     },
+    credentials: 'include', // Send session cookies
   });
 
   if (!response.ok) {
@@ -255,4 +261,56 @@ export const reportApi = {
     downloadUrl: string;
     message: string;
   }> => apiRequest(`/reports/${id}/download`),
+};
+
+// Organization Invitation types
+export interface Invitation {
+  id: string;
+  organizationId: string;
+  email: string;
+  role: 'admin' | 'member';
+  status: 'pending' | 'accepted';
+  invitedBy: string;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string | null;
+  accountTier: string;
+  organizationId: string | null;
+  organizationRole: string;
+  isAdmin: boolean;
+  createdAt: string;
+}
+
+// Organization API functions
+export const organizationApi = {
+  getInvitations: (): Promise<Invitation[]> => 
+    apiRequest('/organization/invites'),
+
+  inviteMember: (email: string, role: 'admin' | 'member'): Promise<Invitation> => 
+    apiRequest('/organization/invite', {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    }),
+
+  getMembers: (): Promise<User[]> => 
+    apiRequest('/organization/members'),
+};
+
+// Auth API functions for invitation acceptance
+export const authApi = {
+  acceptInvite: (token: string, data: { 
+    username: string; 
+    password: string; 
+    email: string; 
+  }): Promise<User> => 
+    apiRequest('/auth/accept-invite', {
+      method: 'POST',
+      body: JSON.stringify({ token, ...data }),
+    }),
 };

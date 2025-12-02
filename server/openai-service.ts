@@ -2,7 +2,17 @@ import OpenAI from "openai";
 import type { AssessmentWithQuestions, InsertRiskInsight } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key is not configured. Please set the OPENAI_API_KEY environment variable.");
+  }
+  if (!openai) {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openai;
+}
 
 interface RiskAnalysisResult {
   overallRiskScore: number;
@@ -13,6 +23,7 @@ interface RiskAnalysisResult {
 export class OpenAIService {
   async analyzeSecurityRisks(assessment: AssessmentWithQuestions): Promise<RiskAnalysisResult> {
     try {
+      const client = getOpenAIClient();
       const assessmentData = this.prepareAssessmentData(assessment);
       
       const prompt = `You are a Certified Protection Professional (CPP) with expertise in ASIS International standards and physical security design principles. Analyze the security assessment data following professional standards.
@@ -74,16 +85,37 @@ Analyze using professional standards and respond with JSON containing:
    - recommendation: Specific technical recommendation with standards
    - impact: 1-10 consequence if exploited
    - probability: 1-10 likelihood based on threat analysis
-3. executiveSummary: Professional executive summary
+3. executiveSummary: Board-level strategic brief using this STRICT format:
+
+### 1. Executive Risk & Financial Exposure
+Bottom Line: State the overall Risk Score and Annualized Loss Exposure (calculate based on risk scenarios).
+Primary Drivers: Identify the top 2 business threats (e.g., "Margin Erosion via Shrinkage", "Operational Disruption").
+
+### 2. Operational Vulnerability Analysis
+Root Causes: Explain the systemic failure (e.g., "Lack of Detective Controls").
+Evidence: Cite specific survey findings as business gaps. Translate technical jargon into business capabilities:
+- NEVER say: "No CCTV at POS" → ALWAYS say: "Lack of transaction auditing capability at point-of-sale"
+- NEVER say: "No K4-rated bollards" → ALWAYS say: "Perimeter lacks hostile vehicle mitigation"
+- NEVER say: "Insufficient lumens" → ALWAYS say: "Inadequate forensic identification lighting"
+- NEVER say: "No Grade 1 hardware" → ALWAYS say: "Entry points lack anti-forced entry protection"
+- NEVER say: "No 58kHz EAS" → ALWAYS say: "No electronic article surveillance system"
+
+### 3. Strategic Recommendations & ROI
+The Strategy: Summarize the remediation plan (e.g., "Implement comprehensive loss prevention technology").
+The Financials: State the Investment, Projected Savings, and Payback Period (estimate based on risk reduction).
+The Outcome: "This investment aligns security posture with industry benchmarks."
+
+TONE: Decisive, financially literate, risk-focused (Chief Risk Officer writing to Board of Directors).
+CONSTRAINT: Do NOT use technical engineering jargon. Translate into business capabilities.
 
 Apply technical standards, reference specific metrics where applicable, and provide actionable professional recommendations.`;
 
-      const response = await openai.chat.completions.create({
+      const response = await client.chat.completions.create({
         model: "gpt-5",
         messages: [
           {
             role: "system",
-            content: "You are a Certified Protection Professional (CPP) with expertise in ASIS International and ANSI standards, physical security systems design, and risk assessment methodologies. Reference specific technical standards, measurements, and professional best practices in your analysis."
+            content: "You are the Chief Risk Officer (CRO) writing a strategic brief for the Board of Directors. Your analysis is based on your expertise as a Certified Protection Professional (CPP) with deep knowledge of ASIS International and ANSI standards, physical security systems design, and risk assessment methodologies. Your writing tone is decisive, financially literate, and risk-focused. You translate technical engineering jargon into business capabilities (e.g., 'forensic identification capability' instead of 'Px/ft', 'anti-forced entry protection' instead of 'Grade 1 Hardware'). Reference specific technical standards in your insights array, but use business language in the executive summary."
           },
           {
             role: "user",
@@ -96,16 +128,30 @@ Apply technical standards, reference specific metrics where applicable, and prov
       const result = JSON.parse(response.choices[0].message.content || "{}");
       
       // Validate and format the response
-      const insights: InsertRiskInsight[] = (result.insights || []).map((insight: any) => ({
-        assessmentId: assessment.id,
-        category: insight.category || "General",
-        severity: this.validateSeverity(insight.severity),
-        title: insight.title || "Security Finding",
-        description: insight.description || "No description provided",
-        recommendation: insight.recommendation || "Review and assess",
-        impact: Math.max(1, Math.min(10, insight.impact || 5)),
-        probability: Math.max(1, Math.min(10, insight.probability || 5))
-      }));
+      const insights: InsertRiskInsight[] = (result.insights || []).map((insight: any) => {
+        const impact = Math.max(1, Math.min(10, insight.impact || 5));
+        const probability = Math.max(1, Math.min(10, insight.probability || 5));
+        const riskScore = impact * probability;
+        
+        // Calculate risk matrix position based on impact and probability
+        let riskMatrix = "Low";
+        if (impact >= 7 && probability >= 7) riskMatrix = "Critical";
+        else if (impact >= 6 || probability >= 6) riskMatrix = "High";
+        else if (impact >= 4 || probability >= 4) riskMatrix = "Medium";
+        
+        return {
+          assessmentId: assessment.id,
+          category: insight.category || "General",
+          severity: this.validateSeverity(insight.severity),
+          title: insight.title || "Security Finding",
+          description: insight.description || "No description provided",
+          recommendation: insight.recommendation || "Review and assess",
+          impact,
+          probability,
+          riskScore,
+          riskMatrix
+        };
+      });
 
       return {
         overallRiskScore: Math.max(1, Math.min(100, result.overallRiskScore || 50)),
@@ -121,6 +167,7 @@ Apply technical standards, reference specific metrics where applicable, and prov
 
   async generateReportContent(assessment: AssessmentWithQuestions, reportType: string): Promise<string> {
     try {
+      const client = getOpenAIClient();
       const assessmentData = this.prepareAssessmentData(assessment);
       const riskInsights = assessment.riskInsights || [];
 
@@ -173,7 +220,7 @@ ${riskInsights.map(insight =>
 
 Please provide a professional, well-structured report in markdown format.`;
 
-      const response = await openai.chat.completions.create({
+      const response = await client.chat.completions.create({
         model: "gpt-5",
         messages: [
           {

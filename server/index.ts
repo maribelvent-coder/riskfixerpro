@@ -4,6 +4,11 @@ import ConnectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { loadFlagsFromEnv } from "@shared/featureFlags";
+import { attachTenantContext } from "./tenantMiddleware";
+
+// Initialize feature flags from environment variables
+loadFlagsFromEnv();
 
 // Validate required environment variables
 if (!process.env.DATABASE_URL) {
@@ -16,11 +21,35 @@ if (!process.env.SESSION_SECRET) {
 
 const app = express();
 
-// Trust proxy in production for secure cookies
-const isProduction = process.env.NODE_ENV === "production";
-if (isProduction) {
-  app.set('trust proxy', 1);
-}
+// VERY FIRST: Log EVERY single request to the server, no filtering
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    console.log(`🚀 [RAW] ${req.method} ${req.path} Origin: ${req.headers.origin || 'none'}`);
+  }
+  next();
+});
+
+// Always trust proxy - Replit runs behind HTTPS proxy in all environments
+// This is REQUIRED for secure cookies and session persistence
+app.set('trust proxy', 1);
+
+// CORS middleware - handle preflight OPTIONS requests for cross-origin requests
+// This is needed because Replit's webview may be considered cross-origin
+app.use((req, res, next) => {
+  // Allow requests from any origin in development
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    console.log(`🌐 CORS PREFLIGHT: ${req.path}`);
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -30,6 +59,20 @@ const PgSession = ConnectPgSimple(session);
 const pgPool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
+
+// Add error handler to prevent unhandled pool errors from crashing the app
+pgPool.on('error', (err) => {
+  console.error('Unexpected database pool error:', err);
+  // Pool will automatically try to reconnect
+});
+
+// Replit runs behind a proxy with HTTPS, even in development
+// The webview uses cross-origin iframe, requiring:
+// - secure: true (Replit provides HTTPS via proxy)
+// - sameSite: 'none' (allows cross-origin cookie sending)
+// - proxy: true (trust the X-Forwarded-Proto header)
+console.log("🍪 Cookie config: secure=true, sameSite=none (Replit cross-origin webview)");
+console.log("🌍 NODE_ENV:", process.env.NODE_ENV);
 
 // Configure session middleware with PostgreSQL store
 app.use(
@@ -42,16 +85,20 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    name: 'connect.sid',
+    name: 'sessionId',
     cookie: {
-      secure: false, // Replit handles HTTPS at the proxy level
+      secure: true, // Required: Replit provides HTTPS via proxy
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'none', // Required: Replit webview is cross-origin iframe
       path: '/',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
+    proxy: true, // Trust the reverse proxy (Replit provides HTTPS)
   })
 );
+
+// Attach tenant context after session middleware
+app.use(attachTenantContext);
 
 app.use((req, res, next) => {
   const start = Date.now();

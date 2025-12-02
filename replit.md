@@ -1,7 +1,7 @@
 # Physical Security Risk Assessment Platform
 
 ## Overview
-This enterprise-grade platform conducts professional physical security assessments, adhering to ASIS International standards and Army FM guidelines. It offers structured facility surveys, detailed risk analysis, and automated reporting to streamline the assessment process and enhance security posture. The platform supports tiered access (free/pro/enterprise), robust authentication, and a site/location management system. It's designed for security professionals to identify vulnerabilities, evaluate physical security controls, and generate compliance-ready reports.
+This platform delivers an enterprise-grade solution for professional physical security assessments, aligning with ASIS International standards and Army FM guidelines. It facilitates structured facility surveys, in-depth risk analysis, and automated reporting to streamline security processes, enhance an organization's security posture, and generate compliance-ready reports. Key features include tiered access (free/pro/enterprise), robust authentication, and comprehensive site/location management. The platform's core purpose is to empower security professionals in identifying vulnerabilities and evaluating physical security controls effectively.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,32 +9,47 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### UI/UX Decisions
--   **Framework**: React 18 with TypeScript.
--   **Styling**: Tailwind CSS with shadcn/ui and Radix UI, primarily dark mode, inspired by Carbon Design and Linear.
--   **State Management**: TanStack Query for server state, React hooks for local state.
--   **Routing**: Wouter for lightweight client-side routing.
--   **Form Handling**: React Hook Form with Zod validation.
--   **Mobile Responsiveness**: iOS-optimized design with touch targets, pinch-to-zoom, and responsive layouts for key pages (Dashboard, Assessments, AssessmentDetail).
+The platform utilizes React 18 with TypeScript for the frontend, styled with Tailwind CSS, shadcn/ui, and Radix UI, primarily in a dark mode theme inspired by Carbon Design and Linear. State management is handled by TanStack Query for server state and React hooks for local state, with Wouter providing lightweight client-side routing. Form handling is managed by React Hook Form with Zod validation. A mobile-first responsive design is implemented across the platform, ensuring optimal viewing and interaction from small mobile devices to desktops.
+
+**Template Dashboard Architecture (November 2025):** All assessment template dashboards follow the mandated react-hook-form + zodResolver + shadcn Form component pattern. The Office Building dashboard serves as the reference implementation, featuring schema-driven validation, controlled form components, synchronous state updates via form.reset(), and comprehensive data-testid coverage for QA automation. This pattern eliminates ad-hoc state management and ensures type-safe form handling across all templates.
 
 ### Technical Implementations
--   **Backend**: Express.js with Node.js ESM modules, TypeScript.
--   **Database**: PostgreSQL with Drizzle ORM, sharing TypeScript schemas.
--   **API Design**: RESTful endpoints with JSON responses.
--   **Authentication**: Session-based using `express-session` and `connect-pg-simple` for PostgreSQL storage; bcrypt for password hashing; role-based access control (free/pro/enterprise tiers).
--   **Security Model**: Multi-layered, including session authentication, ownership verification middleware, payload sanitization, and filtered data access.
--   **Admin Features**: Admin role system, admin panel for user management, and password reset functionality.
--   **Password Reset System**: Secure self-service password reset using cryptographically strong, time-limited, one-time use tokens.
--   **Multi-Paradigm Assessment System**: Dynamic workflows (e.g., "facility" or "executive") with distinct tab structures, phase indicators, and completion tracking. Includes an Executive Interview component with 34 pre-loaded questions across 11 categories and a standalone PDF export for survey findings.
--   **Triple Risk Calculation Model**: Calculates Inherent, Current, and Residual risks using a floating-point compound reduction system.
--   **Photo Evidence Upload System**: Comprehensive workflow including Replit Object Storage integration, secure API endpoints for upload/download/delete, frontend components for capture/preview/progress, and database storage of evidence paths.
+The backend is built with Express.js and Node.js ESM modules in TypeScript. PostgreSQL is used as the database, integrated via Drizzle ORM which also shares TypeScript schemas. The API follows a RESTful design with JSON responses. Authentication supports both JWT tokens (7-day expiration, sent via Authorization header) and session-based fallback using `express-session` and `connect-pg-simple`, with bcrypt for password hashing and role-based access control (RBAC) across free, pro, and enterprise tiers.
+
+**Phase 1 Security Architecture (November 2025):** Multi-tenant data isolation implemented via TenantStorage class with hybrid filtering approach. Sites use direct organizationId filtering (performant, uses index), while Assessments use implicit joins through users table. Key middleware components:
+- `attachTenantContext`: Decodes JWT from Authorization header or falls back to session, populates req.user, req.organizationId, req.accountTier
+- `requireOrganizationPermission`: Enforces tenant context with allowlist for onboarding/auth routes
+- `verifyAssessmentOwnership` and `verifySiteOwnership`: Use TenantStorage for tenant-scoped ownership verification
+
+Error handling distinguishes between:
+- 401 Unauthorized: Auth failure (invalid/expired JWT) or not authenticated
+- 403 Forbidden with ONBOARDING_REQUIRED code: User needs to complete onboarding to set organizationId
+
+**Invitation System (November 2025):** Secure organization member invitation with one-time token-based acceptance:
+- `POST /api/organization/invite`: Protected route requiring owner/admin role, generates 7-day expiring tokens
+- `POST /api/auth/accept-invite`: Public route for new user registration via invitation token
+- `storage.acceptInvitation(token, userId)`: Updates both users table (organizationId, organizationRole) and organizationInvitations table (status='accepted', acceptedAt)
+- Token replay prevention: Checks invitation status ('pending') and expiration before processing
+- Email service logs invite URLs to console (development mode), links to `/accept-invitation/${token}`
+
+Admin features include user management and a secure, token-based password reset system.
+
+A multi-paradigm assessment system supports dynamic workflows (e.g., "facility" or "executive") with template-driven questions loaded dynamically from the database, enforcing template selection and auto-populating assessment questions. A modular risk calculation engine uses an adapter pattern for template-specific implementations, supporting various assessment types like Executive Protection, Office Building, Retail Store, Warehouse, Manufacturing Facility, and Data Center, with compound reduction models for control effectiveness.
+
+**Office Building Template (Completed November 2025):** Workplace violence preparedness and data security assessment with strict Zod schema (employeeCount, visitorVolume, dataSensitivity, hasExecutivePresence), 15 threats (8 workplace violence + 7 data security), 62 controls (access control, emergency response, surveillance, data security, workplace safety), dual-axis risk scoring (60% violence + 40% data security), Unicode-aware control matching, and production-ready react-hook-form implementation. Risk thresholds: Critical (75+), High (50-74), Medium (25-49), Low (0-24).
+
+**Auto-Generation & Hybrid Risk Model (November 2025):** Office Building assessments now feature automated risk scenario generation upon profile save, creating 5 standard scenarios (workplace violence, facility access, data breach, social engineering) with 3 implicit assets (Personnel, Facility, Data & Information). Risk Assessment tab defaults to "Scenarios" view for immediate value display. This hybrid approach eliminates empty states while preserving manual asset entry flexibility.
+
+**Total Cost of Risk (TCOR) Implementation (November 2025):** Comprehensive TCOR calculations deployed across all 6 assessment templates (Retail, Warehouse, Office, Manufacturing, Datacenter, Executive Protection) to quantify both direct and indirect security costs. Each template's profile schema includes 5 standardized TCOR fields: annualTurnoverRate (%), avgHiringCost ($), annualLiabilityEstimates ($), securityIncidentsPerYear (#), and brandDamageEstimate ($). The risk calculation engine computes Total Annual Exposure = Direct Loss + (Turnover Cost + Liability + Incident Cost + Brand Damage), where turnover cost applies a 20% security factor to employee churn. All 5 adapters (retail, warehouse, office, manufacturing, datacenter) implement calculateTCOR() with proper direct/indirect cost breakdown. All 5 dashboards (Retail, Warehouse, Office, Manufacturing, Datacenter) collect TCOR inputs via forms and display cost breakdowns for control ROI justification. Type safety maintained through DatacenterProfile, RetailProfile, WarehouseProfile, ManufacturingProfile, and OfficeProfile types with proper JSONB field assertions. Production-ready with architect-approved end-to-end data flow from UI to adapters.
+
+The platform includes a comprehensive photo evidence upload system integrated with Replit Object Storage. A multi-tenancy foundation provides organization and member management, secure invitation systems, and RBAC enforcement. Reference libraries for Threats (57 threats) and Controls (74 controls) are integrated, aligning with CPTED and ASIS standards. A robust question-control linkage architecture uses database IDs for referential integrity, mapping template questions to control_library entries for quantifiable risk assessments.
+
+A granular facility zoning system provides full CRUD API. The Geographic Intelligence (GeoIntel) system extends site schemas with geographic data, including tables for Points of Interest, crime data, and site incidents. It integrates geocoding services (Google Maps) and various crime data sources, with AI extraction (GPT-4o Vision) and multiple import options, supporting crime data visualization and risk integration with charts and threat likelihood recommendations.
+
+An Executive Protection Database Schema includes executive profiles, interviews, locations, travel routes, crime data imports, incidents, points of interest, and OSINT findings, with Zod validation and TypeScript types. An Executive Interview Questionnaire facilitates structured data ingestion for these assessments.
 
 ### Feature Specifications
--   **Core Entities**: Assessments, Sites/Locations, Assets, Risk Scenarios, Vulnerabilities, Controls, Treatment Plans, Survey Questions, Risk Insights, Reports, Users, Password Reset Tokens.
--   **Sites Management**: CRUD operations for physical sites, linking assessments to locations.
--   **Risk Calculation**: Compound reduction model for precise risk assessment.
--   **Reporting**: Generates reports in multiple formats (PDF, DOCX, HTML) with visualizations and action items.
--   **Account Tiers**: Free (1 assessment, no AI/PDF), Pro (unlimited, full AI/exports), Enterprise (custom limits, priority support).
--   **Marketing Website**: Professional landing page with feature highlights, pricing, and CTAs.
+Core entities managed by the platform include Assessments, Sites/Locations, Assets, Risk Scenarios, Vulnerabilities, Controls, Treatment Plans, Survey Questions, Risk Insights, Reports, Users, Organizations, Threats, Security Controls, Facility Zones, Points of Interest, Crime Data, Site Incidents, and Executive Protection specific entities. The question-control architecture links template questions to control library entries, enabling the risk calculation engine to map survey responses to control effectiveness ratings. The platform supports CRUD operations for physical sites with integrated geocoding, generates reports in multiple formats, and offers Free, Pro, and Enterprise account tiers.
 
 ## External Dependencies
 
@@ -43,25 +58,26 @@ Preferred communication style: Simple, everyday language.
 -   **Neon Database**: Cloud PostgreSQL service.
 
 ### AI Services
--   **OpenAI API**: For GPT-5 integration.
+-   **OpenAI API**: For GPT-5 integration, including GPT-4o Vision for crime data extraction.
 
 ### UI/UX Libraries
 -   **Radix UI**: Headless component primitives.
 -   **Tailwind CSS**: Utility-first CSS framework.
 -   **Lucide Icons**: Icon library.
 -   **Embla Carousel**: Carousel component.
+-   **Google Maps API**: For geocoding, mapping, and proximity services.
 
 ### Development Tools
--   **Vite**: Build tool and dev server.
--   **TypeScript**: Full-stack type safety.
--   **Drizzle Kit**: Database migrations.
--   **Zod**: Runtime type validation.
+-   **Vite**: Build tool and development server.
+-   **TypeScript**: For full-stack type safety.
+-   **Drizzle Kit**: For database migrations.
+-   **Zod**: For runtime type validation.
 
 ### Session & Storage
 -   **connect-pg-simple**: PostgreSQL session store.
 -   **Express Session**: Server-side session management.
--   **Replit Object Storage**: For file persistence (photo evidence).
+-   **Replit Object Storage**: For file persistence, particularly photo evidence.
 
 ### Deployment
--   **Replit**: Development and hosting.
+-   **Replit**: Development and hosting platform.
 -   **ESBuild**: Server code bundling.

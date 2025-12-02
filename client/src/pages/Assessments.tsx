@@ -68,7 +68,7 @@ export default function Assessments() {
         <Button 
           onClick={() => setLocation("/app/assessments/new")}
           data-testid="button-new-assessment"
-          className="gap-2 w-full sm:w-auto min-h-11"
+          className="gap-2 w-full sm:w-auto text-xs sm:text-sm"
         >
           <Plus className="h-4 w-4" />
           New Assessment
@@ -120,7 +120,7 @@ export default function Assessments() {
                 <p className="text-sm mt-1">Create your first assessment to get started</p>
                 <Button 
                   onClick={() => setLocation("/app/assessments/new")}
-                  className="mt-4 min-h-11"
+                  className="mt-4 text-xs sm:text-sm"
                   data-testid="button-create-first"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -135,16 +135,16 @@ export default function Assessments() {
           {filteredAssessments.map((assessment: Assessment) => (
             <div
               key={assessment.id}
-              className="border rounded-md p-4 hover-elevate cursor-pointer transition-all"
+              className="border rounded-md p-3 sm:p-6 hover-elevate cursor-pointer transition-all"
               onClick={() => setLocation(`/app/assessments/${assessment.id}`)}
               data-testid={`card-assessment-${assessment.id}`}
             >
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-lg line-clamp-2" data-testid={`text-title-${assessment.id}`}>
+                  <h3 className="font-semibold text-base sm:text-lg line-clamp-2" data-testid={`text-title-${assessment.id}`}>
                     {assessment.title}
                   </h3>
-                  <span className={`text-xs px-2 py-1 rounded-md whitespace-nowrap ${getStatusColor(assessment.status)}`}>
+                  <span className={`text-[10px] sm:text-xs px-2 py-1 rounded-md whitespace-nowrap ${getStatusColor(assessment.status)}`}>
                     {getStatusLabel(assessment.status)}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export default function Assessments() {
                   </p>
                 )}
                 
-                <div className="text-xs text-muted-foreground space-y-1">
+                <div className="text-[10px] sm:text-xs text-muted-foreground space-y-1">
                   {assessment.createdAt && (
                     <p>Created: {new Date(assessment.createdAt).toLocaleDateString()}</p>
                   )}
@@ -167,7 +167,7 @@ export default function Assessments() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="w-full min-h-11 sm:min-h-8"
+                  className="w-full text-xs sm:text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     setLocation(`/app/assessments/${assessment.id}`);

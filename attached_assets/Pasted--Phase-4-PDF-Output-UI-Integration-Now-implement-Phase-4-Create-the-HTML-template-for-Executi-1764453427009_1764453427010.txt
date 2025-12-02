@@ -1,0 +1,119 @@
+## Phase 4: PDF Output & UI Integration
+
+Now implement Phase 4: Create the HTML template for Executive Summary reports, integrate with PDF generation, and build the UI components.
+
+### Task 4.1: Create Executive Summary HTML Template
+
+Create `server/templates/executive-summary-template.ts`:
+
+This template renders a GeneratedReportResult into professional HTML. It should:
+
+1. Import the GeneratedReportResult type from report-generator
+2. Export `function renderExecutiveSummaryHTML(report: GeneratedReportResult): string`
+3. Create a professional HTML document with:
+   - Inline CSS styles (for PDF compatibility)
+   - Cover page with principal name, assessment date, consultant name
+   - Table of contents
+   - Each section rendered with proper headers and content
+   - Page break handling via CSS `page-break-before`
+   - Professional typography (Arial font family)
+   - Navy (#1a365d) accent color for headers
+   - Proper margins and spacing
+
+Key styling requirements:
+- Use `@media print` CSS for PDF-specific formatting
+- Section headers: 18pt bold navy
+- Body text: 11pt, 1.5 line height
+- Tables: bordered, zebra striping
+- Risk level badges with color coding (red=critical, orange=high, yellow=elevated, green=low)
+
+### Task 4.2: Update PDF Generator
+
+Modify `server/services/reporting/pdf-generator.ts` to add a new function:
+
+```typescript
+export async function generateReportPDF(
+  report: GeneratedReportResult,
+  templateType: 'executive-summary' | 'comprehensive'
+): Promise<Buffer> {
+  // 1. Render HTML using the appropriate template
+  // 2. Use Puppeteer to convert to PDF (reuse existing Puppeteer setup)
+  // 3. Return the PDF buffer
+}
+```
+
+### Task 4.3: Add PDF Download Endpoint
+
+Add to routes:
+
+```typescript
+// Generate and download PDF
+app.post('/api/assessments/:id/reports/:reportId/pdf', async (req, res) => {
+  // 1. Fetch the generated report from database
+  // 2. Call generateReportPDF
+  // 3. Set response headers for PDF download
+  // 4. Send the PDF buffer
+});
+
+// Generate report and immediately return PDF (one-step)
+app.post('/api/assessments/:id/reports/generate-pdf', async (req, res) => {
+  const { recipeId } = req.body;
+  // 1. Call generateReport
+  // 2. Save to database
+  // 3. Generate PDF
+  // 4. Return PDF as download
+});
+```
+
+### Task 4.4: Create Report Generation UI Component
+
+Create `client/src/components/ReportGenerator.tsx`:
+
+```typescript
+interface ReportGeneratorProps {
+  assessmentId: number;
+  assessmentName: string;
+}
+
+// Component should:
+// 1. Show available recipes (fetch from /api/reports/recipes)
+// 2. Let user select a recipe
+// 3. Show "Generate Report" button
+// 4. Show progress indicator during generation
+// 5. On success, show download button for PDF
+// 6. Handle errors gracefully
+```
+
+Use existing UI components from shadcn/ui (Button, Select, Card, etc.)
+
+### Task 4.5: Add Reports Tab to Assessment Detail Page
+
+Modify `client/src/pages/AssessmentDetail.tsx`:
+
+1. Add a new "Reports" tab alongside existing tabs
+2. In the Reports tab, show:
+   - ReportGenerator component
+   - List of previously generated reports with download links
+   - Delete option for old reports
+
+### Task 4.6: Test End-to-End Flow
+
+1. Navigate to an existing assessment
+2. Go to Reports tab
+3. Select "Executive Protection Summary" recipe
+4. Click Generate
+5. Verify PDF downloads correctly
+6. Verify the PDF looks professional
+
+---
+
+IMPORTANT:
+- Test with a real assessment that has data
+- Make sure the PDF renders properly (check styling)
+- Handle cases where assessment has missing data gracefully
+- Add loading states and error handling in UI
+
+After completing Phase 4, show me:
+1. A screenshot of the Reports UI
+2. Confirmation that PDF generation works
+3. Any errors encountered
