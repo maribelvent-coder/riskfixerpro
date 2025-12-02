@@ -38,6 +38,7 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export const sites = pgTable("sites", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  organizationId: varchar("organization_id").references(() => organizations.id), // Multi-tenancy: nullable for Free Tier users
   name: text("name").notNull(),
   address: text("address"),
   city: text("city"),
@@ -55,6 +56,7 @@ export const sites = pgTable("sites", {
 export const assessments = pgTable("assessments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  organizationId: varchar("organization_id").references(() => organizations.id), // Multi-tenancy: nullable for Free Tier users
   siteId: varchar("site_id").references(() => sites.id),
   templateId: text("template_id"), // Source template: executive-protection, office-building, etc.
   surveyParadigm: text("survey_paradigm").notNull().default("facility"), // facility, executive, custom
