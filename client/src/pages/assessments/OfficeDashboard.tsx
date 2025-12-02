@@ -166,30 +166,34 @@ export default function OfficeDashboard() {
   }
 
   return (
-    <div className="space-y-6 p-6" data-testid="office-dashboard">
-      <div>
-        <h2 className="text-2xl font-bold" data-testid="heading-title">Corporate Operations</h2>
-        <p className="text-muted-foreground" data-testid="text-subtitle">
+    <div className="space-y-4 sm:space-y-5 md:space-y-6 p-3 sm:p-4 md:p-6" data-testid="office-dashboard">
+      <div className="min-w-0">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold" data-testid="heading-title">Corporate Operations</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-subtitle">
           Workplace violence preparedness and data security analysis
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList data-testid="tabs-list">
-          <TabsTrigger value="profile" data-testid="tab-profile">
-            <Shield className="w-4 h-4 mr-2" />
-            Profile & Safety Score
-          </TabsTrigger>
-          <TabsTrigger value="risk-assessment" data-testid="tab-risk-assessment">
-            <Target className="w-4 h-4 mr-2" />
-            Risk Assessment
-          </TabsTrigger>
-        </TabsList>
+        <div className="horizontal-scroll-container pb-1">
+          <TabsList data-testid="tabs-list" className="inline-flex gap-1 p-1 w-max min-w-full">
+            <TabsTrigger value="profile" data-testid="tab-profile" className="text-xs sm:text-sm whitespace-nowrap">
+              <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Profile & Safety Score</span>
+              <span className="sm:hidden">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="risk-assessment" data-testid="tab-risk-assessment" className="text-xs sm:text-sm whitespace-nowrap">
+              <Target className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Risk Assessment</span>
+              <span className="sm:hidden">Risks</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="profile" className="mt-6">
+        <TabsContent value="profile" className="mt-4 sm:mt-5 md:mt-6">
         {/* Security Risk Cards - TOP PRIORITY */}
         {safetyScore && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-5 md:mb-6">
             {/* Workplace Violence Risk */}
             <Card data-testid="card-violence-risk">
               <CardHeader>

@@ -196,14 +196,14 @@ export default function DatacenterDashboard() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="heading-dashboard">
-            <Server className="w-8 h-8" />
+    <div className="space-y-4 sm:space-y-5 md:space-y-6 p-3 sm:p-4 md:p-6">
+      <div className="flex flex-wrap items-start gap-2 sm:gap-3">
+        <Server className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold" data-testid="heading-dashboard">
             Infrastructure Operations
           </h1>
-          <p className="text-muted-foreground mt-1" data-testid="text-subtitle">
+          <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-subtitle">
             Tier classification, SLA compliance, and infrastructure reliability analysis
           </p>
         </div>
@@ -211,7 +211,7 @@ export default function DatacenterDashboard() {
 
       {/* Risk Cards - TOP PRIORITY */}
       {reliabilityScore && !scoreLoading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           {/* SLA Risk Assessment */}
           <Card data-testid="card-uptime-risk">
             <CardHeader>

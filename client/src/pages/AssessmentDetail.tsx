@@ -453,74 +453,82 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Header with Phase Progress */}
-      <div className="flex items-start gap-2 sm:gap-4">
+      <div className="flex items-start gap-2 sm:gap-3">
         <Button 
           variant="outline" 
           size="icon"
           onClick={handleBack}
           data-testid="button-back"
-          className="flex-shrink-0 min-h-9 sm:min-h-10"
+          className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </Button>
         
         <div className="flex-1 min-w-0">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold truncate" data-testid="heading-assessment-title">
+          <div className="flex flex-col gap-2 sm:gap-3">
+            {/* Title Row */}
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate max-w-full" data-testid="heading-assessment-title">
                 {assessmentData.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground">
-                <div className="flex items-center min-w-0">
-                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
-                  <span className="truncate">{assessmentData.location}</span>
-                </div>
-                <div className="flex items-center">
-                  <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
-                  <span className="truncate">{assessmentData.assessor}</span>
-                </div>
-                <div className="flex items-center whitespace-nowrap">
-                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
-                  Created {assessmentData.createdAt ? new Date(assessmentData.createdAt).toLocaleDateString() : 'N/A'}
-                </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <Badge 
+                  variant={assessmentData.status === "completed" ? "default" : "secondary"}
+                  data-testid="badge-status"
+                  className="whitespace-nowrap text-[10px] sm:text-xs"
+                >
+                  {assessmentData.status === "completed" ? "Completed" : 
+                   assessmentData.status === "risk-assessment" ? "Risk Assessment" :
+                   assessmentData.status === "facility-survey" ? "Facility Survey" : "Draft"}
+                </Badge>
               </div>
-              
-              {/* Phase Progress Indicator - Paradigm-Aware */}
-              <div className="flex items-center gap-2 sm:gap-4 mt-3 sm:mt-4 overflow-x-auto">
-                <div className="flex items-center gap-1 sm:gap-2">
+            </div>
+            
+            {/* Meta Row */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:text-xs text-muted-foreground">
+              <div className="flex items-center min-w-0">
+                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                <span className="truncate max-w-[120px] sm:max-w-none">{assessmentData.location}</span>
+              </div>
+              <div className="flex items-center">
+                <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                <span className="truncate">{assessmentData.assessor}</span>
+              </div>
+              <div className="flex items-center whitespace-nowrap">
+                <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                <span className="hidden sm:inline">Created </span>{assessmentData.createdAt ? new Date(assessmentData.createdAt).toLocaleDateString() : 'N/A'}
+              </div>
+            </div>
+            
+            {/* Phase Progress + Actions Row */}
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+              {/* Phase Progress Indicator */}
+              <div className="horizontal-scroll-container flex-1 min-w-0">
+                <div className="flex items-center gap-1 w-max">
                   {workflowConfig.phases.map((phase, index) => (
-                    <div key={index} className="flex items-center gap-1 sm:gap-2">
-                      <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded text-[10px] sm:text-xs whitespace-nowrap ${
-                        phase.completed ? "bg-green-100 text-green-700" : 
-                        currentPhase > index ? "bg-blue-100 text-blue-700" :
+                    <div key={index} className="flex items-center gap-0.5 sm:gap-1">
+                      <div className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[9px] sm:text-[10px] md:text-xs whitespace-nowrap ${
+                        phase.completed ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : 
+                        currentPhase > index ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" :
                         "bg-muted text-muted-foreground"
                       }`}>
-                        {phase.completed ? <CheckCircle className="h-3 w-3 flex-shrink-0" /> : <Shield className="h-3 w-3 flex-shrink-0" />}
-                        <span className="hidden sm:inline">{phase.label}</span>
-                        <span className="sm:hidden">{phase.label.split(':')[0]}</span>
+                        {phase.completed ? <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" /> : <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />}
+                        <span className="hidden md:inline">{phase.label}</span>
+                        <span className="md:hidden">{phase.label.split(' ')[0]}</span>
                       </div>
                       {index < workflowConfig.phases.length - 1 && (
-                        <div className={`w-4 sm:w-8 h-0.5 ${currentPhase > index + 1 ? "bg-green-500" : "bg-muted"}`} />
+                        <div className={`w-3 sm:w-4 md:w-6 h-0.5 ${currentPhase > index + 1 ? "bg-green-500" : "bg-muted"}`} />
                       )}
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Badge 
-                variant={assessmentData.status === "completed" ? "default" : "secondary"}
-                data-testid="badge-status"
-                className="whitespace-nowrap text-[10px] sm:text-xs"
-              >
-                {assessmentData.status === "completed" ? "Completed" : 
-                 assessmentData.status === "risk-assessment" ? "Risk Assessment" :
-                 assessmentData.status === "facility-survey" ? "Facility Survey" : "Draft"}
-              </Badge>
-              <DropdownMenu>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
@@ -578,11 +586,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </div>
         </div>
       </div>
+    </div>
 
       {/* Main Content - Paradigm-Aware Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="w-full overflow-x-auto">
-          <TabsList className="inline-flex gap-1 sm:gap-2 p-1 sm:p-2 w-max min-w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4">
+        <div className="w-full horizontal-scroll-container pb-1">
+          <TabsList className="inline-flex gap-1 p-1 w-max min-w-full bg-muted/50">
             {workflowConfig.tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -591,11 +600,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                   value={tab.id}
                   data-testid={`tab-${tab.id}`}
                   disabled={!(tabsAvailable as Record<string, boolean>)[tab.id]}
-                  className="flex items-center gap-1 sm:gap-2 justify-center text-center min-h-11 text-sm whitespace-nowrap px-3 flex-shrink-0"
+                  className="flex items-center gap-1 sm:gap-1.5 justify-center text-center min-h-8 sm:min-h-9 text-[11px] sm:text-xs md:text-sm whitespace-nowrap px-2 sm:px-3 flex-shrink-0"
                 >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                  <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="hidden md:inline">{tab.label}</span>
+                  <span className="md:hidden">{tab.label.split(' ')[0]}</span>
                 </TabsTrigger>
               );
             })}

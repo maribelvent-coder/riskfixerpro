@@ -244,20 +244,18 @@ export default function WarehouseDashboard() {
   ];
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+    <div className="space-y-4 sm:space-y-5 md:space-y-6 p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <Warehouse className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">{assessment?.name}</h1>
-            <p className="text-muted-foreground">Warehouse Security Analysis Dashboard</p>
-          </div>
+      <div className="flex flex-wrap items-start gap-2 sm:gap-3">
+        <Warehouse className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate">{assessment?.name}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Warehouse Security Analysis Dashboard</p>
         </div>
       </div>
 
       {/* Two-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
         {/* LEFT COLUMN: Facility Profile Form */}
         <div className="space-y-6">
           <Card>
