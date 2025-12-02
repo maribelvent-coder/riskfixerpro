@@ -73,7 +73,10 @@ export default function Login() {
         title: "Welcome back",
         description: "You have successfully logged in.",
       });
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      // Use refetchQueries instead of invalidateQueries to wait for the data to be fetched
+      // This ensures the ProtectedRoute sees the authenticated state before navigation
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
+      console.log("🔐 Auth query refetched, navigating to dashboard...");
       setLocation("/app/dashboard");
     },
     onError: (error: any) => {
