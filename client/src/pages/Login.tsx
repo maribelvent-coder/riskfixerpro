@@ -74,7 +74,7 @@ export default function Login() {
         description: "You have successfully logged in.",
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      setLocation("/app");
+      setLocation("/app/dashboard");
     },
     onError: (error: any) => {
       toast({
