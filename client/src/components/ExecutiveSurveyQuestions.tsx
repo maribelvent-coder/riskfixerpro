@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Link } from "wouter";
 import { 
   Save, 
   Shield, 
@@ -13,7 +14,9 @@ import {
   CheckCircle,
   Info,
   Camera,
-  FileDown
+  FileDown,
+  ArrowRight,
+  Home
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -221,18 +224,18 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
               value={question.response as string || ''}
               onValueChange={(value) => handleSave('response', value)}
             >
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2">
                   <RadioGroupItem value="yes" id={`${question.id}-yes`} data-testid={`radio-yes-${question.id}`} />
-                  <Label htmlFor={`${question.id}-yes`}>Yes</Label>
+                  <Label htmlFor={`${question.id}-yes`} className="cursor-pointer">Yes</Label>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <RadioGroupItem value="no" id={`${question.id}-no`} data-testid={`radio-no-${question.id}`} />
-                  <Label htmlFor={`${question.id}-no`}>No</Label>
+                  <Label htmlFor={`${question.id}-no`} className="cursor-pointer">No</Label>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <RadioGroupItem value="n/a" id={`${question.id}-na`} data-testid={`radio-na-${question.id}`} />
-                  <Label htmlFor={`${question.id}-na`}>N/A</Label>
+                  <Label htmlFor={`${question.id}-na`} className="cursor-pointer">N/A</Label>
                 </div>
               </div>
             </RadioGroup>
@@ -246,11 +249,11 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
               value={question.response as string || ''}
               onValueChange={(value) => handleSave('response', value)}
             >
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {[1, 2, 3, 4, 5].map((rating) => (
-                  <div key={rating} className="flex items-center space-x-1">
+                  <div key={rating} className="flex items-center gap-1">
                     <RadioGroupItem value={String(rating)} id={`${question.id}-${rating}`} data-testid={`radio-rating-${rating}-${question.id}`} />
-                    <Label htmlFor={`${question.id}-${rating}`}>{rating}</Label>
+                    <Label htmlFor={`${question.id}-${rating}`} className="cursor-pointer">{rating}</Label>
                   </div>
                 ))}
               </div>
@@ -465,37 +468,72 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         </Card>
       ))}
 
-      {/* Action Buttons */}
-      {onComplete && (
-        <Card className={progressPercent === 100 ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900" : ""}>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {progressPercent === 100 ? (
-                  <>
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                    <div>
-                      <h4 className="font-semibold">Section Complete</h4>
-                      <p className="text-sm text-muted-foreground">All questions have been answered</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Info className="h-6 w-6 text-muted-foreground" />
-                    <div>
-                      <h4 className="font-semibold">Progress: {Math.round(progressPercent)}%</h4>
-                      <p className="text-sm text-muted-foreground">{answeredQuestions} of {totalQuestions} questions answered</p>
-                    </div>
-                  </>
-                )}
-              </div>
-              <Button onClick={onComplete} data-testid="button-complete-section">
-                {progressPercent === 100 ? "Continue to Next Section" : "Save & Continue"}
-              </Button>
+      {/* Action Buttons - Always visible */}
+      <Card className={progressPercent === 100 ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900" : ""}>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {progressPercent === 100 ? (
+                <>
+                  <CheckCircle className="h-6 w-6 text-green-600 shrink-0" />
+                  <div>
+                    <h4 className="font-semibold">Section Complete</h4>
+                    <p className="text-sm text-muted-foreground">All questions have been answered</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Save className="h-6 w-6 text-muted-foreground shrink-0" />
+                  <div>
+                    <h4 className="font-semibold">Progress: {Math.round(progressPercent)}%</h4>
+                    <p className="text-sm text-muted-foreground">{answeredQuestions} of {totalQuestions} questions answered</p>
+                    <p className="text-xs text-muted-foreground mt-1">Responses save automatically</p>
+                  </div>
+                </>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              {onComplete ? (
+                <Button 
+                  onClick={onComplete} 
+                  className="flex-1 sm:flex-none"
+                  data-testid="button-complete-section"
+                >
+                  {progressPercent === 100 ? "Continue to Next Section" : "Save & Continue"}
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      toast({
+                        title: "Progress Saved",
+                        description: `${answeredQuestions} responses saved. Return anytime to continue.`,
+                      });
+                    }}
+                    className="flex-1 sm:flex-none"
+                    data-testid="button-save-progress"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Progress
+                  </Button>
+                  <Link href="/app/dashboard">
+                    <Button 
+                      variant="secondary"
+                      className="w-full sm:w-auto"
+                      data-testid="button-return-dashboard"
+                    >
+                      <Home className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
