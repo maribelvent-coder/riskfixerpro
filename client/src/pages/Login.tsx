@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -22,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, AlertCircle } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -34,6 +36,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -45,28 +48,22 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
-      console.log("🔐 Frontend: Attempting login with:", values.username);
-      console.log("🔐 Frontend: About to call fetch...");
-      try {
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
-          credentials: "include",
-        });
-        console.log("🔐 Frontend: Fetch completed, status:", response.status);
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("🔐 Frontend: Server error:", errorText);
-          throw new Error(`${response.status}: ${errorText}`);
-        }
-        const data = await response.json();
-        console.log("🔐 Frontend: Login successful, user:", data.username);
-        return data;
-      } catch (error) {
-        console.error("🔐 Frontend: Login error:", error);
-        throw error;
+      // Clear any previous error when attempting login
+      setLoginError(null);
+      
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Login failed" }));
+        throw new Error(errorData.error || "Invalid username or password");
       }
+      
+      return response.json();
     },
     onSuccess: async (data: any) => {
       toast({
@@ -76,21 +73,17 @@ export default function Login() {
       // Use refetchQueries instead of invalidateQueries to wait for the data to be fetched
       // This ensures the ProtectedRoute sees the authenticated state before navigation
       await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-      console.log("🔐 Auth query refetched, navigating to dashboard...");
       setLocation("/app/dashboard");
     },
-    onError: (error: any) => {
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid username or password.",
-        variant: "destructive",
-      });
+    onError: (error: Error) => {
+      // Set inline error message instead of throwing
+      setLoginError(error.message || "Invalid username or password. Please try again.");
     },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
-    console.log("🔐 Form submitted with values:", values);
-    await loginMutation.mutateAsync(values);
+  const onSubmit = (values: LoginFormValues) => {
+    // Use mutate instead of mutateAsync to prevent unhandled rejection
+    loginMutation.mutate(values);
   };
 
   return (
@@ -164,12 +157,22 @@ export default function Login() {
                   </FormItem>
                 )}
               />
+              
+              {/* Inline error message */}
+              {loginError && (
+                <Alert variant="destructive" className="py-2" data-testid="alert-login-error">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs sm:text-sm">
+                    {loginError}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <Button
                 type="submit"
                 className="w-full text-xs sm:text-sm min-h-10 sm:min-h-11"
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
-                onClick={() => console.log("🔘 Button clicked!")}
               >
                 {loginMutation.isPending ? "Logging in..." : "Log in"}
               </Button>
