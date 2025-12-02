@@ -1,7 +1,7 @@
 # MANDATORY DEVELOPMENT PROTOCOL
 
 > **Purpose**: Master workflow document that governs ALL development work on RiskFixer.
-> **Authority**: CTO-Approved Protocol
+> **Authority**: CTO-Approved Protocol (CTO: Gemini Gem "RiskFixer CTO" - accessible at https://gemini.google.com/)
 > **Enforcement**: ALL developers (human and AI) MUST follow this protocol.
 > **Last Updated**: 2025-12-02
 
