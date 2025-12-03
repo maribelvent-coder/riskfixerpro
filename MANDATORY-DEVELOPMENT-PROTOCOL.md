@@ -2,6 +2,7 @@
 
 > **Purpose**: Master workflow document that governs ALL development work on RiskFixer.
 > **Authority**: CTO-Approved Protocol (CTO: Gemini Gem "RiskFixer CTO" - accessible at https://gemini.google.com/)
+> > **PM (Project Manager)**: PM Communications and Daily Briefings (Perplexity Workspace: "RiskFixer" - accessible at https://www.perplexity.ai/)
 > **Enforcement**: ALL developers (human and AI) MUST follow this protocol.
 > **Last Updated**: 2025-12-02
 
@@ -31,6 +32,29 @@ This document defines the **mandatory workflow** for any development work on Ris
 ```
 
 ---
+
+## Communication Channels
+
+**MANDATORY**: All development work follows this communication workflow:
+
+### CTO (Chief Technology Officer)
+- **Platform**: Gemini Gem "RiskFixer CTO"
+- **URL**: https://gemini.google.com/
+- **Purpose**: Strategic decisions, architecture approvals, phase authorizations, critical bug prioritization
+- **When to Use**: Before starting any phase, when encountering P0 blockers, for deployment approvals
+
+### PM (Project Manager)
+- **Platform**: Perplexity Workspace "RiskFixer"
+- **URL**: https://www.perplexity.ai/
+- **Purpose**: Daily briefings, phase planning, test results, progress updates, bug reports
+- **When to Use**: Daily status updates, phase completion reports, regression test results, production health checks
+
+### Workflow
+1. **Start of Day**: Check PM briefing for daily priorities and CTO directives
+2. **Phase Planning**: Get CTO approval before starting new phases
+3. **During Development**: Report blockers to PM, escalate critical issues to CTO
+4. **End of Day**: Update PM with progress, document decisions in GitHub
+5. **Deployment**: Get CTO authorization, confirm with PM after completion
 
 ## Supporting Documents
 
