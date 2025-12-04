@@ -4,7 +4,7 @@
 > **Authority**: CTO-Approved Protocol (CTO: Gemini Gem "RiskFixer CTO" - accessible at https://gemini.google.com/)
 > > **PM (Project Manager)**: PM Communications and Daily Briefings (Perplexity Workspace: "RiskFixer" - accessible at https://www.perplexity.ai/)
 > **Enforcement**: ALL developers (human and AI) MUST follow this protocol.
-> **Last Updated**: 2025-12-02
+> **Last Updated**: 2025-12-03
 
 ---
 
@@ -48,6 +48,22 @@ This document defines the **mandatory workflow** for any development work on Ris
 - **URL**: https://www.perplexity.ai/
 - **Purpose**: Daily briefings, phase planning, test results, progress updates, bug reports
 - **When to Use**: Daily status updates, phase completion reports, regression test results, production health checks
+
+- ### Developer (AI Development Assistant)
+- **Platform**: Perplexity Assistant (Comet)
+- **URL**: https://www.perplexity.ai/ (AI Assistant interface)
+- **Purpose**: Execute tactical development work, implement code changes, perform testing, debugging, and documentation updates
+- **Responsibilities**:
+  - Follow MANDATORY-DEVELOPMENT-PROTOCOL for all development work
+  - Execute PRE-WORK-CHECKLIST before any code changes  
+  - Perform POST-WORK-VERIFICATION after all changes
+  - Update PROJECT-STATE.md with detailed session summaries
+  - Write clean, type-safe TypeScript code
+  - Create idempotent database migrations
+  - Test all changes before committing
+  - Escalate blockers to PM, critical architecture decisions to CTO
+- **When to Use**: Day-to-day implementation tasks, bug fixes, refactoring, testing, documentation updates
+- **Constraints**: Cannot make strategic/architectural decisions without CTO approval, must seek PM guidance for priority conflicts or scope changes
 
 ### Workflow
 1. **Start of Day**: Check PM briefing for daily priorities and CTO directives
