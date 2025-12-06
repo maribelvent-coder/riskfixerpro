@@ -1,5 +1,5 @@
 # RISKFIXER PROJECT STATE
-**Last Updated: December 5, 2025, 8:31 PM EST**
+**Last Updated: December 6, 2025, 11:23 AM EST**
 
 **Source of Truth for Current Development Status**
 
@@ -107,59 +107,118 @@ This document MUST be loaded at the start of every new AI session before any wor
 | Manufacturing | 15 | Basic (needs mapper) | ✅ Functional |
 | Executive Protection | Custom | High (T×V×I×E) | ✅ Working |
 
-**Deferred to Phase 2.0.4:**
-- Interview→risk mappers for Retail, Warehouse, Datacenter, Manufacturing (300-500 lines each)
-- AI scenario enhancement service (GPT-4 with ASIS grounding)
-- Evidence trails for scoring decisions
-- Photo analysis integration (GPT-4 Vision)
-- Sophistication parity across all templates
-
 ---
 
-### Phase 2.0.4: Risk Intelligence Layer - 🚀 NEXT (Starting Dec 6)
-**Status**: PLANNED
-**Duration**: 2-3 weeks
-**Start Date**: Saturday, December 6, 2025, 9:00 AM EST
-**Completion Target**: December 20-27, 2025
+### Phase 2.0.4: AI-First Risk Intelligence Layer - 🚀 IN PROGRESS
+**Status**: ACTIVE
+**Start Date**: Saturday, December 6, 2025, 11:15 AM EST
+**Completion Target**: Sunday, December 14, 2025
+**Duration**: 9 days (accelerated with AI-parallel development)
+**Architecture**: AI-First with 6-Layer Grounding (per Framework v1.0)
 
-**Objective**: Build sophisticated interview→risk mappers for all facility templates
+**AI Development Staffing Model (Updated Dec 6, 2025)**
+- Development is performed by a **parallel AI programming staff** (Claude, Perplexity/Comet, Replit AI, Gemini) acting as coordinated developers.
+- Tasks that are **template-specific but structurally identical** (e.g., Retail/Warehouse/Datacenter/Manufacturing AI risk templates) are executed **in parallel** across AI agents once the shared core services and patterns are defined.
+- Human CEO/PM acts as **orchestrator**, assigning work units and enforcing architectural and UX standards.
+- Target: **≤15 minutes per template mapper skeleton** once patterns and prompts are stable; deeper refinement and testing follow in subsequent passes.
 
-**Week 1 (Dec 6-8): Retail Foundation**
-- Days 1-3: Retail interview→risk mapper (300-500 lines)
-  - Question analysis layer (100-150 lines)
-  - Threat-specific calculation functions (150-200 lines)
-  - Evidence trail builder (50-100 lines)
-- Days 4-5: AI scenario enhancement service
-  - GPT-4 integration with ASIS GDL-RA grounding
-  - Structured prompts + scoring rubrics
-  - Temperature 0.3 (deterministic)
+**Daily Work Schedule**:
+- **Hours**: 7:00 AM – 10:00 PM EST every day (12 hours/day, 7 days/week)
+- **Breaks**: 12:00-12:45 PM (lunch), 5:00-6:00 PM (dinner)
+- **Work Blocks**:
+  - Block 1 (7:00 AM - 12:00 PM): Core architecture, shared services, code review
+  - Block 2 (12:45 PM - 5:00 PM): Parallel template builds
+  - Block 3 (6:00 PM - 10:00 PM): Hardening, testing, documentation
 
-**Week 2 (Dec 9-15): Warehouse + Photo Analysis**
-- Days 1-3: Warehouse interview→risk mapper (300-500 lines)
-- Days 4-5: Photo analysis integration (GPT-4 Vision)
-  - Vulnerability score adjustments from photos
-  - Evidence capture and linkage
+**Core Build Order** (unchanged from Framework v1.0):
+```
+Data (Phase 2.0.1-2.0.3) → Intelligence (Phase 2.0.4) → Presentation (Phase 2.1)
+```
 
-**Week 3 (Dec 16-22): Remaining Templates**
-- Days 1-2: Datacenter interview→risk mapper
-- Days 3-4: Manufacturing interview→risk mapper
-- Day 5: Integration testing across all templates
+**Step 1: Shared AI Engine & Base Framework** (Single-threaded, Days 1-2)
+- Core GPT-4 assessment service (`server/services/ai-risk-assessment.ts`)
+- Base system prompt with ASIS GDL-RA + global T/V/I rubrics (`server/prompts/system-prompt-base.ts`)
+- Shared response validator (structure, score ranges, rubric alignment, evidence presence)
+- Context builder utilities
+
+**Step 2: Template Context Layers** (Parallelizable, Days 2-3)
+Once Step 1 is stable, AI staff build in parallel:
+- **Retail**: NRF standards, threat intel, control effectiveness, scoring rubrics, prompt wrapper
+- **Warehouse**: TAPA FSR/TSR, C-TPAT, CargoNet threat intel equivalents
+- **Datacenter**: SOC 2/ISO 27001/PCI-DSS/TIA-942 equivalents
+- **Manufacturing**: NIST SP 800-82, CFATS, ITAR equivalents
+
+**Step 3: Template AI Mappers** (Parallelizable, Days 3-4)
+For each template, create AI-first mapper that:
+- Gathers interview + facility + threat intel context
+- Calls shared AI risk engine for each threat
+- Stores T×V×I + 1-125 risk + evidence trail
+- Per-template first-pass build targeted at **≤15 minutes per mapper skeleton** using Claude/Replit AI
+
+**Step 4: Integration & Hardening** (Single-threaded review, Days 5-9)
+- Cross-template testing
+- Performance + cost checks (target: <$1.00 per assessment)
+- Framework compliance audit (Section 3.6)
+- UX verification (outputs readable, actionable, consistent)
+- Evidence trail validation (50+ assessments)
+- Documentation (technical + business)
+
+**Accelerated Timeline (AI-Parallel Approach)**:
+
+**Days 1-2 (Dec 6-7): Foundation**
+- Sat AM: Core AI service + base prompt
+- Sat PM: Integration test + Retail/Warehouse rubrics (parallel)
+- Sun: Retail/Warehouse threat intel + control effectiveness + mappers (parallel)
+
+**Day 3 (Dec 8): Remaining Templates**
+- Datacenter/Manufacturing rubrics + standards (parallel)
+- Datacenter/Manufacturing threat intel + control effectiveness (parallel)
+- Datacenter/Manufacturing mappers (parallel)
+
+**Days 4-6 (Dec 9-11): Hardening**
+- Response validation layer + CAP Index integration
+- Quality gates implementation
+- Performance optimization
+- Cross-template consistency testing
+
+**Days 7-9 (Dec 12-14): Validation + Documentation**
+- Evidence trail audit
+- Cost analysis
+- Technical documentation (API docs, prompt engineering guide)
+- Business documentation (audit defense playbook, pricing impact)
+- Final sign-off
 
 **Deliverables:**
-- ✅ Template-specific calculation engines (4 new mappers)
-- ✅ Evidence trails for all scoring decisions
-- ✅ AI-grounded scenario narratives
-- ✅ Photo-based vulnerability adjustments
-- ✅ Sophistication parity with Office template
-- ✅ Framework 3.6 full compliance
+- ✅ AI Assessment Service (shared) - GPT-4 integration with 6-layer context
+- ✅ 4 Template Mappers (Retail, Warehouse, Datacenter, Manufacturing) - 300-500 lines each
+- ✅ Template-specific rubrics (T/V/I scoring criteria)
+- ✅ Template-specific standards prompts (NRF, TAPA, SOC 2, NIST)
+- ✅ Threat intelligence integration (CAP Index + industry data)
+- ✅ Control effectiveness data (research-backed percentages)
+- ✅ Response validation layer (ensures audit defensibility)
+- ✅ Quality gates implementation (sophistication parity enforcement)
+- ✅ Complete documentation (technical + business)
 
-**Framework Compliance**: Full alignment with Master Framework Section 3.6 (Interview-Driven Dynamic Risk Calculation)
+**Budget:**
+- OpenAI API costs: **$500-1,000 approved** for dev/test
+- Cost per assessment target: <$1.00
+
+**Framework Compliance**: Full alignment with RiskFixer-AI-Assessment-Framework-v1.0.md
+
+**Success Metrics**:
+- [ ] All 4 templates generate AI-enhanced risk scenarios
+- [ ] 100% of scores have evidence citations
+- [ ] Rubric alignment validation passes
+- [ ] API cost < $1.00 per assessment
+- [ ] Response time < 3 seconds per threat
+- [ ] Sophistication parity achieved (300-500 lines per template)
+- [ ] Audit defense documentation complete
 
 ---
 
 ### Phase 2.1: Unified Report Engine - 🔄 DEFERRED
 **Status**: PLANNED (after Phase 2.0.4)
-**Start Date**: Week of January 6, 2025 (after 2.0.4 complete)
+**Start Date**: Week of December 16, 2025 (after 2.0.4 complete)
 **Duration**: 1 week
 
 **Why After Phase 2.0.4:**
@@ -224,17 +283,43 @@ See MANDATORY-DEVELOPMENT-PROTOCOL.md for complete workflow.
 - Database: PostgreSQL (via Replit)
 - Deployment: Replit
 - Version Control: GitHub (main branch)
-- AI Services: GPT-4, GPT-4 Vision (planned Phase 2.0.4)
+- AI Services: GPT-4, GPT-4 Vision (Phase 2.0.4)
 
 ### Work Schedule
-**Continuous operations (including weekends)**
-- Phase 2.0.4 starts Saturday, December 6, 2025, 9:00 AM EST
-- No Monday-Friday limitation
-- PM-BRIEFING-LOG.md updated at end of each session
+**Continuous operations with AI-assisted parallel development**
+- **Hours**: 7:00 AM – 10:00 PM EST daily (12 hours/day, 7 days/week)
+- **Standard human availability windows**:
+  - 7:00 AM – 12:00 PM: Active programming block (Block 1)
+  - 12:00 PM – 12:45 PM: Break (no human review expected)
+  - 12:45 PM – 5:00 PM: Active programming block (Block 2)
+  - 5:00 PM – 6:00 PM: Break (no human review expected)
+  - 6:00 PM – 10:00 PM: Active programming block (Block 3)
+- **AI programming staff** (Claude, Perplexity/Comet, Replit AI, Gemini) can work **in parallel** within these windows, as long as MANDATORY-DEVELOPMENT-PROTOCOL is followed and code reviews are performed by CEO/PM at least once per day.
+- **PM-BRIEFING-LOG.md** MUST be updated at the end of the final daily block.
+
+### Parallel Template Builds (AI-First)
+- Once the **shared AI risk engine** and **base prompt framework** are implemented and validated, retail, warehouse, datacenter, and manufacturing AI risk templates may be built **in parallel** by different AI agents, using the same rubric and context-layer pattern.
+- Target: **≤15 minutes per template mapper skeleton** once patterns and prompts are stable; deeper refinement and testing follow in subsequent passes.
 
 ---
 
 ## CHANGELOG
+
+### 2025-12-06 (Late Morning - 11:23 AM)
+- **PHASE 2.0.4 IN PROGRESS**: Started at 11:15 AM EST
+- Updated PROJECT-STATE.md with AI-parallelized development approach
+- Documented AI Development Staffing Model (parallel AI programming staff)
+- Updated work schedule: 12 hours/day with defined blocks and breaks
+- Timeline accelerated: 9 days (Dec 6-14) with parallel template builds
+- Budget confirmed: $500-1,000 for OpenAI API costs approved
+- Calendar events created for all development blocks
+
+### 2025-12-06 (Morning - 9:24-11:02 AM)
+- Architecture review: Claude's AI Framework v1.0 analyzed
+- CEO approved: AI-First approach (not deterministic formulas)
+- Rationale documented: Evidence-based > formula-based for audit defense
+- Development approach: AI-assisted parallel programming authorized
+- Timeline: 9 days vs 3 weeks (16 days saved)
 
 ### 2025-12-05 (Evening)
 - **PHASE 2.0 COMPLETE**: All data foundation work finished
@@ -263,207 +348,22 @@ See MANDATORY-DEVELOPMENT-PROTOCOL.md for complete workflow.
 
 ## NEXT ACTIONS
 
-**Immediate (Tonight - Dec 5)**:
-1. ✅ Phase 2.0.3 closed (MVP deployed)
-2. ✅ PROJECT-STATE.md updated
-3. ✅ PM-BRIEFING-LOG.md created
-4. ⏳ Commit changes to repository
+**Right Now (11:23 AM)**:
+1. ✅ PROJECT-STATE.md updated and committed
+2. ⏳ PM-BRIEFING-LOG.md update in progress
+3. ⏳ Begin Phase 2.0.4 Block 1 work
 
-**Tomorrow (Saturday Dec 6, 9:00 AM EST)**:
-1. 🚀 Begin Phase 2.0.4: Risk Intelligence Layer
-2. 📋 Create detailed task breakdown for Retail mapper
-3. 🔧 Set up GPT-4 integration environment
-4. 📖 Review Framework Section 3.6 for implementation details
+**Today's Focus (11:23 AM - 10:00 PM)**:
+1. 🚀 Build `system-prompt-base.ts` (ASIS GDL-RA framework)
+2. 🚀 Build `ai-risk-assessment.ts` (GPT-4 integration core)
+3. 🧪 Smoke test with single threat
+4. 📋 Draft retail context pattern + rubrics
+5. 🤖 If time: Claude/Replit AI spin up warehouse in parallel
 
-**Week 1 Focus**: Retail interview→risk mapper + AI enhancement service
-
----
-
-## SESSION LOG: December 5, 2025 (Evening) - Phase 2.0.3 Complete (MVP)
-
-**Developer**: Comet (Perplexity Assistant) + Claude RiskFixer CTO + Replit AI Agent  
-**Session Duration**: 4:55 PM - 8:15 PM EST (3 hours 20 minutes)  
-**Focus**: Universal Risk Scenario System (MVP Implementation)
-
-### Phase 2.0.3: Risk Scenarios (T/V/I) ✅ COMPLETE (MVP)
-
-**Challenge**: 5 of 6 assessment templates had zero risk scenarios
-
-**Root Cause Discovery**:
-- Office template had sophisticated 900-line interview-driven mapper (`office-interview-risk-mapper-corrected.ts`)
-- Office mapper NOT wired to assessment completion handler
-- Other templates (retail, warehouse, datacenter, manufacturing) had NO generators
-- Executive Protection had separate T×V×I×E generator (working)
-
-**Critical Incident - Almost Implemented Wrong Solution**:
-1. ❌ Initial approach: Create hardcoded scenario generators (like retail pattern)
-2. ❌ Would have: Destroyed interview-driven sophistication
-3. ❌ Would have: Eliminated AI assessment foundation
-4. ❌ Would have: Removed audit defensibility (ASIS GDL-RA methodology)
-5. ✅ **CEO Strategic Pause**: Requested architectural review with Claude CTO
-6. ✅ **Claude Discovery**: Found sophisticated office mapper, identified correct architecture
-7. ✅ **CEO Decision**: Build universal system preserving sophistication, defer deep mappers to Phase 2.0.4
-
-**CEO Strategic Decisions**:
-1. **Pause for Architectural Review**: Prevented implementing hardcoded solution that would destroy Framework 3.6 compliance
-2. **Build Order Correction**: Identified correct dependency sequence (Data → Intelligence → Presentation)
-3. **Phase 2.0.4 Before 2.1**: Build risk intelligence layer BEFORE report AI (prevents rework)
-4. **Architectural Safeguards**: Established mandatory checkpoints to prevent future "shortcut solution" patterns
-5. **Weekend Work Continuation**: Authorized continuous operations (no Monday start delay)
-
-**MVP Solution Implemented**:
-1. **Universal Dispatcher** (`risk-scenario-generator.ts`):
-   - Template auto-detection from assessment records
-   - Switch statement routing to correct threat library
-   - Handles all 5 facility templates + Executive Protection
-   - Single import path change in routes.ts (Line 4146)
-
-2. **Threat Libraries Created** (5 new files):
-   - `threat-libraries/retail-threats.ts` (15 threats + control mapping)
-   - `threat-libraries/warehouse-threats.ts` (15 threats + control mapping)
-   - `threat-libraries/datacenter-threats.ts` (15 threats + control mapping)
-   - `threat-libraries/manufacturing-threats.ts` (15 threats + control mapping)
-   - `threat-libraries/index.ts` (barrel exports)
-
-3. **Basic TVI Calculation**:
-   - Generic `calculateBaselineScores()` function (~30 lines)
-   - Same formula applied to all threats (not template-specific yet)
-   - Functional but not sophisticated (upgrade in Phase 2.0.4)
-
-**Testing Results**:
-- ✅ Office Building: Confirmed working (sophisticated mapper preserved)
-- ✅ Retail Store: Confirmed working (basic scenarios + $180K control recommendations)
-- ✅ Warehouse: Fixed file population issue, confirmed working
-- ✅ Executive Protection: No regression (separate system intact)
-- ⚠️ Datacenter/Manufacturing: Not tested (but structurally ready)
-
-**Architectural Learning**:
-- **Pattern Identified**: AI assistants repeatedly take "shortcut solutions" without checking for sophisticated existing implementations
-- **Cost of Shortcuts**: Would have required 2-3 week rework + destroyed Framework compliance
-- **Safeguard Established**: MANDATORY-DEVELOPMENT-PROTOCOL.md Phase 4 added (architectural checkpoints)
-- **Key Lesson**: "Speed without sophistication = technical debt"
-
-**Files Modified**:
-- `server/routes.ts` (Line 4146 - import path redirect)
-- `server/services/risk-scenario-generator.ts` (created - universal dispatcher)
-- `server/services/threat-libraries/retail-threats.ts` (created)
-- `server/services/threat-libraries/warehouse-threats.ts` (created)
-- `server/services/threat-libraries/datacenter-threats.ts` (created)
-- `server/services/threat-libraries/manufacturing-threats.ts` (created)
-- `server/services/threat-libraries/index.ts` (created)
-- `MANDATORY-DEVELOPMENT-PROTOCOL.md` (Phase 4 safeguards added)
-
-**Deferred to Phase 2.0.4** (CEO-Approved Roadmap):
-1. **Retail Interview→Risk Mapper** (Priority 1: 3-4 days)
-   - 300-500 lines of template-specific logic
-   - Question analysis layer
-   - Threat-specific TVI calculations
-   - Evidence trail builder
-
-2. **AI Scenario Enhancement** (Priority 2: 2-3 days)
-   - GPT-4 integration with ASIS GDL-RA framework grounding
-   - Structured prompts with industry standards (NRF, TAPA, SOC 2)
-   - Scoring rubrics (eliminates subjectivity)
-   - Temperature 0.3 (deterministic, not creative)
-   - Evidence-based reasoning required
-
-3. **Warehouse Interview→Risk Mapper** (Priority 3: 3-4 days)
-   - Warehouse-specific calculation engine
-   - Similar structure to retail mapper
-
-4. **Photo Analysis Integration** (Priority 4: 2 days)
-   - GPT-4 Vision to adjust vulnerability scores
-   - Evidence capture from facility photos
-
-5. **Datacenter/Manufacturing Mappers** (Priority 5: 4-5 days)
-   - Remaining templates to achieve sophistication parity
-
-**Production Status**: DEPLOYED (MVP functional, enhancement planned)
-- All 6 templates can create assessments
-- Risk scenarios generate for all templates
-- Office maintains sophisticated scoring
-- Other templates have functional (but basic) scoring
-- Users can edit TVI values manually
-- Control recommendations display correctly
-
-**Framework Compliance Status**:
-- ✅ Section 3.6 architecture understood and documented
-- ✅ Office template proves sophisticated approach works
-- ⚠️ Retail/Warehouse/Datacenter/Manufacturing need sophistication upgrade (Phase 2.0.4)
-- ✅ Correct build order identified (prevents rework)
-- ✅ AI assessment foundation preserved
-
-**Architectural Decisions Documented**:
-1. **Build Order**: Data → Intelligence → Presentation (Phase 2.0.4 before 2.1)
-2. **Why This Order**: Report AI needs evidence trails from interview mappers
-3. **Cost of Wrong Order**: Would require rebuilding reports after adding intelligence
-4. **Time Saved**: 1 week + elimination of rework
-
-**Protocol Enhancements**:
-- Added Phase 4 to MANDATORY-DEVELOPMENT-PROTOCOL.md
-- Mandatory pre-implementation checkpoints
-- Framework citation requirements
-- Sophistication parity rules
-- Build order enforcement
-- Escalation triggers (STOP conditions)
-- MVP vs Production-Grade disclosure protocol
-
-**Commit Reference**:
-- Branch: `main`
-- Time: December 5, 2025, 8:15 PM EST
-- Message: "feat: Implement universal risk scenario system (Phase 2.0.3 MVP)"
-
-### Key Metrics
-- **Templates Fixed**: 5 of 5 (warehouse, retail, datacenter, manufacturing, office wiring)
-- **Threat Scenarios Created**: 90+ (15 per facility template)
-- **Code Quality**: MVP (functional, upgradeable)
-- **Framework Alignment**: Partial (full alignment in Phase 2.0.4)
-- **Technical Debt**: Documented and planned (Phase 2.0.4 roadmap)
-- **Regressions**: Zero (all existing features working)
-
-### Team Recognition
-**CEO**: Strategic leadership, architectural oversight, correct build order identification  
-**Claude RiskFixer CTO**: Architectural analysis, threat library generation, integration guidance  
-**Replit AI Agent**: File integration, bonus bug fixes  
-**Comet (PM)**: Root cause analysis, timeline management, protocol enforcement
+**Tomorrow (Sunday Dec 7)**:
+- Complete Retail + Warehouse templates (parallel AI build)
+- End-to-end testing both templates
 
 ---
 
-## SESSION LOG: December 3, 2025 (Evening) - Protocol Documentation Update
-
-**Developer**: Comet (Perplexity Assistant)
-**Session Duration**: 9:00 PM - 9:30 PM EST
-**Focus**: Team Role Definition & Documentation
-
-### Key Activities
-
-#### 1. Documentation Enhancement ✅
-- **Updated MANDATORY-DEVELOPMENT-PROTOCOL.md**:
-  - Added new section: "Developer (AI Development Assistant)" role definition
-  - Clearly differentiated between PM (Perplexity RiskFixer Space) and Programmer/Developer (Perplexity Assistant/Comet)
-  - Updated Last Updated date to 2025-12-03
-  - Defined responsibilities, constraints, and when to use Developer role
-  
-- **Role Clarification**:
-  - **CTO** (Gemini Gem): Strategic decisions, architecture approvals, phase authorizations
-  - **PM** (Perplexity Workspace): Daily briefings, project planning, progress tracking
-  - **Developer** (Perplexity Assistant/Comet): Tactical implementation, coding, testing, debugging
-
-### CTO Decision & Strategic Pivot
-
-**Decision**: Formalize AI Assistant role in project protocols to ensure session continuity and clear role boundaries.
-
-**Rationale**: 
-- Previous ambiguity between PM communications and developer execution led to potential confusion
-- Explicit role definition ensures AI assistant knows exact responsibilities at session start
-- Clear escalation paths (blockers → PM, architecture → CTO) prevent scope creep
-- Enables better handoffs between sessions with defined responsibility boundaries
-
-### Files Modified
-- `MANDATORY-DEVELOPMENT-PROTOCOL.md` - Added Developer role section, updated date
-- `PROJECT-STATE.md` - Added this session log
-
-### Commit Reference
-- Commit: `docs: Add Developer (AI Assistant) role definition to protocol`
-- Branch: `main`
-- Time: December 3, 2025, ~9:15 PM EST
+**END OF PROJECT-STATE.MD**
