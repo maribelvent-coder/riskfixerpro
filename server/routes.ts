@@ -3287,6 +3287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   options: tq.options ?? null, // Copy options for checklist questions
                   conditionalOnQuestionId: tq.conditionalOnQuestionId ?? null, // Copy conditional logic
                   showWhenAnswer: tq.showWhenAnswer ?? null, // Copy conditional logic
+                  riskDirection: tq.riskDirection ?? "positive", // Copy risk direction (default to positive)
                   response: null,
                   notes: null,
                   evidence: null,
