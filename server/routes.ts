@@ -54,6 +54,39 @@ import { sendInvitationEmail } from "./services/email";
 import { registerGeoIntelRoutes } from "./routes/geoIntelRoutes.js";
 import { generateAssessmentReport } from "./services/reporting/pdf-generator";
 
+// Manufacturing Assessment Imports
+import {
+  MANUFACTURING_INTERVIEW_QUESTIONS,
+  MANUFACTURING_SECTION_METADATA,
+  MANUFACTURING_SECTIONS,
+  MANUFACTURING_ZONES,
+  getQuestionsBySection,
+  getQuestionById,
+  getAllQuestionsFlattened,
+  getQuestionnaireStats,
+  getAIContextPrompt,
+} from "./services/manufacturing-interview-questionnaire";
+
+import {
+  calculateVulnerabilityFromInterview,
+  calculateThreatLikelihoodFromInterview,
+  calculateImpactFromInterview,
+  calculateOverallSecurityScore,
+  generateControlRecommendations,
+  getPrioritizedControlRecommendations,
+  calculateRiskForThreat,
+  initializeRiskScenariosFromInterview,
+  MANUFACTURING_THREATS,
+  THREAT_CONTROL_MAPPING,
+  QUESTION_THREAT_MAPPING,
+} from "./services/manufacturing-interview-mapper";
+
+import {
+  generateManufacturingRiskScenariosWithAI,
+  assessSingleManufacturingThreat,
+  generateManufacturingNarrative,
+} from "./services/manufacturing-ai-risk-assessment";
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -2498,6 +2531,565 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res
           .status(500)
           .json({ error: "Failed to calculate production continuity score" });
+      }
+    },
+  );
+
+  // ============================================================================
+  // MANUFACTURING INTERVIEW ROUTES
+  // ============================================================================
+
+  // Get manufacturing threats for interview workflow
+  app.get(
+    "/api/assessments/:id/manufacturing-interview/threats",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        res.json({
+          threats: MANUFACTURING_THREATS.map((t) => ({
+            id: t.id,
+            name: t.name,
+            category: t.category,
+            typicalLikelihood: t.typicalLikelihood,
+            typicalImpact: t.typicalImpact,
+            asisCode: t.asisCode,
+            description: t.description,
+          })),
+          totalThreats: MANUFACTURING_THREATS.length,
+        });
+      } catch (error) {
+        console.error("Error fetching manufacturing threats:", error);
+        res.status(500).json({ error: "Failed to fetch manufacturing threats" });
+      }
+    },
+  );
+
+  // Get manufacturing interview questions with section metadata
+  app.get(
+    "/api/assessments/:id/manufacturing-interview/questions",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const questions = getAllQuestionsFlattened();
+        const stats = getQuestionnaireStats();
+
+        const bySection: Record<string, any[]> = {};
+        for (const section of MANUFACTURING_SECTIONS) {
+          bySection[section] = getQuestionsBySection(section);
+        }
+
+        res.json({
+          totalQuestions: stats.totalQuestions,
+          sections: MANUFACTURING_SECTION_METADATA.map((s) => ({
+            id: s.id,
+            name: s.name,
+            description: s.description,
+            order: s.order,
+            questionCount: bySection[s.name]?.length || 0,
+          })),
+          questionsBySection: bySection,
+          aiContextPrompt: getAIContextPrompt(),
+        });
+      } catch (error) {
+        console.error("Error fetching manufacturing questions:", error);
+        res.status(500).json({ error: "Failed to fetch questions" });
+      }
+    },
+  );
+
+  // Get manufacturing facility zones
+  app.get(
+    "/api/assessments/:id/manufacturing-interview/zones",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        res.json({
+          zones: MANUFACTURING_ZONES,
+          zoneCategories: {
+            perimeter: ["perimeter", "parking_lot", "visitor_entrance"],
+            production: ["production_floor", "tool_room"],
+            sensitive: ["r_and_d_area", "server_room"],
+            storage: ["raw_material_storage", "finished_goods_warehouse", "hazmat_storage"],
+            shipping: ["loading_dock"],
+            administrative: ["office_area", "break_room"],
+          },
+        });
+      } catch (error) {
+        console.error("Error fetching manufacturing zones:", error);
+        res.status(500).json({ error: "Failed to fetch zones" });
+      }
+    },
+  );
+
+  // Calculate IP theft risk during interview
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/calculate-ip-theft-risk",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const { score, grade, findings, strengths, categoryScores } =
+          calculateOverallSecurityScore(interviewResponses);
+
+        // IP protection level calculation
+        const hasNDAs = interviewResponses.ip_2 === "yes";
+        const hasDLP = interviewResponses.ip_5 === "yes";
+        const hasCleanDesk = interviewResponses.ip_3 === "yes";
+        const hasPhotographyProhibition = interviewResponses.production_5 === "yes";
+        const hasExitInterviews = interviewResponses.ip_7 === "yes";
+        const hasRDAccessControl = !(interviewResponses.ip_1a || "")
+          .toLowerCase()
+          .includes("no formal");
+
+        const ipControlCount = [
+          hasNDAs,
+          hasDLP,
+          hasCleanDesk,
+          hasPhotographyProhibition,
+          hasExitInterviews,
+          hasRDAccessControl,
+        ].filter(Boolean).length;
+
+        let ipProtectionLevel = "concerning";
+        if (ipControlCount >= 6) ipProtectionLevel = "excellent";
+        else if (ipControlCount >= 5) ipProtectionLevel = "good";
+        else if (ipControlCount >= 3) ipProtectionLevel = "average";
+        else if (ipControlCount >= 1) ipProtectionLevel = "concerning";
+        else ipProtectionLevel = "critical";
+
+        // Insider threat risk calculation
+        const incidentHistory = interviewResponses.emergency_2 || [];
+        const hasInsiderHistory =
+          Array.isArray(incidentHistory) &&
+          (incidentHistory.includes("Employee theft") ||
+            incidentHistory.includes("IP theft or suspected espionage") ||
+            incidentHistory.includes("Equipment sabotage or tampering"));
+        const hasInsiderProgram = interviewResponses.personnel_3 === "yes";
+        const hasAccessRevocation = interviewResponses.personnel_6 === "yes";
+        const hasBackgroundChecks = !(interviewResponses.personnel_1 || "")
+          .toLowerCase()
+          .includes("no background");
+        const hasInsiderControls =
+          hasInsiderProgram && hasAccessRevocation && hasBackgroundChecks;
+
+        let insiderThreatRisk = "moderate";
+        if (hasInsiderHistory && !hasInsiderControls) insiderThreatRisk = "critical";
+        else if (hasInsiderHistory || !hasInsiderControls) insiderThreatRisk = "high";
+        else if (!hasInsiderProgram || !hasAccessRevocation)
+          insiderThreatRisk = "moderate";
+        else insiderThreatRisk = "low";
+
+        // CFATS compliance
+        const hasHazmat = interviewResponses.facility_8 === "yes";
+        const cfatsTier = interviewResponses.facility_8a || null;
+
+        res.json({
+          securityScore: score,
+          securityGrade: grade,
+          ipProtectionLevel,
+          insiderThreatRisk,
+          keyFindings: findings,
+          strengths,
+          categoryScores,
+          cfatsCompliance: {
+            applicable: hasHazmat,
+            tier: hasHazmat ? cfatsTier : null,
+          },
+          components: {
+            hasProductionAccessControl: interviewResponses.production_1 === "yes",
+            hasIPProtectionMeasures: hasDLP || hasNDAs,
+            hasDLPSystem: hasDLP,
+            hasBackgroundChecks,
+            hasInsiderThreatProgram: hasInsiderProgram,
+            hasPhotographyProhibition,
+            hasVisitorNDA: hasNDAs,
+          },
+        });
+      } catch (error) {
+        console.error("Error calculating IP theft risk:", error);
+        res.status(500).json({ error: "Failed to calculate IP theft risk" });
+      }
+    },
+  );
+
+  // Prioritize all threats based on interview responses
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/prioritize-threats",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const threatRisks = MANUFACTURING_THREATS.map((threat) => {
+          const riskData = calculateRiskForThreat(interviewResponses, threat.id);
+          return {
+            id: threat.id,
+            name: threat.name,
+            category: threat.category,
+            ...riskData,
+          };
+        });
+
+        const sortedThreats = threatRisks.sort((a, b) => b.inherentRisk - a.inherentRisk);
+        const highestRisks = sortedThreats.filter(
+          (t) => t.riskLevel === "critical" || t.riskLevel === "high",
+        );
+
+        res.json({
+          allThreats: sortedThreats,
+          highestRisks,
+          summary: {
+            critical: sortedThreats.filter((t) => t.riskLevel === "critical").length,
+            high: sortedThreats.filter((t) => t.riskLevel === "high").length,
+            medium: sortedThreats.filter((t) => t.riskLevel === "medium").length,
+            low: sortedThreats.filter((t) => t.riskLevel === "low").length,
+          },
+        });
+      } catch (error) {
+        console.error("Error prioritizing threats:", error);
+        res.status(500).json({ error: "Failed to prioritize threats" });
+      }
+    },
+  );
+
+  // Get control recommendations based on interview responses
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/get-control-recommendations",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses, priorityThreats, includeRationale = true } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const generalRecommendations = generateControlRecommendations(
+          interviewResponses,
+          priorityThreats?.[0],
+        );
+
+        const prioritizedControls = includeRationale
+          ? getPrioritizedControlRecommendations(interviewResponses)
+          : [];
+
+        let threatSpecificControls: any[] = [];
+        if (priorityThreats && priorityThreats.length > 0) {
+          for (const threatId of priorityThreats) {
+            const threatControls = THREAT_CONTROL_MAPPING[threatId] || [];
+            threatSpecificControls.push({
+              threatId,
+              controls: threatControls.map((controlId: string) => ({
+                controlId,
+                controlName: controlId
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (char: string) => char.toUpperCase()),
+              })),
+            });
+          }
+        }
+
+        res.json({
+          total: generalRecommendations.length,
+          recommendations: generalRecommendations.map((controlId: string) => ({
+            controlId,
+            controlName: controlId
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (char: string) => char.toUpperCase()),
+          })),
+          prioritizedControls: prioritizedControls.length > 0 ? prioritizedControls : undefined,
+          threatSpecificControls:
+            threatSpecificControls.length > 0 ? threatSpecificControls : undefined,
+        });
+      } catch (error) {
+        console.error("Error getting control recommendations:", error);
+        res.status(500).json({ error: "Failed to get control recommendations" });
+      }
+    },
+  );
+
+  // Get threat breakdown with T×V×I details
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/get-threat-breakdown",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses, threatId } = req.body;
+
+        if (!interviewResponses || !threatId) {
+          return res
+            .status(400)
+            .json({ error: "interviewResponses and threatId are required" });
+        }
+
+        const threat = MANUFACTURING_THREATS.find((t) => t.id === threatId);
+        if (!threat) {
+          return res.status(400).json({
+            error: "Invalid threatId",
+            validThreats: MANUFACTURING_THREATS.map((t) => t.id),
+          });
+        }
+
+        const questionMapping = QUESTION_THREAT_MAPPING[threatId] || {
+          questionIds: [],
+          criticalQuestions: [],
+          controlQuestions: [],
+        };
+
+        const T = calculateThreatLikelihoodFromInterview(interviewResponses, threatId);
+        const V = calculateVulnerabilityFromInterview(interviewResponses, threatId);
+        const I = calculateImpactFromInterview(interviewResponses, threatId);
+        const inherentRisk = T * V * I;
+
+        let riskLevel = "low";
+        const normalizedRisk = (inherentRisk / 125) * 100;
+        if (normalizedRisk >= 60) riskLevel = "critical";
+        else if (normalizedRisk >= 40) riskLevel = "high";
+        else if (normalizedRisk >= 25) riskLevel = "medium";
+
+        res.json({
+          threat: {
+            id: threat.id,
+            name: threat.name,
+            category: threat.category,
+            description: threat.description,
+            asisCode: threat.asisCode,
+          },
+          scores: {
+            threatLikelihood: T,
+            vulnerability: V,
+            impact: I,
+            inherentRisk,
+            riskLevel,
+          },
+          questionMapping: {
+            totalQuestions: questionMapping.questionIds?.length || 0,
+            criticalQuestions: questionMapping.criticalQuestions || [],
+            controlQuestions: questionMapping.controlQuestions || [],
+          },
+          recommendedControls: THREAT_CONTROL_MAPPING[threatId] || [],
+        });
+      } catch (error) {
+        console.error("Error getting threat breakdown:", error);
+        res.status(500).json({ error: "Failed to get threat breakdown" });
+      }
+    },
+  );
+
+  // Generate risk scenarios using AI
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/generate-risks-ai",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const {
+          interviewResponses,
+          useAI = true,
+          photoFindings,
+          incidentHistory,
+          ipAssets,
+          cfatsProfile,
+          productionValue,
+        } = req.body;
+
+        const assessment = await storage.getAssessment(id);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        if (
+          assessment.templateId !== "manufacturing-facility" &&
+          assessment.templateId !== "manufacturing"
+        ) {
+          return res.status(400).json({
+            error:
+              "Invalid assessment type. This endpoint is for Manufacturing assessments only.",
+          });
+        }
+
+        const result = await generateManufacturingRiskScenariosWithAI(
+          id,
+          interviewResponses,
+          {
+            useAI,
+            photoFindings,
+            incidentHistory,
+            ipAssets,
+            cfatsProfile,
+            productionValue,
+          },
+        );
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error generating manufacturing risk scenarios:", error);
+        res.status(500).json({
+          error: "Failed to generate risk scenarios",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Assess a single manufacturing threat
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/assess-single-threat",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { threatId, interviewResponses, useAI = true } = req.body;
+
+        if (!threatId) {
+          return res.status(400).json({ error: "threatId is required" });
+        }
+
+        const validThreat = MANUFACTURING_THREATS.find((t) => t.id === threatId);
+        if (!validThreat) {
+          return res.status(400).json({
+            error: "Invalid threatId",
+            validThreats: MANUFACTURING_THREATS.map((t) => t.id),
+          });
+        }
+
+        const result = await assessSingleManufacturingThreat(
+          threatId,
+          interviewResponses,
+          useAI,
+        );
+        res.json(result);
+      } catch (error) {
+        console.error("Error assessing single manufacturing threat:", error);
+        res.status(500).json({
+          error: "Failed to assess threat",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Generate AI narrative for manufacturing assessment
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/generate-narrative",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { results, interviewResponses, narrativeType = "executive_summary" } =
+          req.body;
+
+        if (!results || !Array.isArray(results)) {
+          return res.status(400).json({ error: "results array is required" });
+        }
+
+        const context = {
+          assessmentId: id,
+          interviewResponses: interviewResponses || {},
+        };
+
+        const narrative = await generateManufacturingNarrative({
+          assessmentId: id,
+          riskScenarios: results,
+          facilityContext: context,
+          narrativeType,
+        });
+
+        res.json({ narrative });
+      } catch (error) {
+        console.error("Error generating manufacturing narrative:", error);
+        res.status(500).json({ error: "Failed to generate narrative" });
+      }
+    },
+  );
+
+  // Save interview responses
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/save-responses",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { interviewResponses, generateScenarios = false } = req.body;
+
+        const updatedAssessment = await storage.updateAssessment(id, {
+          interviewResponses,
+        });
+
+        let scenarioResult = null;
+        if (generateScenarios) {
+          scenarioResult = await initializeRiskScenariosFromInterview(
+            id,
+            interviewResponses,
+          );
+        }
+
+        res.json({
+          success: true,
+          assessmentId: id,
+          savedAt: new Date().toISOString(),
+          scenarioResult,
+        });
+      } catch (error) {
+        console.error("Error saving interview responses:", error);
+        res.status(500).json({ error: "Failed to save responses" });
+      }
+    },
+  );
+
+  // Get industry benchmarks
+  app.get(
+    "/api/assessments/:id/manufacturing-interview/industry-benchmarks",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        res.json({
+          industryStandards: {
+            asis: {
+              name: "ASIS GDL-RA",
+              description: "General Security Risk Assessment Guidelines",
+              applicability: "All manufacturing facilities",
+            },
+            cfats: {
+              name: "CFATS (Chemical Facility Anti-Terrorism Standards)",
+              description: "DHS requirements for facilities handling chemicals of interest",
+              applicability: "Facilities with hazardous materials",
+              tiers: ["Tier 1 (highest risk)", "Tier 2", "Tier 3", "Tier 4"],
+            },
+            nist: {
+              name: "NIST Manufacturing Security Guidelines",
+              description: "Security framework for manufacturing operations",
+              applicability: "All manufacturing facilities",
+            },
+            iso28000: {
+              name: "ISO 28000",
+              description: "Supply Chain Security Management Systems",
+              applicability: "Supply chain operations",
+            },
+          },
+          ipTheftStatistics: {
+            annualCost: "$600+ billion annually in US (FBI estimate)",
+            insiderInvolvement: "60%+ involves current or former employees",
+          },
+          securityMaturityLevels: {
+            level1: { name: "Initial", typicalScore: "0-40" },
+            level2: { name: "Developing", typicalScore: "41-60" },
+            level3: { name: "Defined", typicalScore: "61-75" },
+            level4: { name: "Managed", typicalScore: "76-90" },
+            level5: { name: "Optimized", typicalScore: "91-100" },
+          },
+        });
+      } catch (error) {
+        console.error("Error fetching industry benchmarks:", error);
+        res.status(500).json({ error: "Failed to fetch benchmarks" });
       }
     },
   );
