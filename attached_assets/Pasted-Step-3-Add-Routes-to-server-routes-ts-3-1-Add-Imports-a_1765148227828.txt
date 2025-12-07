@@ -1,0 +1,52 @@
+Step 3: Add Routes to server/routes.ts
+3.1 Add Imports at Top of File
+Add these imports to server/routes.ts:
+typescript// Manufacturing Assessment Imports
+import { 
+  generateManufacturingRiskScenariosWithAI,
+  assessSingleManufacturingThreat,
+  generateManufacturingNarrative,
+  ManufacturingAssessmentContext,
+  ManufacturingAIAssessmentResponse,
+} from './services/manufacturing-ai-risk-assessment';
+
+import {
+  calculateVulnerabilityFromInterview,
+  calculateThreatLikelihoodFromInterview,
+  calculateImpactFromInterview,
+  calculateOverallSecurityScore,
+  generateControlRecommendations,
+  getPrioritizedControlRecommendations,
+  calculateRiskForThreat,
+  initializeRiskScenariosFromInterview,
+  MANUFACTURING_THREATS,
+  THREAT_CONTROL_MAPPING,
+  QUESTION_THREAT_MAPPING,
+} from './services/manufacturing-interview-mapper';
+
+import {
+  MANUFACTURING_INTERVIEW_QUESTIONS,
+  SECTION_METADATA,
+  MANUFACTURING_SECTIONS,
+  MANUFACTURING_ZONES,
+  getQuestionsBySection,
+  getQuestionById,
+  getAllQuestionsFlattened,
+  getQuestionnaireStats,
+} from './services/manufacturing-interview-questionnaire';
+3.2 Add Route Definitions
+Copy the complete route block from manufacturing-route-integration-guide.ts (the MANUFACTURING_ROUTES_BLOCK export) into your server/routes.ts file.
+The routes to add are:
+typescript// POST /api/assessments/:id/manufacturing-interview/generate-risks-ai
+// POST /api/assessments/:id/manufacturing-interview/assess-single-threat
+// POST /api/assessments/:id/manufacturing-interview/generate-narrative
+// GET  /api/assessments/:id/manufacturing-interview/threats
+// POST /api/assessments/:id/manufacturing-interview/calculate-ip-theft-risk
+// GET  /api/controls/manufacturing
+// POST /api/assessments/:id/manufacturing-interview/get-control-recommendations
+// POST /api/assessments/:id/manufacturing-interview/get-threat-breakdown
+// POST /api/assessments/:id/manufacturing-interview/prioritize-threats
+// GET  /api/assessments/:id/manufacturing-interview/questions
+// GET  /api/assessments/:id/manufacturing-interview/industry-benchmarks
+// GET  /api/assessments/:id/manufacturing-interview/zones
+// POST /api/assessments/:id/manufacturing-interview/save-responses
