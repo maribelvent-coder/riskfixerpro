@@ -1038,11 +1038,11 @@ export function FacilitySurvey({
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
-                question.options.map((option, index) => (
-                  <SelectItem key={index} value={option}>
-                    {option}
-                  </SelectItem>
-                ))
+              {question.options.map((option, index) => (
+                <SelectItem key={index} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         );

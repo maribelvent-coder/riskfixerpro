@@ -52,7 +52,11 @@ import type {
   CrimeObservation,
   InsertCrimeObservation,
   SiteIncident,
-  InsertSiteIncident
+  InsertSiteIncident,
+  LoadingDock,
+  InsertLoadingDock,
+  ExecutiveProfile,
+  InsertExecutiveProfile
 } from "@shared/schema";
 
 export class DbStorage implements IStorage {
@@ -1145,6 +1149,39 @@ export class DbStorage implements IStorage {
   async deleteSiteIncident(id: string): Promise<boolean> {
     const results = await db.delete(schema.siteIncidents)
       .where(eq(schema.siteIncidents.id, id))
+      .returning();
+    return results.length > 0;
+  }
+
+  // Executive Profile methods
+  async getExecutiveProfile(id: string): Promise<ExecutiveProfile | undefined> {
+    const results = await db.select().from(schema.executiveProfiles)
+      .where(eq(schema.executiveProfiles.id, id));
+    return results[0];
+  }
+
+  async getExecutiveProfileByAssessment(assessmentId: string): Promise<ExecutiveProfile | undefined> {
+    const results = await db.select().from(schema.executiveProfiles)
+      .where(eq(schema.executiveProfiles.assessmentId, assessmentId));
+    return results[0];
+  }
+
+  async createExecutiveProfile(profile: InsertExecutiveProfile): Promise<ExecutiveProfile> {
+    const results = await db.insert(schema.executiveProfiles).values(profile).returning();
+    return results[0];
+  }
+
+  async updateExecutiveProfile(id: string, updateData: Partial<ExecutiveProfile>): Promise<ExecutiveProfile | undefined> {
+    const results = await db.update(schema.executiveProfiles)
+      .set(updateData)
+      .where(eq(schema.executiveProfiles.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteExecutiveProfile(id: string): Promise<boolean> {
+    const results = await db.delete(schema.executiveProfiles)
+      .where(eq(schema.executiveProfiles.id, id))
       .returning();
     return results.length > 0;
   }
