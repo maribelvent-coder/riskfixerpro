@@ -275,11 +275,11 @@ async function seedFacilityQuestions() {
             question: question.questionText,
             type: question.questionType,
             orderIndex: question.orderIndex,
-            riskDirection: question.riskDirection || "positive", // Default to positive if not specified
+            options: (question as any).options || null,
             controlLibraryId: controlId,
             bestPractice: question.followUpText || null,
             rationale: question.evidenceType || null,
-            importance: "Medium" // Default importance
+            importance: "Medium"
           };
           
           if (existing.length > 0) {

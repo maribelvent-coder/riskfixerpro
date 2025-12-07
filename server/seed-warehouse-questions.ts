@@ -145,10 +145,11 @@ async function seedWarehouseQuestions() {
             category: question.section,
             subcategory: question.zoneApplicable?.join(', ') || null,
             question: question.questionText,
-            bestPractice: question.options?.join('; ') || null,
+            bestPractice: null,
             rationale: question.riskIndicators?.join('; ') || null,
             importance: question.required ? 'High' : 'Medium',
             type: question.questionType.replace('_', '-'),
+            options: question.options || null,
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
             controlLibraryId: controlLibraryId
           })
@@ -166,10 +167,11 @@ async function seedWarehouseQuestions() {
             category: question.section,
             subcategory: question.zoneApplicable?.join(', ') || null,
             question: question.questionText,
-            bestPractice: question.options?.join('; ') || null,
+            bestPractice: null,
             rationale: question.riskIndicators?.join('; ') || null,
             importance: question.required ? 'High' : 'Medium',
             type: question.questionType.replace('_', '-'),
+            options: question.options || null,
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
             controlLibraryId: controlLibraryId
           })

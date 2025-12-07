@@ -61,8 +61,9 @@ async function seedOfficeQuestions() {
             question: question.question,
             bestPractice: question.helpText || null,
             rationale: question.riskIndicators?.highRisk || null,
-            importance: 'High', // Default importance
+            importance: 'High',
             type: question.type,
+            options: question.options || null,
             orderIndex: parseInt(question.id.replace('.', '')) || 0,
             controlLibraryId: controlLibraryId
           })
@@ -82,8 +83,9 @@ async function seedOfficeQuestions() {
             question: question.question,
             bestPractice: question.helpText || null,
             rationale: question.riskIndicators?.highRisk || null,
-            importance: 'High', // Default importance
+            importance: 'High',
             type: question.type,
+            options: question.options || null,
             orderIndex: parseInt(question.id.replace('.', '')) || 0,
             controlLibraryId: controlLibraryId
           })

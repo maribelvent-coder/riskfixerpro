@@ -189,6 +189,7 @@ async function seedExecutiveSurveyQuestionsV2() {
         rationale: rationale || null,
         importance,
         type: questionType,
+        options: null,
         orderIndex: orderIndex++
       });
     }
@@ -205,6 +206,7 @@ async function seedExecutiveSurveyQuestionsV2() {
       rationale: 'Assessments often reveal unexpected findings or unique circumstances that require documentation. This catch-all section ensures nothing critical is missed.',
       importance: 'Medium',
       type: 'text',
+      options: null,
       orderIndex: orderIndex++
     });
     
