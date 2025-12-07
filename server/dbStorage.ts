@@ -1186,11 +1186,3 @@ export class DbStorage implements IStorage {
     return results.length > 0;
   }
 }
-
-async getFacilitySurveyQuestions(assessmentId: string): Promise<FacilitySurveyQuestion[]> {
-  const results = await db.select()
-    .from(schema.facilitySurveyQuestions)
-    .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId))
-    .orderBy(schema.facilitySurveyQuestions.order);
-  return results;
-}
