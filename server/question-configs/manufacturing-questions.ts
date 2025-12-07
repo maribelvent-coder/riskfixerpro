@@ -1,6 +1,78 @@
 import { QuestionConfig } from './retail-store-questions';
 
 export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
+  // ========== SECTION 1: FACILITY & PRODUCTION PROFILE ==========
+  {
+    questionText: "What type of manufacturing does this facility perform?",
+    category: "Facility & Production Profile",
+    questionType: "text",
+    controlLibraryName: "Security Awareness Training",
+    evidenceType: "Facility overview documentation",
+    orderIndex: 1
+  },
+  {
+    questionText: "What is the approximate square footage of the manufacturing facility?",
+    category: "Facility & Production Profile",
+    questionType: "text",
+    controlLibraryName: "Security Awareness Training",
+    evidenceType: "Facility floor plan",
+    orderIndex: 2
+  },
+  {
+    questionText: "What is the approximate annual production value?",
+    category: "Facility & Production Profile",
+    questionType: "text",
+    controlLibraryName: "Security Awareness Training",
+    evidenceType: "Production value documentation",
+    orderIndex: 3
+  },
+  {
+    questionText: "How many shifts does the facility operate?",
+    category: "Facility & Production Profile",
+    questionType: "text",
+    controlLibraryName: "Security Awareness Training",
+    evidenceType: "Shift schedule",
+    orderIndex: 4
+  },
+  {
+    questionText: "How many total employees work at this facility?",
+    category: "Facility & Production Profile",
+    questionType: "text",
+    controlLibraryName: "Background Checks",
+    evidenceType: "Employee roster",
+    orderIndex: 5
+  },
+  {
+    questionText: "Does your facility manufacture products that contain proprietary processes, formulas, or trade secrets?",
+    category: "Facility & Production Profile",
+    questionType: "yes-no",
+    followUpText: "Describe the types of intellectual property present",
+    followUpType: "text",
+    controlLibraryName: "Security Awareness Training",
+    evidenceType: "IP classification documentation",
+    orderIndex: 6
+  },
+  {
+    questionText: "Do you manufacture high-value products or use high-value raw materials?",
+    category: "Facility & Production Profile",
+    questionType: "yes-no",
+    followUpText: "Describe the types of high-value materials or products",
+    followUpType: "text",
+    controlLibraryName: "Warehouse Management System (WMS)",
+    evidenceType: "Inventory valuation report",
+    orderIndex: 7
+  },
+  {
+    questionText: "Does your facility handle hazardous materials subject to CFATS or other security regulations?",
+    category: "Facility & Production Profile",
+    questionType: "yes-no",
+    followUpText: "Describe the CFATS tier classification if applicable",
+    followUpType: "text",
+    controlLibraryName: "Hazmat Storage & Handling Procedures",
+    evidenceType: "CFATS documentation",
+    orderIndex: 8
+  },
+  // ========== SECTION 2: ACCESS CONTROL ==========
   {
     questionText: "Is access to production floor and critical equipment restricted to authorized personnel?",
     category: "Access Control",
@@ -9,7 +81,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Card Access System",
     evidenceType: "Photo of access readers",
-    orderIndex: 1
+    orderIndex: 9
   },
   {
     questionText: "Is CCTV installed covering all production equipment and critical areas?",
@@ -19,7 +91,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "CCTV System - IP/Network",
     evidenceType: "Camera layout map",
-    orderIndex: 2
+    orderIndex: 10
   },
   {
     questionText: "Are safety interlocks and guards installed on machinery to prevent tampering?",
@@ -29,7 +101,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Machine Guarding & Safety Interlocks",
     evidenceType: "Photo of machine guarding",
-    orderIndex: 3
+    orderIndex: 11
   },
   {
     questionText: "Are tools and equipment tracked via inventory management system?",
@@ -39,7 +111,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Warehouse Management System (WMS)",
     evidenceType: "Equipment inventory report",
-    orderIndex: 4
+    orderIndex: 12
   },
   {
     questionText: "Are security patrols or guards present during non-production hours?",
@@ -49,7 +121,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Mobile Patrol",
     evidenceType: "Patrol logs",
-    orderIndex: 5
+    orderIndex: 13
   },
   {
     questionText: "Is access to payroll/cash handling areas restricted and monitored?",
@@ -59,7 +131,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Card Access System",
     evidenceType: "Photo of secured cash office",
-    orderIndex: 6
+    orderIndex: 14
   },
   {
     questionText: "Are all equipment operators certified and trained on safe operation?",
@@ -69,7 +141,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Security Awareness Training",
     evidenceType: "Training certificates",
-    orderIndex: 7
+    orderIndex: 15
   },
   {
     questionText: "Are all machines equipped with proper guards, light curtains, and emergency stops?",
@@ -79,7 +151,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Machine Guarding & Safety Interlocks",
     evidenceType: "Safety inspection records",
-    orderIndex: 8
+    orderIndex: 16
   },
   {
     questionText: "Is adequate lighting maintained on production floor and traffic aisles?",
@@ -89,7 +161,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Perimeter Lighting",
     evidenceType: "Lighting survey results",
-    orderIndex: 9
+    orderIndex: 17
   },
   {
     questionText: "Is access to R&D, design, or proprietary production areas strictly controlled?",
@@ -99,7 +171,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Card Access System",
     evidenceType: "Restricted zone map",
-    orderIndex: 10
+    orderIndex: 18
   },
   {
     questionText: "Are background checks conducted on employees with access to proprietary information?",
@@ -109,7 +181,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Background Checks",
     evidenceType: "Background check policy",
-    orderIndex: 11
+    orderIndex: 19
   },
   {
     questionText: "Are all visitors to production areas escorted and restricted from sensitive zones?",
@@ -119,7 +191,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Visitor Escort Policy",
     evidenceType: "Visitor log",
-    orderIndex: 12
+    orderIndex: 20
   },
   {
     questionText: "Is facility perimeter protected by fencing or other physical barriers?",
@@ -129,7 +201,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Perimeter Fencing - Chain Link",
     evidenceType: "Photo of perimeter fence",
-    orderIndex: 13
+    orderIndex: 21
   },
   {
     questionText: "Is intrusion alarm system installed and monitored 24/7?",
@@ -139,7 +211,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Alarm Monitoring Service",
     evidenceType: "Alarm monitoring agreement",
-    orderIndex: 14
+    orderIndex: 22
   },
   {
     questionText: "Are vendors and contractors screened before granting facility access?",
@@ -149,7 +221,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Background Checks",
     evidenceType: "Approved vendor list",
-    orderIndex: 15
+    orderIndex: 23
   },
   {
     questionText: "Is fire alarm system installed covering production, storage, and hazmat areas?",
@@ -159,7 +231,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Fire Alarm System",
     evidenceType: "Fire alarm zone map",
-    orderIndex: 16
+    orderIndex: 24
   },
   {
     questionText: "Are sprinklers or specialized suppression systems installed and tested regularly?",
@@ -169,7 +241,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Fire Suppression System",
     evidenceType: "Fire suppression test records",
-    orderIndex: 17
+    orderIndex: 25
   },
   {
     questionText: "Are flammable materials stored in approved containers and segregated per safety regulations?",
@@ -179,7 +251,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Hazmat Storage & Handling Procedures",
     evidenceType: "Hazmat storage inspection",
-    orderIndex: 18
+    orderIndex: 26
   },
   {
     questionText: "Is employee activity in sensitive areas monitored via CCTV or access logs?",
@@ -189,7 +261,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "CCTV System - IP/Network",
     evidenceType: "Access audit log sample",
-    orderIndex: 19
+    orderIndex: 27
   },
   {
     questionText: "Are industrial control systems network-segmented from corporate IT and internet?",
@@ -199,7 +271,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Network Segmentation",
     evidenceType: "Network diagram",
-    orderIndex: 20
+    orderIndex: 28
   },
   {
     questionText: "Are aisles kept clear and slip/trip hazards addressed through regular inspections?",
@@ -209,7 +281,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     followUpType: "rating",
     controlLibraryName: "Security Awareness Training",
     evidenceType: "Safety inspection checklist",
-    orderIndex: 21
+    orderIndex: 29
   },
   {
     questionText: "Have you experienced workplace safety incidents or OSHA violations in the past 12 months?",
@@ -217,7 +289,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     questionType: "yes-no",
     controlLibraryName: "Security Awareness Training",
     evidenceType: "OSHA incident reports",
-    orderIndex: 22,
+    orderIndex: 30,
     riskDirection: "negative"
   },
   {
@@ -226,7 +298,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     questionType: "yes-no",
     controlLibraryName: "Card Access System",
     evidenceType: "Security incident reports",
-    orderIndex: 23,
+    orderIndex: 31,
     riskDirection: "negative"
   },
   {
@@ -235,7 +307,7 @@ export const MANUFACTURING_QUESTIONS: QuestionConfig[] = [
     questionType: "yes-no",
     controlLibraryName: "CCTV System - IP/Network",
     evidenceType: "Incident investigation reports",
-    orderIndex: 24,
+    orderIndex: 32,
     riskDirection: "negative"
   }
 ];
