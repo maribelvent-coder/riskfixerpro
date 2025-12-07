@@ -4,20 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Camera, 
-  Save, 
-  Shield, 
-  Lock, 
-  Eye, 
-  Lightbulb, 
-  Building, 
+import {
+  Camera,
+  Save,
+  Shield,
+  Lock,
+  Eye,
+  Lightbulb,
+  Building,
   AlertTriangle,
   CheckCircle,
-  Info
+  Info,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +43,15 @@ interface SurveyQuestion {
   subcategory: string;
   question: string;
   standard: string;
-  type: "condition" | "measurement" | "yes-no" | "rating" | "text" | "checklist" | "multiple-choice" | "number";
+  type:
+    | "condition"
+    | "measurement"
+    | "yes-no"
+    | "rating"
+    | "text"
+    | "checklist"
+    | "multiple-choice"
+    | "number";
   response?: any;
   notes?: string;
   evidence?: string[];
@@ -60,15 +74,21 @@ const SURVEY_TYPE_LABELS: Record<string, string> = {
   "executive-protection": "Executive Protection",
 };
 
-export function FacilitySurvey({ assessmentId, templateId, onComplete }: FacilitySurveyProps) {
-  const surveyType = templateId ? (SURVEY_TYPE_LABELS[templateId] || "Facility") : "Facility";
+export function FacilitySurvey({
+  assessmentId,
+  templateId,
+  onComplete,
+}: FacilitySurveyProps) {
+  const surveyType = templateId
+    ? SURVEY_TYPE_LABELS[templateId] || "Facility"
+    : "Facility";
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [currentCategory, setCurrentCategory] = useState(0);
   const [isPersisting, setIsPersisting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
-  
+
   // Map template IDs to database UUIDs - preserves stable lookups while tracking database records
   const templateToDbIdMap = useRef<Map<string, string>>(new Map());
 
@@ -76,10 +96,12 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
   const { data: savedQuestions, isLoading: questionsLoading } = useQuery({
     queryKey: ["/api/assessments", assessmentId, "facility-survey"],
     queryFn: async () => {
-      const response = await fetch(`/api/assessments/${assessmentId}/facility-survey`);
-      if (!response.ok) throw new Error('Failed to fetch facility survey');
+      const response = await fetch(
+        `/api/assessments/${assessmentId}/facility-survey`,
+      );
+      if (!response.ok) throw new Error("Failed to fetch facility survey");
       return response.json();
-    }
+    },
   });
 
   // Safe merge strategy: Preserve local unsaved changes when server data refreshes
@@ -92,73 +114,92 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           templateToDbIdMap.current.set(templateId, sq.id);
         }
       });
-      
+
       // Map database questions to template-centric model
-      const formattedQuestions: SurveyQuestion[] = savedQuestions.map((sq: any) => {
-        // Normalize scalar responses (rating, yes-no, condition) to strings
-        // JSONB may return numbers for rating questions - convert to strings for Select binding
-        let normalizedResponse = sq.response;
-        if (sq.type === 'rating' || sq.type === 'yes-no' || sq.type === 'condition') {
-          if (typeof sq.response === 'number') {
-            normalizedResponse = String(sq.response);
+      const formattedQuestions: SurveyQuestion[] = savedQuestions.map(
+        (sq: any) => {
+          // Normalize scalar responses (rating, yes-no, condition) to strings
+          // JSONB may return numbers for rating questions - convert to strings for Select binding
+          let normalizedResponse = sq.response;
+          if (
+            sq.type === "rating" ||
+            sq.type === "yes-no" ||
+            sq.type === "condition"
+          ) {
+            if (typeof sq.response === "number") {
+              normalizedResponse = String(sq.response);
+            }
           }
-        }
-        
-        return {
-          templateId: sq.templateQuestionId,
-          dbId: sq.id,
-          category: sq.category,
-          subcategory: sq.subcategory,
-          question: sq.question,
-          standard: sq.standard,
-          type: sq.type,
-          options: sq.options || [], // For checklist questions
-          response: normalizedResponse,
-          notes: sq.notes,
-          evidence: sq.evidence || [],
-          recommendations: sq.recommendations || [],
-          conditionalOnQuestionId: sq.conditionalOnQuestionId,
-          showWhenAnswer: sq.showWhenAnswer,
-          riskDirection: sq.riskDirection || "positive" // Default to positive if not specified
-        };
-      });
-      
+
+          return {
+            templateId: sq.templateQuestionId,
+            dbId: sq.id,
+            category: sq.category,
+            subcategory: sq.subcategory,
+            question: sq.question,
+            standard: sq.standard,
+            type: sq.type,
+            options: sq.options || [], // For checklist questions
+            response: normalizedResponse,
+            notes: sq.notes,
+            evidence: sq.evidence || [],
+            recommendations: sq.recommendations || [],
+            conditionalOnQuestionId: sq.conditionalOnQuestionId,
+            showWhenAnswer: sq.showWhenAnswer,
+            riskDirection: sq.riskDirection || "positive", // Default to positive if not specified
+          };
+        },
+      );
+
       // Smart merge: If local state exists, preserve unsaved changes
-      setQuestions(prevQuestions => {
+      setQuestions((prevQuestions) => {
         // First load: No local state exists yet
         if (prevQuestions.length === 0) {
           return formattedQuestions;
         }
-        
+
         // Subsequent loads: Merge server data with local unsaved changes
-        return formattedQuestions.map(serverQuestion => {
-          const localQuestion = prevQuestions.find(q => q.templateId === serverQuestion.templateId);
-          
+        return formattedQuestions.map((serverQuestion) => {
+          const localQuestion = prevQuestions.find(
+            (q) => q.templateId === serverQuestion.templateId,
+          );
+
           // If no local version exists, use server data as-is
           if (!localQuestion) {
             return serverQuestion;
           }
-          
+
           // Merge: Use server data for structure, but preserve local unsaved changes
           // Local changes take precedence if they differ from server (user is actively editing)
           return {
             ...serverQuestion,
             // Preserve local response if it exists and differs from server
-            response: localQuestion.response !== undefined && localQuestion.response !== serverQuestion.response
-              ? localQuestion.response
-              : serverQuestion.response,
+            response:
+              localQuestion.response !== undefined &&
+              localQuestion.response !== serverQuestion.response
+                ? localQuestion.response
+                : serverQuestion.response,
             // Preserve local notes if they differ from server
-            notes: localQuestion.notes !== serverQuestion.notes ? localQuestion.notes : serverQuestion.notes,
+            notes:
+              localQuestion.notes !== serverQuestion.notes
+                ? localQuestion.notes
+                : serverQuestion.notes,
             // Preserve local evidence if modified
-            evidence: localQuestion.evidence && localQuestion.evidence.length > 0 && 
-                     JSON.stringify(localQuestion.evidence) !== JSON.stringify(serverQuestion.evidence)
-              ? localQuestion.evidence
-              : serverQuestion.evidence,
+            evidence:
+              localQuestion.evidence &&
+              localQuestion.evidence.length > 0 &&
+              JSON.stringify(localQuestion.evidence) !==
+                JSON.stringify(serverQuestion.evidence)
+                ? localQuestion.evidence
+                : serverQuestion.evidence,
             // Preserve local recommendations if modified
-            recommendations: localQuestion.recommendations && localQuestion.recommendations.length > 0 &&
-                           JSON.stringify(localQuestion.recommendations) !== JSON.stringify(serverQuestion.recommendations)
-              ? localQuestion.recommendations
-              : serverQuestion.recommendations
+            recommendations:
+              localQuestion.recommendations &&
+              localQuestion.recommendations.length > 0 &&
+              JSON.stringify(localQuestion.recommendations) !==
+                JSON.stringify(serverQuestion.recommendations)
+                ? localQuestion.recommendations
+                : serverQuestion.recommendations,
           };
         });
       });
@@ -167,118 +208,136 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
 
   // Scroll to top when category changes
   useEffect(() => {
-    contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [currentCategory]);
 
-  const categories = Array.from(new Set(questions.map(q => q.category)));
-  
+  const categories = Array.from(new Set(questions.map((q) => q.category)));
+
   // Helper function to check if a question should be shown based on conditional logic
   const shouldShowQuestion = (q: SurveyQuestion): boolean => {
     // If no conditional logic, always show the question
     if (!q.conditionalOnQuestionId || !q.showWhenAnswer) {
       return true;
     }
-    
+
     // Find the prerequisite question
-    const prereqQuestion = questions.find(pq => pq.templateId === q.conditionalOnQuestionId);
-    
+    const prereqQuestion = questions.find(
+      (pq) => pq.templateId === q.conditionalOnQuestionId,
+    );
+
     if (!prereqQuestion?.response) {
       return false;
     }
-    
+
     // Support both exact match and "starts with" match for conditional logic
     // This allows showWhenAnswer="Yes" to match "Yes - full-time LP team" etc.
     const response = String(prereqQuestion.response);
     const expectedAnswer = q.showWhenAnswer;
-    
+
     return response === expectedAnswer || response.startsWith(expectedAnswer);
   };
-  
+
   // Filter questions for current category AND apply conditional rendering
   const currentCategoryQuestions = questions
-    .filter(q => q.category === categories[currentCategory])
+    .filter((q) => q.category === categories[currentCategory])
     .filter(shouldShowQuestion);
-  
+
   // Helper function to check if a question is completed
   const isQuestionCompleted = (q: SurveyQuestion): boolean => {
     // Check if this is a conditional question
     if (q.conditionalOnQuestionId && q.showWhenAnswer) {
       // Find the prerequisite question
-      const prereqQuestion = questions.find(pq => pq.templateId === q.conditionalOnQuestionId);
-      
+      const prereqQuestion = questions.find(
+        (pq) => pq.templateId === q.conditionalOnQuestionId,
+      );
+
       // Auto-complete if prerequisite is unanswered (undefined/null/empty)
       if (!prereqQuestion || !prereqQuestion.response) {
         return true; // Auto-complete until prerequisite is answered
       }
-      
+
       // Auto-complete if prerequisite answer doesn't match showWhenAnswer (question is hidden)
       // Support both exact match and "starts with" match
       const response = String(prereqQuestion.response);
       const expectedAnswer = q.showWhenAnswer;
-      const matches = response === expectedAnswer || response.startsWith(expectedAnswer);
-      
+      const matches =
+        response === expectedAnswer || response.startsWith(expectedAnswer);
+
       if (!matches) {
         return true; // Auto-complete hidden conditional questions
       }
-      
+
       // If prerequisite matches showWhenAnswer, fall through to normal validation
     }
-    
+
     if (!q.response) return false;
-    
+
     // For measurement questions, both value and assessment must be filled
     if (q.type === "measurement") {
-      if (typeof q.response === 'object') {
+      if (typeof q.response === "object") {
         return !!(q.response.value && q.response.assessment);
       }
       return false;
     }
-    
+
     // For text questions, only assessment is required (textResponse is optional)
     if (q.type === "text") {
-      if (typeof q.response === 'object') {
+      if (typeof q.response === "object") {
         return !!q.response.assessment;
       }
       return false;
     }
-    
+
     // For checklist questions, at least one option must be selected
     if (q.type === "checklist") {
-      if (typeof q.response === 'object' && q.response.selectedOptions) {
-        return Array.isArray(q.response.selectedOptions) && q.response.selectedOptions.length > 0;
+      if (typeof q.response === "object" && q.response.selectedOptions) {
+        return (
+          Array.isArray(q.response.selectedOptions) &&
+          q.response.selectedOptions.length > 0
+        );
       }
       return false;
     }
-    
+
     // For yes-no, condition, rating, and multiple-choice questions, response must be a non-empty string or number
     // Accept both types to handle JSONB serialization variations
-    if (typeof q.response === 'string') {
+    if (typeof q.response === "string") {
       return q.response !== "";
     }
-    if (typeof q.response === 'number') {
+    if (typeof q.response === "number") {
       return true; // Any number is valid (1-5 for ratings)
     }
     return false;
   };
-  
+
   const completedQuestions = questions.filter(isQuestionCompleted).length;
-  const progress = questions.length > 0 ? (completedQuestions / questions.length) * 100 : 0;
+  const progress =
+    questions.length > 0 ? (completedQuestions / questions.length) * 100 : 0;
 
   // Autosave mutation for individual questions
   const autosaveQuestionMutation = useMutation({
-    mutationFn: async ({ question, updateData }: { question: SurveyQuestion; updateData: any }) => {
+    mutationFn: async ({
+      question,
+      updateData,
+    }: {
+      question: SurveyQuestion;
+      updateData: any;
+    }) => {
       // Use templateId for stable identification
       const templateId = question.templateId;
       const dbId = templateToDbIdMap.current.get(templateId);
-      
+
       if (dbId) {
         // Question exists in database - use PATCH to update it
-        const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${dbId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData),
-        });
-        if (!response.ok) throw new Error('Failed to update question');
+        const response = await fetch(
+          `/api/assessments/${assessmentId}/facility-survey-questions/${dbId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updateData),
+          },
+        );
+        if (!response.ok) throw new Error("Failed to update question");
         return { savedQuestion: await response.json(), templateId };
       } else {
         // Question doesn't exist yet - use POST to create it
@@ -292,38 +351,41 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           standard: question.standard,
           type: question.type,
           response: question.response,
-          notes: question.notes || '',
+          notes: question.notes || "",
           evidence: question.evidence || [],
           recommendations: question.recommendations || [],
-          ...updateData // Apply the latest update on top
+          ...updateData, // Apply the latest update on top
         };
-        
-        const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(questionData),
-        });
-        if (!response.ok) throw new Error('Failed to create question');
+
+        const response = await fetch(
+          `/api/assessments/${assessmentId}/facility-survey-questions`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(questionData),
+          },
+        );
+        if (!response.ok) throw new Error("Failed to create question");
         const savedQuestion = await response.json();
-        
+
         return { savedQuestion, templateId, isNew: true };
       }
     },
     onSuccess: (data) => {
       const { savedQuestion, templateId, isNew } = data;
-      
+
       if (isNew && savedQuestion && savedQuestion.id) {
         // Store the new database ID in the mapping
         templateToDbIdMap.current.set(templateId, savedQuestion.id);
-        
+
         // Update local state immediately with the new database ID
-        setQuestions(prev => prev.map(q => 
-          q.templateId === templateId 
-            ? { ...q, dbId: savedQuestion.id }
-            : q
-        ));
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.templateId === templateId ? { ...q, dbId: savedQuestion.id } : q,
+          ),
+        );
       }
-      
+
       // No query invalidation here - autosave should be silent and non-disruptive
       // Local state is already updated optimistically above
       // Manual save/complete actions will trigger full refresh when needed
@@ -339,46 +401,50 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
   const saveSurveyMutation = useMutation({
     mutationFn: async (questionsToSave: SurveyQuestion[]) => {
       setIsPersisting(true);
-      
+
       // CRITICAL FIX: Only save questions that have been answered
       // Filter out questions with empty/undefined responses to prevent overwriting existing data
-      const answeredQuestions = questionsToSave.filter(q => {
+      const answeredQuestions = questionsToSave.filter((q) => {
         if (!q.response) return false;
-        
+
         // For measurement/text questions, verify both fields are filled
         if (q.type === "measurement" || q.type === "text") {
-          if (typeof q.response === 'object') {
-            return q.type === "measurement" 
+          if (typeof q.response === "object") {
+            return q.type === "measurement"
               ? !!(q.response.value && q.response.assessment)
               : !!(q.response.textResponse && q.response.assessment);
           }
           return false;
         }
-        
+
         // For yes-no, condition, and rating questions, accept both strings and numbers
         // Accept both types to handle JSONB serialization variations
-        if (typeof q.response === 'string') {
+        if (typeof q.response === "string") {
           return q.response !== "";
         }
-        if (typeof q.response === 'number') {
+        if (typeof q.response === "number") {
           return true; // Any number is valid (1-5 for ratings)
         }
         return false;
       });
-      
+
       // Save each answered question individually using PATCH or POST
       const savePromises = answeredQuestions.map(async (question) => {
         const templateId = question.templateId;
         const dbId = templateToDbIdMap.current.get(templateId);
-        
+
         // Defensive normalization: ensure rating/yes-no/condition responses are strings
         let normalizedResponse = question.response;
-        if (question.type === 'rating' || question.type === 'yes-no' || question.type === 'condition') {
-          if (typeof question.response === 'number') {
+        if (
+          question.type === "rating" ||
+          question.type === "yes-no" ||
+          question.type === "condition"
+        ) {
+          if (typeof question.response === "number") {
             normalizedResponse = String(question.response);
           }
         }
-        
+
         const questionData = {
           assessmentId,
           templateQuestionId: templateId,
@@ -388,37 +454,45 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           standard: question.standard,
           type: question.type,
           response: normalizedResponse,
-          notes: question.notes || '',
+          notes: question.notes || "",
           evidence: question.evidence || [],
-          recommendations: question.recommendations || []
+          recommendations: question.recommendations || [],
         };
-        
+
         if (dbId) {
           // Update existing question
-          const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${dbId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(questionData),
-          });
-          if (!response.ok) throw new Error(`Failed to update question ${templateId}`);
+          const response = await fetch(
+            `/api/assessments/${assessmentId}/facility-survey-questions/${dbId}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(questionData),
+            },
+          );
+          if (!response.ok)
+            throw new Error(`Failed to update question ${templateId}`);
           return response.json();
         } else {
           // Create new question
-          const response = await fetch(`/api/assessments/${assessmentId}/facility-survey-questions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(questionData),
-          });
-          if (!response.ok) throw new Error(`Failed to create question ${templateId}`);
+          const response = await fetch(
+            `/api/assessments/${assessmentId}/facility-survey-questions`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(questionData),
+            },
+          );
+          if (!response.ok)
+            throw new Error(`Failed to create question ${templateId}`);
           return response.json();
         }
       });
-      
+
       return Promise.all(savePromises);
     },
     onSuccess: (savedQuestions: any[]) => {
       setIsPersisting(false);
-      
+
       // Update mapping with any new database IDs
       savedQuestions.forEach((sq: any) => {
         const templateId = sq.templateQuestionId;
@@ -426,14 +500,16 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           templateToDbIdMap.current.set(templateId, sq.id);
         }
       });
-      
+
       toast({
         title: "Survey Saved",
         description: "Your facility survey progress has been saved.",
       });
-      
+
       // Refresh data from server to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/assessments", assessmentId, "facility-survey"],
+      });
     },
     onError: (error) => {
       setIsPersisting(false);
@@ -447,27 +523,30 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
 
   // Debounced autosave function
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const triggerAutosave = useCallback((question: SurveyQuestion, updateData: any) => {
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current);
-    }
-    autosaveTimeoutRef.current = setTimeout(() => {
-      autosaveQuestionMutation.mutate({ question, updateData });
-    }, 1500); // Autosave after 1.5 seconds of inactivity
-  }, [autosaveQuestionMutation]);
+  const triggerAutosave = useCallback(
+    (question: SurveyQuestion, updateData: any) => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+      autosaveTimeoutRef.current = setTimeout(() => {
+        autosaveQuestionMutation.mutate({ question, updateData });
+      }, 1500); // Autosave after 1.5 seconds of inactivity
+    },
+    [autosaveQuestionMutation],
+  );
 
   const updateQuestion = (templateId: string, field: string, value: any) => {
-    setQuestions(prev => {
-      const updated = prev.map(q => 
-        q.templateId === templateId ? { ...q, [field]: value } : q
+    setQuestions((prev) => {
+      const updated = prev.map((q) =>
+        q.templateId === templateId ? { ...q, [field]: value } : q,
       );
-      
+
       // Find the updated question to trigger autosave
-      const updatedQuestion = updated.find(q => q.templateId === templateId);
+      const updatedQuestion = updated.find((q) => q.templateId === templateId);
       if (updatedQuestion) {
         triggerAutosave(updatedQuestion, { [field]: value });
       }
-      
+
       return updated;
     });
   };
@@ -478,13 +557,17 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
   };
 
   const handleComplete = async () => {
-    console.log("Complete Survey clicked - Progress:", progress, "Threshold: 80%");
-    
+    console.log(
+      "Complete Survey clicked - Progress:",
+      progress,
+      "Threshold: 80%",
+    );
+
     if (progress < 80) {
       toast({
         title: "Survey Incomplete",
         description: `Please complete at least 80% of the survey (currently ${Math.round(progress)}%). Answer more questions to continue.`,
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -495,12 +578,12 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       // Pass questions directly - mutation will handle individual saves
       await saveSurveyMutation.mutateAsync(questions);
       console.log("Survey saved successfully, calling onComplete callback");
-      
+
       toast({
         title: "Facility Survey Complete",
         description: "Ready to proceed to ASIS Risk Assessment phase.",
       });
-      
+
       // Call onComplete after successful save
       if (onComplete) {
         onComplete();
@@ -512,31 +595,43 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       console.error("Failed to complete survey:", error);
       toast({
         title: "Failed to Complete Survey",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive"
+        description:
+          error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
       });
     }
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case "barriers": return Building;
-      case "lighting": return Lightbulb;
-      case "surveillance": return Eye;
-      case "access-control": return Lock;
-      case "intrusion-detection": return Shield;
-      default: return Info;
+      case "barriers":
+        return Building;
+      case "lighting":
+        return Lightbulb;
+      case "surveillance":
+        return Eye;
+      case "access-control":
+        return Lock;
+      case "intrusion-detection":
+        return Shield;
+      default:
+        return Info;
     }
   };
 
   const renderQuestionInput = (question: SurveyQuestion) => {
     switch (question.type) {
       case "measurement":
-        const isCountQuestion = question.question.toLowerCase().startsWith("how many");
+        const isCountQuestion = question.question
+          .toLowerCase()
+          .startsWith("how many");
         return (
           <div className="space-y-2.5 sm:space-y-4">
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor={`${question.templateId}-value`} className="text-xs sm:text-sm">
+              <Label
+                htmlFor={`${question.templateId}-value`}
+                className="text-xs sm:text-sm"
+              >
                 {isCountQuestion ? "Count" : "Measurement Value"}
               </Label>
               <Input
@@ -544,12 +639,18 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
                 type="number"
                 step={isCountQuestion ? "1" : "0.1"}
                 value={question.response?.value || ""}
-                onChange={(e) => updateQuestion(question.templateId, "response", { 
-                  ...question.response, 
-                  value: e.target.value,
-                  unit: isCountQuestion ? "count" : (question.response?.unit || "fc")
-                })}
-                placeholder={isCountQuestion ? "Enter count" : "Enter measurement"}
+                onChange={(e) =>
+                  updateQuestion(question.templateId, "response", {
+                    ...question.response,
+                    value: e.target.value,
+                    unit: isCountQuestion
+                      ? "count"
+                      : question.response?.unit || "fc",
+                  })
+                }
+                placeholder={
+                  isCountQuestion ? "Enter count" : "Enter measurement"
+                }
                 className="text-xs sm:text-sm"
                 data-testid={`input-${question.templateId}-value`}
               />
@@ -557,44 +658,66 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
                 <Input
                   placeholder="Unit (fc, Px/ft, feet, etc.)"
                   value={question.response?.unit || ""}
-                  onChange={(e) => updateQuestion(question.templateId, "response", { 
-                    ...question.response, 
-                    unit: e.target.value 
-                  })}
+                  onChange={(e) =>
+                    updateQuestion(question.templateId, "response", {
+                      ...question.response,
+                      unit: e.target.value,
+                    })
+                  }
                   className="text-xs sm:text-sm"
                   data-testid={`input-${question.templateId}-unit`}
                 />
               )}
             </div>
-            
+
             {/* Add Assessment Response for measurement questions, especially lighting */}
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor={`${question.templateId}-assessment`} className="text-xs sm:text-sm">Assessment Response</Label>
-              <Select 
-                value={question.response?.assessment || ""} 
-                onValueChange={(value) => updateQuestion(question.templateId, "response", { 
-                  ...question.response, 
-                  assessment: value 
-                })}
+              <Label
+                htmlFor={`${question.templateId}-assessment`}
+                className="text-xs sm:text-sm"
               >
-                <SelectTrigger data-testid={`select-${question.templateId}-assessment`} className="text-xs sm:text-sm">
+                Assessment Response
+              </Label>
+              <Select
+                value={question.response?.assessment || ""}
+                onValueChange={(value) =>
+                  updateQuestion(question.templateId, "response", {
+                    ...question.response,
+                    assessment: value,
+                  })
+                }
+              >
+                <SelectTrigger
+                  data-testid={`select-${question.templateId}-assessment`}
+                  className="text-xs sm:text-sm"
+                >
                   <SelectValue placeholder="Select assessment" />
                 </SelectTrigger>
                 <SelectContent>
                   {/* Add N/A option for system-related measurement questions */}
-                  {(question.category === "surveillance" || 
+                  {(question.category === "surveillance" ||
                     question.category === "access-control" ||
                     question.category === "lighting" ||
                     question.category === "barriers" ||
                     question.category === "intrusion-detection" ||
                     question.subcategory === "visitor-management") && (
-                    <SelectItem value="n/a">N/A - No system in place or not applicable</SelectItem>
+                    <SelectItem value="n/a">
+                      N/A - No system in place or not applicable
+                    </SelectItem>
                   )}
-                  <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>
-                  <SelectItem value="good">Good - Meets standards well</SelectItem>
-                  <SelectItem value="adequate">Adequate - Meets minimum standards</SelectItem>
+                  <SelectItem value="excellent">
+                    Excellent - Exceeds all standards
+                  </SelectItem>
+                  <SelectItem value="good">
+                    Good - Meets standards well
+                  </SelectItem>
+                  <SelectItem value="adequate">
+                    Adequate - Meets minimum standards
+                  </SelectItem>
                   <SelectItem value="poor">Poor - Below standards</SelectItem>
-                  <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
+                  <SelectItem value="critical">
+                    Critical - Immediate attention required
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -603,28 +726,41 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
 
       case "condition":
         return (
-          <Select 
-            value={String(question.response || "")} 
-            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
+          <Select
+            value={String(question.response || "")}
+            onValueChange={(value) =>
+              updateQuestion(question.templateId, "response", value)
+            }
           >
-            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
+            <SelectTrigger
+              data-testid={`select-${question.templateId}`}
+              className="text-xs sm:text-sm"
+            >
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
             <SelectContent>
               {/* Add N/A option for all system-related questions */}
-              {(question.category === "surveillance" || 
+              {(question.category === "surveillance" ||
                 question.category === "access-control" ||
                 question.category === "lighting" ||
                 question.category === "barriers" ||
                 question.category === "intrusion-detection" ||
                 question.subcategory === "visitor-management") && (
-                <SelectItem value="n/a">N/A - No system in place or not applicable</SelectItem>
+                <SelectItem value="n/a">
+                  N/A - No system in place or not applicable
+                </SelectItem>
               )}
-              <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>
+              <SelectItem value="excellent">
+                Excellent - Exceeds all standards
+              </SelectItem>
               <SelectItem value="good">Good - Meets standards well</SelectItem>
-              <SelectItem value="adequate">Adequate - Meets minimum standards</SelectItem>
+              <SelectItem value="adequate">
+                Adequate - Meets minimum standards
+              </SelectItem>
               <SelectItem value="poor">Poor - Below standards</SelectItem>
-              <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
+              <SelectItem value="critical">
+                Critical - Immediate attention required
+              </SelectItem>
             </SelectContent>
           </Select>
         );
@@ -634,22 +770,27 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
         // POSITIVE: "Yes" = Good (100%), "No" = Bad (0%)
         // NEGATIVE: "Yes" = Bad (0%), "No" = Good (100%) - for incident/threat questions
         const isNegative = question.riskDirection === "negative";
-        const yesLabel = isNegative 
-          ? "Yes (0%) - High risk / Incident occurred" 
+        const yesLabel = isNegative
+          ? "Yes (0%) - High risk / Incident occurred"
           : "Yes (100%) - Fully compliant";
-        const noLabel = isNegative 
-          ? "No (100%) - Safe / No incidents" 
+        const noLabel = isNegative
+          ? "No (100%) - Safe / No incidents"
           : "No (0%) - Non-compliant";
         const partialLabel = isNegative
           ? "Partial (50%) - Some incidents"
           : "Partial (50%) - Partially compliant";
-        
+
         return (
-          <Select 
-            value={String(question.response || "")} 
-            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
+          <Select
+            value={String(question.response || "")}
+            onValueChange={(value) =>
+              updateQuestion(question.templateId, "response", value)
+            }
           >
-            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
+            <SelectTrigger
+              data-testid={`select-${question.templateId}`}
+              className="text-xs sm:text-sm"
+            >
               <SelectValue placeholder="Select response" />
             </SelectTrigger>
             <SelectContent>
@@ -663,11 +804,16 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
 
       case "rating":
         return (
-          <Select 
-            value={String(question.response || "")} 
-            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
+          <Select
+            value={String(question.response || "")}
+            onValueChange={(value) =>
+              updateQuestion(question.templateId, "response", value)
+            }
           >
-            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
+            <SelectTrigger
+              data-testid={`select-${question.templateId}`}
+              className="text-xs sm:text-sm"
+            >
               <SelectValue placeholder="Select rating" />
             </SelectTrigger>
             <SelectContent>
@@ -683,7 +829,10 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       case "number":
         return (
           <div className="space-y-1.5 sm:space-y-2">
-            <Label htmlFor={`${question.templateId}-number`} className="text-xs sm:text-sm">
+            <Label
+              htmlFor={`${question.templateId}-number`}
+              className="text-xs sm:text-sm"
+            >
               Assessment Response
             </Label>
             <Input
@@ -692,7 +841,9 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
               step="1"
               min="0"
               value={question.response || ""}
-              onChange={(e) => updateQuestion(question.templateId, "response", e.target.value)}
+              onChange={(e) =>
+                updateQuestion(question.templateId, "response", e.target.value)
+              }
               placeholder="Enter number"
               className="text-xs sm:text-sm"
               data-testid={`input-${question.templateId}-number`}
@@ -704,43 +855,68 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
         return (
           <div className="space-y-2.5 sm:space-y-4">
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor={`${question.templateId}-text`} className="text-xs sm:text-sm">
+              <Label
+                htmlFor={`${question.templateId}-text`}
+                className="text-xs sm:text-sm"
+              >
                 Detailed Response
               </Label>
               <Textarea
                 id={`${question.templateId}-text`}
                 value={question.response?.textResponse || ""}
-                onChange={(e) => updateQuestion(question.templateId, "response", { 
-                  ...question.response, 
-                  textResponse: e.target.value 
-                })}
+                onChange={(e) =>
+                  updateQuestion(question.templateId, "response", {
+                    ...question.response,
+                    textResponse: e.target.value,
+                  })
+                }
                 placeholder="Enter detailed description (e.g., specific locations, types, conditions...)"
                 rows={3}
                 className="text-xs sm:text-sm"
                 data-testid={`textarea-${question.templateId}-text`}
               />
             </div>
-            
+
             {/* Assessment dropdown required for completion */}
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor={`${question.templateId}-assessment`} className="text-xs sm:text-sm">Assessment Response</Label>
-              <Select 
-                value={question.response?.assessment || ""} 
-                onValueChange={(value) => updateQuestion(question.templateId, "response", { 
-                  ...question.response, 
-                  assessment: value 
-                })}
+              <Label
+                htmlFor={`${question.templateId}-assessment`}
+                className="text-xs sm:text-sm"
               >
-                <SelectTrigger data-testid={`select-${question.templateId}-assessment`} className="text-xs sm:text-sm">
+                Assessment Response
+              </Label>
+              <Select
+                value={question.response?.assessment || ""}
+                onValueChange={(value) =>
+                  updateQuestion(question.templateId, "response", {
+                    ...question.response,
+                    assessment: value,
+                  })
+                }
+              >
+                <SelectTrigger
+                  data-testid={`select-${question.templateId}-assessment`}
+                  className="text-xs sm:text-sm"
+                >
                   <SelectValue placeholder="Select assessment" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="n/a">N/A - Not installed or not applicable</SelectItem>
-                  <SelectItem value="excellent">Excellent - Exceeds all standards</SelectItem>
-                  <SelectItem value="good">Good - Meets standards well</SelectItem>
-                  <SelectItem value="adequate">Adequate - Meets minimum standards</SelectItem>
+                  <SelectItem value="n/a">
+                    N/A - Not installed or not applicable
+                  </SelectItem>
+                  <SelectItem value="excellent">
+                    Excellent - Exceeds all standards
+                  </SelectItem>
+                  <SelectItem value="good">
+                    Good - Meets standards well
+                  </SelectItem>
+                  <SelectItem value="adequate">
+                    Adequate - Meets minimum standards
+                  </SelectItem>
                   <SelectItem value="poor">Poor - Below standards</SelectItem>
-                  <SelectItem value="critical">Critical - Immediate attention required</SelectItem>
+                  <SelectItem value="critical">
+                    Critical - Immediate attention required
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -754,11 +930,13 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
             <div className="space-y-2">
               {question.options && question.options.length > 0 ? (
                 question.options.map((option, index) => {
-                  const selectedOptions = Array.isArray(question.response?.selectedOptions) 
-                    ? question.response.selectedOptions 
+                  const selectedOptions = Array.isArray(
+                    question.response?.selectedOptions,
+                  )
+                    ? question.response.selectedOptions
                     : [];
                   const isChecked = selectedOptions.includes(option);
-                  
+
                   return (
                     <div key={index} className="flex items-center space-x-2">
                       <input
@@ -766,26 +944,30 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
                         id={`${question.templateId}-option-${index}`}
                         checked={isChecked}
                         onChange={(e) => {
-                          const currentSelected = Array.isArray(question.response?.selectedOptions) 
-                            ? [...question.response.selectedOptions] 
+                          const currentSelected = Array.isArray(
+                            question.response?.selectedOptions,
+                          )
+                            ? [...question.response.selectedOptions]
                             : [];
-                          
+
                           let newSelected;
                           if (e.target.checked) {
                             newSelected = [...currentSelected, option];
                           } else {
-                            newSelected = currentSelected.filter(o => o !== option);
+                            newSelected = currentSelected.filter(
+                              (o) => o !== option,
+                            );
                           }
-                          
+
                           updateQuestion(question.templateId, "response", {
                             ...question.response,
-                            selectedOptions: newSelected
+                            selectedOptions: newSelected,
                           });
                         }}
                         className="h-4 w-4 rounded border-input"
                         data-testid={`checkbox-${question.templateId}-${index}`}
                       />
-                      <Label 
+                      <Label
                         htmlFor={`${question.templateId}-option-${index}`}
                         className="text-xs sm:text-sm font-normal cursor-pointer"
                       >
@@ -795,22 +977,43 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
                   );
                 })
               ) : (
-                <p className="text-xs sm:text-sm text-muted-foreground">No options available</p>
+                <Select
+                  value={(question.response as string) || ""}
+                  onValueChange={(value) =>
+                    updateQuestion(question.templateId, "response", value)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select an option..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {question.options?.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
-            
+
             {/* Text area for additional details */}
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor={`${question.templateId}-details`} className="text-xs sm:text-sm">
+              <Label
+                htmlFor={`${question.templateId}-details`}
+                className="text-xs sm:text-sm"
+              >
                 Additional Details (Optional)
               </Label>
               <Textarea
                 id={`${question.templateId}-details`}
                 value={question.response?.textResponse || ""}
-                onChange={(e) => updateQuestion(question.templateId, "response", { 
-                  ...question.response, 
-                  textResponse: e.target.value 
-                })}
+                onChange={(e) =>
+                  updateQuestion(question.templateId, "response", {
+                    ...question.response,
+                    textResponse: e.target.value,
+                  })
+                }
                 placeholder="Add any additional details or context..."
                 rows={2}
                 className="text-xs sm:text-sm"
@@ -822,23 +1025,24 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
 
       case "multiple-choice":
         return (
-          <Select 
-            value={String(question.response || "")} 
-            onValueChange={(value) => updateQuestion(question.templateId, "response", value)}
+          <Select
+            value={String(question.response || "")}
+            onValueChange={(value) =>
+              updateQuestion(question.templateId, "response", value)
+            }
           >
-            <SelectTrigger data-testid={`select-${question.templateId}`} className="text-xs sm:text-sm">
+            <SelectTrigger
+              data-testid={`select-${question.templateId}`}
+              className="text-xs sm:text-sm"
+            >
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
-              {question.options && question.options.length > 0 ? (
                 question.options.map((option, index) => (
                   <SelectItem key={index} value={option}>
                     {option}
                   </SelectItem>
                 ))
-              ) : (
-                <SelectItem value="no-options" disabled>No options available</SelectItem>
-              )}
             </SelectContent>
           </Select>
         );
@@ -854,7 +1058,9 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
-          <p className="text-muted-foreground">Loading survey questions from template...</p>
+          <p className="text-muted-foreground">
+            Loading survey questions from template...
+          </p>
         </div>
       </div>
     );
@@ -866,9 +1072,12 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">No survey questions available.</p>
+          <p className="text-muted-foreground">
+            No survey questions available.
+          </p>
           <p className="text-sm text-muted-foreground mt-2">
-            This assessment may not have been created from a template with questions.
+            This assessment may not have been created from a template with
+            questions.
           </p>
         </div>
       </div>
@@ -884,13 +1093,19 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
             <div>
               <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg">
                 <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="text-sm sm:text-base">{surveyType} Survey</span>
+                <span className="text-sm sm:text-base">
+                  {surveyType} Survey
+                </span>
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Comprehensive assessment of existing physical security controls and systems
+                Comprehensive assessment of existing physical security controls
+                and systems
               </p>
             </div>
-            <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">
+            <Badge
+              variant="outline"
+              className="text-[10px] sm:text-xs shrink-0"
+            >
               Survey
             </Badge>
           </div>
@@ -900,19 +1115,30 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
             <div>
               <div className="flex justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
                 <span>Survey Progress</span>
-                <span className="text-[11px] sm:text-sm">{completedQuestions} of {questions.length} completed</span>
+                <span className="text-[11px] sm:text-sm">
+                  {completedQuestions} of {questions.length} completed
+                </span>
               </div>
-              <Progress value={progress} className="w-full" data-testid="progress-survey" />
+              <Progress
+                value={progress}
+                className="w-full"
+                data-testid="progress-survey"
+              />
             </div>
-            
+
             {/* Category Navigation */}
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {categories.map((category, index) => {
                 const Icon = getCategoryIcon(category);
-                const categoryQuestions = questions.filter(q => q.category === category);
-                const categoryCompleted = categoryQuestions.filter(isQuestionCompleted).length;
-                const isComplete = categoryQuestions.length > 0 && categoryCompleted === categoryQuestions.length;
-                
+                const categoryQuestions = questions.filter(
+                  (q) => q.category === category,
+                );
+                const categoryCompleted =
+                  categoryQuestions.filter(isQuestionCompleted).length;
+                const isComplete =
+                  categoryQuestions.length > 0 &&
+                  categoryCompleted === categoryQuestions.length;
+
                 return (
                   <Button
                     key={category}
@@ -923,8 +1149,14 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
                     data-testid={`nav-category-${category}`}
                   >
                     <Icon className="h-3 w-3" />
-                    <span className="hidden xs:inline sm:inline">{category.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}</span>
-                    {isComplete && <CheckCircle className="h-3 w-3 text-green-500" />}
+                    <span className="hidden xs:inline sm:inline">
+                      {category
+                        .replace("-", " ")
+                        .replace(/\b\w/g, (l) => l.toUpperCase())}
+                    </span>
+                    {isComplete && (
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                    )}
                   </Button>
                 );
               })}
@@ -941,22 +1173,28 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
               const Icon = getCategoryIcon(categories[currentCategory]);
               return <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
             })()}
-            <span className="text-xs sm:text-base">{categories[currentCategory]?.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}</span>
+            <span className="text-xs sm:text-base">
+              {categories[currentCategory]
+                ?.replace("-", " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase())}
+            </span>
           </h3>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => {
               // Skip this category - mark all questions with notes
-              const categoryQuestions = questions.filter(q => q.category === categories[currentCategory]);
-              categoryQuestions.forEach(q => {
+              const categoryQuestions = questions.filter(
+                (q) => q.category === categories[currentCategory],
+              );
+              categoryQuestions.forEach((q) => {
                 if (!q.notes) {
                   updateQuestion(q.templateId, "notes", "[Section Skipped]");
                 }
               });
               // Move to next category or complete
               if (currentCategory < categories.length - 1) {
-                setCurrentCategory(prev => prev + 1);
+                setCurrentCategory((prev) => prev + 1);
               } else {
                 handleComplete();
               }
@@ -974,8 +1212,12 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
             <CardHeader className="p-2.5 sm:p-4 pb-2 sm:pb-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <CardTitle className="text-sm sm:text-base leading-tight">{question.question}</CardTitle>
-                  <Badge variant="secondary" className="text-[10px] sm:text-xs">{question.subcategory}</Badge>
+                  <CardTitle className="text-sm sm:text-base leading-tight">
+                    {question.question}
+                  </CardTitle>
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs">
+                    {question.subcategory}
+                  </Badge>
                 </div>
                 {isQuestionCompleted(question) && (
                   <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 mt-0.5 sm:mt-1 shrink-0" />
@@ -986,24 +1228,35 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
               {/* Standard Reference */}
               {question.standard && (
                 <div className="bg-muted/50 p-2 sm:p-3 rounded-md">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">Professional Standard:</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+                    Professional Standard:
+                  </p>
                   <p className="text-xs sm:text-sm">{question.standard}</p>
                 </div>
               )}
 
               {/* Response Input */}
               <div>
-                <Label className="text-xs sm:text-sm font-medium">Assessment Response</Label>
+                <Label className="text-xs sm:text-sm font-medium">
+                  Assessment Response
+                </Label>
                 {renderQuestionInput(question)}
               </div>
 
               {/* Notes */}
               <div>
-                <Label htmlFor={`${question.templateId}-notes`} className="text-xs sm:text-sm">Observations & Notes</Label>
+                <Label
+                  htmlFor={`${question.templateId}-notes`}
+                  className="text-xs sm:text-sm"
+                >
+                  Observations & Notes
+                </Label>
                 <Textarea
                   id={`${question.templateId}-notes`}
                   value={question.notes || ""}
-                  onChange={(e) => updateQuestion(question.templateId, "notes", e.target.value)}
+                  onChange={(e) =>
+                    updateQuestion(question.templateId, "notes", e.target.value)
+                  }
                   placeholder="Document specific observations, conditions, or concerns..."
                   rows={2}
                   className="text-xs sm:text-sm"
@@ -1013,27 +1266,39 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
 
               {/* Photo Evidence */}
               <div>
-                <Label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block">Photo Evidence</Label>
+                <Label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block">
+                  Photo Evidence
+                </Label>
                 <EvidenceUploader
                   assessmentId={assessmentId}
                   questionId={question.dbId || ""}
                   questionType="facility"
                   evidence={question.evidence || []}
-                  onUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] })}
+                  onUpdate={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: [
+                        "/api/assessments",
+                        assessmentId,
+                        "facility-survey",
+                      ],
+                    })
+                  }
                 />
               </div>
-              
+
               {/* Recommendations Badge - respects riskDirection */}
-              {question.response && (
-                question.riskDirection === 'negative'
-                  ? ["yes", "partial"].includes(question.response)  // For incidents: yes=bad
-                  : ["poor", "critical", "no"].includes(question.response)  // For controls: no=bad
-              ) && (
-                <Badge variant="destructive" className="text-[10px] sm:text-xs">
-                  <AlertTriangle className="h-3 w-3 mr-0.5 sm:mr-1" />
-                  Requires Attention
-                </Badge>
-              )}
+              {question.response &&
+                (question.riskDirection === "negative"
+                  ? ["yes", "partial"].includes(question.response) // For incidents: yes=bad
+                  : ["poor", "critical", "no"].includes(question.response)) && ( // For controls: no=bad
+                  <Badge
+                    variant="destructive"
+                    className="text-[10px] sm:text-xs"
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-0.5 sm:mr-1" />
+                    Requires Attention
+                  </Badge>
+                )}
             </CardContent>
           </Card>
         ))}
@@ -1041,7 +1306,7 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 pt-3 sm:pt-4">
-        <Button 
+        <Button
           variant="outline"
           onClick={handleSave}
           disabled={isPersisting}
@@ -1051,29 +1316,29 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           <Save className="h-4 w-4 mr-2" />
           {isPersisting ? "Saving..." : "Save Progress"}
         </Button>
-        
+
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {currentCategory > 0 && (
-            <Button 
+            <Button
               variant="outline"
-              onClick={() => setCurrentCategory(prev => prev - 1)}
+              onClick={() => setCurrentCategory((prev) => prev - 1)}
               className="text-sm min-h-11 w-full sm:w-auto"
               data-testid="button-previous-category"
             >
               Previous Category
             </Button>
           )}
-          
+
           {currentCategory < categories.length - 1 ? (
-            <Button 
-              onClick={() => setCurrentCategory(prev => prev + 1)}
+            <Button
+              onClick={() => setCurrentCategory((prev) => prev + 1)}
               className="text-sm min-h-11 w-full sm:w-auto"
               data-testid="button-next-category"
             >
               Next Category
             </Button>
           ) : (
-            <Button 
+            <Button
               onClick={handleComplete}
               disabled={isPersisting}
               className="text-sm min-h-11 w-full sm:w-auto"
