@@ -104,6 +104,32 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           }
         }
         
+        // Normalize options - handle both formats:
+        // 1. Simple array: ["option1", "option2"]
+        // 2. JSONB object: {"choices": [...], "polarity": ...}
+        let normalizedOptions: string[] = [];
+        if (sq.options) {
+          if (Array.isArray(sq.options)) {
+            // Check if first element is a string or the whole array is simple strings
+            normalizedOptions = sq.options;
+          } else if (typeof sq.options === 'object' && sq.options.choices && Array.isArray(sq.options.choices)) {
+            // JSONB format with choices property
+            normalizedOptions = sq.options.choices;
+          } else if (typeof sq.options === 'string') {
+            // String that might be JSON - try parsing
+            try {
+              const parsed = JSON.parse(sq.options);
+              if (Array.isArray(parsed)) {
+                normalizedOptions = parsed;
+              } else if (parsed.choices && Array.isArray(parsed.choices)) {
+                normalizedOptions = parsed.choices;
+              }
+            } catch {
+              // Not valid JSON, ignore
+            }
+          }
+        }
+        
         return {
           templateId: sq.templateQuestionId,
           dbId: sq.id,
@@ -112,7 +138,7 @@ export function FacilitySurvey({ assessmentId, templateId, onComplete }: Facilit
           question: sq.question,
           standard: sq.standard,
           type: sq.type,
-          options: sq.options || [], // For checklist questions
+          options: normalizedOptions,
           response: normalizedResponse,
           notes: sq.notes,
           evidence: sq.evidence || [],
