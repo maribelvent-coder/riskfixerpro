@@ -7,7 +7,11 @@ import multer from "multer";
 import { db } from "./db";
 import { assessments, riskScenarios } from "@shared/schema";
 import { TenantStorage } from "./tenant-storage";
-import { attachTenantContext, requireOrganizationPermission, requireTenantContext } from "./tenantMiddleware";
+import {
+  attachTenantContext,
+  requireOrganizationPermission,
+  requireTenantContext,
+} from "./tenantMiddleware";
 import { eq, and, desc } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import {
@@ -95,7 +99,12 @@ async function verifyAssessmentOwnership(req: any, res: any, next: any) {
   try {
     // Check for auth error first (invalid JWT)
     if (req.authError) {
-      return res.status(401).json({ error: "Authentication failed", details: req.authError.message });
+      return res
+        .status(401)
+        .json({
+          error: "Authentication failed",
+          details: req.authError.message,
+        });
     }
 
     // Check for missing user (not authenticated at all)
@@ -105,10 +114,10 @@ async function verifyAssessmentOwnership(req: any, res: any, next: any) {
 
     // Use tenant context from attachTenantContext middleware
     if (!req.organizationId) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "Organization context required",
         code: "ONBOARDING_REQUIRED",
-        message: "Please complete onboarding to access this resource"
+        message: "Please complete onboarding to access this resource",
       });
     }
 
@@ -158,7 +167,12 @@ async function verifySiteOwnership(req: any, res: any, next: any) {
   try {
     // Check for auth error first (invalid JWT)
     if (req.authError) {
-      return res.status(401).json({ error: "Authentication failed", details: req.authError.message });
+      return res
+        .status(401)
+        .json({
+          error: "Authentication failed",
+          details: req.authError.message,
+        });
     }
 
     // Check for missing user (not authenticated at all)
@@ -168,10 +182,10 @@ async function verifySiteOwnership(req: any, res: any, next: any) {
 
     // Use tenant context from attachTenantContext middleware
     if (!req.organizationId) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "Organization context required",
         code: "ONBOARDING_REQUIRED",
-        message: "Please complete onboarding to access this resource"
+        message: "Please complete onboarding to access this resource",
       });
     }
 
@@ -257,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Development-only bypass auth endpoint for QA testing
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     // HTML page that sets session and redirects to app
     app.get("/api/bypass", async (req, res) => {
       try {
@@ -265,17 +279,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!user) {
           return res.status(404).send("mcadmin user not found");
         }
-        
+
         req.session.userId = user.id;
-        
+
         req.session.save((err) => {
           if (err) {
             console.error("Session save error:", err);
             return res.status(500).send("Failed to save session");
           }
-          
+
           console.log("🧪 DEV: Bypass auth for mcadmin, userId:", user.id);
-          
+
           // Return HTML that redirects to /app
           res.send(`
             <!DOCTYPE html>
@@ -299,17 +313,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).send("Failed to create session");
       }
     });
-    
+
     // Simple POST test endpoint - no auth, no session
     app.post("/api/test-post", (req, res) => {
       console.log("🧪 TEST POST received:", JSON.stringify(req.body));
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         received: req.body,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     });
-    
+
     // JSON API endpoint
     app.get("/api/test-session", async (req, res) => {
       try {
@@ -317,21 +331,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!user) {
           return res.status(404).json({ error: "mcadmin user not found" });
         }
-        
+
         req.session.userId = user.id;
-        
+
         req.session.save((err) => {
           if (err) {
             console.error("Session save error:", err);
             return res.status(500).json({ error: "Failed to save session" });
           }
-          
-          console.log("🧪 DEV: Test session created for mcadmin, userId:", user.id);
-          res.json({ 
-            success: true, 
+
+          console.log(
+            "🧪 DEV: Test session created for mcadmin, userId:",
+            user.id,
+          );
+          res.json({
+            success: true,
             message: "Test session created for mcadmin",
             userId: user.id,
-            sessionId: req.sessionID
+            sessionId: req.sessionID,
           });
         });
       } catch (error) {
@@ -367,10 +384,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("═══════════════════════════════════════════════════════════");
     console.log("🔐 LOGIN ATTEMPT - Step 1: Request received");
     console.log("   📥 Body:", JSON.stringify(req.body));
-    console.log("   📥 Content-Type:", req.headers['content-type']);
-    console.log("   📥 Origin:", req.headers['origin']);
-    console.log("   📥 User-Agent:", req.headers['user-agent']?.substring(0, 50));
-    
+    console.log("   📥 Content-Type:", req.headers["content-type"]);
+    console.log("   📥 Origin:", req.headers["origin"]);
+    console.log(
+      "   📥 User-Agent:",
+      req.headers["user-agent"]?.substring(0, 50),
+    );
+
     try {
       // Step 2: Validate input
       console.log("🔐 LOGIN - Step 2: Validating input schema...");
@@ -380,7 +400,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validatedData = loginSchema.parse(req.body);
-      console.log("   ✅ Schema validation passed for username:", validatedData.username);
+      console.log(
+        "   ✅ Schema validation passed for username:",
+        validatedData.username,
+      );
 
       // Step 3: Find user by username
       console.log("🔐 LOGIN - Step 3: Looking up user in database...");
@@ -409,7 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("   Session exists:", !!req.session);
       req.session.userId = user.id;
       console.log("   ✅ Session userId set:", req.session.userId);
-      
+
       // Step 6: Session save check
       console.log("🔐 LOGIN - Step 6: Saving session...");
       await new Promise<void>((resolve, reject) => {
@@ -434,11 +457,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 8: Send response
       console.log("🔐 LOGIN - Step 8: Sending success response...");
       const { password, ...userWithoutPassword } = user;
-      console.log("   Response payload:", JSON.stringify({ ...userWithoutPassword, token: "[REDACTED]" }));
-      console.log("═══════════════════════════════════════════════════════════");
+      console.log(
+        "   Response payload:",
+        JSON.stringify({ ...userWithoutPassword, token: "[REDACTED]" }),
+      );
+      console.log(
+        "═══════════════════════════════════════════════════════════",
+      );
       res.json({ ...userWithoutPassword, token });
     } catch (error) {
-      console.log("═══════════════════════════════════════════════════════════");
+      console.log(
+        "═══════════════════════════════════════════════════════════",
+      );
       console.log("🔐 LOGIN - ❌ EXCEPTION CAUGHT");
       if (error instanceof z.ZodError) {
         console.log("   Error type: Zod validation error");
@@ -448,9 +478,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Invalid data", details: error.errors });
       }
       console.error("   Error type:", error?.constructor?.name);
-      console.error("   Error message:", error instanceof Error ? error.message : String(error));
-      console.error("   Error stack:", error instanceof Error ? error.stack : "No stack");
-      console.log("═══════════════════════════════════════════════════════════");
+      console.error(
+        "   Error message:",
+        error instanceof Error ? error.message : String(error),
+      );
+      console.error(
+        "   Error stack:",
+        error instanceof Error ? error.stack : "No stack",
+      );
+      console.log(
+        "═══════════════════════════════════════════════════════════",
+      );
       res.status(500).json({ error: "Failed to login" });
     }
   });
@@ -462,14 +500,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Logout error:", err);
           return res.status(500).json({ error: "Failed to logout" });
         }
-        
+
         res.clearCookie("connect.sid", {
           path: "/",
           httpOnly: true,
           secure: true,
-          sameSite: "none"
+          sameSite: "none",
         });
-        
+
         return res.status(200).json({ message: "Logged out successfully" });
       });
     } else {
@@ -615,15 +653,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = acceptInviteSchema.parse(req.body);
 
       // Get invitation by token
-      const invitation = await storage.getInvitationByToken(validatedData.token);
-      
+      const invitation = await storage.getInvitationByToken(
+        validatedData.token,
+      );
+
       if (!invitation) {
         return res.status(400).json({ error: "Invalid invitation token" });
       }
 
       // Check if invitation is pending
-      if (invitation.status !== 'pending') {
-        return res.status(400).json({ error: "This invitation has already been used" });
+      if (invitation.status !== "pending") {
+        return res
+          .status(400)
+          .json({ error: "This invitation has already been used" });
       }
 
       // Check if invitation is expired
@@ -632,7 +674,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if username already exists
-      const existingUser = await storage.getUserByUsername(validatedData.username);
+      const existingUser = await storage.getUserByUsername(
+        validatedData.username,
+      );
       if (existingUser) {
         return res.status(400).json({ error: "Username already taken" });
       }
@@ -667,11 +711,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { password: _, ...userWithoutPassword } = updatedUser;
         res.status(201).json(userWithoutPassword);
       } else {
-        res.status(201).json({ message: "Account created and invitation accepted" });
+        res
+          .status(201)
+          .json({ message: "Account created and invitation accepted" });
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid data", details: error.errors });
       }
       console.error("Error accepting invitation:", error);
       res.status(500).json({ error: "Failed to accept invitation" });
@@ -893,11 +941,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only owners can delete organization
       if (user.organizationRole !== "owner") {
-        return res
-          .status(403)
-          .json({
-            error: "Only organization owners can delete the organization",
-          });
+        return res.status(403).json({
+          error: "Only organization owners can delete the organization",
+        });
       }
 
       // Remove all members from organization first
@@ -920,108 +966,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Organization Invite - uses tenant context from middleware
-  app.post("/api/organization/invite", requireOrganizationPermission, async (req: any, res) => {
-    try {
-      const user = req.user;
-      const organizationId = req.organizationId;
+  app.post(
+    "/api/organization/invite",
+    requireOrganizationPermission,
+    async (req: any, res) => {
+      try {
+        const user = req.user;
+        const organizationId = req.organizationId;
 
-      // Only owners and admins can invite
-      if (user.organizationRole !== "owner" && user.organizationRole !== "admin") {
-        return res.status(403).json({ error: "Only owners and admins can invite members" });
+        // Only owners and admins can invite
+        if (
+          user.organizationRole !== "owner" &&
+          user.organizationRole !== "admin"
+        ) {
+          return res
+            .status(403)
+            .json({ error: "Only owners and admins can invite members" });
+        }
+
+        const inviteSchema = z.object({
+          email: z.string().email("Please enter a valid email address"),
+          role: z.enum(["member", "admin"]).default("member"),
+        });
+
+        const validatedData = inviteSchema.parse(req.body);
+
+        // Cannot invite owners
+        if (validatedData.role === "owner") {
+          return res
+            .status(400)
+            .json({ error: "Cannot invite users as owners" });
+        }
+
+        // Check if user already exists in this organization
+        const existingUser = await storage.getUserByEmail(validatedData.email);
+        if (existingUser && existingUser.organizationId === organizationId) {
+          return res
+            .status(400)
+            .json({ error: "User is already a member of this organization" });
+        }
+
+        // Check for existing pending invitation
+        const existingInvitations =
+          await storage.listOrganizationInvitations(organizationId);
+        const pendingInvite = existingInvitations.find(
+          (inv) =>
+            inv.email === validatedData.email && inv.status === "pending",
+        );
+        if (pendingInvite) {
+          return res
+            .status(400)
+            .json({ error: "Invitation already sent to this email" });
+        }
+
+        // Generate cryptographically strong token
+        const token = randomBytes(32).toString("hex");
+
+        // Set expiration to 7 days from now
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+
+        const invitation = await storage.createInvitation({
+          organizationId,
+          email: validatedData.email,
+          role: validatedData.role,
+          invitedBy: user.id,
+          status: "pending",
+          token,
+          expiresAt,
+        });
+
+        // Send invitation email using the new simple email service
+        await sendInvitationEmail(validatedData.email, token);
+
+        // Return invitation without token for security
+        const { token: _token, ...safeInvitation } = invitation;
+        res.status(201).json(safeInvitation);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ error: "Invalid data", details: error.errors });
+        }
+        console.error("Error creating invitation:", error);
+        res.status(500).json({ error: "Failed to create invitation" });
       }
-
-      const inviteSchema = z.object({
-        email: z.string().email("Please enter a valid email address"),
-        role: z.enum(["member", "admin"]).default("member"),
-      });
-
-      const validatedData = inviteSchema.parse(req.body);
-
-      // Cannot invite owners
-      if (validatedData.role === "owner") {
-        return res.status(400).json({ error: "Cannot invite users as owners" });
-      }
-
-      // Check if user already exists in this organization
-      const existingUser = await storage.getUserByEmail(validatedData.email);
-      if (existingUser && existingUser.organizationId === organizationId) {
-        return res.status(400).json({ error: "User is already a member of this organization" });
-      }
-
-      // Check for existing pending invitation
-      const existingInvitations = await storage.listOrganizationInvitations(organizationId);
-      const pendingInvite = existingInvitations.find(
-        (inv) => inv.email === validatedData.email && inv.status === "pending"
-      );
-      if (pendingInvite) {
-        return res.status(400).json({ error: "Invitation already sent to this email" });
-      }
-
-      // Generate cryptographically strong token
-      const token = randomBytes(32).toString("hex");
-
-      // Set expiration to 7 days from now
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
-
-      const invitation = await storage.createInvitation({
-        organizationId,
-        email: validatedData.email,
-        role: validatedData.role,
-        invitedBy: user.id,
-        status: "pending",
-        token,
-        expiresAt,
-      });
-
-      // Send invitation email using the new simple email service
-      await sendInvitationEmail(validatedData.email, token);
-
-      // Return invitation without token for security
-      const { token: _token, ...safeInvitation } = invitation;
-      res.status(201).json(safeInvitation);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid data", details: error.errors });
-      }
-      console.error("Error creating invitation:", error);
-      res.status(500).json({ error: "Failed to create invitation" });
-    }
-  });
+    },
+  );
 
   // Get organization invitations - uses tenant context from middleware
-  app.get("/api/organization/invites", requireOrganizationPermission, async (req: any, res) => {
-    try {
-      const organizationId = req.organizationId;
+  app.get(
+    "/api/organization/invites",
+    requireOrganizationPermission,
+    async (req: any, res) => {
+      try {
+        const organizationId = req.organizationId;
 
-      const invitations = await storage.listOrganizationInvitations(organizationId);
+        const invitations =
+          await storage.listOrganizationInvitations(organizationId);
 
-      // Exclude token field for security
-      const safeInvitations = invitations.map(({ token, ...invitation }) => invitation);
+        // Exclude token field for security
+        const safeInvitations = invitations.map(
+          ({ token, ...invitation }) => invitation,
+        );
 
-      res.json(safeInvitations);
-    } catch (error) {
-      console.error("Error fetching invitations:", error);
-      res.status(500).json({ error: "Failed to fetch invitations" });
-    }
-  });
+        res.json(safeInvitations);
+      } catch (error) {
+        console.error("Error fetching invitations:", error);
+        res.status(500).json({ error: "Failed to fetch invitations" });
+      }
+    },
+  );
 
   // Get organization members - uses tenant context from middleware
-  app.get("/api/organization/members", requireOrganizationPermission, async (req: any, res) => {
-    try {
-      const organizationId = req.organizationId;
+  app.get(
+    "/api/organization/members",
+    requireOrganizationPermission,
+    async (req: any, res) => {
+      try {
+        const organizationId = req.organizationId;
 
-      const members = await storage.getOrganizationMembers(organizationId);
+        const members = await storage.getOrganizationMembers(organizationId);
 
-      // Exclude password field for security
-      const safeMembers = members.map(({ password, ...member }) => member);
+        // Exclude password field for security
+        const safeMembers = members.map(({ password, ...member }) => member);
 
-      res.json(safeMembers);
-    } catch (error) {
-      console.error("Error fetching organization members:", error);
-      res.status(500).json({ error: "Failed to fetch organization members" });
-    }
-  });
+        res.json(safeMembers);
+      } catch (error) {
+        console.error("Error fetching organization members:", error);
+        res.status(500).json({ error: "Failed to fetch organization members" });
+      }
+    },
+  );
 
   // Organization Invitation Routes (Legacy - uses session and :id param)
   app.post("/api/organizations/:id/invitations", async (req, res) => {
@@ -1198,11 +1274,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify email matches (if user has email set)
       if (user.email && user.email !== invitation.email) {
-        return res
-          .status(403)
-          .json({
-            error: "This invitation was sent to a different email address",
-          });
+        return res.status(403).json({
+          error: "This invitation was sent to a different email address",
+        });
       }
 
       // Add user to organization
@@ -1374,12 +1448,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validTiers = ["free", "basic", "pro", "enterprise"];
       if (!accountTier || !validTiers.includes(accountTier)) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "Invalid account tier. Must be one of: free, basic, pro, enterprise",
-          });
+        return res.status(400).json({
+          error:
+            "Invalid account tier. Must be one of: free, basic, pro, enterprise",
+        });
       }
 
       const user = await storage.getUser(id);
@@ -1632,7 +1704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const tenantStorage = new TenantStorage(db as any, req.organizationId!);
-      
+
       // Sanitize: Remove ownership fields from update payload to prevent tampering
       const { userId, organizationId, ...updateData } = req.body;
       const updated = await tenantStorage.updateSite(id, updateData);
@@ -1647,21 +1719,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/sites/:id", requireOrganizationPermission, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
-      const deleted = await tenantStorage.deleteSite(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: "Site not found" });
+  app.delete(
+    "/api/sites/:id",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+        const deleted = await tenantStorage.deleteSite(id);
+
+        if (!deleted) {
+          return res.status(404).json({ error: "Site not found" });
+        }
+        res.status(204).send();
+      } catch (error) {
+        console.error("Error deleting site:", error);
+        res.status(500).json({ error: "Failed to delete site" });
       }
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting site:", error);
-      res.status(500).json({ error: "Failed to delete site" });
-    }
-  });
+    },
+  );
 
   // Facility Zone routes
   app.get("/api/sites/:siteId/zones", verifySiteOwnership, async (req, res) => {
@@ -1935,30 +2011,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Assessment routes (tenant-scoped)
-  app.get("/api/assessments", requireOrganizationPermission, async (req, res) => {
-    try {
-      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
-      const assessments = await tenantStorage.getAllAssessments();
-      res.json(assessments);
-    } catch (error) {
-      console.error("Error fetching assessments:", error);
-      res.status(500).json({ error: "Failed to fetch assessments" });
-    }
-  });
-
-  app.get("/api/assessments/:id", requireOrganizationPermission, async (req, res) => {
-    try {
-      const tenantStorage = new TenantStorage(db as any, req.organizationId!);
-      const assessment = await tenantStorage.getAssessment(req.params.id);
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found" });
+  app.get(
+    "/api/assessments",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+        const assessments = await tenantStorage.getAllAssessments();
+        res.json(assessments);
+      } catch (error) {
+        console.error("Error fetching assessments:", error);
+        res.status(500).json({ error: "Failed to fetch assessments" });
       }
-      res.json(assessment);
-    } catch (error) {
-      console.error("Error fetching assessment:", error);
-      res.status(500).json({ error: "Failed to fetch assessment" });
-    }
-  });
+    },
+  );
+
+  app.get(
+    "/api/assessments/:id",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const tenantStorage = new TenantStorage(db as any, req.organizationId!);
+        const assessment = await tenantStorage.getAssessment(req.params.id);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+        res.json(assessment);
+      } catch (error) {
+        console.error("Error fetching assessment:", error);
+        res.status(500).json({ error: "Failed to fetch assessment" });
+      }
+    },
+  );
 
   // Get comprehensive report data for an assessment
   app.get(
@@ -2008,7 +2092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assessmentId = req.params.id;
         const tenantStorage = new TenantStorage(db as any, req.organizationId!);
         const assessment = await tenantStorage.getAssessment(assessmentId);
-        
+
         if (!assessment) {
           return res.status(404).json({ error: "Assessment not found" });
         }
@@ -2092,12 +2176,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(updatedAssessment);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid warehouse profile data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid warehouse profile data",
+            details: error.errors,
+          });
         }
         console.error("Error updating warehouse profile:", error);
         res.status(500).json({ error: "Failed to update warehouse profile" });
@@ -2125,12 +2207,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(201).json(loadingDock);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid loading dock data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid loading dock data",
+            details: error.errors,
+          });
         }
         console.error("Error creating loading dock:", error);
         res.status(500).json({ error: "Failed to create loading dock" });
@@ -2177,12 +2257,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(updatedDock);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid loading dock data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid loading dock data",
+            details: error.errors,
+          });
         }
         console.error("Error updating loading dock:", error);
         res.status(500).json({ error: "Failed to update loading dock" });
@@ -2335,12 +2413,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid retail profile data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid retail profile data",
+            details: error.errors,
+          });
         }
         console.error("Error updating retail profile:", error);
         res.status(500).json({ error: "Failed to update retail profile" });
@@ -3103,12 +3179,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid executive profile data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid executive profile data",
+            details: error.errors,
+          });
         }
         console.error("Error updating executive profile:", error);
         res.status(500).json({ error: "Failed to update executive profile" });
@@ -3125,7 +3199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use req.user if available (already fetched by attachTenantContext), otherwise fetch
-      const user = req.user || await storage.getUser(userId);
+      const user = req.user || (await storage.getUser(userId));
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
@@ -3381,12 +3455,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(result);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid facility survey data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid facility survey data",
+            details: error.errors,
+          });
         }
         console.error("Error saving facility survey:", error);
         res.status(500).json({ error: "Failed to save facility survey" });
@@ -3982,38 +4054,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingScenarios.length > 0 && !forceRegenerate) {
           return res.status(409).json({
             error: "Risk scenarios already exist for this assessment",
-            message: "Set forceRegenerate: true to delete existing scenarios and regenerate",
-            existingCount: existingScenarios.length
+            message:
+              "Set forceRegenerate: true to delete existing scenarios and regenerate",
+            existingCount: existingScenarios.length,
           });
         }
 
         // Delete existing scenarios if forceRegenerate is true
         if (existingScenarios.length > 0 && forceRegenerate) {
           await storage.bulkUpsertRiskScenarios(assessmentId, []); // Deletes all existing
-          console.log(`[RiskScenarios] Deleted ${existingScenarios.length} existing scenarios for assessment ${assessmentId}`);
+          console.log(
+            `[RiskScenarios] Deleted ${existingScenarios.length} existing scenarios for assessment ${assessmentId}`,
+          );
         }
 
         // Import and call the risk scenario generator
-        const { generateRiskScenariosForAssessment } = await import("./services/office-interview-risk-mapper-corrected");
+        const { generateRiskScenariosForAssessment } = await import(
+          "./services/office-interview-risk-mapper-corrected"
+        );
         const result = await generateRiskScenariosForAssessment(assessmentId);
 
         if (!result.success) {
           return res.status(400).json({
             error: "Failed to generate risk scenarios",
-            message: "No interview responses found for this assessment"
+            message: "No interview responses found for this assessment",
           });
         }
 
         res.status(201).json({
           success: true,
           message: `Generated ${result.generatedScenarios} risk scenarios`,
-          ...result
+          ...result,
         });
       } catch (error) {
         console.error("Error generating risk scenarios:", error);
         res.status(500).json({ error: "Failed to generate risk scenarios" });
       }
-    }
+    },
   );
 
   app.put("/api/risk-scenarios/:id", async (req, res) => {
@@ -4381,12 +4458,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(201).json(result);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid treatment plan data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid treatment plan data",
+            details: error.errors,
+          });
         }
         console.error("Error creating treatment plan:", error);
         res.status(500).json({ error: "Failed to create treatment plan" });
@@ -4473,12 +4548,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(result);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid treatment plans data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid treatment plans data",
+            details: error.errors,
+          });
         }
         console.error("Error bulk upserting treatment plans:", error);
         res
@@ -4518,12 +4591,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(201).json(result);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({
-              error: "Invalid vulnerability data",
-              details: error.errors,
-            });
+          return res.status(400).json({
+            error: "Invalid vulnerability data",
+            details: error.errors,
+          });
         }
         console.error("Error creating vulnerability:", error);
         res.status(500).json({ error: "Failed to create vulnerability" });
@@ -5162,35 +5233,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.get("/api/reports/:id/download", requireOrganizationPermission, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const report = await storage.getReport(id);
+  app.get(
+    "/api/reports/:id/download",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const report = await storage.getReport(id);
 
-      if (!report) {
-        return res.status(404).json({ error: "Report not found" });
+        if (!report) {
+          return res.status(404).json({ error: "Report not found" });
+        }
+
+        if (report.status !== "ready") {
+          return res
+            .status(400)
+            .json({ error: "Report is not ready for download" });
+        }
+
+        // In a real implementation, you would serve the actual file
+        // For now, return report metadata
+        res.json({
+          id: report.id,
+          title: report.title,
+          format: report.format,
+          downloadUrl: `/api/reports/${id}/download`,
+          message: "Report download would be available here",
+        });
+      } catch (error) {
+        console.error("Error downloading report:", error);
+        res.status(500).json({ error: "Failed to download report" });
       }
-
-      if (report.status !== "ready") {
-        return res
-          .status(400)
-          .json({ error: "Report is not ready for download" });
-      }
-
-      // In a real implementation, you would serve the actual file
-      // For now, return report metadata
-      res.json({
-        id: report.id,
-        title: report.title,
-        format: report.format,
-        downloadUrl: `/api/reports/${id}/download`,
-        message: "Report download would be available here",
-      });
-    } catch (error) {
-      console.error("Error downloading report:", error);
-      res.status(500).json({ error: "Failed to download report" });
-    }
-  });
+    },
+  );
 
   // Evidence Upload/Download/Delete routes
   app.post(
@@ -5340,11 +5415,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { questionId, questionType, evidencePath } = req.body;
 
         if (!questionId || !questionType || !evidencePath) {
-          return res
-            .status(400)
-            .json({
-              error: "questionId, questionType, and evidencePath are required",
-            });
+          return res.status(400).json({
+            error: "questionId, questionType, and evidencePath are required",
+          });
         }
 
         if (!["facility", "assessment"].includes(questionType)) {
@@ -5453,25 +5526,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   // Report Generation Routes (Phase 3)
   // ==========================================
-  
+
   // Import report generation services
-  const { 
-    generateReport, 
-    saveGeneratedReport, 
-    getGeneratedReports, 
-    getGeneratedReport, 
+  const {
+    generateReport,
+    saveGeneratedReport,
+    getGeneratedReports,
+    getGeneratedReport,
     getAllRecipes,
-    getRecipe
+    getRecipe,
   } = await import("./services/reporting/report-generator");
-  const { isAnthropicConfigured } = await import("./services/anthropic-service");
+  const { isAnthropicConfigured } = await import(
+    "./services/anthropic-service"
+  );
 
   // Check if Anthropic API is configured (public - no auth needed)
   app.get("/api/reports/status", async (_req, res) => {
     try {
       const configured = isAnthropicConfigured();
-      res.json({ 
+      res.json({
         anthropicConfigured: configured,
-        message: configured ? 'Ready to generate reports' : 'Anthropic API key not configured'
+        message: configured
+          ? "Ready to generate reports"
+          : "Anthropic API key not configured",
       });
     } catch (error) {
       console.error("Error checking report status:", error);
@@ -5506,252 +5583,346 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate a new report for an assessment (protected - requires org permission + assessment ownership)
-  app.post("/api/assessments/:id/reports/generate", requireOrganizationPermission, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { recipeId } = req.body;
-      const organizationId = req.organizationId;
+  app.post(
+    "/api/assessments/:id/reports/generate",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { recipeId } = req.body;
+        const organizationId = req.organizationId;
 
-      if (!recipeId) {
-        return res.status(400).json({ error: "recipeId is required" });
-      }
+        if (!recipeId) {
+          return res.status(400).json({ error: "recipeId is required" });
+        }
 
-      // Verify the assessment belongs to the user's organization
-      if (!organizationId) {
-        return res.status(403).json({ error: "Organization context required" });
-      }
-      const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessment(id);
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found or access denied" });
-      }
+        // Verify the assessment belongs to the user's organization
+        if (!organizationId) {
+          return res
+            .status(403)
+            .json({ error: "Organization context required" });
+        }
+        const tenantStorage = new TenantStorage(db as any, organizationId);
+        const assessment = await tenantStorage.getAssessment(id);
+        if (!assessment) {
+          return res
+            .status(404)
+            .json({ error: "Assessment not found or access denied" });
+        }
 
-      if (!isAnthropicConfigured()) {
-        return res.status(503).json({ 
-          error: "Report generation unavailable", 
-          message: "Anthropic API key is not configured" 
+        if (!isAnthropicConfigured()) {
+          return res.status(503).json({
+            error: "Report generation unavailable",
+            message: "Anthropic API key is not configured",
+          });
+        }
+
+        console.log(
+          `[API] Generating report for assessment ${id} with recipe ${recipeId}`,
+        );
+
+        const result = await generateReport(id, recipeId);
+
+        // Get userId from session if available
+        const userId = req.session?.userId;
+        const savedReportId = await saveGeneratedReport(result, userId);
+
+        res.json({
+          reportId: savedReportId,
+          recipeId: result.recipeId,
+          assessmentId: result.assessmentId,
+          generatedAt: result.generatedAt,
+          sectionsGenerated: result.sections.length,
+          totalTokensUsed: result.totalTokensUsed,
+          totalNarrativeWords: result.totalNarrativeWords,
+          sections: result.sections.map((s) => ({
+            id: s.id,
+            title: s.title,
+            order: s.order,
+            hasNarrative: !!s.narrativeContent,
+            hasTable: !!s.tableContent,
+            wordCount: s.generationMetadata?.wordCount,
+          })),
+          generationLog: result.generationLog,
         });
+      } catch (error) {
+        console.error("Error generating report:", error);
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        res.status(500).json({ error: "Failed to generate report", message });
       }
-
-      console.log(`[API] Generating report for assessment ${id} with recipe ${recipeId}`);
-
-      const result = await generateReport(id, recipeId);
-      
-      // Get userId from session if available
-      const userId = req.session?.userId;
-      const savedReportId = await saveGeneratedReport(result, userId);
-
-      res.json({
-        reportId: savedReportId,
-        recipeId: result.recipeId,
-        assessmentId: result.assessmentId,
-        generatedAt: result.generatedAt,
-        sectionsGenerated: result.sections.length,
-        totalTokensUsed: result.totalTokensUsed,
-        totalNarrativeWords: result.totalNarrativeWords,
-        sections: result.sections.map(s => ({
-          id: s.id,
-          title: s.title,
-          order: s.order,
-          hasNarrative: !!s.narrativeContent,
-          hasTable: !!s.tableContent,
-          wordCount: s.generationMetadata?.wordCount
-        })),
-        generationLog: result.generationLog
-      });
-    } catch (error) {
-      console.error("Error generating report:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ error: "Failed to generate report", message });
-    }
-  });
+    },
+  );
 
   // Get all generated reports for an assessment (protected - requires org permission + assessment ownership)
-  app.get("/api/assessments/:id/reports", requireOrganizationPermission, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const organizationId = req.organizationId;
+  app.get(
+    "/api/assessments/:id/reports",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const organizationId = req.organizationId;
 
-      // Verify the assessment belongs to the user's organization
-      if (!organizationId) {
-        return res.status(403).json({ error: "Organization context required" });
-      }
-      const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessment(id);
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found or access denied" });
-      }
+        // Verify the assessment belongs to the user's organization
+        if (!organizationId) {
+          return res
+            .status(403)
+            .json({ error: "Organization context required" });
+        }
+        const tenantStorage = new TenantStorage(db as any, organizationId);
+        const assessment = await tenantStorage.getAssessment(id);
+        if (!assessment) {
+          return res
+            .status(404)
+            .json({ error: "Assessment not found or access denied" });
+        }
 
-      const reports = await getGeneratedReports(id);
-      res.json(reports);
-    } catch (error) {
-      console.error("Error fetching reports:", error);
-      res.status(500).json({ error: "Failed to fetch reports" });
-    }
-  });
+        const reports = await getGeneratedReports(id);
+        res.json(reports);
+      } catch (error) {
+        console.error("Error fetching reports:", error);
+        res.status(500).json({ error: "Failed to fetch reports" });
+      }
+    },
+  );
 
   // Get a specific generated report (protected - requires org permission + assessment ownership)
-  app.get("/api/assessments/:id/reports/:reportId", requireOrganizationPermission, async (req, res) => {
-    try {
-      const { id, reportId } = req.params;
-      const organizationId = req.organizationId;
+  app.get(
+    "/api/assessments/:id/reports/:reportId",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const { id, reportId } = req.params;
+        const organizationId = req.organizationId;
 
-      // Verify the assessment belongs to the user's organization
-      if (!organizationId) {
-        return res.status(403).json({ error: "Organization context required" });
-      }
-      const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessment(id);
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found or access denied" });
-      }
+        // Verify the assessment belongs to the user's organization
+        if (!organizationId) {
+          return res
+            .status(403)
+            .json({ error: "Organization context required" });
+        }
+        const tenantStorage = new TenantStorage(db as any, organizationId);
+        const assessment = await tenantStorage.getAssessment(id);
+        if (!assessment) {
+          return res
+            .status(404)
+            .json({ error: "Assessment not found or access denied" });
+        }
 
-      const report = await getGeneratedReport(reportId);
-      if (!report) {
-        return res.status(404).json({ error: "Report not found" });
+        const report = await getGeneratedReport(reportId);
+        if (!report) {
+          return res.status(404).json({ error: "Report not found" });
+        }
+
+        // Additional check: ensure report belongs to the requested assessment
+        if (report.assessmentId !== id) {
+          return res
+            .status(404)
+            .json({ error: "Report not found for this assessment" });
+        }
+
+        res.json(report);
+      } catch (error) {
+        console.error("Error fetching report:", error);
+        res.status(500).json({ error: "Failed to fetch report" });
       }
-      
-      // Additional check: ensure report belongs to the requested assessment
-      if (report.assessmentId !== id) {
-        return res.status(404).json({ error: "Report not found for this assessment" });
-      }
-      
-      res.json(report);
-    } catch (error) {
-      console.error("Error fetching report:", error);
-      res.status(500).json({ error: "Failed to fetch report" });
-    }
-  });
+    },
+  );
 
   // Import PDF generator for report PDF endpoints
-  const { generateReportPDF } = await import("./services/reporting/pdf-generator");
+  const { generateReportPDF } = await import(
+    "./services/reporting/pdf-generator"
+  );
 
   // Generate and download PDF from existing report (protected)
-  app.post("/api/assessments/:id/reports/:reportId/pdf", requireOrganizationPermission, async (req, res) => {
-    try {
-      const { id, reportId } = req.params;
-      const organizationId = req.organizationId;
+  app.post(
+    "/api/assessments/:id/reports/:reportId/pdf",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const { id, reportId } = req.params;
+        const organizationId = req.organizationId;
 
-      // Verify the assessment belongs to the user's organization
-      if (!organizationId) {
-        return res.status(403).json({ error: "Organization context required" });
+        // Verify the assessment belongs to the user's organization
+        if (!organizationId) {
+          return res
+            .status(403)
+            .json({ error: "Organization context required" });
+        }
+        const tenantStorage = new TenantStorage(db as any, organizationId);
+        const assessment = await tenantStorage.getAssessment(id);
+        if (!assessment) {
+          return res
+            .status(404)
+            .json({ error: "Assessment not found or access denied" });
+        }
+
+        // Fetch the generated report
+        const report = await getGeneratedReport(reportId);
+        if (!report) {
+          return res.status(404).json({ error: "Report not found" });
+        }
+
+        if (report.assessmentId !== id) {
+          return res
+            .status(404)
+            .json({ error: "Report not found for this assessment" });
+        }
+
+        // Reconstruct the GeneratedReportResult from stored data with robust defaults
+        const dataSnapshot = (report.dataSnapshot as any) || {};
+        const reportResult = {
+          recipeId: report.recipeId,
+          assessmentId: report.assessmentId,
+          generatedAt: report.generatedAt || new Date(),
+          sections: dataSnapshot?.sections || [],
+          dataSnapshot: {
+            assessmentType: dataSnapshot?.assessmentType || "unknown",
+            principal: dataSnapshot?.principal || null,
+            facility: dataSnapshot?.facility || null,
+            riskScores: dataSnapshot?.riskScores || { overallScore: 0 },
+            threatDomains: dataSnapshot?.threatDomains || [],
+            generatedAt:
+              dataSnapshot?.generatedAt || report.generatedAt || new Date(),
+            ...dataSnapshot,
+          },
+          generationLog: (report.generationLog as any[]) || [],
+          totalTokensUsed: 0,
+          totalNarrativeWords: 0,
+        };
+
+        // Determine template type based on report type
+        const templateType =
+          report.reportType === "comprehensive"
+            ? "comprehensive"
+            : "executive-summary";
+
+        console.log(`[API] Generating PDF for report ${reportId}`);
+        const pdfBuffer = await generateReportPDF(
+          reportResult as any,
+          templateType as "executive-summary" | "comprehensive",
+        );
+
+        // Set response headers for PDF download
+        const fileName = `report-${reportId.substring(0, 8)}.pdf`;
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${fileName}"`,
+        );
+        res.setHeader("Content-Length", pdfBuffer.length);
+
+        res.send(pdfBuffer);
+      } catch (error) {
+        console.error("Error generating PDF:", error);
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        res.status(500).json({ error: "Failed to generate PDF", message });
       }
-      const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessment(id);
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found or access denied" });
-      }
-
-      // Fetch the generated report
-      const report = await getGeneratedReport(reportId);
-      if (!report) {
-        return res.status(404).json({ error: "Report not found" });
-      }
-      
-      if (report.assessmentId !== id) {
-        return res.status(404).json({ error: "Report not found for this assessment" });
-      }
-
-      // Reconstruct the GeneratedReportResult from stored data with robust defaults
-      const dataSnapshot = report.dataSnapshot as any || {};
-      const reportResult = {
-        recipeId: report.recipeId,
-        assessmentId: report.assessmentId,
-        generatedAt: report.generatedAt || new Date(),
-        sections: dataSnapshot?.sections || [],
-        dataSnapshot: {
-          assessmentType: dataSnapshot?.assessmentType || 'unknown',
-          principal: dataSnapshot?.principal || null,
-          facility: dataSnapshot?.facility || null,
-          riskScores: dataSnapshot?.riskScores || { overallScore: 0 },
-          threatDomains: dataSnapshot?.threatDomains || [],
-          generatedAt: dataSnapshot?.generatedAt || report.generatedAt || new Date(),
-          ...dataSnapshot
-        },
-        generationLog: report.generationLog as any[] || [],
-        totalTokensUsed: 0,
-        totalNarrativeWords: 0
-      };
-
-      // Determine template type based on report type
-      const templateType = report.reportType === 'comprehensive' ? 'comprehensive' : 'executive-summary';
-
-      console.log(`[API] Generating PDF for report ${reportId}`);
-      const pdfBuffer = await generateReportPDF(reportResult as any, templateType as 'executive-summary' | 'comprehensive');
-
-      // Set response headers for PDF download
-      const fileName = `report-${reportId.substring(0, 8)}.pdf`;
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      res.send(pdfBuffer);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ error: "Failed to generate PDF", message });
-    }
-  });
+    },
+  );
 
   // Generate report and immediately return PDF (one-step) (protected)
-  app.post("/api/assessments/:id/reports/generate-pdf", requireOrganizationPermission, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { recipeId } = req.body;
-      const organizationId = req.organizationId;
+  app.post(
+    "/api/assessments/:id/reports/generate-pdf",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { recipeId } = req.body;
+        const organizationId = req.organizationId;
 
-      if (!recipeId) {
-        return res.status(400).json({ error: "recipeId is required" });
+        if (!recipeId) {
+          return res.status(400).json({ error: "recipeId is required" });
+        }
+
+        // Verify the assessment belongs to the user's organization
+        if (!organizationId) {
+          return res
+            .status(403)
+            .json({ error: "Organization context required" });
+        }
+        const tenantStorage = new TenantStorage(db as any, organizationId);
+        const assessment = await tenantStorage.getAssessment(id);
+        if (!assessment) {
+          return res
+            .status(404)
+            .json({ error: "Assessment not found or access denied" });
+        }
+
+        if (!isAnthropicConfigured()) {
+          return res.status(503).json({
+            error: "Report generation unavailable",
+            message: "Anthropic API key is not configured",
+          });
+        }
+
+        console.log(
+          `[API] Generating report and PDF for assessment ${id} with recipe ${recipeId}`,
+        );
+
+        // Generate the report
+        const result = await generateReport(id, recipeId);
+
+        // Save to database
+        const userId = req.session?.userId;
+        const savedReportId = await saveGeneratedReport(result, userId);
+
+        // Determine template type based on recipe
+        const recipe = await getRecipe(recipeId);
+        const templateType =
+          recipe?.reportType === "comprehensive"
+            ? "comprehensive"
+            : "executive-summary";
+
+        // Generate PDF
+        const pdfBuffer = await generateReportPDF(
+          result,
+          templateType as "executive-summary" | "comprehensive",
+        );
+
+        // Set response headers for PDF download
+        const fileName = `report-${savedReportId.substring(0, 8)}.pdf`;
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${fileName}"`,
+        );
+        res.setHeader("Content-Length", pdfBuffer.length);
+        res.setHeader("X-Report-Id", savedReportId);
+
+        res.send(pdfBuffer);
+      } catch (error) {
+        console.error("Error generating report PDF:", error);
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        res
+          .status(500)
+          .json({ error: "Failed to generate report PDF", message });
       }
-
-      // Verify the assessment belongs to the user's organization
-      if (!organizationId) {
-        return res.status(403).json({ error: "Organization context required" });
-      }
-      const tenantStorage = new TenantStorage(db as any, organizationId);
-      const assessment = await tenantStorage.getAssessment(id);
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found or access denied" });
-      }
-
-      if (!isAnthropicConfigured()) {
-        return res.status(503).json({ 
-          error: "Report generation unavailable", 
-          message: "Anthropic API key is not configured" 
-        });
-      }
-
-      console.log(`[API] Generating report and PDF for assessment ${id} with recipe ${recipeId}`);
-
-      // Generate the report
-      const result = await generateReport(id, recipeId);
-      
-      // Save to database
-      const userId = req.session?.userId;
-      const savedReportId = await saveGeneratedReport(result, userId);
-
-      // Determine template type based on recipe
-      const recipe = await getRecipe(recipeId);
-      const templateType = recipe?.reportType === 'comprehensive' ? 'comprehensive' : 'executive-summary';
-
-      // Generate PDF
-      const pdfBuffer = await generateReportPDF(result, templateType as 'executive-summary' | 'comprehensive');
-
-      // Set response headers for PDF download
-      const fileName = `report-${savedReportId.substring(0, 8)}.pdf`;
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      res.setHeader('X-Report-Id', savedReportId);
-      
-      res.send(pdfBuffer);
-    } catch (error) {
-      console.error("Error generating report PDF:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      res.status(500).json({ error: "Failed to generate report PDF", message });
-    }
-  });
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;
+
+  // GET facility survey questions for an assessment
+  app.get(
+    "/api/assessments/:id/facility-survey",
+    async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+
+        // Get all facility survey questions for this assessment from database
+        const questions = await storage.getFacilitySurveyQuestions(
+          parseInt(id),
+        );
+
+        res.json(questions);
+      } catch (error) {
+        console.error("Error fetching facility survey questions:", error);
+        res.status(500).json({ error: "Failed to fetch survey questions" });
+      }
+    },
+  );
 }
