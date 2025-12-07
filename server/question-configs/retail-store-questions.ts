@@ -1,7 +1,8 @@
 export interface QuestionConfig {
   questionText: string;
   category: string;
-  questionType: "yes-no" | "rating" | "text" | "photo"; // Hyphenated to match schema
+  questionType: "yes-no" | "rating" | "text" | "photo" | "multiple-choice" | "checklist"; // Hyphenated to match schema
+  options?: string[]; // For multiple-choice and checklist question types
   followUpText?: string;
   followUpType?: "rating" | "text" | "photo";
   controlLibraryName: string;
