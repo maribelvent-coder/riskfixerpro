@@ -7,9 +7,13 @@ channel = "stable-24_05"
 packages = ["glib", "nss", "nspr", "atk", "cups", "dbus", "expat", "xorg.libxcb", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "libdrm", "mesa", "libxkbcommon", "pango", "cairo", "alsa-lib", "at-spi2-atk", "gtk3", "chromium", "noto-fonts", "liberation_ttf"]
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "cloudrun"
 build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+run = ["sh", "-c", "npm run start"]
+
+[deployment.health]
+path = "/health"
+timeout = 60
 
 [[ports]]
 localPort = 5000
