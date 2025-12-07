@@ -28,7 +28,7 @@
 
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
-import { assessments, riskScenarios, threats } from '@shared/schema';
+import { assessments, riskScenarios, threatLibrary } from '@shared/schema';
 
 // ============================================================================
 // INTERFACES
@@ -52,7 +52,7 @@ export interface CalculatedRiskInputs {
 }
 
 export interface NewRiskScenario {
-  assessmentId: number;
+  assessmentId: string;
   threatId: number;
   threatLikelihood: number;
   vulnerability: number;
@@ -1909,7 +1909,7 @@ function generateScenarioDescription(
  * Creates 15 manufacturing-specific risk scenarios
  */
 export async function initializeRiskScenariosFromInterview(
-  assessmentId: number,
+  assessmentId: string,
   interviewResponses: InterviewResponses
 ): Promise<GeneratedScenarioResult> {
   const result: GeneratedScenarioResult = {
@@ -2677,10 +2677,10 @@ export function calculateOverallSecurityScore(responses: InterviewResponses): Se
 // EXPORTS FOR ROUTE INTEGRATION
 // ============================================================================
 
+// MANUFACTURING_THREATS, THREAT_CONTROL_MAPPING, QUESTION_THREAT_MAPPING
+// are already exported above where they are defined
+
 export {
-  MANUFACTURING_THREATS,
-  THREAT_CONTROL_MAPPING,
-  QUESTION_THREAT_MAPPING,
   QUESTION_RISK_WEIGHTS,
   classifyRiskLevel,
   getThreatById,
