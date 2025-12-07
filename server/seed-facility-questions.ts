@@ -3,9 +3,28 @@ import { templateQuestions, controlLibrary } from '../shared/schema';
 import { RETAIL_STORE_QUESTIONS } from './question-configs/retail-store-questions';
 import { WAREHOUSE_QUESTIONS } from './question-configs/warehouse-questions';
 import { DATA_CENTER_QUESTIONS } from './question-configs/data-center-questions';
-import { MANUFACTURING_QUESTIONS } from './question-configs/manufacturing-questions';
+// DEPRECATED: Simple manufacturing questions replaced by detailed interview questionnaire
+// import { MANUFACTURING_QUESTIONS } from './question-configs/manufacturing-questions';
+import { 
+  getAllQuestionsFlattened,
+  MANUFACTURING_SECTION_METADATA,
+  type InterviewQuestion
+} from './services/manufacturing-interview-questionnaire';
 import type { QuestionConfig } from './question-configs/retail-store-questions';
 import { eq } from 'drizzle-orm';
+
+// Map manufacturing questionnaire types to database types
+function mapManufacturingQuestionType(type: string): string {
+  const typeMap: Record<string, string> = {
+    'multiple_choice': 'multiple-choice',
+    'yes_no': 'yes-no',
+    'rating': 'rating',
+    'text': 'text',
+    'checklist': 'checklist',
+    'number': 'number'
+  };
+  return typeMap[type] || type;
+}
 
 // DEPRECATED: Old office-building questions for reference
 const OFFICE_BUILDING_QUESTIONS_DEPRECATED = [
@@ -231,18 +250,22 @@ async function seedFacilityQuestions() {
     
     console.log(`📚 Loaded ${controls.length} controls from control_library\n`);
     
-    const templates = [
+    // Standard templates using QuestionConfig format
+    const standardTemplates = [
       { id: 'retail-store', name: 'Retail Store', questions: RETAIL_STORE_QUESTIONS },
       { id: 'warehouse-distribution', name: 'Warehouse & Distribution', questions: WAREHOUSE_QUESTIONS },
       { id: 'data-center', name: 'Data Center', questions: DATA_CENTER_QUESTIONS },
-      { id: 'manufacturing-facility', name: 'Manufacturing Facility', questions: MANUFACTURING_QUESTIONS }
     ];
+    
+    // Manufacturing uses the detailed interview questionnaire with proper IDs for AI mapper
+    const manufacturingQuestions = getAllQuestionsFlattened();
     
     let totalQuestionsAdded = 0;
     let totalQuestionsUpdated = 0;
     let totalErrors = 0;
     
-    for (const template of templates) {
+    // Process standard templates (retail, warehouse, datacenter)
+    for (const template of standardTemplates) {
       console.log(`📋 Processing: ${template.name}`);
       console.log('─'.repeat(60));
       
@@ -306,6 +329,65 @@ async function seedFacilityQuestions() {
       console.log(`  📊 Total questions for ${template.name}: ${template.questions.length}\n`);
     }
     
+    // Process Manufacturing template with detailed interview questionnaire
+    // Uses question.id (e.g., 'perimeter_1') as questionId for AI mapper compatibility
+    console.log(`📋 Processing: Manufacturing Facility (Detailed Interview Questionnaire)`);
+    console.log('─'.repeat(60));
+    
+    let mfgAdded = 0;
+    let mfgUpdated = 0;
+    let mfgErrors = 0;
+    
+    for (let i = 0; i < manufacturingQuestions.length; i++) {
+      const question = manufacturingQuestions[i];
+      // Use the question.id directly (e.g., 'perimeter_1', 'ip_5', 'facility_8')
+      // This aligns with what manufacturing-interview-mapper.ts expects
+      const questionId = question.id;
+      
+      try {
+        // Check if question already exists
+        const existing = await db.select()
+          .from(templateQuestions)
+          .where(eq(templateQuestions.questionId, questionId))
+          .limit(1);
+        
+        const questionData = {
+          templateId: 'manufacturing-facility',
+          questionId: questionId,
+          category: question.section, // Use section as category
+          question: question.questionText,
+          type: mapManufacturingQuestionType(question.questionType),
+          orderIndex: i + 1,
+          options: question.options || null, // Include dropdown options
+          controlLibraryId: null, // Manufacturing questionnaire doesn't map to control library directly
+          bestPractice: question.helpText || null,
+          rationale: question.riskIndicators?.join(', ') || null,
+          importance: question.riskWeight >= 3 ? 'High' : question.riskWeight >= 2 ? 'Medium' : 'Low'
+        };
+        
+        if (existing.length > 0) {
+          // Update existing question
+          await db.update(templateQuestions)
+            .set(questionData)
+            .where(eq(templateQuestions.questionId, questionId));
+          mfgUpdated++;
+          totalQuestionsUpdated++;
+        } else {
+          // Insert new question
+          await db.insert(templateQuestions).values(questionData);
+          mfgAdded++;
+          totalQuestionsAdded++;
+        }
+      } catch (error: any) {
+        console.log(`  ❌ Error processing question ${questionId}: ${error.message}`);
+        mfgErrors++;
+        totalErrors++;
+      }
+    }
+    
+    console.log(`  ✅ Added: ${mfgAdded} | Updated: ${mfgUpdated} | Errors: ${mfgErrors}`);
+    console.log(`  📊 Total questions for Manufacturing Facility: ${manufacturingQuestions.length}\n`);
+    
     console.log('═'.repeat(60));
     console.log('✅ Seeding complete!\n');
     console.log('📊 Summary:');
@@ -316,7 +398,11 @@ async function seedFacilityQuestions() {
     
     // Verify seeding
     console.log('🔍 Verifying seeded data...');
-    for (const template of templates) {
+    const allTemplates = [
+      ...standardTemplates,
+      { id: 'manufacturing-facility', name: 'Manufacturing Facility' }
+    ];
+    for (const template of allTemplates) {
       const count = await db.select()
         .from(templateQuestions)
         .where(eq(templateQuestions.templateId, template.id));
