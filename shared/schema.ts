@@ -149,6 +149,7 @@ export const templateQuestions = pgTable("template_questions", {
   rationale: text("rationale"),
   importance: text("importance"),
   type: text("type").notNull().default("yes-no"),
+  options: text("options").array(),
   orderIndex: integer("order_index").notNull(),
   controlLibraryId: varchar("control_library_id"),
   conditionalOnQuestionId: text("conditional_on_question_id"),

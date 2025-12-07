@@ -131,14 +131,13 @@ async function seedRetailQuestions() {
             category: question.section,
             subcategory: question.zoneApplicable?.join(', ') || null,
             question: question.questionText,
-            bestPractice: null, // Not using this field for options anymore
+            bestPractice: null,
             rationale: question.riskIndicators?.join('; ') || null,
             importance: question.required ? 'High' : 'Medium',
-            type: question.questionType.replace('_', '-'), // Convert yes_no to yes-no
-            options: question.options || null, // Store options array for checklist questions
+            type: question.questionType.replace('_', '-'),
+            options: question.options || null,
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
-            controlLibraryId: controlLibraryId,
-            riskDirection: question.riskDirection || 'positive' // Default to 'positive' if not specified
+            controlLibraryId: controlLibraryId
           })
           .where(eq(templateQuestions.id, existingQuestion[0].id));
 
@@ -154,14 +153,13 @@ async function seedRetailQuestions() {
             category: question.section,
             subcategory: question.zoneApplicable?.join(', ') || null,
             question: question.questionText,
-            bestPractice: null, // Not using this field for options anymore
+            bestPractice: null,
             rationale: question.riskIndicators?.join('; ') || null,
             importance: question.required ? 'High' : 'Medium',
             type: question.questionType.replace('_', '-'),
-            options: question.options || null, // Store options array for checklist questions
+            options: question.options || null,
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
-            controlLibraryId: controlLibraryId,
-            riskDirection: question.riskDirection || 'positive' // Default to 'positive' if not specified
+            controlLibraryId: controlLibraryId
           })
           .returning();
 
