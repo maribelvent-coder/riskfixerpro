@@ -5,6 +5,39 @@ All notable changes to the RiskFixer project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase 1.2] - 2025-12-08
+
+### Added
+- **Risk Direction Column**: Added `risk_direction` column to both `template_questions` and `facility_survey_questions` tables
+  - Enables polarity-aware yes-no question labels in the Facility Survey UI
+  - `negative` polarity: "Yes (0%) - High risk / Incident occurred" / "No (100%) - Safe / No incidents"
+  - `positive` polarity: "Yes (100%) - Fully compliant" / "No (0%) - Non-compliant"
+- Updated Drizzle schema with `riskDirection` field for proper ORM integration
+
+### Changed
+- **Warehouse Template Re-seeded**: Complete re-seed from authoritative source `warehouse-interview-questionnaire.ts`
+  - 77 questions across 9 categories aligned with TAPA FSR, ASIS GDL-RA, CargoNet, and ISO 28000 standards
+  - Proper question type naming convention (hyphens: `yes-no`, `multiple-choice`)
+  - All incident questions (incident_1 through incident_8) correctly marked with `negative` risk_direction
+  - All compliance questions marked with `positive` risk_direction
+
+### Fixed
+- **Yes-No Question Labels**: Incident/history questions now display contextually appropriate labels
+  - Previous: All yes-no questions showed generic "Yes/No" labels
+  - Fixed: Labels now reflect whether "Yes" indicates risk (incidents) or compliance (security controls)
+- **Polarity Mapping**: Implemented correct mapping from source polarity to database risk_direction
+  - `YES_BAD` → `negative` (7 incident questions)
+  - `YES_GOOD` → `positive` (33 compliance questions)
+  - `CONTEXT`/`MULTIPLE_CHOICE`/`RATING` → NULL (context-only questions)
+
+### Database
+- Updated 772 existing `facility_survey_questions` records with correct `risk_direction` values
+- Both `warehouse` and `warehouse-distribution` templates (77 questions each) now auto-populate correctly on assessment creation
+
+### Technical Details
+- **Authoritative Source**: `server/services/warehouse-interview-questionnaire.ts` (2138 lines)
+- **Question Categories**: Facility & Operations Profile (8), Cargo Theft & Incident History (13), Perimeter & Yard Security (10), Loading Dock Security (11), Inventory Control & Management (9), Personnel & Access Control (9), Vehicle & Fleet Security (5), Surveillance & Monitoring (6), Emergency Response & Procedures (6)
+
 ## [Phase 1.1] - 2025-12-02
 
 ## [Phase 1.1] - 2025-12-03
