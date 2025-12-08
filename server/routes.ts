@@ -3169,6 +3169,237 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Get datacenter interview threats list
+  app.get(
+    "/api/assessments/:id/datacenter-interview/threats",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { DATACENTER_THREATS } = await import(
+          "./services/datacenter-interview-mapper"
+        );
+
+        res.json({
+          threats: DATACENTER_THREATS.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            category: t.category,
+            typicalLikelihood: t.typicalLikelihood,
+            typicalImpact: t.typicalImpact,
+            asisCode: t.asisCode,
+            description: t.description,
+          })),
+          totalThreats: DATACENTER_THREATS.length,
+          threatCategories: Array.from(new Set(DATACENTER_THREATS.map((t: any) => t.category))),
+        });
+      } catch (error) {
+        console.error("Error fetching datacenter threats:", error);
+        res.status(500).json({ error: "Failed to fetch datacenter threats" });
+      }
+    },
+  );
+
+  // Generate datacenter risk scenarios with AI (primary AI endpoint)
+  app.post(
+    "/api/assessments/:id/datacenter-interview/generate-risks-ai",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const assessmentId = req.params.id;
+        const {
+          interviewResponses,
+          useAI = true,
+          photoFindings,
+          incidentHistory,
+          complianceRequirements,
+          uptimeMetrics,
+          facilityName,
+        } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const assessment = req.assessment;
+        if (assessment?.templateId !== "datacenter" && assessment?.facilityType !== "datacenter") {
+          return res.status(400).json({
+            error: "Invalid assessment type. This endpoint is for Datacenter assessments only.",
+          });
+        }
+
+        const { generateDatacenterRiskScenariosWithAI } = await import(
+          "./services/datacenter-ai-risk-assessment"
+        );
+
+        const result = await generateDatacenterRiskScenariosWithAI(
+          assessmentId,
+          interviewResponses,
+          {
+            useAI,
+            photoFindings,
+            incidentHistory,
+            complianceRequirements,
+            uptimeMetrics,
+            facilityName,
+          }
+        );
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error generating datacenter risk scenarios:", error);
+        res.status(500).json({
+          error: "Failed to generate risk scenarios",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Assess single datacenter threat with AI
+  app.post(
+    "/api/assessments/:id/datacenter-interview/assess-single-threat",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { threatId, interviewResponses, useAI = true } = req.body;
+
+        if (!threatId) {
+          return res.status(400).json({ error: "threatId is required" });
+        }
+
+        const { DATACENTER_THREATS } = await import(
+          "./services/datacenter-interview-mapper"
+        );
+        const { assessSingleDatacenterThreat } = await import(
+          "./services/datacenter-ai-risk-assessment"
+        );
+
+        const validThreat = DATACENTER_THREATS.find((t: any) => t.id === threatId);
+        if (!validThreat) {
+          return res.status(400).json({
+            error: "Invalid threatId",
+            validThreats: DATACENTER_THREATS.map((t: any) => t.id),
+          });
+        }
+
+        const result = await assessSingleDatacenterThreat(threatId, interviewResponses, { useAI });
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error assessing single datacenter threat:", error);
+        res.status(500).json({
+          error: "Failed to assess threat",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Generate datacenter narrative summary with AI
+  app.post(
+    "/api/assessments/:id/datacenter-interview/generate-narrative",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const assessmentId = req.params.id;
+        const { results, interviewResponses, facilityName } = req.body;
+
+        if (!results || !Array.isArray(results)) {
+          return res.status(400).json({ error: "results array is required" });
+        }
+
+        const { generateDatacenterNarrativeSummary } = await import(
+          "./services/datacenter-ai-risk-assessment"
+        );
+
+        const context = {
+          assessmentId,
+          interviewResponses: interviewResponses || {},
+          facilityName,
+        };
+
+        const narrative = await generateDatacenterNarrativeSummary(results, context);
+
+        res.json({ narrative });
+      } catch (error) {
+        console.error("Error generating datacenter narrative:", error);
+        res.status(500).json({ error: "Failed to generate narrative" });
+      }
+    },
+  );
+
+  // Calculate datacenter security score from interview responses
+  app.post(
+    "/api/assessments/:id/datacenter-interview/calculate-security-score",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const { calculateOverallSecurityScore, DATACENTER_THREATS } = await import(
+          "./services/datacenter-interview-mapper"
+        );
+
+        const result = calculateOverallSecurityScore(interviewResponses);
+
+        res.json({
+          score: result.score,
+          grade: result.grade,
+          findings: result.findings,
+          strengths: result.strengths,
+          categoryScores: result.categoryScores,
+          totalThreats: DATACENTER_THREATS.length,
+        });
+      } catch (error) {
+        console.error("Error calculating datacenter security score:", error);
+        res.status(500).json({ error: "Failed to calculate security score" });
+      }
+    },
+  );
+
+  // Get datacenter vulnerability breakdown for all threats
+  app.post(
+    "/api/assessments/:id/datacenter-interview/vulnerability-breakdown",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const {
+          DATACENTER_THREATS,
+          calculateVulnerabilityFromInterview,
+          calculateThreatLikelihoodFromInterview,
+          calculateImpactFromInterview,
+        } = await import("./services/datacenter-interview-mapper");
+
+        const breakdown = DATACENTER_THREATS.map((threat: any) => ({
+          threatId: threat.id,
+          threatName: threat.name,
+          category: threat.category,
+          vulnerability: calculateVulnerabilityFromInterview(interviewResponses, threat.id),
+          threatLikelihood: calculateThreatLikelihoodFromInterview(interviewResponses, threat.id),
+          impact: calculateImpactFromInterview(interviewResponses, threat.id),
+        }));
+
+        res.json({
+          breakdown,
+          totalThreats: DATACENTER_THREATS.length,
+        });
+      } catch (error) {
+        console.error("Error calculating vulnerability breakdown:", error);
+        res.status(500).json({ error: "Failed to calculate vulnerability breakdown" });
+      }
+    },
+  );
+
   // OFFICE BUILDING FRAMEWORK ROUTES
 
   // Update office profile (JSONB column) - explicit wrapped payload
