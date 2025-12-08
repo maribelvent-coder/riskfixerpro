@@ -81,7 +81,7 @@ export default function Settings() {
         title: "Logged out",
         description: "You have been logged out successfully.",
       });
-      setLocation("/auth");
+      setLocation("/login");
     },
     onError: () => {
       toast({

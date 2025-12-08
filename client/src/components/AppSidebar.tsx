@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import logoPath from "@assets/RiskFixer Logo_1759487773302.png";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 const navigationItems = [
@@ -84,12 +84,16 @@ export function AppSidebar() {
       
       await apiRequest("POST", "/api/auth/logout");
       
-      setLocation("/");
+      // Clear query cache to ensure fresh state on next login
+      queryClient.clear();
       
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
+      
+      // Redirect to login page
+      setLocation("/login");
     } catch (error) {
       toast({
         title: "Error",
