@@ -2301,7 +2301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Update assessment with new warehouse_profile data
         const updatedAssessment = await storage.updateAssessment(assessmentId, {
-          warehouse_profile: validatedProfile,
+          warehouseProfile: validatedProfile,
         });
 
         if (!updatedAssessment) {
@@ -2499,7 +2499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Update assessment with new retail_profile data
         const updatedAssessment = await storage.updateAssessment(assessmentId, {
-          retail_profile: validatedProfile,
+          retailProfile: validatedProfile,
         });
 
         if (!updatedAssessment) {
@@ -2591,7 +2591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Update assessment with validated profile
         const updatedAssessment = await storage.updateAssessment(assessmentId, {
-          manufacturing_profile: validationResult.data,
+          manufacturingProfile: validationResult.data,
         });
 
         if (!updatedAssessment) {
@@ -3227,7 +3227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Update assessment with validated profile
         const updatedAssessment = await storage.updateAssessment(assessmentId, {
-          datacenter_profile: validationResult.data,
+          datacenterProfile: validationResult.data,
         });
 
         if (!updatedAssessment) {
@@ -3512,9 +3512,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const assessmentId = req.params.id;
         const { office_profile } = req.body; // Expect wrapped payload
+        
+        console.log('[OFFICE-PROFILE] PATCH received:', { assessmentId, office_profile });
 
         // Guard against missing payload
         if (!office_profile) {
+          console.log('[OFFICE-PROFILE] ERROR: Missing office_profile in body');
           return res
             .status(400)
             .json({ error: "Office profile data is required" });
@@ -3525,16 +3528,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validationResult = officeProfileSchema.safeParse(office_profile);
 
         if (!validationResult.success) {
+          console.log('[OFFICE-PROFILE] VALIDATION ERROR:', validationResult.error.errors);
           return res.status(400).json({
             error: "Invalid office profile data",
             details: validationResult.error.errors,
           });
         }
 
-        // Update assessment with validated profile
+        console.log('[OFFICE-PROFILE] Validated data:', validationResult.data);
+
+        // Update assessment with validated profile (use camelCase to match Drizzle schema)
         const updatedAssessment = await storage.updateAssessment(assessmentId, {
-          office_profile: validationResult.data,
+          officeProfile: validationResult.data,
         });
+        
+        console.log('[OFFICE-PROFILE] Updated assessment officeProfile:', updatedAssessment?.officeProfile);
 
         if (!updatedAssessment) {
           return res.status(404).json({ error: "Assessment not found" });

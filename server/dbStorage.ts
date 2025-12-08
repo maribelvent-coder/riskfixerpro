@@ -433,11 +433,17 @@ export class DbStorage implements IStorage {
   }
 
   async updateAssessment(id: string, updateData: Partial<Assessment>): Promise<Assessment | undefined> {
+    console.log('[dbStorage.updateAssessment] id:', id);
+    console.log('[dbStorage.updateAssessment] updateData keys:', Object.keys(updateData));
+    console.log('[dbStorage.updateAssessment] updateData:', JSON.stringify(updateData, null, 2));
+    
     const results = await db
       .update(schema.assessments)
       .set({ ...updateData, updatedAt: new Date() })
       .where(eq(schema.assessments.id, id))
       .returning();
+    
+    console.log('[dbStorage.updateAssessment] result officeProfile:', results[0]?.officeProfile);
     return results[0];
   }
 
