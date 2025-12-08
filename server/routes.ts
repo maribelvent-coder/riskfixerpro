@@ -6272,7 +6272,26 @@ The facility should prioritize addressing critical risks immediately, particular
       try {
         const { id } = req.params;
         const questions = await storage.getFacilitySurveyQuestions(id);
-        res.json(questions);
+        
+        // Get assessment to find template
+        const assessment = await storage.getAssessment(id);
+        let templateQuestions: any[] = [];
+        if (assessment?.templateId) {
+          templateQuestions = await storage.getTemplateQuestions(assessment.templateId);
+        }
+        
+        // Enrich questions with options from template_questions
+        const enrichedQuestions = questions.map((q) => {
+          const match = templateQuestions.find(tq => 
+            tq.id === q.templateQuestionId || tq.questionId === q.questionId
+          );
+          if (match?.options) {
+            return { ...q, options: match.options };
+          }
+          return q;
+        });
+        
+        res.json(enrichedQuestions);
       } catch (error) {
         console.error("Error fetching facility survey questions:", error);
         res
