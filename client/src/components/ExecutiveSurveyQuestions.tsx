@@ -38,22 +38,20 @@ export const EP_PART1_CATEGORIES = [
   'Emergency Preparedness',
 ];
 
-// Executive Protection Part 2 - Professional Assessment (77 questions, 13 sections)
+// Executive Protection Part 2 - Residential Security Assessment (75 questions, 12 sections)
 export const EP_PART2_CATEGORIES = [
+  'Residential Security - Property Profile',
   'Residential Security - Perimeter',
-  'Residential Security - Exterior',
+  'Residential Security - Lighting',
+  'Residential Security - Landscaping',
+  'Residential Security - Doors',
+  'Residential Security - Windows',
+  'Residential Security - Vehicles',
+  'Residential Security - Alarms',
+  'Residential Security - Surveillance',
   'Residential Security - Interior',
   'Residential Security - Safe Room',
-  'Residential Security - Lighting',
-  'Residential Security - Surveillance',
-  'Residential Security - Alarms',
-  'Residential Security - Staff',
-  'Residential Security - Emergency',
-  'Residential Security - Landscaping',
-  'Residential Security - Vehicles',
-  'Residential Security - Communications',
-  'Residential Security - Technical',
-  'Additional Observations',
+  'Residential Security - Monitoring',
 ];
 
 interface ExecutiveSurveyQuestionsProps {
