@@ -214,7 +214,8 @@ export interface RetailProfile {
 }
 
 export interface AssessmentWithRetailData {
-  retail_profile?: RetailProfile;
+  retailProfile?: RetailProfile;  // camelCase to match Drizzle ORM output
+  retail_profile?: RetailProfile; // snake_case fallback for legacy
   [key: string]: any;
 }
 
@@ -236,7 +237,8 @@ export interface AssessmentWithRetailData {
 export function calculateShrinkageRiskScore(
   assessment: AssessmentWithRetailData
 ): ShrinkageRiskScore {
-  const profile = assessment.retail_profile || {};
+  // Support both camelCase (Drizzle ORM) and snake_case (legacy)
+  const profile = assessment.retailProfile || assessment.retail_profile || {};
   const responses = assessment;
   
   let shrinkageRate = 0;
