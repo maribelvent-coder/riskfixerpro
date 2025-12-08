@@ -453,7 +453,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4 md:space-y-6">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0 max-w-full">
       {/* Header with Phase Progress */}
       <div className="flex items-start gap-2 sm:gap-3">
         <Button 
@@ -589,9 +589,9 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     </div>
 
       {/* Main Content - Paradigm-Aware Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4">
-        <div className="w-full horizontal-scroll-container pb-1">
-          <TabsList className="inline-flex gap-1 p-1 w-max min-w-full bg-muted/50">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4 w-full min-w-0">
+        <div className="w-full min-w-0 horizontal-scroll-container pb-1">
+          <TabsList className="inline-flex gap-1 p-1 w-max bg-muted/50">
             {workflowConfig.tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -740,7 +740,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         </TabsContent>
 
         {/* Executive Protection Paradigm Tabs */}
-        <TabsContent value="executive-interview" className="space-y-4">
+        <TabsContent value="executive-interview" className="space-y-4 min-w-0 overflow-hidden">
           {assessmentData?.templateId === 'office-building' ? (
             // Office Building Security Interview (91 questions, 13 sections)
             <OfficeBuildingInterview 
