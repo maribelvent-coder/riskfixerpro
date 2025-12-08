@@ -154,6 +154,7 @@ export const templateQuestions = pgTable("template_questions", {
   controlLibraryId: varchar("control_library_id"),
   conditionalOnQuestionId: text("conditional_on_question_id"),
   showWhenAnswer: text("show_when_answer"),
+  riskDirection: text("risk_direction"),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -178,6 +179,7 @@ export const facilitySurveyQuestions = pgTable("facility_survey_questions", {
   controlLibraryId: varchar("control_library_id").references(() => controlLibrary.id),
   conditionalOnQuestionId: text("conditional_on_question_id"),
   showWhenAnswer: text("show_when_answer"),
+  riskDirection: text("risk_direction"),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
