@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { ExecutiveSummaryCard } from "@/components/analysis/ExecutiveSummaryCard
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
+import { useProfileAutosave } from "@/hooks/useProfileAutosave";
 import type { MerchandiseDisplay } from "@shared/schema";
 import { 
   ShoppingBag, 
@@ -93,9 +94,11 @@ export default function RetailDashboard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
 
-  // Fetch retail analysis data
+  // Fetch retail analysis data with fresh data on mount
   const { data, isLoading, error } = useQuery<RetailAnalysisResponse>({
     queryKey: ['/api/assessments', id, 'retail-analysis'],
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
@@ -116,6 +119,33 @@ export default function RetailDashboard() {
   const [annualLiabilityEstimates, setAnnualLiabilityEstimates] = useState<string>('');
   const [securityIncidentsPerYear, setSecurityIncidentsPerYear] = useState<string>('');
   const [brandDamageEstimate, setBrandDamageEstimate] = useState<string>('');
+
+  // Build profile data for autosave
+  const profileData = useMemo(() => ({
+    annualRevenue: parseFloat(annualRevenue) || 0,
+    shrinkageRate: parseFloat(shrinkageRate) || 0,
+    highValueMerchandise: selectedMerchandise,
+    storeFormat: storeFormat || 'Standalone',
+    merchandiseDisplay: merchandiseDisplay || 'Open Shelving',
+    employeeCount: parseFloat(employeeCount) || 0,
+    annualTurnoverRate: parseFloat(annualTurnoverRate) || 0,
+    avgHiringCost: parseFloat(avgHiringCost) || 0,
+    annualLiabilityEstimates: parseFloat(annualLiabilityEstimates) || 0,
+    securityIncidentsPerYear: parseFloat(securityIncidentsPerYear) || 0,
+    brandDamageEstimate: parseFloat(brandDamageEstimate) || 0,
+  }), [annualRevenue, shrinkageRate, selectedMerchandise, storeFormat, merchandiseDisplay, 
+      employeeCount, annualTurnoverRate, avgHiringCost, annualLiabilityEstimates, 
+      securityIncidentsPerYear, brandDamageEstimate]);
+
+  // Autosave profile changes with debounce
+  useProfileAutosave({
+    assessmentId: id,
+    profileType: 'retail',
+    data: profileData,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'retail-analysis'] });
+    },
+  });
 
   // Initialize form when data loads
   useEffect(() => {

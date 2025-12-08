@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import type { LoadingDock } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
+import { useProfileAutosave } from "@/hooks/useProfileAutosave";
 import { 
   Warehouse, 
   AlertTriangle, 
@@ -78,9 +79,11 @@ export default function WarehouseDashboard() {
   const [isAddDockOpen, setIsAddDockOpen] = useState(false);
   const [selectedDock, setSelectedDock] = useState<LoadingDock | null>(null);
 
-  // Fetch warehouse analysis data
+  // Fetch warehouse analysis data with fresh data on mount
   const { data, isLoading, error } = useQuery<WarehouseAnalysisResponse>({
     queryKey: ['/api/assessments', id, 'warehouse-analysis'],
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
@@ -99,6 +102,30 @@ export default function WarehouseDashboard() {
   const [annualLiabilityEstimates, setAnnualLiabilityEstimates] = useState<string>('');
   const [securityIncidentsPerYear, setSecurityIncidentsPerYear] = useState<string>('');
   const [brandDamageEstimate, setBrandDamageEstimate] = useState<string>('');
+
+  // Build profile data for autosave
+  const profileData = useMemo(() => ({
+    inventoryValue: parseFloat(inventoryValue) || 0,
+    shrinkageRate: parseFloat(shrinkageRate) || 0,
+    highValueProducts: selectedProducts,
+    employeeCount: parseFloat(employeeCount) || 0,
+    annualTurnoverRate: parseFloat(annualTurnoverRate) || 0,
+    avgHiringCost: parseFloat(avgHiringCost) || 0,
+    annualLiabilityEstimates: parseFloat(annualLiabilityEstimates) || 0,
+    securityIncidentsPerYear: parseFloat(securityIncidentsPerYear) || 0,
+    brandDamageEstimate: parseFloat(brandDamageEstimate) || 0,
+  }), [inventoryValue, shrinkageRate, selectedProducts, employeeCount, annualTurnoverRate, 
+      avgHiringCost, annualLiabilityEstimates, securityIncidentsPerYear, brandDamageEstimate]);
+
+  // Autosave profile changes with debounce
+  useProfileAutosave({
+    assessmentId: id,
+    profileType: 'warehouse',
+    data: profileData,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'warehouse-analysis'] });
+    },
+  });
 
   // Initialize form when data loads
   useEffect(() => {

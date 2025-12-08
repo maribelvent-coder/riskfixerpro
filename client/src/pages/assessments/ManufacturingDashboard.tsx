@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { ExecutiveSummaryCard } from '@/components/analysis/ExecutiveSummaryCard';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
+import { useProfileAutosave } from '@/hooks/useProfileAutosave';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Factory, AlertCircle, DollarSign, Shield, FileText, CheckCircle, XCircle } from 'lucide-react';
 import type { ManufacturingProfile } from '@shared/schema';
@@ -57,9 +58,38 @@ export default function ManufacturingDashboard() {
   const [securityIncidentsPerYear, setSecurityIncidentsPerYear] = useState<string>('');
   const [brandDamageEstimate, setBrandDamageEstimate] = useState<string>('');
 
+  // Build profile data for autosave
+  const profileData = useMemo(() => ({
+    shiftOperations,
+    ipTypes: selectedIpTypes,
+    hazmatPresent,
+    annualProductionValue: parseFloat(annualProductionValue) || undefined,
+    employeeCount: parseFloat(employeeCount) || 0,
+    annualTurnoverRate: parseFloat(annualTurnoverRate) || 0,
+    avgHiringCost: parseFloat(avgHiringCost) || 0,
+    annualLiabilityEstimates: parseFloat(annualLiabilityEstimates) || 0,
+    securityIncidentsPerYear: parseFloat(securityIncidentsPerYear) || 0,
+    brandDamageEstimate: parseFloat(brandDamageEstimate) || 0,
+  }), [annualProductionValue, shiftOperations, selectedIpTypes, hazmatPresent,
+      employeeCount, annualTurnoverRate, avgHiringCost, annualLiabilityEstimates,
+      securityIncidentsPerYear, brandDamageEstimate]);
+
+  // Autosave profile changes with debounce
+  useProfileAutosave({
+    assessmentId: id,
+    profileType: 'manufacturing',
+    data: profileData,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}/production-continuity`] });
+    },
+  });
+
   const { data: assessment, isLoading } = useQuery<Assessment>({
     queryKey: [`/api/assessments/${id}`],
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const { data: continuityScore } = useQuery<ProductionContinuityScore>({

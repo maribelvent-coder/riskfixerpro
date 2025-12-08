@@ -1,6 +1,6 @@
 import { useParams } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
+import { useProfileAutosave } from '@/hooks/useProfileAutosave';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import type { Assessment, DatacenterProfile } from '@shared/schema';
 import { Server, Shield, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
@@ -42,10 +43,39 @@ export default function DatacenterDashboard() {
   const [securityIncidentsPerYear, setSecurityIncidentsPerYear] = useState<string>('');
   const [brandDamageEstimate, setBrandDamageEstimate] = useState<string>('');
 
-  // Fetch assessment data
+  // Build profile data for autosave
+  const profileData = useMemo(() => ({
+    tierClassification: tierClassification || undefined,
+    uptimeSLA: uptimeSLA || undefined,
+    complianceRequirements: complianceRequirements.length > 0 ? complianceRequirements : undefined,
+    powerCapacity: parseFloat(powerCapacity) || undefined,
+    employeeCount: parseFloat(employeeCount) || 0,
+    annualTurnoverRate: parseFloat(annualTurnoverRate) || 0,
+    avgHiringCost: parseFloat(avgHiringCost) || 0,
+    annualLiabilityEstimates: parseFloat(annualLiabilityEstimates) || 0,
+    securityIncidentsPerYear: parseFloat(securityIncidentsPerYear) || 0,
+    brandDamageEstimate: parseFloat(brandDamageEstimate) || 0,
+  }), [tierClassification, uptimeSLA, complianceRequirements, powerCapacity,
+      employeeCount, annualTurnoverRate, avgHiringCost, annualLiabilityEstimates,
+      securityIncidentsPerYear, brandDamageEstimate]);
+
+  // Autosave profile changes with debounce
+  useProfileAutosave({
+    assessmentId: id,
+    profileType: 'datacenter',
+    data: profileData,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}/uptime-reliability`] });
+    },
+  });
+
+  // Fetch assessment data with fresh data on mount
   const { data: assessment, isLoading: assessmentLoading } = useQuery<Assessment>({
     queryKey: [`/api/assessments/${id}`],
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Fetch uptime reliability score
