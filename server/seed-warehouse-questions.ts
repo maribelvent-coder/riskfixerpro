@@ -4,7 +4,8 @@
  */
 import { db } from './db';
 import { templateQuestions, questionThreatMap, questionControlMap } from '../shared/schema';
-import { WAREHOUSE_INTERVIEW_QUESTIONS } from './data/warehouse-interview-questionnaire';
+// Authoritative source: server/services/warehouse-interview-questionnaire.ts
+import { WAREHOUSE_INTERVIEW_QUESTIONS } from './services/warehouse-interview-questionnaire';
 import { eq, and } from 'drizzle-orm';
 
 // Mapping from questionnaire snake_case identifiers to library names
