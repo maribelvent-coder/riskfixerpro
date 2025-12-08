@@ -386,6 +386,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Failed to complete account setup. Please try again." });
       }
 
+      // Set session (auto-login after signup)
+      req.session.userId = user.id;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error during signup:", err);
+            reject(err);
+          } else {
+            console.log("✅ Session created for new user:", user.username);
+            resolve();
+          }
+        });
+      });
+
       // Generate JWT token
       const token = jwt.sign({ userId: user.id }, process.env.SESSION_SECRET!, {
         expiresIn: "7d",
