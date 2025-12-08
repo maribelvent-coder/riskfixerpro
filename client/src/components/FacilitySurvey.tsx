@@ -1024,8 +1024,6 @@ export function FacilitySurvey({
         );
 
       case "multiple-choice":
-      case "multiple_choice":
-      case "single_select":
         return (
           <Select
             value={String(question.response || "")}
@@ -1040,7 +1038,7 @@ export function FacilitySurvey({
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
-              {question.options?.map((option, index) => (
+              {question.options.map((option, index) => (
                 <SelectItem key={index} value={option}>
                   {option}
                 </SelectItem>
