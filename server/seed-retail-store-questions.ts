@@ -4,7 +4,8 @@
  */
 import { db } from './db';
 import { templateQuestions, questionThreatMap, questionControlMap } from '../shared/schema';
-import { RETAIL_STORE_INTERVIEW_QUESTIONS } from './data/retail-store-interview-questionnaire';
+// Use root-level authoritative retail questionnaire with correct options
+import { RETAIL_INTERVIEW_QUESTIONS as RETAIL_STORE_INTERVIEW_QUESTIONS } from '../retail-interview-questionnaire';
 import { eq, and } from 'drizzle-orm';
 
 // Mapping from questionnaire snake_case identifiers to library names
