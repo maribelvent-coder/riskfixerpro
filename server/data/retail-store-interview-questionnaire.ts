@@ -151,7 +151,12 @@ const section1_storeProfile: RetailInterviewQuestion[] = [
     id: 'store_profile_8',
     section: 'Store Profile & Operations',
     questionText: 'Do you sell high-value merchandise (individual items over $200)?',
-    questionType: 'yes_no',
+    questionType: 'multiple_choice',
+    options: [
+      'Yes',
+      'No',
+      'N/A - Not applicable',
+    ],
     required: true,
     informsThreat: ['shoplifting_organized_retail_crime', 'armed_robbery', 'smash_and_grab'],
     followUpQuestions: [
@@ -1012,25 +1017,18 @@ const section8_employee: RetailInterviewQuestion[] = [
     id: 'employee_3',
     section: 'Employee Procedures & Training',
     questionText: 'Do employees receive robbery response training?',
-    questionType: 'yes_no',
+    questionType: 'multiple_choice',
+    options: [
+      'Yes - comprehensive training during onboarding',
+      'Yes - brief mention during onboarding',
+      'Informal on-the-job guidance',
+      'No formal training',
+    ],
     required: true,
     informsThreat: ['armed_robbery'],
+    informsVulnerability: true,
     suggestsControls: ['robbery_response_training'],
-    followUpQuestions: [
-      {
-        id: 'employee_3a',
-        section: 'Employee Procedures & Training',
-        questionText: 'How often is robbery response training reinforced?',
-        questionType: 'multiple_choice',
-        options: [
-          'Annually',
-          'Every 2-3 years',
-          'Only during initial training',
-          'Never refreshed',
-        ],
-        required: true,
-      },
-    ],
+    riskIndicators: ['informal', 'no formal'],
   },
 
   {

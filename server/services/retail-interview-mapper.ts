@@ -640,8 +640,9 @@ export function calculateVulnerabilityFromInterview(
     riskFactorCount += 1;
   }
   
-  // No robbery response training
-  if (responses.employee_3 === 'no') {
+  // Informal or no robbery response training
+  if (responseMatchesIndicator(responses.employee_3, 'informal') ||
+      responseMatchesIndicator(responses.employee_3, 'no formal')) {
     riskFactorCount += 1;
   }
   
@@ -1206,7 +1207,8 @@ export function generateControlRecommendations(
     recommendations.add('employee_background_checks');
   }
   
-  if (responses.employee_3 === 'no') {
+  if (responseMatchesIndicator(responses.employee_3, 'informal') ||
+      responseMatchesIndicator(responses.employee_3, 'no formal')) {
     recommendations.add('robbery_response_training');
   }
   
@@ -1353,7 +1355,8 @@ function generateScenarioDescription(
     if (responses.physical_6 === 'no') {
       observations.push('no panic/duress alarms');
     }
-    if (responses.employee_3 === 'no') {
+    if (responseMatchesIndicator(responses.employee_3, 'informal') ||
+        responseMatchesIndicator(responses.employee_3, 'no formal')) {
       observations.push('staff lack robbery response training');
     }
     if (responseMatchesIndicator(responses.cash_1, 'over $2,000')) {
@@ -1602,9 +1605,11 @@ export function calculateOverallSecurityScore(
   
   // Robbery Training
   totalFactors++;
-  if (responses.employee_3 === 'yes') {
+  if (responseMatchesIndicator(responses.employee_3, 'yes -') ||
+      responseMatchesIndicator(responses.employee_3, 'comprehensive')) {
     securityFactors++;
-  } else {
+  } else if (responseMatchesIndicator(responses.employee_3, 'informal') ||
+      responseMatchesIndicator(responses.employee_3, 'no formal')) {
     findings.push('No robbery response training');
   }
   
