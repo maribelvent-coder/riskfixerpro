@@ -1,0 +1,78 @@
+Here are the manufacturing integration instructions for Replit Agent:
+
+"I'm uploading 5 manufacturing framework files for the AI-first assessment architecture. Please integrate them using the same process we used for warehouse, datacenter, and office.
+FILES BEING UPLOADED:
+
+manufacturing-interview-questionnaire.ts - Questions with options (AUTHORITATIVE SOURCE)
+manufacturing-interview-mapper.ts - Algorithmic fallback calculations (look for MANUFACTURING_THREATS export)
+manufacturing-ai-risk-assessment.ts - AI-first orchestration with GPT-4
+manufacturing-route-integration-guide.ts - API route definitions
+manufacturing-controls-seed.sql - Security controls
+
+STEP 1: CHECK FOR EXISTING MANUFACTURING FILES
+bashfind . -name '*manufacturing*' -type f
+List any existing files so we know what to replace/consolidate.
+STEP 2: CHECK CURRENT STATE
+sqlSELECT COUNT(*) as total_questions,
+       SUM(CASE WHEN options IS NOT NULL THEN 1 ELSE 0 END) as with_options
+FROM template_questions 
+WHERE template_id LIKE '%manufacturing%';
+STEP 3: PLACE FILES IN CORRECT LOCATIONS
+
+manufacturing-interview-questionnaire.ts → Same location as other questionnaires
+manufacturing-interview-mapper.ts → server/services/
+manufacturing-ai-risk-assessment.ts → server/services/
+manufacturing-route-integration-guide.ts → server/ or docs/
+manufacturing-controls-seed.sql → Adapt to control_library table schema
+
+STEP 4: UPDATE OR CREATE SEED SCRIPT
+
+Import from the NEW questionnaire file (check export name: likely MANUFACTURING_INTERVIEW_QUESTIONS)
+Map options: question.options || null
+Use correct template_id and orderIndex field (not "order")
+
+STEP 5: CLEAR AND RE-SEED QUESTIONS
+sqlDELETE FROM template_questions WHERE template_id LIKE '%manufacturing%';
+Then run the seed script.
+STEP 6: VERIFY OPTIONS POPULATED
+sqlSELECT question_id, options 
+FROM template_questions 
+WHERE template_id LIKE '%manufacturing%' 
+AND question_type IN ('multiple_choice', 'checklist')
+LIMIT 10;
+STEP 7: SEED THREATS
+Add threats from MANUFACTURING_THREATS in the mapper to threat_library table.
+STEP 8: SEED CONTROLS
+Adapt manufacturing-controls-seed.sql to match control_library table schema and insert.
+STEP 9: ADD ROUTES
+Integrate routes from manufacturing-route-integration-guide.ts into server/routes.ts:
+
+GET /api/assessments/:id/manufacturing-interview/threats
+POST /api/assessments/:id/manufacturing-interview/generate-risks-ai
+POST /api/assessments/:id/manufacturing-interview/assess-single-threat
+POST /api/assessments/:id/manufacturing-interview/generate-narrative
+POST /api/assessments/:id/manufacturing-interview/calculate-security-score
+POST /api/assessments/:id/manufacturing-interview/vulnerability-breakdown
+
+STEP 10: VERIFY MAPPER CONNECTIONS
+
+All MANUFACTURING_THREATS exist in threat_library
+All THREAT_CONTROL_MAPPING controls exist in control_library
+calculateVulnerabilityFromInterview({}) returns valid 1-5 score
+
+STEP 11: VERIFY SOURCE → DATABASE → MAPPER CHAIN
+Compare 3 questions (source file vs database):
+
+facility_profile_1 (facility type)
+access_control_1 (primary access method)
+production_security_1 (production floor security)
+
+Then test vulnerability calculation:
+typescriptconst testResponses = {
+  access_control_1: 'No access control',
+  perimeter_1: 'No perimeter fence',
+  surveillance_1: 'No cameras'
+};
+calculateVulnerabilityFromInterview(testResponses, 'unauthorized_access')
+Should return 4-5 (high vulnerability).
+Please show me results at each step."
