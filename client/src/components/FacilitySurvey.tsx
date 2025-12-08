@@ -766,19 +766,10 @@ export function FacilitySurvey({
         );
 
       case "yes-no":
-        // Dynamic labels based on riskDirection
-        // POSITIVE: "Yes" = Good (100%), "No" = Bad (0%)
-        // NEGATIVE: "Yes" = Bad (0%), "No" = Good (100%) - for incident/threat questions
-        const isNegative = question.riskDirection === "negative";
-        const yesLabel = isNegative
-          ? "Yes (0%) - High risk / Incident occurred"
-          : "Yes (100%) - Fully compliant";
-        const noLabel = isNegative
-          ? "No (100%) - Safe / No incidents"
-          : "No (0%) - Non-compliant";
-        const partialLabel = isNegative
-          ? "Partial (50%) - Some incidents"
-          : "Partial (50%) - Partially compliant";
+        // Simple Yes/No labels with contextual hints based on riskDirection
+        // POSITIVE polarity: "Yes" = control in place (good), "No" = control missing (bad)
+        // NEGATIVE polarity: "Yes" = incident occurred (bad), "No" = no incidents (good)
+        const isNegativePolarity = question.riskDirection === "negative";
 
         return (
           <Select
@@ -794,9 +785,12 @@ export function FacilitySurvey({
               <SelectValue placeholder="Select response" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="yes">{yesLabel}</SelectItem>
-              <SelectItem value="partial">{partialLabel}</SelectItem>
-              <SelectItem value="no">{noLabel}</SelectItem>
+              <SelectItem value="yes">
+                {isNegativePolarity ? "Yes - Incident occurred" : "Yes"}
+              </SelectItem>
+              <SelectItem value="no">
+                {isNegativePolarity ? "No - No incidents" : "No"}
+              </SelectItem>
               <SelectItem value="na">N/A - Not applicable</SelectItem>
             </SelectContent>
           </Select>

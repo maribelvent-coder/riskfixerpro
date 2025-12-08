@@ -1,0 +1,65 @@
+"The warehouse template yes/no questions are showing WRONG generic options:
+- 'Yes (100%) - Fully compliant'
+- 'Partial (50%) - Partially compliant'
+- 'No (0%) - Non-compliant'
+- 'N/A - Not applicable'
+
+These should be simple Yes/No based on the question's polarity (YES_GOOD or YES_BAD).
+
+We fixed this earlier by adding a risk_direction column, but warehouse questions don't have it populated.
+
+PLEASE FIX:
+
+1. CHECK which templates have risk_direction populated vs NULL:
+   SELECT template_id, 
+          COUNT(*) as total,
+          COUNT(risk_direction) as has_risk_direction,
+          COUNT(*) - COUNT(risk_direction) as missing_risk_direction
+   FROM template_questions 
+   WHERE question_type IN ('yes_no', 'yes-no')
+   GROUP BY template_id;
+
+2. CHECK the warehouse source file for polarity values:
+   grep -n 'polarity' server/services/warehouse-interview-questionnaire.ts | head -20
+
+3. UPDATE warehouse questions to set risk_direction based on polarity:
+   
+   For YES_GOOD polarity (answering 'yes' is good/low risk):
+   UPDATE template_questions 
+   SET risk_direction = 'positive'
+   WHERE template_id IN ('warehouse', 'warehouse-distribution')
+   AND question_type IN ('yes_no', 'yes-no');
+   
+   (Most warehouse yes/no questions are YES_GOOD - verify in source file)
+
+4. FOR QUESTIONS WITH YES_BAD polarity (like incident history questions):
+   UPDATE template_questions
+   SET risk_direction = 'negative'
+   WHERE template_id IN ('warehouse', 'warehouse-distribution')
+   AND question_id IN ('incident_1', 'incident_2', 'incident_3', 'incident_4');
+   
+   (These ask about past incidents - answering 'yes' is BAD)
+
+5. ALSO UPDATE facility_survey_questions for existing assessments:
+   UPDATE facility_survey_questions fsq
+   SET risk_direction = tq.risk_direction
+   FROM template_questions tq
+   WHERE fsq.template_question_id = tq.question_id
+   AND tq.template_id IN ('warehouse', 'warehouse-distribution');
+
+6. VERIFY the fix:
+   SELECT question_id, question, risk_direction 
+   FROM template_questions 
+   WHERE template_id = 'warehouse' 
+   AND question_type IN ('yes_no', 'yes-no')
+   LIMIT 10;
+
+7. DO THE SAME FOR ALL OTHER TEMPLATES that have NULL risk_direction:
+   - office-building / office_building
+   - manufacturing / manufacturing-facility
+   - datacenter / data-center
+   - executive-protection / executive_protection
+   
+   Each template's source questionnaire file has polarity defined - use that to set risk_direction.
+
+This will make the FacilitySurvey component show appropriate Yes/No labels instead of generic compliance percentages."
