@@ -183,19 +183,37 @@ export class RetailAdapter implements RiskEngineAdapter {
 
 /**
  * SHRINKAGE RISK SCORING
- * Standalone 0-100 scoring system for retail store shrinkage risk
- * Framework: Retail Store Framework Section 9.2
+ * T×V×I methodology per RiskFixer Retail Store Framework
+ * 
+ * IMPORTS the authoritative calculation functions from retail-interview-mapper.ts:
+ * - calculateVulnerabilityFromInterview: 10+ section vulnerability analysis
+ * - calculateThreatLikelihoodFromInterview: Incident history & threat patterns
+ * - calculateImpactFromInterview: Revenue, merchandise, employee impact
+ * - generateControlRecommendations: Gap-based recommendations
+ * 
+ * Formula: Risk Score = (T × V × I / 125) × 100
+ * Scale: 1-5 for each factor, inherent risk 1-125, normalized to 0-100
  */
 
+import {
+  calculateVulnerabilityFromInterview,
+  calculateThreatLikelihoodFromInterview,
+  calculateImpactFromInterview,
+  generateControlRecommendations,
+  RETAIL_STORE_THREATS,
+  type InterviewResponses,
+} from '../../retail-interview-mapper';
+
 export interface ShrinkageRiskScore {
-  score: number; // 0-100
+  score: number; // 0-100 (normalized T×V×I)
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   breakdown: {
-    shrinkageRate: number; // Max 25 pts
-    controlGaps: number; // Max 35 pts
-    highValueGoods: number; // Max 10 pts
-    incidentHistory: number; // Max 15 pts
+    threatLikelihood: number; // 1-5 scale
+    vulnerability: number; // 1-5 scale
+    impact: number; // 1-5 scale
+    inherentRisk: number; // T×V×I raw score (1-125)
   };
+  riskFactors: string[]; // Contributing factors from survey
 }
 
 export interface RetailProfile {
@@ -220,105 +238,244 @@ export interface AssessmentWithRetailData {
 }
 
 /**
- * Calculate Shrinkage Risk Score (0-100)
+ * Determine if EAS absence should contribute to vulnerability
+ * Context-aware based on merchandise display model
+ * (Used to conditionally skip EAS vulnerability for service-only stores)
+ */
+function shouldApplyEASVulnerability(merchandiseDisplay: MerchandiseDisplay | undefined): boolean {
+  const displayModel = merchandiseDisplay || 'Open Shelving';
+  
+  switch (displayModel) {
+    case 'Behind Counter / Staff Access Only':
+    case 'Service Only':
+      // EAS not needed - no customer access to merchandise
+      return false;
+    case 'Open Shelving':
+    case 'Locked Cabinets / Tethered':
+    default:
+      // EAS is relevant for these display models
+      return true;
+  }
+}
+
+/**
+ * Shrinkage-relevant threat IDs from retail-interview-mapper.ts
+ * These threats are combined into a weighted composite shrinkage score
+ */
+const SHRINKAGE_THREATS = [
+  'shoplifting',
+  'organized_retail_crime', 
+  'employee_theft',
+  'cash_handling_theft',
+  'inventory_shrinkage',
+];
+
+/**
+ * Get threat weight dynamically from RETAIL_STORE_THREATS.typicalLikelihood
+ * Falls back to 3 if threat not found
+ */
+function getThreatWeight(threatId: string): number {
+  const threat = RETAIL_STORE_THREATS.find(t => t.id === threatId);
+  return threat?.typicalLikelihood ?? 3;
+}
+
+/**
+ * Convert assessment data to InterviewResponses format for framework functions
+ * Maps both direct properties and survey response Map entries
+ */
+function toInterviewResponses(assessment: AssessmentWithRetailData): InterviewResponses {
+  const responses: InterviewResponses = {};
+  
+  // Copy all direct properties (survey responses stored on assessment)
+  for (const [key, value] of Object.entries(assessment)) {
+    if (key !== 'retailProfile' && key !== 'retail_profile') {
+      responses[key] = value;
+    }
+  }
+  
+  // Add profile data to responses for framework functions
+  const profile = assessment.retailProfile || assessment.retail_profile;
+  if (profile) {
+    if (profile.shrinkageRate !== undefined) {
+      // Map profile shrinkage rate to survey response format
+      if (profile.shrinkageRate > 5) {
+        responses.shrinkage_1 = 'over 5%';
+      } else if (profile.shrinkageRate > 3) {
+        responses.shrinkage_1 = '3-5%';
+      } else if (profile.shrinkageRate > 1.5) {
+        responses.shrinkage_1 = '1.5-3%';
+      }
+    }
+    
+    // Map merchandise display for EAS conditionals
+    if (profile.merchandiseDisplay) {
+      responses.merchandise_display = profile.merchandiseDisplay;
+    }
+    
+    // Map high-value merchandise for impact/likelihood
+    if (profile.highValueMerchandise && profile.highValueMerchandise.length > 0) {
+      const hasElectronics = profile.highValueMerchandise.some(c => 
+        c.toLowerCase().includes('electronic')
+      );
+      const hasJewelry = profile.highValueMerchandise.some(c => 
+        c.toLowerCase().includes('jewelry')
+      );
+      if (hasElectronics || hasJewelry) {
+        responses.store_profile_4 = 'High-value merchandise';
+      }
+    }
+    
+    // Map annual revenue for impact calculations
+    if (profile.annualRevenue !== undefined) {
+      if (profile.annualRevenue > 10000000) {
+        responses.store_profile_3 = 'over 10 million';
+      } else if (profile.annualRevenue > 3000000) {
+        responses.store_profile_3 = '3-10 million';
+      }
+    }
+  }
+  
+  return responses;
+}
+
+/**
+ * Calculate Shrinkage Risk Score using Multi-Threat T×V×I Aggregation
  * 
- * Scoring Components:
- * - Shrinkage Rate: 25 pts (>3% = Critical 25pts, >1.5% = Medium 10pts)
- * - Control Gaps: 35 pts (No EAS: 15pts, No POS CCTV: 10pts, No LP Staff: 10pts)
- * - High-Value Goods: 10 pts (+2pts per category, max 10)
- * - Incident History: 15 pts (Robbery: +8pts, ORC: +7pts)
+ * Uses authoritative framework functions from retail-interview-mapper.ts
+ * Aggregates scores across shrinkage-relevant threats with weighted average
  * 
- * Risk Levels:
+ * Formula per threat: Risk Score = (T × V × I / 125) × 100
+ * Aggregate: Weighted average of threat scores, with MAX guardrail for criticality
+ * 
+ * Risk Levels (normalized 0-100):
  * - 0-24: LOW
- * - 25-49: MEDIUM
+ * - 25-49: MEDIUM  
  * - 50-74: HIGH
  * - 75-100: CRITICAL
  */
 export function calculateShrinkageRiskScore(
   assessment: AssessmentWithRetailData
 ): ShrinkageRiskScore {
-  // Support both camelCase (Drizzle ORM) and snake_case (legacy)
   const profile = assessment.retailProfile || assessment.retail_profile || {};
-  const responses = assessment;
   
-  let shrinkageRate = 0;
-  let controlGaps = 0;
-  let highValueGoods = 0;
-  let incidentHistory = 0;
-
-  // 1. SHRINKAGE RATE (Max 25 pts)
-  if (profile.shrinkageRate !== undefined && profile.shrinkageRate !== null) {
-    if (profile.shrinkageRate > 3.0) {
-      shrinkageRate = 25; // Critical
-    } else if (profile.shrinkageRate > 1.5) {
-      shrinkageRate = 10; // Medium
-    } else {
-      shrinkageRate = 0; // Low (industry baseline ~1.4-1.6%)
+  // Convert to InterviewResponses format for framework functions
+  const responses = toInterviewResponses(assessment);
+  
+  // Track aggregated scores and risk factors
+  const allRiskFactors: string[] = [];
+  let weightedSum = 0;
+  let totalWeight = 0;
+  let maxNormalizedScore = 0; // Track max normalized score per threat
+  let avgVulnerability = 0;
+  let avgThreatLikelihood = 0;
+  let avgImpact = 0;
+  let peakInherentRisk = 0; // For breakdown display
+  
+  // Calculate T×V×I for each shrinkage-relevant threat
+  for (const threatId of SHRINKAGE_THREATS) {
+    // Pull weight dynamically from RETAIL_STORE_THREATS
+    const weight = getThreatWeight(threatId);
+    
+    // Call authoritative framework functions
+    const vulnerability = calculateVulnerabilityFromInterview(responses, threatId);
+    const threatLikelihood = calculateThreatLikelihoodFromInterview(responses, threatId);
+    const impact = calculateImpactFromInterview(responses, threatId);
+    
+    // T×V×I calculation
+    const inherentRisk = threatLikelihood * vulnerability * impact;
+    
+    // Calculate normalized score PER THREAT (for proper CRITICAL detection)
+    const threatNormalizedScore = (inherentRisk / 125) * 100;
+    
+    // Accumulate weighted scores
+    weightedSum += threatNormalizedScore * weight;
+    totalWeight += weight;
+    
+    // Track maximum normalized score (for CRITICAL guardrail)
+    if (threatNormalizedScore > maxNormalizedScore) {
+      maxNormalizedScore = threatNormalizedScore;
+      peakInherentRisk = inherentRisk;
+    }
+    
+    // Accumulate for average breakdown
+    avgVulnerability += vulnerability * weight;
+    avgThreatLikelihood += threatLikelihood * weight;
+    avgImpact += impact * weight;
+    
+    // Capture control recommendations/risk factors PER THREAT
+    // generateControlRecommendations returns string[] (control IDs)
+    const threatControlRecs = generateControlRecommendations(responses, threatId);
+    for (const controlId of threatControlRecs) {
+      // Convert control IDs to human-readable format
+      const readableControl = controlId
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+      allRiskFactors.push(readableControl);
+    }
+    
+    // Add threat-specific risk indicators based on score level
+    if (threatNormalizedScore >= 50) {
+      const threatName = RETAIL_STORE_THREATS.find(t => t.id === threatId)?.name || threatId;
+      allRiskFactors.push(`Elevated ${threatName} risk (${Math.round(threatNormalizedScore)})`);
+    }
+  }
+  
+  // Calculate weighted average score
+  const weightedAvgScore = totalWeight > 0 ? weightedSum / totalWeight : 0;
+  
+  // Use MAX guardrail: if any threat's NORMALIZED score hits CRITICAL (≥75), use that maximum
+  // This ensures a single critical threat properly escalates overall risk
+  const finalScore = Math.round(maxNormalizedScore >= 75 ? maxNormalizedScore : weightedAvgScore);
+  
+  // Calculate average breakdown values (weighted)
+  const finalVulnerability = totalWeight > 0 ? Math.round(avgVulnerability / totalWeight) : 3;
+  const finalThreatLikelihood = totalWeight > 0 ? Math.round(avgThreatLikelihood / totalWeight) : 2;
+  const finalImpact = totalWeight > 0 ? Math.round(avgImpact / totalWeight) : 3;
+  
+  // Add profile-based risk factors
+  if (profile.shrinkageRate !== undefined && profile.shrinkageRate > 2.5) {
+    allRiskFactors.push(`Elevated shrinkage rate: ${profile.shrinkageRate}%`);
+  }
+  if (profile.highValueMerchandise && profile.highValueMerchandise.length > 0) {
+    allRiskFactors.push(`High-value merchandise: ${profile.highValueMerchandise.join(', ')}`);
+  }
+  if (profile.storeFormat === 'Standalone') {
+    allRiskFactors.push('Standalone location (higher exposure)');
+  }
+  
+  // Check EAS conditional penalty
+  if (!shouldApplyEASVulnerability(profile.merchandiseDisplay)) {
+    // Note: EAS penalty not applied for service-only stores
+    if (allRiskFactors.some(f => f.toLowerCase().includes('eas'))) {
+      // Remove EAS-related factors for service-only stores
     }
   }
 
-  // 2. CONTROL GAPS (Max 35 pts)
-  
-  // No EAS system (15 pts)
-  if (responses.eas_system === 'no' || responses.eas_system === false) {
-    controlGaps += 15;
-  }
-
-  // No POS CCTV (10 pts)
-  if (responses.pos_cctv === 'no' || responses.pos_cctv === false) {
-    controlGaps += 10;
-  }
-
-  // No LP Staff (10 pts)
-  if (responses.lp_staff === 'no' || responses.lp_staff === false) {
-    controlGaps += 10;
-  }
-
-  controlGaps = Math.min(35, controlGaps);
-
-  // 3. HIGH-VALUE GOODS (Max 10 pts)
-  if (profile.highValueMerchandise && Array.isArray(profile.highValueMerchandise)) {
-    highValueGoods = Math.min(10, profile.highValueMerchandise.length * 2);
-  }
-
-  // 4. INCIDENT HISTORY (Max 15 pts)
-  
-  // Robbery incidents (+8 pts)
-  if (responses.prior_robbery === 'yes' || responses.prior_robbery === true) {
-    incidentHistory += 8;
-  }
-
-  // ORC incidents (+7 pts)
-  if (responses.prior_orc === 'yes' || responses.prior_orc === true) {
-    incidentHistory += 7;
-  }
-
-  incidentHistory = Math.min(15, incidentHistory);
-
-  // TOTAL SCORE CALCULATION
-  const totalScore = shrinkageRate + controlGaps + highValueGoods + incidentHistory;
-
-  // RISK LEVEL DETERMINATION
+  // Risk level determination per framework thresholds
   let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  if (totalScore >= 75) {
+  if (finalScore >= 75) {
     riskLevel = 'CRITICAL';
-  } else if (totalScore >= 50) {
+  } else if (finalScore >= 50) {
     riskLevel = 'HIGH';
-  } else if (totalScore >= 25) {
+  } else if (finalScore >= 25) {
     riskLevel = 'MEDIUM';
   } else {
     riskLevel = 'LOW';
   }
 
+  // Deduplicate risk factors
+  const uniqueRiskFactors = [...new Set(allRiskFactors)];
+
   return {
-    score: totalScore,
+    score: finalScore,
     riskLevel,
     breakdown: {
-      shrinkageRate,
-      controlGaps,
-      highValueGoods,
-      incidentHistory,
+      threatLikelihood: Math.min(5, finalThreatLikelihood),
+      vulnerability: Math.min(5, finalVulnerability),
+      impact: Math.min(5, finalImpact),
+      inherentRisk: Math.round(peakInherentRisk),
     },
+    riskFactors: uniqueRiskFactors,
   };
 }
 

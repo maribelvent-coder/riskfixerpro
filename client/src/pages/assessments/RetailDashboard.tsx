@@ -24,7 +24,8 @@ import {
   Save,
   Loader2,
   Shield,
-  DollarSign
+  DollarSign,
+  XCircle
 } from "lucide-react";
 
 interface RetailAnalysisResponse {
@@ -46,11 +47,12 @@ interface RetailAnalysisResponse {
     score: number;
     riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     breakdown: {
-      shrinkageRate: number;
-      controlGaps: number;
-      highValueGoods: number;
-      incidentHistory: number;
+      threatLikelihood: number;
+      vulnerability: number;
+      impact: number;
+      inherentRisk: number;
     };
+    riskFactors?: string[];
   };
 }
 
@@ -667,43 +669,41 @@ export default function RetailDashboard() {
 
         {/* RIGHT COLUMN: Control Gaps → Risk Score → ROI */}
         <div className="space-y-6">
-          {/* Control Gaps - PRIORITIZED */}
-          {riskAnalysis && riskAnalysis.breakdown.controlGaps > 0 && (
+          {/* Control Gaps - PRIORITIZED - Shows when vulnerability score is elevated (>3) */}
+          {riskAnalysis && riskAnalysis.breakdown.vulnerability > 3 && (
             <Card className="border-2 border-orange-500/50" data-testid="card-control-gaps">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
                   Loss Prevention Control Gaps
                 </CardTitle>
-                <CardDescription>Critical vulnerabilities increasing shrinkage risk</CardDescription>
+                <CardDescription>Vulnerabilities detected in security posture (V={riskAnalysis.breakdown.vulnerability}/5)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Control Gap Impact</span>
+                    <span className="text-sm font-medium">Vulnerability Score</span>
                     <Badge variant="destructive" className="text-lg px-3">
-                      {riskAnalysis.breakdown.controlGaps} pts
+                      {riskAnalysis.breakdown.vulnerability}/5
                     </Badge>
                   </div>
                   <div className="space-y-2">
-                    <div className="text-sm font-semibold text-muted-foreground">Common Gaps:</div>
+                    <div className="text-sm font-semibold text-muted-foreground">Detected Gaps:</div>
                     <ul className="space-y-1 text-sm">
-                      <li className="flex items-start gap-2">
-                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <span>No EAS (Electronic Article Surveillance) tags</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <span>Missing or inadequate CCTV coverage</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <span>POS (Point of Sale) security weaknesses</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <span>Inadequate employee screening</span>
-                      </li>
+                      {riskAnalysis.riskFactors?.slice(0, 4).map((factor, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                          <span>{factor}</span>
+                        </li>
+                      ))}
+                      {(!riskAnalysis.riskFactors || riskAnalysis.riskFactors.length === 0) && (
+                        <>
+                          <li className="flex items-start gap-2">
+                            <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                            <span>Complete the survey to identify specific control gaps</span>
+                          </li>
+                        </>
+                      )}
                     </ul>
                   </div>
                   <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
@@ -761,36 +761,56 @@ export default function RetailDashboard() {
                     </div>
                   </div>
 
-                  {/* Breakdown */}
+                  {/* T×V×I Breakdown */}
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold">Risk Breakdown</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Shrinkage Rate Impact</span>
-                        <Badge variant="outline" data-testid="badge-shrinkage-rate-score">
-                          {riskAnalysis.breakdown.shrinkageRate} pts
-                        </Badge>
+                    <h4 className="text-sm font-semibold">T×V×I Risk Formula</h4>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <div className="text-2xl font-bold text-primary" data-testid="text-threat-score">
+                          {riskAnalysis.breakdown.threatLikelihood}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Threat (T)</div>
+                        <div className="text-xs text-muted-foreground">Likelihood</div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Control Gaps</span>
-                        <Badge variant="outline" data-testid="badge-control-gaps-score">
-                          {riskAnalysis.breakdown.controlGaps} pts
-                        </Badge>
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <div className="text-2xl font-bold text-primary" data-testid="text-vulnerability-score">
+                          {riskAnalysis.breakdown.vulnerability}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Vulnerability (V)</div>
+                        <div className="text-xs text-muted-foreground">Control Gaps</div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">High-Value Goods</span>
-                        <Badge variant="outline" data-testid="badge-high-value-score">
-                          {riskAnalysis.breakdown.highValueGoods} pts
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Incident History</span>
-                        <Badge variant="outline" data-testid="badge-incident-history-score">
-                          {riskAnalysis.breakdown.incidentHistory} pts
-                        </Badge>
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <div className="text-2xl font-bold text-primary" data-testid="text-impact-score">
+                          {riskAnalysis.breakdown.impact}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Impact (I)</div>
+                        <div className="text-xs text-muted-foreground">Severity</div>
                       </div>
                     </div>
+                    <div className="text-center text-xs text-muted-foreground">
+                      Inherent Risk: {riskAnalysis.breakdown.threatLikelihood} × {riskAnalysis.breakdown.vulnerability} × {riskAnalysis.breakdown.impact} = {riskAnalysis.breakdown.inherentRisk}/125
+                    </div>
                   </div>
+
+                  {/* Risk Factors */}
+                  {riskAnalysis.riskFactors && riskAnalysis.riskFactors.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold">Contributing Risk Factors</h4>
+                      <ul className="space-y-1 text-sm">
+                        {riskAnalysis.riskFactors.slice(0, 6).map((factor: string, index: number) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">{factor}</span>
+                          </li>
+                        ))}
+                        {riskAnalysis.riskFactors.length > 6 && (
+                          <li className="text-xs text-muted-foreground ml-6">
+                            + {riskAnalysis.riskFactors.length - 6} more factors...
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Recommendations based on risk level */}
                   {riskAnalysis.riskLevel === 'CRITICAL' ? (
