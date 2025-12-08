@@ -2460,14 +2460,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const assessment = req.assessment; // Verified by middleware
+        const assessmentId = req.params.id;
+
+        // Fetch survey responses for this assessment
+        const surveyResponses = await storage.getAssessmentQuestions(assessmentId);
+        
+        // Map survey question IDs to expected field names for risk calculation
+        const surveyData: Record<string, any> = {};
+        for (const response of surveyResponses) {
+          if (response.response) {
+            // Normalize response to lowercase for yes/no comparison
+            const normalizedResponse = typeof response.response === 'string' 
+              ? response.response.toLowerCase() 
+              : response.response;
+            
+            // Map specific question IDs to risk calculation field names
+            switch (response.questionId) {
+              case 'eas_1':
+                surveyData.eas_system = normalizedResponse;
+                break;
+              case 'cctv_1':
+                surveyData.cctv_system = normalizedResponse;
+                break;
+              case 'cctv_5':
+                surveyData.pos_cctv = normalizedResponse;
+                break;
+              case 'lp_staff_1':
+                surveyData.lp_staff = normalizedResponse;
+                break;
+              case 'shrinkage_4':
+                surveyData.prior_orc = normalizedResponse;
+                break;
+              case 'shrinkage_6':
+                surveyData.prior_robbery = normalizedResponse;
+                break;
+              default:
+                // Store all responses by question ID for potential future use
+                surveyData[response.questionId] = normalizedResponse;
+            }
+          }
+        }
 
         // Import the shrinkage risk scoring function
         const { calculateShrinkageRiskScore } = await import(
           "./services/risk-engine/adapters/retail"
         );
 
+        // Merge assessment with survey data for risk calculation
+        const assessmentWithSurvey = {
+          ...assessment,
+          ...surveyData,
+        };
+
         // Calculate shrinkage risk score
-        const riskAnalysis = calculateShrinkageRiskScore(assessment);
+        const riskAnalysis = calculateShrinkageRiskScore(assessmentWithSurvey);
 
         // Return comprehensive retail data
         res.json({

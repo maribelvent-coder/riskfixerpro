@@ -792,18 +792,48 @@ export default function RetailDashboard() {
                     </div>
                   </div>
 
-                  {/* Recommendations */}
-                  {riskAnalysis.riskLevel === 'HIGH' || riskAnalysis.riskLevel === 'CRITICAL' ? (
+                  {/* Recommendations based on risk level */}
+                  {riskAnalysis.riskLevel === 'CRITICAL' ? (
                     <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
                         <div>
                           <h4 className="text-sm font-semibold text-destructive mb-1">
-                            Action Required
+                            Critical Risk - Immediate Action Required
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            Your shrinkage risk score indicates severe vulnerabilities requiring immediate attention.
+                            Review the Loss Prevention ROI calculator below to prioritize control investments.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : riskAnalysis.riskLevel === 'HIGH' ? (
+                    <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-orange-600 dark:text-orange-500 mb-1">
+                            High Risk - Action Required
                           </h4>
                           <p className="text-xs text-muted-foreground">
                             Your shrinkage risk score indicates significant vulnerabilities. 
                             Review the Loss Prevention ROI calculator below to evaluate control investments.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : riskAnalysis.riskLevel === 'MEDIUM' ? (
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-yellow-600 dark:text-yellow-500 mb-1">
+                            Elevated Risk - Review Controls
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            Your shrinkage risk is above industry baseline. Consider reviewing control gaps 
+                            and evaluating additional loss prevention measures.
                           </p>
                         </div>
                       </div>
