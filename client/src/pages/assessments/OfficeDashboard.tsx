@@ -1,6 +1,6 @@
 import { useParams } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,11 @@ export default function OfficeDashboard() {
   const { id } = useParams();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
+  
+  // Autosave tracking
+  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingChangesRef = useRef<boolean>(false);
+  const lastSavedDataRef = useRef<string>('');
 
   // Initialize form with zodResolver and default values
   const form = useForm<OfficeProfile>({
@@ -49,27 +54,30 @@ export default function OfficeDashboard() {
     },
   });
 
-  // Fetch assessment
+  // Fetch assessment with fresh data on every mount (prevents stale cache)
   const { data: assessment, isLoading: assessmentLoading } = useQuery<Assessment>({
-    queryKey: [`/api/assessments/${id}`],
-    enabled: !!id
+    queryKey: ['/api/assessments', id],
+    enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Fetch office safety score
   const { data: safetyScore, isLoading: scoreLoading } = useQuery<OfficeSafetyScore>({
     queryKey: [`/api/assessments/${id}/office-safety`],
-    enabled: !!id && !!assessment?.office_profile
+    enabled: !!id && !!assessment?.officeProfile
   });
 
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
-  const profileSaved = !!assessment?.office_profile;
+  const profileSaved = !!assessment?.officeProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Load profile data when assessment loads
   useEffect(() => {
-    if (assessment?.office_profile) {
-      const profile = assessment.office_profile as OfficeProfile;
-      form.reset({
+    if (assessment?.officeProfile) {
+      const profile = assessment.officeProfile as OfficeProfile;
+      console.log('[OfficeProfile] Loaded profile data:', profile);
+      const resetData = {
         employeeCount: profile.employeeCount,
         visitorVolume: profile.visitorVolume,
         dataSensitivity: profile.dataSensitivity,
@@ -80,10 +88,13 @@ export default function OfficeDashboard() {
         annualLiabilityEstimates: profile.annualLiabilityEstimates,
         securityIncidentsPerYear: profile.securityIncidentsPerYear,
         brandDamageEstimate: profile.brandDamageEstimate,
-      });
+      };
+      form.reset(resetData);
+      lastSavedDataRef.current = JSON.stringify(resetData);
     } else {
+      console.log('[OfficeProfile] No existing profile, using defaults');
       // Reset to defaults when no profile
-      form.reset({
+      const resetData = {
         employeeCount: undefined,
         visitorVolume: undefined,
         dataSensitivity: undefined,
@@ -94,21 +105,106 @@ export default function OfficeDashboard() {
         annualLiabilityEstimates: undefined,
         securityIncidentsPerYear: undefined,
         brandDamageEstimate: undefined,
-      });
+      };
+      form.reset(resetData);
+      lastSavedDataRef.current = JSON.stringify(resetData);
     }
   }, [assessment, form]);
 
-  const saveMutation = useMutation({
+  // Autosave mutation (silent, no toast)
+  const autosaveMutation = useMutation({
     mutationFn: async (profileData: OfficeProfile) => {
+      console.log('[OfficeProfile] AUTOSAVE: Sending data to server', profileData);
       return await apiRequest('PATCH', `/api/assessments/${id}/office-profile`, {
         office_profile: profileData
       });
     },
     onSuccess: (response: any) => {
+      console.log('[OfficeProfile] AUTOSAVE SUCCESS');
+      pendingChangesRef.current = false;
+      if (response?.office_profile) {
+        lastSavedDataRef.current = JSON.stringify(response.office_profile);
+      }
+      // Silently invalidate queries for background sync
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}/office-safety`] });
+    },
+    onError: (error: any) => {
+      console.error('[OfficeProfile] AUTOSAVE FAILED:', error);
+    }
+  });
+
+  // Debounced autosave function
+  const triggerAutosave = useCallback(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+    
+    autosaveTimerRef.current = setTimeout(() => {
+      const currentData = form.getValues();
+      const currentDataStr = JSON.stringify(currentData);
+      
+      // Only save if data actually changed
+      if (currentDataStr !== lastSavedDataRef.current && pendingChangesRef.current) {
+        console.log('[OfficeProfile] AUTOSAVE: Timer fired, saving changes');
+        autosaveMutation.mutate(currentData);
+      }
+    }, 1500); // 1.5 second debounce
+  }, [form, autosaveMutation]);
+
+  // Watch for form changes and trigger autosave
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name) {
+        console.log('[OfficeProfile] CHANGE:', name, '=', value[name as keyof OfficeProfile]);
+        pendingChangesRef.current = true;
+        triggerAutosave();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, triggerAutosave]);
+
+  // Save pending changes on unmount (navigation away)
+  useEffect(() => {
+    return () => {
+      // Clear any pending timers
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+      
+      // Flush pending changes using fetch with keepalive
+      if (pendingChangesRef.current && id) {
+        const currentData = form.getValues();
+        const currentDataStr = JSON.stringify(currentData);
+        
+        if (currentDataStr !== lastSavedDataRef.current) {
+          console.log('[OfficeProfile] UNMOUNT: Saving pending changes');
+          fetch(`/api/assessments/${id}/office-profile`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ office_profile: currentData }),
+            keepalive: true,
+          }).catch(err => console.error('[OfficeProfile] UNMOUNT save failed:', err));
+        }
+      }
+    };
+  }, [id, form]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (profileData: OfficeProfile) => {
+      console.log('[OfficeProfile] MANUAL SAVE: Sending data to server', profileData);
+      return await apiRequest('PATCH', `/api/assessments/${id}/office-profile`, {
+        office_profile: profileData
+      });
+    },
+    onSuccess: (response: any) => {
+      console.log('[OfficeProfile] MANUAL SAVE SUCCESS');
+      pendingChangesRef.current = false;
+      
       // Immediately update form state from response
       if (response?.office_profile) {
         const profile = response.office_profile as OfficeProfile;
-        form.reset({
+        const resetData = {
           employeeCount: profile.employeeCount,
           visitorVolume: profile.visitorVolume,
           dataSensitivity: profile.dataSensitivity,
@@ -119,11 +215,13 @@ export default function OfficeDashboard() {
           annualLiabilityEstimates: profile.annualLiabilityEstimates,
           securityIncidentsPerYear: profile.securityIncidentsPerYear,
           brandDamageEstimate: profile.brandDamageEstimate,
-        });
+        };
+        form.reset(resetData);
+        lastSavedDataRef.current = JSON.stringify(resetData);
       }
       
-      // Then invalidate queries for background refetch
-      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}`] });
+      // Then invalidate queries for background refetch (use array format for consistency)
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id] });
       queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}/office-safety`] });
       toast({
         title: 'Profile Saved',
@@ -132,6 +230,7 @@ export default function OfficeDashboard() {
     },
     onError: (error: any) => {
       const errorMessage = error?.message || 'Failed to update office profile';
+      console.error('[OfficeProfile] MANUAL SAVE FAILED:', error);
       toast({
         title: 'Save Failed',
         description: errorMessage,
@@ -568,7 +667,7 @@ export default function OfficeDashboard() {
             </Card>
           )}
 
-          {!safetyScore && !scoreLoading && assessment?.office_profile && (
+          {!safetyScore && !scoreLoading && assessment?.officeProfile && (
             <Card data-testid="card-no-score">
               <CardContent className="pt-6">
                 <div className="text-center text-muted-foreground">
