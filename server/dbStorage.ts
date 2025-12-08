@@ -588,36 +588,10 @@ export class DbStorage implements IStorage {
 
   // Facility Survey methods
   async getFacilitySurveyQuestions(assessmentId: string): Promise<any[]> {
-    // LEFT JOIN with template_questions to include riskDirection for proper scoring
+    // Simple query - no JOIN needed, all data is in facility_survey_questions
     const results = await db
-      .select({
-        id: schema.facilitySurveyQuestions.id,
-        assessmentId: schema.facilitySurveyQuestions.assessmentId,
-        templateQuestionId: schema.facilitySurveyQuestions.templateQuestionId,
-        category: schema.facilitySurveyQuestions.category,
-        subcategory: schema.facilitySurveyQuestions.subcategory,
-        question: schema.facilitySurveyQuestions.question,
-        standard: schema.facilitySurveyQuestions.standard,
-        type: schema.facilitySurveyQuestions.type,
-        response: schema.facilitySurveyQuestions.response,
-        notes: schema.facilitySurveyQuestions.notes,
-        evidence: schema.facilitySurveyQuestions.evidence,
-        recommendations: schema.facilitySurveyQuestions.recommendations,
-        bestPractice: schema.facilitySurveyQuestions.bestPractice,
-        rationale: schema.facilitySurveyQuestions.rationale,
-        importance: schema.facilitySurveyQuestions.importance,
-        orderIndex: schema.facilitySurveyQuestions.orderIndex,
-        conditionalOnQuestionId: schema.facilitySurveyQuestions.conditionalOnQuestionId,
-        showWhenAnswer: schema.facilitySurveyQuestions.showWhenAnswer,
-        createdAt: schema.facilitySurveyQuestions.createdAt,
-        // Include options from facility_survey_questions for checklist rendering
-        options: schema.facilitySurveyQuestions.options,
-      })
+      .select()
       .from(schema.facilitySurveyQuestions)
-      .leftJoin(
-        schema.templateQuestions,
-        eq(schema.facilitySurveyQuestions.templateQuestionId, schema.templateQuestions.questionId)
-      )
       .where(eq(schema.facilitySurveyQuestions.assessmentId, assessmentId))
       .orderBy(schema.facilitySurveyQuestions.orderIndex, schema.facilitySurveyQuestions.templateQuestionId);
     
