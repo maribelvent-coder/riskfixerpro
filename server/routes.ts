@@ -3716,6 +3716,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // ============================================================================
+  // OFFICE BUILDING INTERVIEW ROUTES (AI-POWERED)
+  // ============================================================================
+
+  // Get office threats list
+  app.get(
+    "/api/assessments/:id/office-interview/threats",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { OFFICE_BUILDING_THREATS } = await import(
+          "./services/office-interview-risk-mapper-corrected"
+        );
+        
+        res.json({
+          threats: OFFICE_BUILDING_THREATS.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            category: t.category,
+            description: t.description,
+            typicalLikelihood: t.typicalLikelihood,
+            typicalImpact: t.typicalImpact,
+            asisCode: t.asisCode,
+          })),
+          totalThreats: OFFICE_BUILDING_THREATS.length,
+        });
+      } catch (error) {
+        console.error("Error fetching office threats:", error);
+        res.status(500).json({ error: "Failed to fetch office threats" });
+      }
+    },
+  );
+
+  // Generate risk scenarios from interview with AI
+  app.post(
+    "/api/assessments/:id/office-interview/generate-risks-ai",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const assessmentId = parseInt(req.params.id);
+        const { interviewResponses, useAI = true, photoFindings, incidentHistory, facilityName } = req.body;
+
+        const assessment = req.assessment;
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        // Import mapper functions
+        const mapper = await import("./services/office-interview-risk-mapper-corrected");
+        
+        // Generate scenarios using algorithmic approach
+        const result = await mapper.initializeRiskScenariosFromInterview(
+          assessmentId,
+          interviewResponses
+        );
+
+        res.json({
+          ...result,
+          mode: useAI ? "hybrid" : "algorithmic",
+          aiConfidence: "medium",
+        });
+      } catch (error) {
+        console.error("Error generating office risk scenarios:", error);
+        res.status(500).json({
+          error: "Failed to generate risk scenarios",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Assess single office threat
+  app.post(
+    "/api/assessments/:id/office-interview/assess-single-threat",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { threatId, interviewResponses } = req.body;
+
+        if (!threatId) {
+          return res.status(400).json({ error: "threatId is required" });
+        }
+
+        const validThreatIds = [
+          "unauthorized_access", "workplace_violence", "theft_burglary",
+          "executive_targeting", "data_breach_physical", "terrorism_bomb_threat",
+          "civil_disturbance", "insider_threat", "after_hours_intrusion",
+          "vehicle_ramming", "active_shooter", "corporate_espionage",
+        ];
+
+        if (!validThreatIds.includes(threatId)) {
+          return res.status(400).json({
+            error: "Invalid threatId",
+            validOptions: validThreatIds,
+          });
+        }
+
+        const mapper = await import("./services/office-interview-risk-mapper-corrected");
+        
+        const threatLikelihood = mapper.calculateThreatLikelihoodFromInterview(interviewResponses, threatId);
+        const vulnerability = mapper.calculateVulnerabilityFromInterview(interviewResponses, threatId);
+        const impact = mapper.calculateImpactFromInterview(interviewResponses, threatId);
+        const inherentRisk = threatLikelihood * vulnerability * impact;
+        const normalizedScore = Math.round((inherentRisk / 125) * 100);
+
+        res.json({
+          threatId,
+          threatLikelihood: { score: threatLikelihood },
+          vulnerability: { score: vulnerability },
+          impact: { score: impact },
+          inherentRisk: {
+            score: inherentRisk,
+            normalizedScore,
+            classification: normalizedScore >= 75 ? "critical" : normalizedScore >= 50 ? "high" : normalizedScore >= 25 ? "medium" : "low",
+          },
+        });
+      } catch (error) {
+        console.error("Error assessing single office threat:", error);
+        res.status(500).json({
+          error: "Failed to assess threat",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Generate narrative summary
+  app.post(
+    "/api/assessments/:id/office-interview/generate-narrative",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { results, interviewResponses, facilityName } = req.body;
+
+        if (!results || !Array.isArray(results)) {
+          return res.status(400).json({ error: "results array is required" });
+        }
+
+        // Generate simple narrative without AI for now
+        const criticalCount = results.filter((r: any) => r.inherentRisk?.classification === "critical").length;
+        const highCount = results.filter((r: any) => r.inherentRisk?.classification === "high").length;
+
+        const narrative = `Security Assessment Summary for ${facilityName || "Office Building"}
+
+This assessment identified ${results.length} threat scenarios requiring attention. Of these, ${criticalCount} are classified as critical risk and ${highCount} as high risk.
+
+Key recommendations include strengthening access control measures, enhancing surveillance coverage, and implementing comprehensive emergency response procedures.
+
+The facility should prioritize addressing critical risks immediately while developing a phased approach for medium-term improvements.`;
+
+        res.json({ narrative });
+      } catch (error) {
+        console.error("Error generating office narrative:", error);
+        res.status(500).json({ error: "Failed to generate narrative" });
+      }
+    },
+  );
+
+  // Calculate security score
+  app.post(
+    "/api/assessments/:id/office-interview/calculate-security-score",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const mapper = await import("./services/office-interview-risk-mapper-corrected");
+        const result = mapper.calculateOverallSecurityScore(interviewResponses);
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error calculating security score:", error);
+        res.status(500).json({ error: "Failed to calculate security score" });
+      }
+    },
+  );
+
+  // Get vulnerability breakdown
+  app.post(
+    "/api/assessments/:id/office-interview/vulnerability-breakdown",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const mapper = await import("./services/office-interview-risk-mapper-corrected");
+        const { OFFICE_BUILDING_THREATS } = mapper;
+
+        const breakdown = OFFICE_BUILDING_THREATS.map((threat: any) => ({
+          threatId: threat.id,
+          name: threat.name,
+          category: threat.category,
+          vulnerability: mapper.calculateVulnerabilityFromInterview(interviewResponses, threat.id),
+          threatLikelihood: mapper.calculateThreatLikelihoodFromInterview(interviewResponses, threat.id),
+          impact: mapper.calculateImpactFromInterview(interviewResponses, threat.id),
+        }));
+
+        res.json({ breakdown });
+      } catch (error) {
+        console.error("Error getting vulnerability breakdown:", error);
+        res.status(500).json({ error: "Failed to get vulnerability breakdown" });
+      }
+    },
+  );
+
   // EXECUTIVE PROTECTION FRAMEWORK ROUTES
 
   /**
