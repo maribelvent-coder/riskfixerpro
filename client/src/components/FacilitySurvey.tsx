@@ -93,8 +93,11 @@ export function FacilitySurvey({
   // Map template IDs to database UUIDs - preserves stable lookups while tracking database records
   const templateToDbIdMap = useRef<Map<string, string>>(new Map());
   
-  // Track pending changes for flush-on-navigate
-  const pendingChangeRef = useRef<{ question: SurveyQuestion; updateData: any } | null>(null);
+  // Track ALL pending changes for flush-on-navigate (keyed by templateId)
+  const pendingChangesMap = useRef<Map<string, { question: SurveyQuestion; updateData: any }>>(new Map());
+  
+  // Track individual autosave timers per question
+  const autosaveTimersMap = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Load template questions from database (no hardcoded fallback)
   const { data: savedQuestions, isLoading: questionsLoading } = useQuery({
@@ -381,14 +384,17 @@ export function FacilitySurvey({
     },
     onSuccess: (data) => {
       const { savedQuestion, templateId, isNew } = data;
-      console.log(`[FacilitySurvey] Autosave successful for question ${templateId}${isNew ? ' (new)' : ' (updated)'}`);
+      console.log(`[FacilitySurvey] SAVE SUCCESS: ${templateId}${isNew ? ' (new)' : ' (updated)'}, remaining pending: ${pendingChangesMap.current.size - 1}`);
       
-      // Clear pending change since it's now saved
-      pendingChangeRef.current = null;
-      setSaveStatus('saved');
+      // Remove this question from pending changes
+      pendingChangesMap.current.delete(templateId);
       
-      // Reset save status indicator after 2 seconds
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      // Update save status based on remaining pending changes
+      if (pendingChangesMap.current.size === 0) {
+        setSaveStatus('saved');
+        // Reset save status indicator after 2 seconds
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      }
 
       if (isNew && savedQuestion && savedQuestion.id) {
         // Store the new database ID in the mapping
@@ -413,31 +419,51 @@ export function FacilitySurvey({
     },
   });
   
-  // Flush any pending autosave immediately (used before navigation)
+  // Flush ALL pending autosaves immediately (used before navigation)
   const flushPendingSave = useCallback(async () => {
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current);
-      autosaveTimeoutRef.current = null;
+    // Clear all pending timers
+    autosaveTimersMap.current.forEach((timer) => clearTimeout(timer));
+    autosaveTimersMap.current.clear();
+    
+    const pendingCount = pendingChangesMap.current.size;
+    if (pendingCount === 0) {
+      console.log('[FacilitySurvey] FLUSH: No pending changes to save');
+      return;
     }
     
-    if (pendingChangeRef.current) {
-      const { question, updateData } = pendingChangeRef.current;
-      console.log(`[FacilitySurvey] Flushing pending save for question ${question.templateId}`);
-      setSaveStatus('saving');
-      
-      try {
-        await autosaveQuestionMutation.mutateAsync({ question, updateData });
-      } catch (error) {
-        console.error("Flush save failed:", error);
-        setSaveStatus('error');
+    console.log(`[FacilitySurvey] FLUSH: Saving ${pendingCount} pending changes before navigation`);
+    setSaveStatus('saving');
+    
+    // Save ALL pending changes in parallel
+    const savePromises = Array.from(pendingChangesMap.current.values()).map(
+      async ({ question, updateData }) => {
+        try {
+          console.log(`[FacilitySurvey] FLUSH: Saving question ${question.templateId}`);
+          await autosaveQuestionMutation.mutateAsync({ question, updateData });
+        } catch (error) {
+          console.error(`Flush save failed for ${question.templateId}:`, error);
+          throw error;
+        }
       }
+    );
+    
+    try {
+      await Promise.all(savePromises);
+      console.log(`[FacilitySurvey] FLUSH: All ${pendingCount} changes saved successfully`);
+    } catch (error) {
+      console.error("Some flush saves failed:", error);
+      setSaveStatus('error');
     }
   }, [autosaveQuestionMutation]);
   
   // Handle category change with save-before-navigate
   const handleCategoryChange = useCallback(async (newCategoryIndex: number) => {
+    console.log(`[FacilitySurvey] TAB CLICKED: Switching to category ${newCategoryIndex}, pending changes: ${pendingChangesMap.current.size}`);
+    
     // Flush any pending saves before switching
     await flushPendingSave();
+    
+    console.log(`[FacilitySurvey] TAB CLICKED: Flush complete, now switching category`);
     setCurrentCategory(newCategoryIndex);
     
     // Scroll to top of content area
@@ -449,7 +475,7 @@ export function FacilitySurvey({
   // Warn user about unsaved changes when leaving page
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (pendingChangeRef.current || saveStatus === 'saving') {
+      if (pendingChangesMap.current.size > 0 || saveStatus === 'saving') {
         e.preventDefault();
         e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
       }
@@ -583,20 +609,30 @@ export function FacilitySurvey({
     },
   });
 
-  // Debounced autosave function
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Debounced autosave function - uses per-question timers
   const triggerAutosave = useCallback(
     (question: SurveyQuestion, updateData: any) => {
+      const templateId = question.templateId;
+      
       // Track pending change for flush-on-navigate
-      pendingChangeRef.current = { question, updateData };
+      pendingChangesMap.current.set(templateId, { question, updateData });
+      console.log(`[FacilitySurvey] CHANGE: ${templateId} = ${JSON.stringify(updateData)}, total pending: ${pendingChangesMap.current.size}`);
       setSaveStatus('saving');
       
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current);
+      // Clear existing timer for this specific question
+      const existingTimer = autosaveTimersMap.current.get(templateId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
       }
-      autosaveTimeoutRef.current = setTimeout(() => {
+      
+      // Set new timer for this question
+      const timer = setTimeout(() => {
+        console.log(`[FacilitySurvey] AUTOSAVE: Timer fired for ${templateId}`);
         autosaveQuestionMutation.mutate({ question, updateData });
+        autosaveTimersMap.current.delete(templateId);
       }, 1500); // Autosave after 1.5 seconds of inactivity
+      
+      autosaveTimersMap.current.set(templateId, timer);
     },
     [autosaveQuestionMutation],
   );
