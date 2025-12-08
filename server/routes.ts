@@ -87,6 +87,19 @@ import {
   generateManufacturingNarrative,
 } from "./services/manufacturing-ai-risk-assessment";
 
+// Executive Protection Assessment Imports
+import {
+  calculateVulnerability as calculateEPVulnerability,
+  calculateThreatLikelihood as calculateEPThreatLikelihood,
+  calculateImpact as calculateEPImpact,
+  calculateExposureFactor,
+  calculateThreatRisk as calculateEPThreatRisk,
+  generateEPRiskScenarios,
+  generateControlRecommendations as generateEPControlRecommendations,
+  EP_THREATS,
+  EP_THREAT_CONTROL_MAPPING,
+} from "./services/ep-interview-mapper";
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -4773,6 +4786,184 @@ The facility should prioritize addressing critical risks immediately, particular
         res
           .status(500)
           .json({ error: "Failed to save executive interview response" });
+      }
+    },
+  );
+
+  // EP Interview Risk Calculation Routes (using ep-interview-mapper)
+  
+  // Get EP threats list
+  app.get(
+    "/api/assessments/:id/ep-interview/threats",
+    verifyAssessmentOwnership,
+    async (_req, res) => {
+      try {
+        res.json({
+          threats: EP_THREATS,
+          controlMapping: EP_THREAT_CONTROL_MAPPING,
+        });
+      } catch (error) {
+        console.error("Error fetching EP threats:", error);
+        res.status(500).json({ error: "Failed to fetch EP threats" });
+      }
+    },
+  );
+
+  // Calculate EP risk for a specific threat
+  app.post(
+    "/api/assessments/:id/ep-interview/calculate-risk",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const epRiskSchema = z.object({
+          interviewResponses: z.record(z.any()),
+          threatId: z.string().min(1),
+        });
+        
+        const validated = epRiskSchema.safeParse(req.body);
+        if (!validated.success) {
+          return res.status(400).json({ 
+            error: "Invalid request body", 
+            details: validated.error.errors 
+          });
+        }
+        
+        const { interviewResponses, threatId } = validated.data;
+        const riskResult = calculateEPThreatRisk(interviewResponses, threatId);
+
+        res.json({
+          threatId,
+          ...riskResult,
+        });
+      } catch (error) {
+        console.error("Error calculating EP risk:", error);
+        res.status(500).json({ error: "Failed to calculate EP risk" });
+      }
+    },
+  );
+
+  // Calculate all EP risks from interview responses
+  app.post(
+    "/api/assessments/:id/ep-interview/calculate-all-risks",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        const epAllRisksSchema = z.object({
+          interviewResponses: z.record(z.any()),
+        });
+        
+        const validated = epAllRisksSchema.safeParse(req.body);
+        if (!validated.success) {
+          return res.status(400).json({ 
+            error: "Invalid request body", 
+            details: validated.error.errors 
+          });
+        }
+        
+        const { interviewResponses } = validated.data;
+
+        // Calculate exposure factor
+        const exposureFactor = calculateExposureFactor(interviewResponses);
+
+        // Calculate risk for each threat
+        const riskResults = EP_THREATS.map((threat) => {
+          const risk = calculateEPThreatRisk(interviewResponses, threat.id);
+          return {
+            threatId: threat.id,
+            threatName: threat.name,
+            category: threat.category,
+            ...risk,
+          };
+        });
+
+        // Sort by normalized risk (highest first)
+        riskResults.sort((a, b) => b.normalizedRisk - a.normalizedRisk);
+
+        // Count risk levels
+        const riskCounts = {
+          critical: riskResults.filter((r) => r.riskLevel === "critical").length,
+          high: riskResults.filter((r) => r.riskLevel === "high").length,
+          medium: riskResults.filter((r) => r.riskLevel === "medium").length,
+          low: riskResults.filter((r) => r.riskLevel === "low").length,
+        };
+
+        res.json({
+          assessmentId: id,
+          exposureFactor,
+          riskCounts,
+          risks: riskResults,
+        });
+      } catch (error) {
+        console.error("Error calculating all EP risks:", error);
+        res.status(500).json({ error: "Failed to calculate EP risks" });
+      }
+    },
+  );
+
+  // Get EP control recommendations for a threat
+  app.post(
+    "/api/assessments/:id/ep-interview/control-recommendations",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const epControlSchema = z.object({
+          interviewResponses: z.record(z.any()),
+          threatId: z.string().min(1),
+        });
+        
+        const validated = epControlSchema.safeParse(req.body);
+        if (!validated.success) {
+          return res.status(400).json({ 
+            error: "Invalid request body", 
+            details: validated.error.errors 
+          });
+        }
+        
+        const { interviewResponses, threatId } = validated.data;
+        const recommendations = generateEPControlRecommendations(interviewResponses, threatId);
+
+        res.json({
+          threatId,
+          recommendedControls: recommendations,
+        });
+      } catch (error) {
+        console.error("Error generating EP control recommendations:", error);
+        res.status(500).json({ error: "Failed to generate control recommendations" });
+      }
+    },
+  );
+
+  // Generate EP risk scenarios from interview
+  app.post(
+    "/api/assessments/:id/ep-interview/generate-scenarios",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        const epScenariosSchema = z.object({
+          interviewResponses: z.record(z.any()),
+        });
+        
+        const validated = epScenariosSchema.safeParse(req.body);
+        if (!validated.success) {
+          return res.status(400).json({ 
+            error: "Invalid request body", 
+            details: validated.error.errors 
+          });
+        }
+        
+        const { interviewResponses } = validated.data;
+        
+        // Use string ID since assessment IDs are UUIDs
+        const result = await generateEPRiskScenarios(parseInt(id) || 0, interviewResponses);
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error generating EP risk scenarios:", error);
+        res.status(500).json({ error: "Failed to generate EP risk scenarios" });
       }
     },
   );

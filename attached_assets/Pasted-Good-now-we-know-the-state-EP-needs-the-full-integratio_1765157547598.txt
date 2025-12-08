@@ -1,0 +1,66 @@
+Good - now we know the state. EP needs the full integration. Give this to the Replit Agent:
+
+"Please complete the Executive Protection framework integration. I'm uploading 5 files:
+
+ep-interview-questionnaire.ts - Questions with options (AUTHORITATIVE SOURCE)
+ep-interview-mapper.ts - Algorithmic fallback with calculateVulnerabilityFromInterview()
+ep-ai-risk-assessment.ts - AI-first orchestration
+ep-route-integration-guide.ts - API route definitions
+ep-controls-seed.sql - Security controls
+
+STEP 1: PLACE THE MAPPER FILE
+
+ep-interview-mapper.ts → server/services/ (this is the missing piece!)
+
+STEP 2: FIX QUESTIONS - RE-SEED WITH OPTIONS
+
+Use the NEW ep-interview-questionnaire.ts as authoritative source
+Clear existing:
+
+sql  DELETE FROM template_questions WHERE template_id LIKE '%executive%' OR template_id LIKE '%ep%';
+
+Re-seed ensuring options field is mapped
+Use orderIndex field (not "order")
+
+STEP 3: VERIFY OPTIONS POPULATED
+sqlSELECT question_id, options 
+FROM template_questions 
+WHERE template_id LIKE '%executive%'
+AND question_type IN ('multiple_choice', 'checklist')
+LIMIT 10;
+STEP 4: SEED ADDITIONAL CONTROLS
+Adapt ep-controls-seed.sql to control_library table schema. Should add ~20+ EP controls including:
+
+Protective detail, advance work, safe room, residential security, travel security, counter-surveillance, threat assessment, secure transportation
+
+STEP 5: ADD INTERVIEW ROUTES
+From ep-route-integration-guide.ts add:
+
+GET /api/assessments/:id/ep-interview/threats
+POST /api/assessments/:id/ep-interview/generate-risks-ai
+POST /api/assessments/:id/ep-interview/assess-single-threat
+POST /api/assessments/:id/ep-interview/generate-narrative
+POST /api/assessments/:id/ep-interview/calculate-security-score
+POST /api/assessments/:id/ep-interview/vulnerability-breakdown
+
+STEP 6: VERIFY MAPPER WORKS
+typescript// Test baseline
+calculateVulnerabilityFromInterview({}, 'targeted_violence')
+// Should return 3
+
+// Test bad security
+const badResponses = {
+  public_exposure_1: 'High public profile - frequent media',
+  threat_history_1: 'yes',
+  residential_security_1: 'No security measures'
+};
+calculateVulnerabilityFromInterview(badResponses, 'targeted_violence')
+// Should return 4-5
+STEP 7: VERIFY SOURCE → DATABASE → MAPPER CHAIN
+Compare 3 questions (source vs database):
+
+First question about principal/executive profile
+First question about threat history
+First question about travel security
+
+Please show results at each step."

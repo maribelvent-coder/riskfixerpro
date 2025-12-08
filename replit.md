@@ -48,6 +48,14 @@ A granular facility zoning system provides full CRUD API. The Geographic Intelli
 
 An Executive Protection Database Schema includes executive profiles, interviews, locations, travel routes, crime data imports, incidents, points of interest, and OSINT findings, with Zod validation and TypeScript types. An Executive Interview Questionnaire facilitates structured data ingestion for these assessments.
 
+**Executive Protection Interview Risk Mapper (December 2025):** Full T×V×I×E formula implementation unique to EP framework. Key components:
+- `server/services/ep-interview-mapper.ts`: 12 EP-specific threats (kidnapping, stalking, doxxing, home invasion, extortion, ambush, workplace violence, travel incidents, cyber targeting, family targeting, reputational attack, protest targeting)
+- T×V×I×E calculation: Threat likelihood (1-10) × Vulnerability (1-10) × Impact (1-10) × Exposure (1-5), normalized to 0-100 scale
+- Exposure factor calculation considers: public profile level, routine predictability, commute patterns, social media usage, media coverage, public records exposure, family digital exposure, travel publicity
+- 43 interview questions across 8 sections seeded to template_questions (Executive Profile, Residence Security, Daily Routines, Workplace Security, Travel & Transportation, Digital Footprint, Family Security, Emergency Preparedness)
+- Control recommendations mapping: Each threat maps to recommended controls from control_library
+- API routes: `/api/assessments/:id/ep-interview/threats`, `/api/assessments/:id/ep-interview/calculate-risk`, `/api/assessments/:id/ep-interview/calculate-all-risks`, `/api/assessments/:id/ep-interview/control-recommendations`, `/api/assessments/:id/ep-interview/generate-scenarios`
+
 ### Feature Specifications
 Core entities managed by the platform include Assessments, Sites/Locations, Assets, Risk Scenarios, Vulnerabilities, Controls, Treatment Plans, Survey Questions, Risk Insights, Reports, Users, Organizations, Threats, Security Controls, Facility Zones, Points of Interest, Crime Data, Site Incidents, and Executive Protection specific entities. The question-control architecture links template questions to control library entries, enabling the risk calculation engine to map survey responses to control effectiveness ratings. The platform supports CRUD operations for physical sites with integrated geocoding, generates reports in multiple formats, and offers Free, Pro, and Enterprise account tiers.
 
