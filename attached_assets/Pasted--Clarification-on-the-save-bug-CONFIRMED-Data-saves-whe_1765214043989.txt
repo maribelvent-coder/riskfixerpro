@@ -1,0 +1,78 @@
+"Clarification on the save bug:
+
+CONFIRMED: Data saves when clicking the Save button
+BUG: Data does NOT save when navigating between tabs/sections within the assessment
+
+Example: User is on "Facility Survey" tab, answers questions, then clicks "Corporate Operations" tab - answers are LOST.
+
+This is because tab/section navigation doesn't trigger a save.
+
+PLEASE FIX:
+
+1. FIND WHERE TAB/SECTION NAVIGATION HAPPENS:
+   grep -rn 'tab\|section\|navigate\|onClick.*section' client/src/components/FacilitySurvey.tsx
+   
+   - What component handles section/tab switching?
+   - What happens when user clicks a different section?
+
+2. THE FIX - Save on navigation:
+
+   Option A: Save BEFORE switching sections
+   
+   const handleSectionChange = async (newSection) => {
+     // Save current answers first
+     await saveCurrentAnswers();
+     // Then switch section
+     setCurrentSection(newSection);
+   };
+
+   Option B: Auto-save on any answer change (debounced)
+   
+   useEffect(() => {
+     const timer = setTimeout(() => {
+       if (hasUnsavedChanges) {
+         saveAnswers();
+       }
+     }, 1000); // Save 1 second after last change
+     
+     return () => clearTimeout(timer);
+   }, [answers]);
+
+   Option C: Save on blur (when user leaves any input)
+   
+   <Select 
+     onBlur={() => saveAnswers()}
+     onChange={(value) => setAnswer(questionId, value)}
+   />
+
+3. ALSO ADD - Unsaved changes warning:
+   
+   If user tries to leave the assessment page entirely with unsaved changes:
+   
+   useEffect(() => {
+     const handleBeforeUnload = (e) => {
+       if (hasUnsavedChanges) {
+         e.preventDefault();
+         e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+       }
+     };
+     window.addEventListener('beforeunload', handleBeforeUnload);
+     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+   }, [hasUnsavedChanges]);
+
+4. ADD VISUAL FEEDBACK:
+   - Show "Saving..." indicator when auto-save is in progress
+   - Show "All changes saved ✓" when complete
+   - Show "Unsaved changes" warning if pending
+
+5. TEST THE FIX:
+   - Answer question in Section 1
+   - Click to Section 2 WITHOUT clicking Save
+   - Go back to Section 1
+   - VERIFY: Answer is still there
+
+RECOMMENDED APPROACH:
+Implement Option B (debounced auto-save) + Option A (save on section change) together.
+This gives users the best experience - changes save automatically AND save when switching sections.
+
+Also add the beforeunload warning as a safety net."

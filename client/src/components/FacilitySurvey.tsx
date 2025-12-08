@@ -85,12 +85,16 @@ export function FacilitySurvey({
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [currentCategory, setCurrentCategory] = useState(0);
   const [isPersisting, setIsPersisting] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Map template IDs to database UUIDs - preserves stable lookups while tracking database records
   const templateToDbIdMap = useRef<Map<string, string>>(new Map());
+  
+  // Track pending changes for flush-on-navigate
+  const pendingChangeRef = useRef<{ question: SurveyQuestion; updateData: any } | null>(null);
 
   // Load template questions from database (no hardcoded fallback)
   const { data: savedQuestions, isLoading: questionsLoading } = useQuery({
@@ -378,6 +382,13 @@ export function FacilitySurvey({
     onSuccess: (data) => {
       const { savedQuestion, templateId, isNew } = data;
       console.log(`[FacilitySurvey] Autosave successful for question ${templateId}${isNew ? ' (new)' : ' (updated)'}`);
+      
+      // Clear pending change since it's now saved
+      pendingChangeRef.current = null;
+      setSaveStatus('saved');
+      
+      // Reset save status indicator after 2 seconds
+      setTimeout(() => setSaveStatus('idle'), 2000);
 
       if (isNew && savedQuestion && savedQuestion.id) {
         // Store the new database ID in the mapping
@@ -397,9 +408,55 @@ export function FacilitySurvey({
     },
     onError: (error) => {
       console.error("Autosave failed:", error);
+      setSaveStatus('error');
       // Silent fail for autosave - don't annoy users with error toasts on every keystroke
     },
   });
+  
+  // Flush any pending autosave immediately (used before navigation)
+  const flushPendingSave = useCallback(async () => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+    
+    if (pendingChangeRef.current) {
+      const { question, updateData } = pendingChangeRef.current;
+      console.log(`[FacilitySurvey] Flushing pending save for question ${question.templateId}`);
+      setSaveStatus('saving');
+      
+      try {
+        await autosaveQuestionMutation.mutateAsync({ question, updateData });
+      } catch (error) {
+        console.error("Flush save failed:", error);
+        setSaveStatus('error');
+      }
+    }
+  }, [autosaveQuestionMutation]);
+  
+  // Handle category change with save-before-navigate
+  const handleCategoryChange = useCallback(async (newCategoryIndex: number) => {
+    // Flush any pending saves before switching
+    await flushPendingSave();
+    setCurrentCategory(newCategoryIndex);
+    
+    // Scroll to top of content area
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [flushPendingSave]);
+  
+  // Warn user about unsaved changes when leaving page
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingChangeRef.current || saveStatus === 'saving') {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStatus]);
 
   // Save facility survey mutation (for manual save/complete actions)
   // Uses individual saves to prevent data loss from bulk upsert
@@ -530,6 +587,10 @@ export function FacilitySurvey({
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const triggerAutosave = useCallback(
     (question: SurveyQuestion, updateData: any) => {
+      // Track pending change for flush-on-navigate
+      pendingChangeRef.current = { question, updateData };
+      setSaveStatus('saving');
+      
       if (autosaveTimeoutRef.current) {
         clearTimeout(autosaveTimeoutRef.current);
       }
@@ -1123,6 +1184,25 @@ export function FacilitySurvey({
                 className="w-full"
                 data-testid="progress-survey"
               />
+              
+              {/* Save Status Indicator */}
+              <div className="flex items-center justify-end mt-1 h-4">
+                {saveStatus === 'saving' && (
+                  <span className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="animate-pulse">●</span> Saving...
+                  </span>
+                )}
+                {saveStatus === 'saved' && (
+                  <span className="text-[10px] sm:text-xs text-green-500 flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" /> Saved
+                  </span>
+                )}
+                {saveStatus === 'error' && (
+                  <span className="text-[10px] sm:text-xs text-destructive flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> Save failed
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Category Navigation */}
@@ -1143,7 +1223,7 @@ export function FacilitySurvey({
                     key={category}
                     variant={currentCategory === index ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setCurrentCategory(index)}
+                    onClick={() => handleCategoryChange(index)}
                     className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 min-h-8 sm:min-h-9"
                     data-testid={`nav-category-${category}`}
                   >
@@ -1193,7 +1273,7 @@ export function FacilitySurvey({
               });
               // Move to next category or complete
               if (currentCategory < categories.length - 1) {
-                setCurrentCategory((prev) => prev + 1);
+                handleCategoryChange(currentCategory + 1);
               } else {
                 handleComplete();
               }
@@ -1320,7 +1400,7 @@ export function FacilitySurvey({
           {currentCategory > 0 && (
             <Button
               variant="outline"
-              onClick={() => setCurrentCategory((prev) => prev - 1)}
+              onClick={() => handleCategoryChange(currentCategory - 1)}
               className="text-sm min-h-11 w-full sm:w-auto"
               data-testid="button-previous-category"
             >
@@ -1330,7 +1410,7 @@ export function FacilitySurvey({
 
           {currentCategory < categories.length - 1 ? (
             <Button
-              onClick={() => setCurrentCategory((prev) => prev + 1)}
+              onClick={() => handleCategoryChange(currentCategory + 1)}
               className="text-sm min-h-11 w-full sm:w-auto"
               data-testid="button-next-category"
             >
