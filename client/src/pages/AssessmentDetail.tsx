@@ -625,6 +625,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
               <FacilitySurvey 
+                key={`facility-survey-${activeTab === 'facility-survey' ? 'active' : 'inactive'}`}
                 assessmentId={assessmentId}
                 templateId={assessmentData?.templateId || undefined}
                 onComplete={handleFacilitySurveyComplete}
