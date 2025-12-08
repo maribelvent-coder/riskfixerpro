@@ -26,16 +26,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateSurveyFindingsPDF } from "@/lib/surveyFindingsPDF";
 import { EvidenceUploader } from "./EvidenceUploader";
 
-// Executive Protection Part 1 - Executive Interview (35 questions, 8 sections)
+// Executive Protection Part 1 - Executive Interview (43 questions, 8 sections)
 export const EP_PART1_CATEGORIES = [
-  'Threat Assessment & Personal Concerns',
-  'Public Profile & Media Exposure',
-  'Daily Routines & Predictability',
-  'Family Vulnerability Assessment',
-  'Current Security Posture',
-  'Travel Security',
-  'Digital Security Hygiene',
-  'Incident History & Response',
+  'Executive Profile & Threat Perception',
+  'Residence Security',
+  'Daily Routines & Pattern Predictability',
+  'Workplace Security',
+  'Travel & Transportation',
+  'Digital Footprint & Privacy',
+  'Family Security',
+  'Emergency Preparedness',
 ];
 
 // Executive Protection Part 2 - Professional Assessment (77 questions, 13 sections)
