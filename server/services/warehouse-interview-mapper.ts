@@ -28,7 +28,7 @@
 
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
-import { assessments, riskScenarios, threats } from '@shared/schema';
+import { assessments, riskScenarios, threatLibrary } from '@shared/schema';
 
 // ============================================================================
 // INTERFACES
@@ -71,7 +71,7 @@ export interface GeneratedScenarioResult {
   highRisks: number;
   mediumRisks: number;
   lowRisks: number;
-  riskScenarioIds: number[];
+  riskScenarioIds: string[];
 }
 
 export interface SecurityScoreResult {
@@ -1292,14 +1292,8 @@ function calculateGenericRiskFactors(responses: InterviewResponses): number {
     riskFactorCount += 1;
   }
 
-  // =========================================================================
-  // CALCULATE FINAL SCORE
-  // =========================================================================
-  
-  // Warehouse uses divisor of 3 (each 3 risk factors increases vulnerability by 1)
-  vulnerabilityScore = Math.min(5, vulnerabilityScore + Math.floor(riskFactorCount / 3));
-  
-  return vulnerabilityScore;
+  // Return the raw risk factor count (caller will apply divisor of 3)
+  return riskFactorCount;
 }
 
 // ============================================================================
@@ -2138,43 +2132,37 @@ export async function initializeRiskScenariosFromInterview(
   }
 
   // Insert scenarios into database
-  const insertedIds: number[] = [];
+  const insertedIds: string[] = [];
   
   try {
     for (let i = 0; i < generatedScenarios.length; i++) {
       const scenario = generatedScenarios[i];
       const threat = WAREHOUSE_THREATS[i];
       
-      // Look up or create threat record
-      const existingThreat = await db.query.threats.findFirst({
-        where: eq(threats.name, threat.name),
-      });
+      // Look up threat record from threat_library using select (pre-seeded)
+      const existingThreats = await db.select().from(threatLibrary).where(eq(threatLibrary.id, threat.id));
+      const threatDbId: string = existingThreats[0]?.id || threat.id;
       
-      let threatDbId: number;
-      if (existingThreat) {
-        threatDbId = existingThreat.id;
-      } else {
-        // Create the threat if it doesn't exist
-        const [newThreat] = await db.insert(threats).values({
-          name: threat.name,
-          category: threat.category,
-          description: `${threat.description} - ASIS Code: ${threat.asisCode}`,
-        }).returning();
-        threatDbId = newThreat.id;
-      }
+      // Map numeric scores to text labels for the actual schema
+      const likelihoodLabel = scenario.threatLikelihood <= 2 ? 'Low' : scenario.threatLikelihood === 3 ? 'Medium' : 'High';
+      const impactLabel = scenario.impact <= 2 ? 'Low' : scenario.impact === 3 ? 'Medium' : scenario.impact >= 4 ? 'High' : 'Critical';
       
-      // Insert risk scenario
+      // Insert risk scenario matching actual riskScenarios schema
       const [inserted] = await db.insert(riskScenarios).values({
-        assessmentId: scenario.assessmentId,
-        threatId: threatDbId,
-        threatLikelihood: scenario.threatLikelihood,
-        vulnerability: scenario.vulnerability,
-        impact: scenario.impact,
+        assessmentId: String(scenario.assessmentId),
+        threatLibraryId: threatDbId,
+        scenario: scenario.scenarioDescription,
+        asset: 'Warehouse Facility',
+        threatType: threat.category,
+        threatDescription: threat.description,
+        likelihood: likelihoodLabel,
+        impact: impactLabel,
+        riskLevel: scenario.riskLevel,
+        likelihoodScore: scenario.threatLikelihood,
+        impactScore: scenario.impact,
         inherentRisk: scenario.inherentRisk,
         residualRisk: scenario.residualRisk,
         controlEffectiveness: scenario.controlEffectiveness,
-        riskLevel: scenario.riskLevel,
-        scenarioDescription: scenario.scenarioDescription,
       }).returning();
       
       insertedIds.push(inserted.id);
