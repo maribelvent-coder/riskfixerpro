@@ -23,15 +23,15 @@ export function useProfileAutosave<T extends Record<string, unknown>>({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const lastSavedRef = useRef<string>('');
-  const initialDataRef = useRef<string>('');
-  const isInitializedRef = useRef(false);
+  const hasUserEditedRef = useRef(false);
+  const previousDataRef = useRef<string>('');
 
   const saveProfile = useCallback(async (profileData: T, useKeepalive = false) => {
     if (!assessmentId) return;
     
     const dataStr = JSON.stringify(profileData);
-    if (dataStr === lastSavedRef.current || dataStr === initialDataRef.current) {
-      console.log(`[${profileType}Profile] Skip save - no changes from saved/initial`);
+    if (dataStr === lastSavedRef.current) {
+      console.log(`[${profileType}Profile] Skip save - no changes from last saved`);
       return;
     }
 
@@ -39,13 +39,12 @@ export function useProfileAutosave<T extends Record<string, unknown>>({
 
     try {
       const url = `/api/assessments/${assessmentId}/${profileType}-profile`;
-      const bodyKey = `${profileType}_profile`;
       
       if (useKeepalive) {
         fetch(url, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [bodyKey]: profileData }),
+          body: JSON.stringify(profileData),
           credentials: 'include',
           keepalive: true,
         });
@@ -56,7 +55,7 @@ export function useProfileAutosave<T extends Record<string, unknown>>({
       const response = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [bodyKey]: profileData }),
+        body: JSON.stringify(profileData),
         credentials: 'include',
       });
 
@@ -80,15 +79,22 @@ export function useProfileAutosave<T extends Record<string, unknown>>({
 
     const dataStr = JSON.stringify(data);
     
-    // Set initial data on first valid data
-    if (!isInitializedRef.current && dataStr !== '{}') {
-      initialDataRef.current = dataStr;
+    // Skip if data hasn't changed
+    if (dataStr === previousDataRef.current) return;
+    
+    const prevDataStr = previousDataRef.current;
+    previousDataRef.current = dataStr;
+    
+    // If this is the first data (from server load), just record it - don't save
+    if (prevDataStr === '') {
       lastSavedRef.current = dataStr;
-      isInitializedRef.current = true;
-      console.log(`[${profileType}Profile] Initialized with data`);
+      console.log(`[${profileType}Profile] Initialized with server data`);
       return;
     }
-
+    
+    // User has made an edit - data differs from what we had before
+    hasUserEditedRef.current = true;
+    
     // Skip if no changes from last saved
     if (dataStr === lastSavedRef.current) return;
 
@@ -129,8 +135,8 @@ export function useProfileAutosave<T extends Record<string, unknown>>({
 
   // Reset when assessmentId changes
   useEffect(() => {
-    isInitializedRef.current = false;
-    initialDataRef.current = '';
+    hasUserEditedRef.current = false;
+    previousDataRef.current = '';
     lastSavedRef.current = '';
     pendingDataRef.current = null;
   }, [assessmentId]);
