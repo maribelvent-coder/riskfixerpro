@@ -32,7 +32,7 @@ interface WarehouseAnalysisResponse {
   assessment: {
     id: string;
     name: string;
-    warehouse_profile?: {
+    warehouseProfile?: {
       warehouseType?: string;
       squareFootage?: number;
       inventoryValue?: number;
@@ -87,7 +87,7 @@ export default function WarehouseDashboard() {
   });
 
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
-  const profileSaved = !!data?.assessment.warehouse_profile;
+  const profileSaved = !!data?.assessment.warehouseProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Form state for warehouse profile
@@ -129,8 +129,8 @@ export default function WarehouseDashboard() {
 
   // Initialize form when data loads
   useEffect(() => {
-    if (data?.assessment.warehouse_profile) {
-      const profile = data.assessment.warehouse_profile;
+    if (data?.assessment.warehouseProfile) {
+      const profile = data.assessment.warehouseProfile;
       setInventoryValue(profile.inventoryValue?.toString() || '');
       setShrinkageRate(profile.shrinkageRate?.toString() || '');
       setSelectedProducts(profile.highValueProducts || []);
@@ -246,9 +246,9 @@ export default function WarehouseDashboard() {
 
   // Prepare data for ROI Calculator
   const roiAssessmentData = {
-    inventoryValue: parseFloat(inventoryValue) || assessment?.warehouse_profile?.inventoryValue || 0,
-    shrinkageRate: parseFloat(shrinkageRate) || assessment?.warehouse_profile?.shrinkageRate || 0,
-    cargoTheftHistory: assessment?.warehouse_profile?.cargoTheftIncidents || [],
+    inventoryValue: parseFloat(inventoryValue) || assessment?.warehouseProfile?.inventoryValue || 0,
+    shrinkageRate: parseFloat(shrinkageRate) || assessment?.warehouseProfile?.shrinkageRate || 0,
+    cargoTheftHistory: assessment?.warehouseProfile?.cargoTheftIncidents || [],
   };
 
   // Example proposed controls (in production, these would come from the control library)

@@ -81,18 +81,18 @@ export default function DatacenterDashboard() {
   // Fetch uptime reliability score
   const { data: reliabilityScore, isLoading: scoreLoading } = useQuery<UptimeReliabilityScore>({
     queryKey: [`/api/assessments/${id}/uptime-reliability`],
-    enabled: !!id && !!assessment?.datacenter_profile
+    enabled: !!id && !!assessment?.datacenterProfile
   });
 
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
-  const profileSaved = !!assessment?.datacenter_profile;
+  const profileSaved = !!assessment?.datacenterProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Load profile data when assessment loads (useEffect to avoid setState in render)
   // ALWAYS run on assessment change to prevent stale state during loading/navigation
   useEffect(() => {
-    if (assessment?.datacenter_profile) {
-      const profile = assessment.datacenter_profile as DatacenterProfile;
+    if (assessment?.datacenterProfile) {
+      const profile = assessment.datacenterProfile as DatacenterProfile;
       // Use nullish coalescing to respect empty/cleared values
       setTierClassification(profile.tierClassification ?? '');
       setUptimeSLA(profile.uptimeSLA ?? '');
@@ -126,13 +126,13 @@ export default function DatacenterDashboard() {
   const saveMutation = useMutation({
     mutationFn: async (profileData: DatacenterProfile) => {
       return await apiRequest('PATCH', `/api/assessments/${id}/datacenter-profile`, {
-        datacenter_profile: profileData
+        datacenterProfile: profileData
       });
     },
     onSuccess: (response: any) => {
       // Immediately update local state from response to ensure null clears propagate instantly
-      if (response?.datacenter_profile) {
-        const profile = response.datacenter_profile as DatacenterProfile;
+      if (response?.datacenterProfile) {
+        const profile = response.datacenterProfile as DatacenterProfile;
         setTierClassification(profile.tierClassification ?? '');
         setUptimeSLA(profile.uptimeSLA ?? '');
         setComplianceRequirements(profile.complianceRequirements ?? []);

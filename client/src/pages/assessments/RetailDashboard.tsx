@@ -31,7 +31,7 @@ interface RetailAnalysisResponse {
     id: string;
     title: string;
     executiveSummary?: string;
-    retail_profile?: {
+    retailProfile?: {
       annualRevenue?: number;
       shrinkageRate?: number;
       highValueMerchandise?: string[];
@@ -102,7 +102,7 @@ export default function RetailDashboard() {
   });
 
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
-  const profileSaved = !!data?.assessment.retail_profile;
+  const profileSaved = !!data?.assessment.retailProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Form state for retail profile
@@ -149,8 +149,8 @@ export default function RetailDashboard() {
 
   // Initialize form when data loads
   useEffect(() => {
-    if (data?.assessment.retail_profile) {
-      const profile = data.assessment.retail_profile;
+    if (data?.assessment.retailProfile) {
+      const profile = data.assessment.retailProfile;
       setAnnualRevenue(profile.annualRevenue?.toString() || '');
       setShrinkageRate(profile.shrinkageRate?.toString() || '');
       setStoreFormat(profile.storeFormat || '');
@@ -285,8 +285,8 @@ export default function RetailDashboard() {
 
   // Prepare data for ROI Calculator
   const roiAssessmentData = {
-    annualRevenue: parseFloat(annualRevenue) || assessment?.retail_profile?.annualRevenue || 0,
-    shrinkageRate: parseFloat(shrinkageRate) || assessment?.retail_profile?.shrinkageRate || 0,
+    annualRevenue: parseFloat(annualRevenue) || assessment?.retailProfile?.annualRevenue || 0,
+    shrinkageRate: parseFloat(shrinkageRate) || assessment?.retailProfile?.shrinkageRate || 0,
   };
 
   // Example proposed controls

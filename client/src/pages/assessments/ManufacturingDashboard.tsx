@@ -28,7 +28,7 @@ interface ProductionContinuityScore {
 interface Assessment {
   id: string;
   title: string;
-  manufacturing_profile: ManufacturingProfile | null;
+  manufacturingProfile: ManufacturingProfile | null;
 }
 
 const IP_TYPE_OPTIONS = [
@@ -94,18 +94,18 @@ export default function ManufacturingDashboard() {
 
   const { data: continuityScore } = useQuery<ProductionContinuityScore>({
     queryKey: [`/api/assessments/${id}/production-continuity`],
-    enabled: !!id && !!assessment?.manufacturing_profile
+    enabled: !!id && !!assessment?.manufacturingProfile
   });
 
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
-  const profileSaved = !!assessment?.manufacturing_profile;
+  const profileSaved = !!assessment?.manufacturingProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
   // Load profile data when assessment loads (useEffect to avoid setState in render)
   // ALWAYS run on assessment change to prevent stale state during loading/navigation
   useEffect(() => {
-    if (assessment?.manufacturing_profile) {
-      const profile = assessment.manufacturing_profile;
+    if (assessment?.manufacturingProfile) {
+      const profile = assessment.manufacturingProfile;
       // Use nullish coalescing to respect empty/cleared values
       setAnnualProductionValue(profile.annualProductionValue?.toString() ?? '');
       setShiftOperations(profile.shiftOperations ?? '1');
@@ -139,7 +139,7 @@ export default function ManufacturingDashboard() {
   const saveMutation = useMutation({
     mutationFn: async (profileData: ManufacturingProfile) => {
       return await apiRequest('PATCH', `/api/assessments/${id}/manufacturing-profile`, {
-        manufacturing_profile: profileData
+        manufacturingProfile: profileData
       });
     },
     onSuccess: () => {
