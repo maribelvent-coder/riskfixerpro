@@ -9,7 +9,7 @@
  */
 
 import { RiskEngineAdapter, InterviewResponse, ThreatData, LIKELIHOOD_VALUES, IMPACT_VALUES } from '../types';
-import type { MerchandiseDisplay } from '../../../shared/schema';
+import type { MerchandiseDisplay } from '@shared/schema';
 
 /**
  * Helper: Determine if EAS system absence should penalize vulnerability score
@@ -464,7 +464,7 @@ export function calculateShrinkageRiskScore(
   }
 
   // Deduplicate risk factors
-  const uniqueRiskFactors = [...new Set(allRiskFactors)];
+  const uniqueRiskFactors = Array.from(new Set(allRiskFactors));
 
   return {
     score: finalScore,
