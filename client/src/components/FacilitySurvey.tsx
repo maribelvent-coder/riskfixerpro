@@ -245,9 +245,10 @@ export function FacilitySurvey({
     }
 
     // Support both exact match and "starts with" match for conditional logic
+    // Case-insensitive comparison to handle variations like "yes" vs "Yes"
     // This allows showWhenAnswer="Yes" to match "Yes - full-time LP team" etc.
-    const response = String(prereqQuestion.response);
-    const expectedAnswer = q.showWhenAnswer;
+    const response = String(prereqQuestion.response).toLowerCase();
+    const expectedAnswer = q.showWhenAnswer.toLowerCase();
 
     return response === expectedAnswer || response.startsWith(expectedAnswer);
   };
@@ -272,9 +273,9 @@ export function FacilitySurvey({
       }
 
       // Auto-complete if prerequisite answer doesn't match showWhenAnswer (question is hidden)
-      // Support both exact match and "starts with" match
-      const response = String(prereqQuestion.response);
-      const expectedAnswer = q.showWhenAnswer;
+      // Support both exact match and "starts with" match (case-insensitive)
+      const response = String(prereqQuestion.response).toLowerCase();
+      const expectedAnswer = q.showWhenAnswer.toLowerCase();
       const matches =
         response === expectedAnswer || response.startsWith(expectedAnswer);
 

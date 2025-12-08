@@ -124,6 +124,16 @@ async function seedRetailQuestions() {
 
       let dbQuestionId: string;
 
+      // Extract conditional logic from questionnaire condition object
+      // condition.questionId -> conditionalOnQuestionId
+      // condition.expectedValue -> showWhenAnswer (convert array to first value if needed)
+      const conditionalOnQuestionId = question.condition?.questionId || null;
+      const showWhenAnswer = question.condition?.expectedValue
+        ? (Array.isArray(question.condition.expectedValue)
+            ? question.condition.expectedValue[0]
+            : question.condition.expectedValue)
+        : null;
+
       if (existingQuestion.length > 0) {
         // Update existing question
         await db
@@ -138,7 +148,9 @@ async function seedRetailQuestions() {
             type: question.questionType.replace('_', '-'),
             options: question.options || null,
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
-            controlLibraryId: controlLibraryId
+            controlLibraryId: controlLibraryId,
+            conditionalOnQuestionId: conditionalOnQuestionId,
+            showWhenAnswer: showWhenAnswer
           })
           .where(eq(templateQuestions.id, existingQuestion[0].id));
 
@@ -160,7 +172,9 @@ async function seedRetailQuestions() {
             type: question.questionType.replace('_', '-'),
             options: question.options || null,
             orderIndex: parseInt(question.id.replace(/[^0-9]/g, '')) || 0,
-            controlLibraryId: controlLibraryId
+            controlLibraryId: controlLibraryId,
+            conditionalOnQuestionId: conditionalOnQuestionId,
+            showWhenAnswer: showWhenAnswer
           })
           .returning();
 
