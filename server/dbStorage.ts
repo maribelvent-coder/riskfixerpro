@@ -196,6 +196,11 @@ export class DbStorage implements IStorage {
     return results[0];
   }
 
+  async deleteUser(userId: string): Promise<boolean> {
+    const results = await db.delete(schema.users).where(eq(schema.users.id, userId)).returning();
+    return results.length > 0;
+  }
+
   async getAllUsers(): Promise<User[]> {
     const results = await db.select().from(schema.users);
     return results;

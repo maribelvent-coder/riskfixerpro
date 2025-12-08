@@ -253,7 +253,49 @@ async function verifySiteOwnership(req: any, res: any, next: any) {
   }
 }
 
+// Startup backfill: Ensure all users have organizations (migrates legacy data)
+async function backfillUserOrganizations(): Promise<void> {
+  try {
+    const allUsers = await storage.getAllUsers();
+    const orphanedUsers = allUsers.filter(u => !u.organizationId);
+    
+    if (orphanedUsers.length === 0) {
+      console.log('✅ All users have organizations - no backfill needed');
+      return;
+    }
+    
+    console.log(`⚠️ Found ${orphanedUsers.length} users without organizations, backfilling...`);
+    
+    for (const user of orphanedUsers) {
+      try {
+        // Create personal organization
+        const org = await storage.createOrganization({
+          name: `${user.username}'s Workspace`,
+          ownerId: user.id,
+          accountTier: 'free',
+          maxMembers: 1,
+          maxSites: 3,
+          maxAssessments: 5,
+        });
+        
+        // Link user to organization
+        await storage.addUserToOrganization(user.id, org.id, 'owner');
+        console.log(`  ✅ Created organization for user: ${user.username}`);
+      } catch (backfillError) {
+        console.error(`  ❌ Failed to create organization for user ${user.username}:`, backfillError);
+      }
+    }
+    
+    console.log('✅ User organization backfill complete');
+  } catch (error) {
+    console.error('Error during user organization backfill:', error);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Startup: Ensure all users have organizations (backfills legacy data)
+  await backfillUserOrganizations();
+  
   // Register Geographic Intelligence routes
   registerGeoIntelRoutes(app, storage);
 
@@ -296,6 +338,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: validatedData.email || null,
         password: hashedPassword,
       });
+
+      // Auto-create personal organization for new user (REQUIRED for proper multi-tenant access)
+      // Note: Neon HTTP driver doesn't support transactions, so we implement manual rollback
+      let organization;
+      try {
+        // Create personal organization
+        organization = await storage.createOrganization({
+          name: `${validatedData.username}'s Workspace`,
+          ownerId: user.id,
+          accountTier: 'free',
+          maxMembers: 1,      // Free tier: solo workspace
+          maxSites: 3,        // Free tier limits
+          maxAssessments: 5,  // Free tier limits
+        });
+
+        // Link user to organization as owner
+        await storage.addUserToOrganization(user.id, organization.id, 'owner');
+        
+        console.log(`✅ Auto-created organization ${organization.id} for new user ${user.username}`);
+        
+        // Update the user object with organization info for the response
+        user.organizationId = organization.id;
+        user.organizationRole = 'owner';
+      } catch (orgError) {
+        // Manual rollback: clean up in reverse order (org first, then user) to respect FK constraints
+        console.error('Organization setup failed, rolling back:', orgError);
+        
+        // Step 1: Delete organization if it was created (before deleting user due to FK constraint)
+        if (organization) {
+          try {
+            await storage.deleteOrganization(organization.id);
+            console.log(`Rolled back organization ${organization.id}`);
+          } catch (deleteOrgError) {
+            console.error('Failed to rollback organization:', deleteOrgError);
+          }
+        }
+        
+        // Step 2: Delete the user
+        try {
+          await storage.deleteUser(user.id);
+          console.log(`Rolled back user ${user.id} due to organization creation failure`);
+        } catch (deleteUserError) {
+          console.error('Failed to rollback user creation:', deleteUserError);
+        }
+        
+        return res.status(500).json({ error: "Failed to complete account setup. Please try again." });
+      }
 
       // Generate JWT token
       const token = jwt.sign({ userId: user.id }, process.env.SESSION_SECRET!, {

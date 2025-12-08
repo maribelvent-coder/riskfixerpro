@@ -25,6 +25,13 @@ Error handling distinguishes between:
 - 401 Unauthorized: Auth failure (invalid/expired JWT) or not authenticated
 - 403 Forbidden with ONBOARDING_REQUIRED code: User needs to complete onboarding to set organizationId
 
+**Auto-Organization at Signup (December 2025):** New users automatically receive a personal organization upon registration, eliminating the need for a separate onboarding step. Implementation:
+- `/api/auth/signup` creates user, then immediately creates a personal organization named `{username}'s Workspace`
+- User is linked as organization owner with free tier limits (1 member, 3 sites, 5 assessments)
+- Manual rollback pattern: if organization creation fails, user creation is rolled back via `storage.deleteUser()`
+- All users now have `organizationId` set, ensuring TenantStorage queries succeed
+- No separate onboarding flow required - users can immediately access all features
+
 **Invitation System (November 2025):** Secure organization member invitation with one-time token-based acceptance:
 - `POST /api/organization/invite`: Protected route requiring owner/admin role, generates 7-day expiring tokens
 - `POST /api/auth/accept-invite`: Public route for new user registration via invitation token

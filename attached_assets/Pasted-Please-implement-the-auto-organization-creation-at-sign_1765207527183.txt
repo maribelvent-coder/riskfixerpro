@@ -1,0 +1,60 @@
+Please implement the auto-organization creation at signup. This is a critical fix that affects all new users.
+
+REQUIREMENTS:
+
+1. MODIFY THE SIGNUP ROUTE (/api/auth/signup) to:
+   
+   After successfully creating the user, BEFORE returning the response:
+   
+   a) Create a personal organization:
+      - name: `${username}'s Workspace`
+      - slug: username.toLowerCase().replace(/[^a-z0-9]/g, '-')
+      - Handle slug collisions (append random suffix if needed)
+   
+   b) Update the user record:
+      - organizationId: org.id
+      - organizationRole: 'owner'
+      - accountTier: 'free' (explicit default)
+   
+   c) Wrap in a transaction so if org creation fails, user creation rolls back
+
+2. HANDLE EXISTING USERS WITHOUT ORGANIZATIONS:
+   
+   Create a migration script that:
+   - Finds all users where organization_id IS NULL
+   - Creates a personal organization for each
+   - Links them to their new organization
+   - Sets account_tier = 'free' if NULL
+```sql
+   -- Show me users who need fixing first
+   SELECT id, username, email, organization_id, account_tier 
+   FROM users 
+   WHERE organization_id IS NULL;
+```
+
+3. UPDATE THE ONBOARDING CHECK:
+   
+   In `requireOrganizationPermission` middleware, consider:
+   - If this is now impossible (all users have orgs), can we simplify the check?
+   - Or add a helpful error message: "Account setup incomplete. Please contact support."
+
+4. TEST THE FIX:
+   
+   a) Create a brand new user through the signup form
+   b) Verify they have an organization_id immediately after signup
+   c) Verify they can create an assessment without errors
+   d) Verify they can create a site without the ONBOARDING_REQUIRED error
+
+5. EDGE CASES TO HANDLE:
+   
+   - Username with special characters (ensure slug is valid)
+   - Very long usernames (truncate slug if needed)
+   - Database errors during org creation (rollback user creation)
+   - Duplicate slug (append timestamp or random string)
+
+6. SHOW ME THE CHANGES before applying:
+   - The modified signup route code
+   - The migration script for existing users
+   - Any middleware changes
+
+Please implement this systematically and show me each piece for review."
