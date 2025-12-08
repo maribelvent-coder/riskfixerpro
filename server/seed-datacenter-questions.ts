@@ -4,7 +4,7 @@
  */
 import { db } from './db';
 import { templateQuestions, questionThreatMap, questionControlMap } from '../shared/schema';
-import { datacenterInterviewQuestions } from './data/datacenter-interview-questionnaire';
+import { DATACENTER_INTERVIEW_QUESTIONS } from './services/datacenter-interview-questionnaire';
 import { eq, and } from 'drizzle-orm';
 
 // Mapping from questionnaire snake_case identifiers to library names
@@ -114,7 +114,7 @@ async function seedDatacenterQuestions() {
     return result;
   }
 
-  const allQuestions = flattenQuestions(datacenterInterviewQuestions);
+  const allQuestions = flattenQuestions(DATACENTER_INTERVIEW_QUESTIONS);
   console.log(`📋 Processing ${allQuestions.length} questions (including follow-ups)...\n`);
 
   for (const question of allQuestions) {

@@ -1,0 +1,53 @@
+Here are the datacenter integration instructions for Replit Agent:
+
+"I'm uploading 5 datacenter framework files for the AI-first assessment architecture. Please integrate them using the same process we used for warehouse.
+FILES BEING UPLOADED:
+
+datacenter-interview-questionnaire.ts - Questions with options (AUTHORITATIVE SOURCE)
+datacenter-interview-mapper.ts - Algorithmic fallback calculations (look for DATACENTER_THREATS export)
+datacenter-ai-risk-assessment.ts - AI-first orchestration with GPT-4
+datacenter-route-integration-guide.ts - API route definitions
+datacenter-controls-seed.sql - Security controls
+
+STEP 1: CHECK FOR EXISTING DATACENTER FILES
+bashfind . -name '*datacenter*' -type f
+List any existing files so we know what to replace/consolidate.
+STEP 2: PLACE FILES IN CORRECT LOCATIONS
+
+datacenter-interview-questionnaire.ts → Same location as warehouse questionnaire
+datacenter-interview-mapper.ts → server/services/
+datacenter-ai-risk-assessment.ts → server/services/
+datacenter-route-integration-guide.ts → server/ or docs/
+datacenter-controls-seed.sql → Adapt to control_library table schema (like warehouse)
+
+STEP 3: UPDATE OR CREATE SEED SCRIPT
+
+Import from the NEW questionnaire file (check export name: likely DATACENTER_INTERVIEW_QUESTIONS)
+Map options: question.options || null
+Use correct template_id (check convention: datacenter or data-center)
+
+STEP 4: CLEAR AND RE-SEED QUESTIONS
+sqlDELETE FROM template_questions WHERE template_id LIKE '%datacenter%' OR template_id LIKE '%data-center%';
+Then run the seed script.
+STEP 5: VERIFY OPTIONS POPULATED
+sqlSELECT question_id, options 
+FROM template_questions 
+WHERE template_id LIKE '%data%center%' 
+AND question_type IN ('multiple_choice', 'checklist')
+LIMIT 10;
+```
+
+**STEP 6: SEED THREATS**
+Add threats from `DATACENTER_THREATS` in the mapper to `threat_library` table.
+
+**STEP 7: SEED CONTROLS**
+Adapt `datacenter-controls-seed.sql` to match `control_library` table schema and insert.
+
+**STEP 8: VERIFY MAPPER CONNECTIONS**
+```
+- All DATACENTER_THREATS exist in threat_library
+- All THREAT_CONTROL_MAPPING controls exist in control_library
+- calculateVulnerabilityFromInterview({}) returns valid 1-5 score
+STEP 9: ADD ROUTES
+Integrate routes from datacenter-route-integration-guide.ts into server/routes.ts
+Please show me results at each step."
