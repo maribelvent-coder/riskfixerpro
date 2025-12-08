@@ -2568,18 +2568,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const assessmentId = req.params.id;
-        const { manufacturing_profile } = req.body; // Expect wrapped payload
-
-        // Guard against missing payload
-        if (!manufacturing_profile) {
-          return res
-            .status(400)
-            .json({ error: "Manufacturing profile data is required" });
-        }
+        const manufacturingProfileData = req.body;
 
         // Validate using shared schema with safeParse
         const validationResult = manufacturingProfileSchema.safeParse(
-          manufacturing_profile,
+          manufacturingProfileData,
         );
 
         if (!validationResult.success) {
@@ -3205,18 +3198,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const assessmentId = req.params.id;
-        const { datacenter_profile } = req.body; // Expect wrapped payload
-
-        // Guard against missing payload
-        if (!datacenter_profile) {
-          return res
-            .status(400)
-            .json({ error: "Datacenter profile data is required" });
-        }
+        const datacenterProfileData = req.body;
 
         // Validate using shared schema with safeParse
         const validationResult =
-          datacenterProfileSchema.safeParse(datacenter_profile);
+          datacenterProfileSchema.safeParse(datacenterProfileData);
 
         if (!validationResult.success) {
           return res.status(400).json({
