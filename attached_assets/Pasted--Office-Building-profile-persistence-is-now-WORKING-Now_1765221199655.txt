@@ -1,0 +1,93 @@
+"Office Building profile persistence is now WORKING! ✅
+
+Now we need to ensure ALL templates have the same fixes applied.
+
+PART 1: VERIFY BACKEND FIXES (You said these are done)
+
+Confirm all 5 profile endpoints have the snake_case → camelCase fix:
+- ✅ Office Building (officeProfile)
+- ❓ Retail Store (retailProfile?)  
+- ❓ Warehouse (warehouseProfile?)
+- ❓ Manufacturing (manufacturingProfile?)
+- ❓ Datacenter (datacenterProfile?)
+
+Show me a quick grep to confirm:
+grep -n 'Profile:' server/storage.ts server/routes.ts | head -20
+
+PART 2: VERIFY/ADD FRONTEND AUTOSAVE TO ALL DASHBOARDS
+
+The autosave fixes (debounced save, save-on-unmount, staleTime:0) were added to OfficeDashboard.tsx.
+
+Do the other template dashboards have the same fixes?
+
+List all dashboard components:
+find client/src -name '*Dashboard*' -o -name '*Profile*' | grep -i tsx
+
+For each one, check if it has:
+1. Debounced autosave (1.5s timer)
+2. Save on unmount (keepalive fetch)
+3. staleTime: 0 and refetchOnMount: 'always'
+4. Console logging for debugging
+
+If any are missing, apply the same pattern from OfficeDashboard.tsx.
+
+PART 3: CREATE A SHARED HOOK (OPTIONAL BUT RECOMMENDED)
+
+To avoid copy-pasting the same autosave logic everywhere, consider extracting it:
+
+// hooks/useAutosave.ts
+export function useAutosave<T>({
+  data,
+  onSave,
+  debounceMs = 1500,
+}: {
+  data: T;
+  onSave: (data: T) => Promise<void>;
+  debounceMs?: number;
+}) {
+  const pendingRef = useRef<T | null>(null);
+  const timerRef = useRef<NodeJS.Timeout>();
+  
+  useEffect(() => {
+    pendingRef.current = data;
+    
+    if (timerRef.current) clearTimeout(timerRef.current);
+    
+    timerRef.current = setTimeout(async () => {
+      if (pendingRef.current) {
+        await onSave(pendingRef.current);
+        pendingRef.current = null;
+      }
+    }, debounceMs);
+    
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [data]);
+  
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingRef.current) {
+        // Use sendBeacon or keepalive fetch
+        onSave(pendingRef.current);
+      }
+    };
+  }, []);
+}
+
+Then each dashboard just uses:
+useAutosave({ data: formData, onSave: saveProfile });
+
+PART 4: VERIFY FACILITYSURVEYFIXES APPLY TO ALL TEMPLATES
+
+FacilitySurvey.tsx handles all template types (office, retail, warehouse, etc.)
+Confirm the fixes there work for ALL templates, not just office.
+
+Quick test: Create a Retail assessment, answer questions, switch tabs, come back.
+
+Please:
+1. List all dashboard/profile components
+2. Identify which ones need the autosave fixes
+3. Apply fixes OR create shared hook
+4. Confirm all 6 templates work end-to-end"
