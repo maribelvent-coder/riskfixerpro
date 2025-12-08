@@ -214,7 +214,102 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
       });
     };
 
+    // Get options from the question (enriched from template_questions)
+    const options = (question as any).options as string[] | undefined;
+    
     switch (question.type) {
+      case 'single_select':
+        if (options && options.length > 0) {
+          return (
+            <div className="space-y-2">
+              <RadioGroup
+                value={question.response as string || ''}
+                onValueChange={(value) => handleSave('response', value)}
+              >
+                <div className="flex flex-col gap-2">
+                  {options.map((option, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <RadioGroupItem 
+                        value={option} 
+                        id={`${question.id}-opt-${idx}`} 
+                        data-testid={`radio-option-${idx}-${question.id}`}
+                        className="mt-1"
+                      />
+                      <Label htmlFor={`${question.id}-opt-${idx}`} className="cursor-pointer text-sm leading-relaxed">
+                        {option}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
+            </div>
+          );
+        }
+        // Fallback to text if no options
+        return (
+          <Textarea
+            placeholder="Enter your response..."
+            value={question.response as string || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              setTimeout(() => handleSave('response', value), 500);
+            }}
+            className="min-h-[80px]"
+            data-testid={`textarea-response-${question.id}`}
+          />
+        );
+      
+      case 'multi_select':
+        if (options && options.length > 0) {
+          const selectedValues = Array.isArray(question.response) 
+            ? question.response 
+            : (question.response ? [question.response] : []);
+          
+          return (
+            <div className="space-y-2">
+              <div className="flex flex-col gap-2">
+                {options.map((option, idx) => {
+                  const isChecked = selectedValues.includes(option);
+                  return (
+                    <div key={idx} className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        id={`${question.id}-opt-${idx}`}
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const newValues = e.target.checked
+                            ? [...selectedValues, option]
+                            : selectedValues.filter((v: string) => v !== option);
+                          handleSave('response', newValues);
+                        }}
+                        className="mt-1 h-4 w-4 rounded border-border"
+                        data-testid={`checkbox-option-${idx}-${question.id}`}
+                      />
+                      <Label htmlFor={`${question.id}-opt-${idx}`} className="cursor-pointer text-sm leading-relaxed">
+                        {option}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">Select all that apply</p>
+            </div>
+          );
+        }
+        return (
+          <Textarea
+            placeholder="Enter your response..."
+            value={question.response as string || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              setTimeout(() => handleSave('response', value), 500);
+            }}
+            className="min-h-[80px]"
+            data-testid={`textarea-response-${question.id}`}
+          />
+        );
+
+      case 'yes_no':
       case 'yes-no':
         return (
           <div className="space-y-2">

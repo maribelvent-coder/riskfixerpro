@@ -4976,7 +4976,26 @@ The facility should prioritize addressing critical risks immediately, particular
       try {
         const { id } = req.params;
         const questions = await storage.getAssessmentQuestions(id);
-        res.json(questions);
+        
+        // Get assessment to find template
+        const assessment = await storage.getAssessment(id);
+        let templateQuestions: any[] = [];
+        if (assessment?.templateId) {
+          templateQuestions = await storage.getTemplateQuestions(assessment.templateId);
+        }
+        
+        // Enrich questions with options from template_questions
+        const enrichedQuestions = questions.map((q) => {
+          const match = templateQuestions.find(tq => 
+            tq.id === q.templateQuestionId || tq.questionId === q.questionId
+          );
+          if (match?.options) {
+            return { ...q, options: match.options };
+          }
+          return q;
+        });
+        
+        res.json(enrichedQuestions);
       } catch (error) {
         console.error("Error fetching assessment questions:", error);
         res.status(500).json({ error: "Failed to fetch assessment questions" });
