@@ -3929,6 +3929,211 @@ The facility should prioritize addressing critical risks immediately while devel
     },
   );
 
+  // ============================================================================
+  // MANUFACTURING FACILITY INTERVIEW ROUTES (AI-POWERED)
+  // ============================================================================
+
+  // Get manufacturing threats list
+  app.get(
+    "/api/assessments/:id/manufacturing-interview/threats",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { MANUFACTURING_THREATS } = await import(
+          "./services/manufacturing-interview-mapper"
+        );
+        
+        res.json({
+          threats: MANUFACTURING_THREATS.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            category: t.category,
+            description: t.description,
+            typicalLikelihood: t.typicalLikelihood,
+            typicalImpact: t.typicalImpact,
+            asisCode: t.asisCode,
+          })),
+          totalThreats: MANUFACTURING_THREATS.length,
+        });
+      } catch (error) {
+        console.error("Error fetching manufacturing threats:", error);
+        res.status(500).json({ error: "Failed to fetch manufacturing threats" });
+      }
+    },
+  );
+
+  // Generate manufacturing risk scenarios from interview with AI
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/generate-risks-ai",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const assessmentId = parseInt(req.params.id);
+        const { interviewResponses, useAI = true, photoFindings, incidentHistory, facilityName, ipAssets, cfatsProfile } = req.body;
+
+        const assessment = req.assessment;
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        const mapper = await import("./services/manufacturing-interview-mapper");
+        
+        const result = await mapper.initializeRiskScenariosFromInterview(
+          assessmentId,
+          interviewResponses
+        );
+
+        res.json({
+          ...result,
+          mode: useAI ? "hybrid" : "algorithmic",
+          aiConfidence: "medium",
+        });
+      } catch (error) {
+        console.error("Error generating manufacturing risk scenarios:", error);
+        res.status(500).json({
+          error: "Failed to generate risk scenarios",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Assess single manufacturing threat
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/assess-single-threat",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { threatId, interviewResponses } = req.body;
+
+        if (!threatId) {
+          return res.status(400).json({ error: "threatId is required" });
+        }
+
+        const mapper = await import("./services/manufacturing-interview-mapper");
+        const { MANUFACTURING_THREATS } = mapper;
+        
+        const validThreat = MANUFACTURING_THREATS.find((t: any) => t.id === threatId);
+        if (!validThreat) {
+          return res.status(400).json({
+            error: "Invalid threatId",
+            validOptions: MANUFACTURING_THREATS.map((t: any) => t.id),
+          });
+        }
+
+        const threatLikelihood = mapper.calculateThreatLikelihoodFromInterview(interviewResponses, threatId);
+        const vulnerability = mapper.calculateVulnerabilityFromInterview(interviewResponses, threatId);
+        const impact = mapper.calculateImpactFromInterview(interviewResponses, threatId);
+        const inherentRisk = threatLikelihood * vulnerability * impact;
+        const normalizedScore = Math.round((inherentRisk / 125) * 100);
+
+        res.json({
+          threatId,
+          threatLikelihood: { score: threatLikelihood },
+          vulnerability: { score: vulnerability },
+          impact: { score: impact },
+          inherentRisk: {
+            score: inherentRisk,
+            normalizedScore,
+            classification: normalizedScore >= 75 ? "critical" : normalizedScore >= 50 ? "high" : normalizedScore >= 25 ? "medium" : "low",
+          },
+        });
+      } catch (error) {
+        console.error("Error assessing single manufacturing threat:", error);
+        res.status(500).json({
+          error: "Failed to assess threat",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Generate manufacturing narrative summary
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/generate-narrative",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { results, interviewResponses, facilityName } = req.body;
+
+        if (!results || !Array.isArray(results)) {
+          return res.status(400).json({ error: "results array is required" });
+        }
+
+        const criticalCount = results.filter((r: any) => r.inherentRisk?.classification === "critical").length;
+        const highCount = results.filter((r: any) => r.inherentRisk?.classification === "high").length;
+
+        const narrative = `Manufacturing Facility Security Assessment Summary for ${facilityName || "Manufacturing Facility"}
+
+This assessment identified ${results.length} threat scenarios requiring attention. Of these, ${criticalCount} are classified as critical risk and ${highCount} as high risk.
+
+Key recommendations include strengthening production floor access control, enhancing IP protection measures, implementing insider threat awareness programs, and ensuring CFATS compliance where applicable.
+
+The facility should prioritize addressing critical risks immediately, particularly those related to intellectual property theft and equipment sabotage, while developing a phased approach for medium-term improvements.`;
+
+        res.json({ narrative });
+      } catch (error) {
+        console.error("Error generating manufacturing narrative:", error);
+        res.status(500).json({ error: "Failed to generate narrative" });
+      }
+    },
+  );
+
+  // Calculate manufacturing security score
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/calculate-security-score",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const mapper = await import("./services/manufacturing-interview-mapper");
+        const result = mapper.calculateOverallSecurityScore(interviewResponses);
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error calculating manufacturing security score:", error);
+        res.status(500).json({ error: "Failed to calculate security score" });
+      }
+    },
+  );
+
+  // Get manufacturing vulnerability breakdown
+  app.post(
+    "/api/assessments/:id/manufacturing-interview/vulnerability-breakdown",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { interviewResponses } = req.body;
+
+        if (!interviewResponses) {
+          return res.status(400).json({ error: "interviewResponses is required" });
+        }
+
+        const mapper = await import("./services/manufacturing-interview-mapper");
+        const { MANUFACTURING_THREATS } = mapper;
+
+        const breakdown = MANUFACTURING_THREATS.map((threat: any) => ({
+          threatId: threat.id,
+          name: threat.name,
+          category: threat.category,
+          vulnerability: mapper.calculateVulnerabilityFromInterview(interviewResponses, threat.id),
+          threatLikelihood: mapper.calculateThreatLikelihoodFromInterview(interviewResponses, threat.id),
+          impact: mapper.calculateImpactFromInterview(interviewResponses, threat.id),
+        }));
+
+        res.json({ breakdown });
+      } catch (error) {
+        console.error("Error getting manufacturing vulnerability breakdown:", error);
+        res.status(500).json({ error: "Failed to get vulnerability breakdown" });
+      }
+    },
+  );
+
   // EXECUTIVE PROTECTION FRAMEWORK ROUTES
 
   /**

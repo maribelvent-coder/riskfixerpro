@@ -25,7 +25,7 @@
 import OpenAI from 'openai';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
-import { riskScenarios, assessments, threats } from '@shared/schema';
+import { riskScenarios, assessments, threatLibrary } from '@shared/schema';
 
 // Import algorithmic fallback functions from existing mapper
 import {

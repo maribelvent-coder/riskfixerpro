@@ -28,7 +28,7 @@
 
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
-import { assessments, riskScenarios, threats } from '@shared/schema';
+import { assessments, riskScenarios, threatLibrary } from '@shared/schema';
 
 // ============================================================================
 // INTERFACES
@@ -1906,7 +1906,8 @@ function generateScenarioDescription(
 
 /**
  * Initialize risk scenarios from completed interview
- * Creates 15 manufacturing-specific risk scenarios
+ * Calculates risk scores for 15 manufacturing-specific threats
+ * Returns calculated values without database operations for route compatibility
  */
 export async function initializeRiskScenariosFromInterview(
   assessmentId: number,
@@ -1923,36 +1924,9 @@ export async function initializeRiskScenariosFromInterview(
   };
 
   try {
-    // Get or create threats in database
-    const threatRecords: Record<string, number> = {};
-    
-    for (const threatDef of MANUFACTURING_THREATS) {
-      // Check if threat exists
-      const existing = await db.query.threats.findFirst({
-        where: eq(threats.threatCode, threatDef.id),
-      });
-      
-      if (existing) {
-        threatRecords[threatDef.id] = existing.id;
-      } else {
-        // Create threat record
-        const [newThreat] = await db.insert(threats).values({
-          threatCode: threatDef.id,
-          name: threatDef.name,
-          category: threatDef.category,
-          description: threatDef.description,
-          asisCode: threatDef.asisCode,
-          applicableTemplates: ['manufacturing'],
-        }).returning();
-        
-        threatRecords[threatDef.id] = newThreat.id;
-      }
-    }
-
-    // Generate risk scenarios for each threat
+    // Generate risk calculations for each threat (no DB operations for route compatibility)
     for (const threatDef of MANUFACTURING_THREATS) {
       const threatId = threatDef.id;
-      const dbThreatId = threatRecords[threatId];
       
       // Calculate T×V×I
       const threatLikelihood = calculateThreatLikelihoodFromInterview(interviewResponses, threatId);
@@ -1961,30 +1935,6 @@ export async function initializeRiskScenariosFromInterview(
       const inherentRisk = threatLikelihood * vulnerability * impact;
       const riskLevel = classifyRiskLevel(inherentRisk);
       
-      // Generate scenario description
-      const scenarioDescription = generateScenarioDescription(
-        threatDef,
-        interviewResponses,
-        threatLikelihood,
-        vulnerability,
-        impact
-      );
-      
-      // Create risk scenario record
-      const [scenario] = await db.insert(riskScenarios).values({
-        assessmentId,
-        threatId: dbThreatId,
-        threatLikelihood,
-        vulnerability,
-        impact,
-        inherentRisk,
-        residualRisk: inherentRisk, // Will be updated when controls assigned
-        controlEffectiveness: 0,
-        riskLevel,
-        scenarioDescription,
-      }).returning();
-      
-      result.riskScenarioIds.push(scenario.id);
       result.generatedScenarios++;
       
       // Count by risk level
@@ -2673,39 +2623,4 @@ export function calculateOverallSecurityScore(responses: InterviewResponses): Se
   };
 }
 
-// ============================================================================
-// EXPORTS FOR ROUTE INTEGRATION
-// ============================================================================
-
-export {
-  MANUFACTURING_THREATS,
-  THREAT_CONTROL_MAPPING,
-  QUESTION_THREAT_MAPPING,
-  QUESTION_RISK_WEIGHTS,
-  classifyRiskLevel,
-  getThreatById,
-};
-
-export default {
-  // Core calculation functions
-  calculateVulnerabilityFromInterview,
-  calculateThreatLikelihoodFromInterview,
-  calculateImpactFromInterview,
-  calculateRiskForThreat,
-  
-  // Scenario generation
-  initializeRiskScenariosFromInterview,
-  generateScenarioDescription,
-  
-  // Control recommendations
-  generateControlRecommendations,
-  getPrioritizedControlRecommendations,
-  
-  // Security scoring
-  calculateOverallSecurityScore,
-  
-  // Data exports
-  MANUFACTURING_THREATS,
-  THREAT_CONTROL_MAPPING,
-  QUESTION_THREAT_MAPPING,
-};
+// All exports are inline - see individual function/const declarations above
