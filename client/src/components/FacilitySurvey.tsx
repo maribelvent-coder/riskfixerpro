@@ -107,6 +107,10 @@ export function FacilitySurvey({
   // Safe merge strategy: Preserve local unsaved changes when server data refreshes
   useEffect(() => {
     if (savedQuestions && savedQuestions.length > 0) {
+      // Debug: Log loaded questions with responses
+      const answeredCount = savedQuestions.filter((sq: any) => sq.response !== null && sq.response !== undefined && sq.response !== '').length;
+      console.log(`[FacilitySurvey] Loaded ${savedQuestions.length} questions, ${answeredCount} with saved responses`);
+      
       // Populate the template-to-database ID mapping
       savedQuestions.forEach((sq: any) => {
         const templateId = sq.templateQuestionId;
@@ -373,6 +377,7 @@ export function FacilitySurvey({
     },
     onSuccess: (data) => {
       const { savedQuestion, templateId, isNew } = data;
+      console.log(`[FacilitySurvey] Autosave successful for question ${templateId}${isNew ? ' (new)' : ' (updated)'}`);
 
       if (isNew && savedQuestion && savedQuestion.id) {
         // Store the new database ID in the mapping

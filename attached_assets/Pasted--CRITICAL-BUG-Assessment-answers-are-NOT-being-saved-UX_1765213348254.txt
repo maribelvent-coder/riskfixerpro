@@ -1,0 +1,79 @@
+"CRITICAL BUG: Assessment answers are NOT being saved.
+
+UX Test Results:
+- User answered 5 questions in Office Building assessment
+- Progress showed "5 of 102 completed"
+- User navigated away then returned
+- ALL ANSWERS LOST - Progress reset to "0 of 102 completed"
+
+This is a production-blocking issue. Please investigate:
+
+1. FIND THE SAVE MECHANISM:
+   grep -rn 'save\|persist\|submit\|auto.*save' client/src/components/FacilitySurvey.tsx
+   
+   - Is there an auto-save function?
+   - What triggers it? (onChange, onBlur, debounce timer?)
+   - What API endpoint does it call?
+
+2. CHECK THE SAVE API ENDPOINT:
+   grep -rn 'facility.*survey\|survey.*save\|assessment.*save' server/routes.ts
+   
+   - Does POST/PATCH endpoint exist?
+   - What table does it write to?
+
+3. CHECK BROWSER NETWORK TAB:
+   - When answering a question, is ANY API call being made?
+   - If yes, what's the response? (200, 400, 500?)
+   - If no, the frontend isn't calling the save function
+
+4. CHECK THE DATABASE:
+   - After answering questions, are they in facility_survey_questions?
+   
+   SELECT fsq.question_id, fsq.answer, fsq.updated_at
+   FROM facility_survey_questions fsq
+   JOIN assessments a ON fsq.assessment_id = a.id
+   WHERE a.template_id LIKE '%office%'
+   ORDER BY fsq.updated_at DESC
+   LIMIT 10;
+
+5. LIKELY CAUSES:
+
+   A) Auto-save not triggering:
+      - Missing onChange/onBlur handler
+      - Debounce timer too long or never fires
+      
+   B) API call failing silently:
+      - No error handling showing user
+      - CORS or auth issue
+      
+   C) Wrong table/column being updated:
+      - Writing to wrong place
+      - Data not associated with correct assessment_id
+      
+   D) Read not matching write:
+      - Saving to one place, loading from another
+
+6. IMMEDIATE FIX NEEDED:
+   - Add console.log to save function to confirm it's being called
+   - Add console.log to API endpoint to confirm it's receiving data
+   - Add error toast if save fails
+   - Consider adding explicit "Save" button as backup
+
+7. ALSO FIX (lower priority):
+
+   A) Assessment creation should prompt for details:
+      - When clicking "Use This Template", show a modal/form asking for:
+        * Assessment Name
+        * Location
+        * Assessor Name
+      - THEN create the assessment with that metadata
+   
+   B) Add explicit Save button:
+      - Even if auto-save works, users need visual confirmation
+      - Add "Save Progress" button that shows "Saved ✓" feedback
+   
+   C) Fix Yes/No labels for office-building:
+      - Same fix we did for warehouse
+      - Populate risk_direction column from polarity
+
+Please prioritize finding and fixing the save bug - this blocks all assessment functionality."
