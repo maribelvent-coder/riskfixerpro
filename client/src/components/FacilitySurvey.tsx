@@ -100,15 +100,19 @@ export function FacilitySurvey({
   const autosaveTimersMap = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Load template questions from database (no hardcoded fallback)
+  // Use staleTime: 0 to always refetch on mount (critical for tab switching)
   const { data: savedQuestions, isLoading: questionsLoading } = useQuery({
     queryKey: ["/api/assessments", assessmentId, "facility-survey"],
     queryFn: async () => {
+      console.log(`[FacilitySurvey] FETCH: Requesting fresh data from server for ${assessmentId}`);
       const response = await fetch(
         `/api/assessments/${assessmentId}/facility-survey`,
       );
       if (!response.ok) throw new Error("Failed to fetch facility survey");
       return response.json();
     },
+    staleTime: 0, // Always consider data stale - refetch on every mount
+    refetchOnMount: 'always', // Force refetch when component mounts
   });
 
   // Safe merge strategy: Preserve local unsaved changes when server data refreshes
