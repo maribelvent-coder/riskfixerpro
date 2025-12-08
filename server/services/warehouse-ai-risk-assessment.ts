@@ -23,7 +23,7 @@
 import OpenAI from 'openai';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
-import { riskScenarios, assessments, threats } from '@shared/schema';
+import { riskScenarios, assessments, threatLibrary } from '@shared/schema';
 
 // Import algorithmic fallback functions from warehouse mapper
 import {
@@ -989,15 +989,15 @@ export async function generateWarehouseRiskScenariosWithAI(
       const threat = WAREHOUSE_THREATS.find(t => t.id === result.threatId);
       
       // Look up or create threat record
-      let existingThreat = await db.query.threats.findFirst({
-        where: eq(threats.name, threat?.name || result.threatId),
+      let existingThreat = await db.query.threatLibrary.findFirst({
+        where: eq(threatLibrary.name, threat?.name || result.threatId),
       });
 
       let threatDbId: number;
       if (existingThreat) {
         threatDbId = existingThreat.id;
       } else {
-        const [newThreat] = await db.insert(threats).values({
+        const [newThreat] = await db.insert(threatLibrary).values({
           name: threat?.name || result.threatId,
           category: threat?.category || 'Warehouse',
           description: `${threat?.name || result.threatId} - ASIS Code: ${threat?.asisCode || 'N/A'}`,

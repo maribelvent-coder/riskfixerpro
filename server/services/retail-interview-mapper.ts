@@ -11,7 +11,7 @@
 
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
-import { assessments, riskScenarios, threats } from '@shared/schema';
+import { assessments, riskScenarios, threatLibrary } from '@shared/schema';
 
 // ============================================================================
 // INTERFACES
@@ -1473,8 +1473,8 @@ export async function initializeRiskScenariosFromInterview(
       const threat = RETAIL_STORE_THREATS[i];
       
       // Look up or create threat record
-      const existingThreat = await db.query.threats.findFirst({
-        where: eq(threats.name, threat.name),
+      const existingThreat = await db.query.threatLibrary.findFirst({
+        where: eq(threatLibrary.name, threat.name),
       });
       
       let threatDbId: number;
@@ -1482,7 +1482,7 @@ export async function initializeRiskScenariosFromInterview(
         threatDbId = existingThreat.id;
       } else {
         // Create the threat if it doesn't exist
-        const [newThreat] = await db.insert(threats).values({
+        const [newThreat] = await db.insert(threatLibrary).values({
           name: threat.name,
           category: threat.category,
           description: `${threat.name} - ASIS Code: ${threat.asisCode}`,
