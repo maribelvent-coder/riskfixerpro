@@ -1,0 +1,72 @@
+"CRITICAL BUG: Manufacturing form is resetting itself after autosave, creating a destructive loop.
+
+Console shows:
+1. User enters value → CHANGE detected
+2. AUTOSAVE fires with correct value (45000)
+3. AUTOSAVE SUCCESS
+4. CHANGE detected again (not by user!)
+5. AUTOSAVE fires with UNDEFINED value
+6. Form clears itself
+
+This is a RACE CONDITION between:
+- Autosave completing
+- React Query refetching/updating form state
+- Form resetting to server data (which may not have the new value yet)
+
+THE FIX:
+
+1. DON'T RESET FORM FROM SERVER DATA WHILE USER IS EDITING:
+
+   The useProfileAutosave hook or the form component is probably doing:
+   
+   useEffect(() => {
+     if (serverData) {
+       form.reset(serverData);  // THIS IS THE PROBLEM
+     }
+   }, [serverData]);
+   
+   This resets the form every time data refetches, overwriting user's input.
+
+2. SOLUTION A - Only reset on initial load:
+
+   const [initialized, setInitialized] = useState(false);
+   
+   useEffect(() => {
+     if (serverData && !initialized) {
+       form.reset(serverData);
+       setInitialized(true);
+     }
+   }, [serverData, initialized]);
+
+3. SOLUTION B - Track dirty state and don't overwrite:
+
+   useEffect(() => {
+     if (serverData && !form.formState.isDirty) {
+       form.reset(serverData);
+     }
+   }, [serverData]);
+
+4. SOLUTION C - Disable refetch while editing:
+
+   const [isEditing, setIsEditing] = useState(false);
+   
+   useQuery({
+     ...
+     enabled: !isEditing,  // Don't refetch while user is editing
+   });
+
+5. CHECK the useProfileAutosave hook:
+   
+   grep -A 30 'useProfileAutosave\|useEffect.*reset\|form.reset' client/src/hooks/useProfileAutosave.ts
+   
+   Find where form.reset() is being called and add the guard.
+
+6. ALSO CHECK ManufacturingDashboard.tsx:
+   
+   grep -n 'reset\|useEffect.*data' client/src/pages/assessments/ManufacturingDashboard.tsx
+   
+   Is there a useEffect that resets the form when data changes?
+
+The same fix should be applied to ALL dashboard components to prevent this race condition.
+
+This is why Office/Retail/Warehouse might work - they may not be refetching as aggressively, or their forms handle the reset differently."

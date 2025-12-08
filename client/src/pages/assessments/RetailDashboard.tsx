@@ -148,7 +148,13 @@ export default function RetailDashboard() {
   });
 
   // Initialize form when data loads
+  // Track if we've initialized from server data to prevent race condition with autosave
+  const [initialized, setInitialized] = useState(false);
+
+  // Load profile data ONLY on initial load - not after autosave refetches
   useEffect(() => {
+    if (initialized) return;
+    
     if (data?.assessment.retailProfile) {
       const profile = data.assessment.retailProfile;
       setAnnualRevenue(profile.annualRevenue?.toString() || '');
@@ -164,8 +170,16 @@ export default function RetailDashboard() {
       setAnnualLiabilityEstimates((profile as any).annualLiabilityEstimates?.toString() || '');
       setSecurityIncidentsPerYear((profile as any).securityIncidentsPerYear?.toString() || '');
       setBrandDamageEstimate((profile as any).brandDamageEstimate?.toString() || '');
+      setInitialized(true);
+    } else if (data?.assessment && !data.assessment.retailProfile) {
+      setInitialized(true);
     }
-  }, [data]);
+  }, [data, initialized]);
+
+  // Reset initialized flag when assessment ID changes (navigation)
+  useEffect(() => {
+    setInitialized(false);
+  }, [id]);
 
   // Update retail profile mutation
   const updateProfileMutation = useMutation({

@@ -101,12 +101,16 @@ export default function ManufacturingDashboard() {
   const profileSaved = !!assessment?.manufacturingProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
-  // Load profile data when assessment loads (useEffect to avoid setState in render)
-  // ALWAYS run on assessment change to prevent stale state during loading/navigation
+  // Track if we've initialized from server data to prevent race condition with autosave
+  const [initialized, setInitialized] = useState(false);
+
+  // Load profile data ONLY on initial load - not after autosave refetches
   useEffect(() => {
+    // Only initialize once per assessment ID to prevent autosave race condition
+    if (initialized) return;
+    
     if (assessment?.manufacturingProfile) {
       const profile = assessment.manufacturingProfile;
-      // Use nullish coalescing to respect empty/cleared values
       setAnnualProductionValue(profile.annualProductionValue?.toString() ?? '');
       setShiftOperations(profile.shiftOperations ?? '1');
       setSelectedIpTypes(profile.ipTypes ?? []);
@@ -119,22 +123,17 @@ export default function ManufacturingDashboard() {
       setAnnualLiabilityEstimates((profile as any).annualLiabilityEstimates?.toString() ?? '');
       setSecurityIncidentsPerYear((profile as any).securityIncidentsPerYear?.toString() ?? '');
       setBrandDamageEstimate((profile as any).brandDamageEstimate?.toString() ?? '');
-    } else {
-      // No assessment or no profile - reset to defaults to prevent stale state
-      setAnnualProductionValue('');
-      setShiftOperations('1');
-      setSelectedIpTypes([]);
-      setHazmatPresent(false);
-      
-      // TCOR fields
-      setEmployeeCount('');
-      setAnnualTurnoverRate('');
-      setAvgHiringCost('');
-      setAnnualLiabilityEstimates('');
-      setSecurityIncidentsPerYear('');
-      setBrandDamageEstimate('');
+      setInitialized(true);
+    } else if (assessment && !assessment.manufacturingProfile) {
+      // Assessment loaded but no profile - initialize with defaults
+      setInitialized(true);
     }
-  }, [assessment]); // Run when assessment data changes (including undefined)
+  }, [assessment, initialized]);
+
+  // Reset initialized flag when assessment ID changes (navigation)
+  useEffect(() => {
+    setInitialized(false);
+  }, [id]);
 
   const saveMutation = useMutation({
     mutationFn: async (profileData: ManufacturingProfile) => {

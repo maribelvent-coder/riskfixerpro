@@ -88,12 +88,15 @@ export default function DatacenterDashboard() {
   const profileSaved = !!assessment?.datacenterProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
-  // Load profile data when assessment loads (useEffect to avoid setState in render)
-  // ALWAYS run on assessment change to prevent stale state during loading/navigation
+  // Track if we've initialized from server data to prevent race condition with autosave
+  const [initialized, setInitialized] = useState(false);
+
+  // Load profile data ONLY on initial load - not after autosave refetches
   useEffect(() => {
+    if (initialized) return;
+    
     if (assessment?.datacenterProfile) {
       const profile = assessment.datacenterProfile as DatacenterProfile;
-      // Use nullish coalescing to respect empty/cleared values
       setTierClassification(profile.tierClassification ?? '');
       setUptimeSLA(profile.uptimeSLA ?? '');
       setComplianceRequirements(profile.complianceRequirements ?? []);
@@ -106,22 +109,16 @@ export default function DatacenterDashboard() {
       setAnnualLiabilityEstimates(profile.annualLiabilityEstimates?.toString() ?? '');
       setSecurityIncidentsPerYear(profile.securityIncidentsPerYear?.toString() ?? '');
       setBrandDamageEstimate(profile.brandDamageEstimate?.toString() ?? '');
-    } else {
-      // No assessment or no profile - reset to defaults to prevent stale state
-      setTierClassification('');
-      setUptimeSLA('');
-      setComplianceRequirements([]);
-      setPowerCapacity('');
-      
-      // TCOR fields
-      setEmployeeCount('');
-      setAnnualTurnoverRate('');
-      setAvgHiringCost('');
-      setAnnualLiabilityEstimates('');
-      setSecurityIncidentsPerYear('');
-      setBrandDamageEstimate('');
+      setInitialized(true);
+    } else if (assessment && !assessment.datacenterProfile) {
+      setInitialized(true);
     }
-  }, [assessment]); // Run when assessment data changes (including undefined)
+  }, [assessment, initialized]);
+
+  // Reset initialized flag when assessment ID changes (navigation)
+  useEffect(() => {
+    setInitialized(false);
+  }, [id]);
 
   const saveMutation = useMutation({
     mutationFn: async (profileData: DatacenterProfile) => {
