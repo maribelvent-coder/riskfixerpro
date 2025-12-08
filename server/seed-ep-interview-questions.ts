@@ -660,14 +660,14 @@ async function seedEPQuestions() {
   console.log('Seeding Executive Protection interview questions...');
   
   // Clear existing EP questions
-  await db.delete(templateQuestions).where(eq(templateQuestions.templateId, 'executive_protection'));
+  await db.delete(templateQuestions).where(eq(templateQuestions.templateId, 'executive-protection'));
   console.log('Cleared existing EP questions');
   
   // Insert new questions
   let orderIndex = 1;
   for (const q of EP_QUESTIONS) {
     await db.insert(templateQuestions).values({
-      templateId: 'executive_protection',
+      templateId: 'executive-protection',
       questionId: q.id,
       question: q.questionText,
       category: q.section,
@@ -680,7 +680,7 @@ async function seedEPQuestions() {
   console.log(`Seeded ${EP_QUESTIONS.length} EP questions`);
   
   // Verify
-  const count = await db.select().from(templateQuestions).where(eq(templateQuestions.templateId, 'executive_protection'));
+  const count = await db.select().from(templateQuestions).where(eq(templateQuestions.templateId, 'executive-protection'));
   const withOptions = count.filter(q => q.options !== null);
   console.log(`Total: ${count.length}, With options: ${withOptions.length}`);
 }
