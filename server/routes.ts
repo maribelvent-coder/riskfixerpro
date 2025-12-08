@@ -6455,7 +6455,7 @@ The facility should prioritize addressing critical risks immediately, particular
     verifyAssessmentOwnership,
     async (req, res) => {
       try {
-        const { questionId } = req.params;
+        const { id: assessmentId, questionId } = req.params;
         const updateData = req.body;
 
         console.log(
@@ -6464,7 +6464,7 @@ The facility should prioritize addressing critical risks immediately, particular
         );
 
         // Sanitize: don't allow changing assessmentId or templateQuestionId
-        const { assessmentId, templateQuestionId, ...safeData } = updateData;
+        const { assessmentId: _, templateQuestionId, ...safeData } = updateData;
 
         const updated = await storage.updateFacilitySurveyQuestion(
           questionId,
@@ -6473,6 +6473,102 @@ The facility should prioritize addressing critical risks immediately, particular
 
         if (!updated) {
           return res.status(404).json({ error: "Question not found" });
+        }
+
+        // AUTO-SYNC: Update retail profile when survey questions map to profile fields
+        // This ensures data consistency and reduces duplicate entry
+        // Use templateQuestionId which contains the original question ID (e.g., 'store_profile_1')
+        const surveyQuestionId = updated.templateQuestionId;
+        if (surveyQuestionId && safeData.response !== undefined) {
+          const surveyToProfileMap: Record<string, { field: string; transform: (val: any) => any }> = {
+            'store_profile_6': { 
+              field: 'storeFormat', 
+              transform: (val: string) => {
+                // Map survey location type options to profile storeFormat options
+                // Survey options: 'Enclosed shopping mall (interior)', 'Strip center/Shopping plaza', 
+                //                 'Standalone building', 'Downtown/Urban street front', 'Airport/Transportation hub'
+                // Profile options: 'Mall', 'Standalone', 'Strip Center', 'Shopping Center'
+                if (val?.toLowerCase().includes('mall')) return 'Mall';
+                if (val?.toLowerCase().includes('standalone')) return 'Standalone';
+                if (val?.toLowerCase().includes('strip') || val?.toLowerCase().includes('plaza')) return 'Strip Center';
+                if (val?.toLowerCase().includes('downtown') || val?.toLowerCase().includes('urban')) return 'Standalone';
+                if (val?.toLowerCase().includes('airport') || val?.toLowerCase().includes('hub')) return 'Shopping Center';
+                console.log(`[AUTO-SYNC] Could not map store_profile_6 value: ${val}`);
+                return null;
+              }
+            },
+            'store_profile_2': { 
+              field: 'annualRevenue', 
+              transform: (val: string) => {
+                // Parse revenue ranges to numeric values (use midpoint)
+                if (val?.includes('Under $500K')) return 250000;
+                if (val?.includes('$500K - $1M')) return 750000;
+                if (val?.includes('$1M - $3M')) return 2000000;
+                if (val?.includes('$3M - $10M')) return 6500000;
+                if (val?.includes('Over $10M')) return 15000000;
+                console.log(`[AUTO-SYNC] Could not map store_profile_2 value: ${val}`);
+                return null;
+              }
+            },
+            'shrinkage_1': { 
+              field: 'shrinkageRate', 
+              transform: (val: string) => {
+                // Parse shrinkage ranges to numeric values (use midpoint)
+                if (val?.includes('Under 1%')) return 0.5;
+                if (val?.includes('1-2%')) return 1.5;
+                if (val?.includes('2-3%')) return 2.5;
+                if (val?.includes('3-5%')) return 4.0;
+                if (val?.includes('Over 5%')) return 6.0;
+                if (val?.includes('Unknown')) return null;
+                console.log(`[AUTO-SYNC] Could not map shrinkage_1 value: ${val}`);
+                return null;
+              }
+            },
+            'store_profile_8a': { 
+              field: 'highValueMerchandise', 
+              transform: (val: any) => {
+                // Handle checklist responses (array of selected items)
+                // Map survey options to dashboard options
+                // Dashboard expects: 'electronics', 'jewelry', 'cosmetics', 'designer_apparel', 'handbags', 'alcohol'
+                if (Array.isArray(val)) {
+                  const categoryMap: Record<string, string> = {
+                    'Electronics (phones, tablets, laptops)': 'electronics',
+                    'Jewelry/Watches': 'jewelry',
+                    'Designer handbags/accessories': 'handbags',
+                    'Cosmetics/Fragrances (premium)': 'cosmetics',
+                    'Alcohol (premium/spirits)': 'alcohol',
+                  };
+                  const mapped = val
+                    .map(item => categoryMap[item])
+                    .filter(Boolean);
+                  if (mapped.length === 0 && val.length > 0) {
+                    console.log(`[AUTO-SYNC] Could not map some store_profile_8a values: ${val.join(', ')}`);
+                  }
+                  return mapped.length > 0 ? mapped : null;
+                }
+                return null;
+              }
+            },
+          };
+
+          const mapping = surveyToProfileMap[surveyQuestionId];
+          if (mapping) {
+            const transformedValue = mapping.transform(safeData.response);
+            if (transformedValue !== null) {
+              const assessment = await storage.getAssessment(assessmentId);
+              if (assessment) {
+                const currentProfile = assessment.retailProfile || {};
+                const updatedProfile = {
+                  ...currentProfile,
+                  [mapping.field]: transformedValue,
+                };
+                await storage.updateAssessment(assessmentId, {
+                  retailProfile: updatedProfile,
+                });
+                console.log(`AUTO-SYNC: Survey ${surveyQuestionId} -> Profile.${mapping.field}:`, transformedValue);
+              }
+            }
+          }
         }
 
         console.log(
