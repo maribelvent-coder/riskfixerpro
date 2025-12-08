@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
 import { useProfileAutosave } from '@/hooks/useProfileAutosave';
+import { useAssessmentMetadataAutosave } from '@/hooks/useAssessmentMetadataAutosave';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import type { Assessment, DatacenterProfile } from '@shared/schema';
 import { Server, Shield, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
@@ -28,6 +29,14 @@ interface UptimeReliabilityScore {
 export default function DatacenterDashboard() {
   const { id } = useParams();
   const { toast } = useToast();
+
+  // Track if we've initialized from server data to prevent race condition with autosave
+  const [initialized, setInitialized] = useState(false);
+
+  // Assessment metadata state
+  const [assessmentTitle, setAssessmentTitle] = useState<string>('');
+  const [assessmentLocation, setAssessmentLocation] = useState<string>('');
+  const [assessmentAssessor, setAssessmentAssessor] = useState<string>('');
 
   // Local state for form
   const [tierClassification, setTierClassification] = useState<string>('');
@@ -70,6 +79,23 @@ export default function DatacenterDashboard() {
     },
   });
 
+  // Build assessment metadata for autosave
+  const metadataData = useMemo(() => ({
+    title: assessmentTitle,
+    location: assessmentLocation,
+    assessor: assessmentAssessor,
+  }), [assessmentTitle, assessmentLocation, assessmentAssessor]);
+
+  // Autosave assessment metadata changes - only enabled after initialization
+  useAssessmentMetadataAutosave({
+    assessmentId: id,
+    data: metadataData,
+    enabled: initialized,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}`] });
+    },
+  });
+
   // Fetch assessment data with fresh data on mount
   const { data: assessment, isLoading: assessmentLoading } = useQuery<Assessment>({
     queryKey: [`/api/assessments/${id}`],
@@ -88,29 +114,31 @@ export default function DatacenterDashboard() {
   const profileSaved = !!assessment?.datacenterProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
-  // Track if we've initialized from server data to prevent race condition with autosave
-  const [initialized, setInitialized] = useState(false);
-
   // Load profile data ONLY on initial load - not after autosave refetches
   useEffect(() => {
     if (initialized) return;
     
-    if (assessment?.datacenterProfile) {
-      const profile = assessment.datacenterProfile as DatacenterProfile;
-      setTierClassification(profile.tierClassification ?? '');
-      setUptimeSLA(profile.uptimeSLA ?? '');
-      setComplianceRequirements(profile.complianceRequirements ?? []);
-      setPowerCapacity(profile.powerCapacity?.toString() ?? '');
+    if (assessment) {
+      // Load assessment metadata
+      setAssessmentTitle(assessment.title || '');
+      setAssessmentLocation((assessment as any).location || '');
+      setAssessmentAssessor((assessment as any).assessor || '');
       
-      // TCOR fields
-      setEmployeeCount(profile.employeeCount?.toString() ?? '');
-      setAnnualTurnoverRate(profile.annualTurnoverRate?.toString() ?? '');
-      setAvgHiringCost(profile.avgHiringCost?.toString() ?? '');
-      setAnnualLiabilityEstimates(profile.annualLiabilityEstimates?.toString() ?? '');
-      setSecurityIncidentsPerYear(profile.securityIncidentsPerYear?.toString() ?? '');
-      setBrandDamageEstimate(profile.brandDamageEstimate?.toString() ?? '');
-      setInitialized(true);
-    } else if (assessment && !assessment.datacenterProfile) {
+      if (assessment.datacenterProfile) {
+        const profile = assessment.datacenterProfile as DatacenterProfile;
+        setTierClassification(profile.tierClassification ?? '');
+        setUptimeSLA(profile.uptimeSLA ?? '');
+        setComplianceRequirements(profile.complianceRequirements ?? []);
+        setPowerCapacity(profile.powerCapacity?.toString() ?? '');
+        
+        // TCOR fields
+        setEmployeeCount(profile.employeeCount?.toString() ?? '');
+        setAnnualTurnoverRate(profile.annualTurnoverRate?.toString() ?? '');
+        setAvgHiringCost(profile.avgHiringCost?.toString() ?? '');
+        setAnnualLiabilityEstimates(profile.annualLiabilityEstimates?.toString() ?? '');
+        setSecurityIncidentsPerYear(profile.securityIncidentsPerYear?.toString() ?? '');
+        setBrandDamageEstimate(profile.brandDamageEstimate?.toString() ?? '');
+      }
       setInitialized(true);
     }
   }, [assessment, initialized]);
@@ -347,6 +375,54 @@ export default function DatacenterDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Assessment Metadata Section */}
+            <div className="space-y-4 pb-4 border-b">
+              <div className="space-y-2">
+                <Label htmlFor="assessmentTitle" className="text-sm font-medium">
+                  Assessment Name
+                </Label>
+                <Input
+                  id="assessmentTitle"
+                  data-testid="input-assessment-title"
+                  type="text"
+                  placeholder="e.g., Primary Data Center Assessment"
+                  value={assessmentTitle}
+                  onChange={(e) => setAssessmentTitle(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="assessmentLocation" className="text-sm font-medium">
+                    Location
+                  </Label>
+                  <Input
+                    id="assessmentLocation"
+                    data-testid="input-assessment-location"
+                    type="text"
+                    placeholder="e.g., 500 Tech Campus Blvd"
+                    value={assessmentLocation}
+                    onChange={(e) => setAssessmentLocation(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="assessmentAssessor" className="text-sm font-medium">
+                    Assessor Name
+                  </Label>
+                  <Input
+                    id="assessmentAssessor"
+                    data-testid="input-assessment-assessor"
+                    type="text"
+                    placeholder="e.g., Jane Doe, CPP"
+                    value={assessmentAssessor}
+                    onChange={(e) => setAssessmentAssessor(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Tier Classification */}
             <div className="space-y-2">
               <Label htmlFor="tier" data-testid="label-tier">Tier Classification</Label>

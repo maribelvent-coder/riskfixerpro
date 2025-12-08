@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
 import { useProfileAutosave } from "@/hooks/useProfileAutosave";
+import { useAssessmentMetadataAutosave } from "@/hooks/useAssessmentMetadataAutosave";
 import type { MerchandiseDisplay } from "@shared/schema";
 import { 
   ShoppingBag, 
@@ -30,6 +31,8 @@ interface RetailAnalysisResponse {
   assessment: {
     id: string;
     title: string;
+    location?: string;
+    assessor?: string;
     executiveSummary?: string;
     retailProfile?: {
       annualRevenue?: number;
@@ -105,6 +108,11 @@ export default function RetailDashboard() {
   const profileSaved = !!data?.assessment.retailProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
+  // Assessment metadata state
+  const [assessmentTitle, setAssessmentTitle] = useState<string>('');
+  const [assessmentLocation, setAssessmentLocation] = useState<string>('');
+  const [assessmentAssessor, setAssessmentAssessor] = useState<string>('');
+
   // Form state for retail profile
   const [annualRevenue, setAnnualRevenue] = useState<string>('');
   const [shrinkageRate, setShrinkageRate] = useState<string>('');
@@ -147,6 +155,22 @@ export default function RetailDashboard() {
     },
   });
 
+  // Build assessment metadata for autosave
+  const metadataData = useMemo(() => ({
+    title: assessmentTitle,
+    location: assessmentLocation,
+    assessor: assessmentAssessor,
+  }), [assessmentTitle, assessmentLocation, assessmentAssessor]);
+
+  // Autosave assessment metadata changes
+  useAssessmentMetadataAutosave({
+    assessmentId: id,
+    data: metadataData,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'retail-analysis'] });
+    },
+  });
+
   // Initialize form when data loads
   // Track if we've initialized from server data to prevent race condition with autosave
   const [initialized, setInitialized] = useState(false);
@@ -155,23 +179,28 @@ export default function RetailDashboard() {
   useEffect(() => {
     if (initialized) return;
     
-    if (data?.assessment.retailProfile) {
-      const profile = data.assessment.retailProfile;
-      setAnnualRevenue(profile.annualRevenue?.toString() || '');
-      setShrinkageRate(profile.shrinkageRate?.toString() || '');
-      setStoreFormat(profile.storeFormat || '');
-      setMerchandiseDisplay(profile.merchandiseDisplay || 'Open Shelving');
-      setSelectedMerchandise(profile.highValueMerchandise || []);
+    if (data?.assessment) {
+      // Load assessment metadata
+      setAssessmentTitle(data.assessment.title || '');
+      setAssessmentLocation(data.assessment.location || '');
+      setAssessmentAssessor(data.assessment.assessor || '');
       
-      // TCOR fields
-      setEmployeeCount((profile as any).employeeCount?.toString() || '');
-      setAnnualTurnoverRate((profile as any).annualTurnoverRate?.toString() || '');
-      setAvgHiringCost((profile as any).avgHiringCost?.toString() || '');
-      setAnnualLiabilityEstimates((profile as any).annualLiabilityEstimates?.toString() || '');
-      setSecurityIncidentsPerYear((profile as any).securityIncidentsPerYear?.toString() || '');
-      setBrandDamageEstimate((profile as any).brandDamageEstimate?.toString() || '');
-      setInitialized(true);
-    } else if (data?.assessment && !data.assessment.retailProfile) {
+      if (data.assessment.retailProfile) {
+        const profile = data.assessment.retailProfile;
+        setAnnualRevenue(profile.annualRevenue?.toString() || '');
+        setShrinkageRate(profile.shrinkageRate?.toString() || '');
+        setStoreFormat(profile.storeFormat || '');
+        setMerchandiseDisplay(profile.merchandiseDisplay || 'Open Shelving');
+        setSelectedMerchandise(profile.highValueMerchandise || []);
+        
+        // TCOR fields
+        setEmployeeCount((profile as any).employeeCount?.toString() || '');
+        setAnnualTurnoverRate((profile as any).annualTurnoverRate?.toString() || '');
+        setAvgHiringCost((profile as any).avgHiringCost?.toString() || '');
+        setAnnualLiabilityEstimates((profile as any).annualLiabilityEstimates?.toString() || '');
+        setSecurityIncidentsPerYear((profile as any).securityIncidentsPerYear?.toString() || '');
+        setBrandDamageEstimate((profile as any).brandDamageEstimate?.toString() || '');
+      }
       setInitialized(true);
     }
   }, [data, initialized]);
@@ -347,6 +376,54 @@ export default function RetailDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Assessment Metadata Section */}
+              <div className="space-y-4 pb-4 border-b">
+                <div className="space-y-2">
+                  <Label htmlFor="assessmentTitle" className="text-sm font-medium">
+                    Assessment Name
+                  </Label>
+                  <Input
+                    id="assessmentTitle"
+                    data-testid="input-assessment-title"
+                    type="text"
+                    placeholder="e.g., Downtown Store Security Assessment"
+                    value={assessmentTitle}
+                    onChange={(e) => setAssessmentTitle(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="assessmentLocation" className="text-sm font-medium">
+                      Location
+                    </Label>
+                    <Input
+                      id="assessmentLocation"
+                      data-testid="input-assessment-location"
+                      type="text"
+                      placeholder="e.g., 123 Main St, City, State"
+                      value={assessmentLocation}
+                      onChange={(e) => setAssessmentLocation(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="assessmentAssessor" className="text-sm font-medium">
+                      Assessor Name
+                    </Label>
+                    <Input
+                      id="assessmentAssessor"
+                      data-testid="input-assessment-assessor"
+                      type="text"
+                      placeholder="e.g., John Smith, CPP"
+                      value={assessmentAssessor}
+                      onChange={(e) => setAssessmentAssessor(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Annual Revenue */}
               <div className="space-y-2">
                 <Label htmlFor="annualRevenue" className="text-sm font-medium">

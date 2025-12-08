@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoGenerateRisks } from "@/hooks/useAutoGenerateRisks";
+import { useAssessmentMetadataAutosave } from "@/hooks/useAssessmentMetadataAutosave";
+import { useMemo } from "react";
 import { ExecutiveCostBenefitCalculator } from "@/components/calculators/ExecutiveCostBenefitCalculator";
 import { 
   Shield, 
@@ -106,6 +108,12 @@ export default function ExecutiveDashboard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
 
+  // Assessment metadata state
+  const [assessmentTitle, setAssessmentTitle] = useState<string>('');
+  const [assessmentLocation, setAssessmentLocation] = useState<string>('');
+  const [assessmentAssessor, setAssessmentAssessor] = useState<string>('');
+  const [metadataInitialized, setMetadataInitialized] = useState(false);
+
   // Fetch executive profile data
   const { data, isLoading } = useQuery<ExecutiveDashboardResponse>({
     queryKey: ['/api/assessments', id, 'executive-profile'],
@@ -131,26 +139,58 @@ export default function ExecutiveDashboard() {
   const [insuranceDeductible, setInsuranceDeductible] = useState<string>('');
   const [dailyLossOfValue, setDailyLossOfValue] = useState<string>('');
 
+  // Build assessment metadata for autosave
+  const metadataData = useMemo(() => ({
+    title: assessmentTitle,
+    location: assessmentLocation,
+    assessor: assessmentAssessor,
+  }), [assessmentTitle, assessmentLocation, assessmentAssessor]);
+
+  // Autosave assessment metadata changes - only enabled after initialization
+  useAssessmentMetadataAutosave({
+    assessmentId: id,
+    data: metadataData,
+    enabled: metadataInitialized,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'executive-profile'] });
+    },
+  });
+
+  // Reset metadata initialized flag when assessment ID changes
+  useEffect(() => {
+    setMetadataInitialized(false);
+  }, [id]);
+
   // Initialize form when data loads
   useEffect(() => {
-    if (data?.profile) {
-      const profile = data.profile;
-      setFullName(profile.fullName || '');
-      setTitle(profile.title || '');
-      setCompanyRole(profile.companyRole || '');
-      setPublicProfile(profile.publicProfile || 'medium');
-      setNetWorthRange(profile.netWorthRange || '');
-      setMediaExposure(profile.mediaExposure || '');
-      setCurrentSecurityLevel(profile.currentSecurityLevel || 'minimal');
-      setHasPersonalProtection(profile.hasPersonalProtection || false);
-      setHasPanicRoom(profile.hasPanicRoom || false);
-      setHasArmoredVehicle(profile.hasArmoredVehicle || false);
-      // TCOR Fields
-      setAnnualProtectionBudget(profile.annualProtectionBudget?.toString() || '');
-      setInsuranceDeductible(profile.insuranceDeductible?.toString() || '');
-      setDailyLossOfValue(profile.dailyLossOfValue?.toString() || '');
+    if (data) {
+      // Load assessment metadata (only once per assessment ID)
+      if (!metadataInitialized && data.assessment) {
+        setAssessmentTitle(data.assessment.title || '');
+        setAssessmentLocation((data.assessment as any).location || '');
+        setAssessmentAssessor((data.assessment as any).assessor || '');
+        setMetadataInitialized(true);
+      }
+      
+      if (data.profile) {
+        const profile = data.profile;
+        setFullName(profile.fullName || '');
+        setTitle(profile.title || '');
+        setCompanyRole(profile.companyRole || '');
+        setPublicProfile(profile.publicProfile || 'medium');
+        setNetWorthRange(profile.netWorthRange || '');
+        setMediaExposure(profile.mediaExposure || '');
+        setCurrentSecurityLevel(profile.currentSecurityLevel || 'minimal');
+        setHasPersonalProtection(profile.hasPersonalProtection || false);
+        setHasPanicRoom(profile.hasPanicRoom || false);
+        setHasArmoredVehicle(profile.hasArmoredVehicle || false);
+        // TCOR Fields
+        setAnnualProtectionBudget(profile.annualProtectionBudget?.toString() || '');
+        setInsuranceDeductible(profile.insuranceDeductible?.toString() || '');
+        setDailyLossOfValue(profile.dailyLossOfValue?.toString() || '');
+      }
     }
-  }, [data]);
+  }, [data, metadataInitialized]);
 
   // Update executive profile mutation
   const updateProfileMutation = useMutation({
@@ -378,6 +418,54 @@ export default function ExecutiveDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Assessment Metadata Section */}
+            <div className="space-y-4 pb-4 border-b">
+              <div className="space-y-2">
+                <Label htmlFor="assessmentTitle" className="text-sm font-medium">
+                  Assessment Name
+                </Label>
+                <input
+                  id="assessmentTitle"
+                  data-testid="input-assessment-title"
+                  type="text"
+                  placeholder="e.g., Executive Protection Assessment - John Smith"
+                  value={assessmentTitle}
+                  onChange={(e) => setAssessmentTitle(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="assessmentLocation" className="text-sm font-medium">
+                    Location
+                  </Label>
+                  <input
+                    id="assessmentLocation"
+                    data-testid="input-assessment-location"
+                    type="text"
+                    placeholder="e.g., New York, NY"
+                    value={assessmentLocation}
+                    onChange={(e) => setAssessmentLocation(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="assessmentAssessor" className="text-sm font-medium">
+                    Assessor Name
+                  </Label>
+                  <input
+                    id="assessmentAssessor"
+                    data-testid="input-assessment-assessor"
+                    type="text"
+                    placeholder="e.g., Jane Doe, CPP"
+                    value={assessmentAssessor}
+                    onChange={(e) => setAssessmentAssessor(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Basic Information */}
             <div className="space-y-4">
               <div className="space-y-2">

@@ -1,6 +1,6 @@
 import { useParams } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, Shield, AlertTriangle, Users, Database, Target } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
+import { useAssessmentMetadataAutosave } from '@/hooks/useAssessmentMetadataAutosave';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { officeProfileSchema } from '@shared/schema';
 import type { Assessment, OfficeProfile } from '@shared/schema';
@@ -31,6 +32,12 @@ export default function OfficeDashboard() {
   const { id } = useParams();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
+
+  // Assessment metadata state
+  const [assessmentTitle, setAssessmentTitle] = useState<string>('');
+  const [assessmentLocation, setAssessmentLocation] = useState<string>('');
+  const [assessmentAssessor, setAssessmentAssessor] = useState<string>('');
+  const [metadataInitialized, setMetadataInitialized] = useState(false);
   
   // Autosave tracking
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,44 +79,76 @@ export default function OfficeDashboard() {
   const profileSaved = !!assessment?.officeProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
+  // Build assessment metadata for autosave
+  const metadataData = useMemo(() => ({
+    title: assessmentTitle,
+    location: assessmentLocation,
+    assessor: assessmentAssessor,
+  }), [assessmentTitle, assessmentLocation, assessmentAssessor]);
+
+  // Autosave assessment metadata changes - only enabled after initialization
+  useAssessmentMetadataAutosave({
+    assessmentId: id,
+    data: metadataData,
+    enabled: metadataInitialized,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id] });
+    },
+  });
+
+  // Reset metadata initialized flag when assessment ID changes
+  useEffect(() => {
+    setMetadataInitialized(false);
+  }, [id]);
+
   // Load profile data when assessment loads
   useEffect(() => {
-    if (assessment?.officeProfile) {
-      const profile = assessment.officeProfile as OfficeProfile;
-      console.log('[OfficeProfile] Loaded profile data:', profile);
-      const resetData = {
-        employeeCount: profile.employeeCount,
-        visitorVolume: profile.visitorVolume,
-        dataSensitivity: profile.dataSensitivity,
-        hasExecutivePresence: profile.hasExecutivePresence ?? false,
-        // TCOR fields
-        annualTurnoverRate: profile.annualTurnoverRate,
-        avgHiringCost: profile.avgHiringCost,
-        annualLiabilityEstimates: profile.annualLiabilityEstimates,
-        securityIncidentsPerYear: profile.securityIncidentsPerYear,
-        brandDamageEstimate: profile.brandDamageEstimate,
-      };
-      form.reset(resetData);
-      lastSavedDataRef.current = JSON.stringify(resetData);
-    } else {
-      console.log('[OfficeProfile] No existing profile, using defaults');
-      // Reset to defaults when no profile
-      const resetData = {
-        employeeCount: undefined,
-        visitorVolume: undefined,
-        dataSensitivity: undefined,
-        hasExecutivePresence: false,
-        // TCOR fields
-        annualTurnoverRate: undefined,
-        avgHiringCost: undefined,
-        annualLiabilityEstimates: undefined,
-        securityIncidentsPerYear: undefined,
-        brandDamageEstimate: undefined,
-      };
-      form.reset(resetData);
-      lastSavedDataRef.current = JSON.stringify(resetData);
+    if (assessment) {
+      // Load assessment metadata (only once per assessment ID)
+      if (!metadataInitialized) {
+        setAssessmentTitle(assessment.title || '');
+        setAssessmentLocation((assessment as any).location || '');
+        setAssessmentAssessor((assessment as any).assessor || '');
+        setMetadataInitialized(true);
+      }
+      
+      if (assessment.officeProfile) {
+        const profile = assessment.officeProfile as OfficeProfile;
+        console.log('[OfficeProfile] Loaded profile data:', profile);
+        const resetData = {
+          employeeCount: profile.employeeCount,
+          visitorVolume: profile.visitorVolume,
+          dataSensitivity: profile.dataSensitivity,
+          hasExecutivePresence: profile.hasExecutivePresence ?? false,
+          // TCOR fields
+          annualTurnoverRate: profile.annualTurnoverRate,
+          avgHiringCost: profile.avgHiringCost,
+          annualLiabilityEstimates: profile.annualLiabilityEstimates,
+          securityIncidentsPerYear: profile.securityIncidentsPerYear,
+          brandDamageEstimate: profile.brandDamageEstimate,
+        };
+        form.reset(resetData);
+        lastSavedDataRef.current = JSON.stringify(resetData);
+      } else {
+        console.log('[OfficeProfile] No existing profile, using defaults');
+        // Reset to defaults when no profile
+        const resetData = {
+          employeeCount: undefined,
+          visitorVolume: undefined,
+          dataSensitivity: undefined,
+          hasExecutivePresence: false,
+          // TCOR fields
+          annualTurnoverRate: undefined,
+          avgHiringCost: undefined,
+          annualLiabilityEstimates: undefined,
+          securityIncidentsPerYear: undefined,
+          brandDamageEstimate: undefined,
+        };
+        form.reset(resetData);
+        lastSavedDataRef.current = JSON.stringify(resetData);
+      }
     }
-  }, [assessment, form]);
+  }, [assessment, form, metadataInitialized]);
 
   // Autosave mutation (silent, no toast)
   const autosaveMutation = useMutation({
@@ -372,6 +411,54 @@ export default function OfficeDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Assessment Metadata Section */}
+              <div className="space-y-4 pb-4 mb-4 border-b">
+                <div className="space-y-2">
+                  <label htmlFor="assessmentTitle" className="text-sm font-medium">
+                    Assessment Name
+                  </label>
+                  <Input
+                    id="assessmentTitle"
+                    data-testid="input-assessment-title"
+                    type="text"
+                    placeholder="e.g., Headquarters Office Assessment"
+                    value={assessmentTitle}
+                    onChange={(e) => setAssessmentTitle(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="assessmentLocation" className="text-sm font-medium">
+                      Location
+                    </label>
+                    <Input
+                      id="assessmentLocation"
+                      data-testid="input-assessment-location"
+                      type="text"
+                      placeholder="e.g., 100 Business Park Dr"
+                      value={assessmentLocation}
+                      onChange={(e) => setAssessmentLocation(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="assessmentAssessor" className="text-sm font-medium">
+                      Assessor Name
+                    </label>
+                    <Input
+                      id="assessmentAssessor"
+                      data-testid="input-assessment-assessor"
+                      type="text"
+                      placeholder="e.g., Jane Doe, CPP"
+                      value={assessmentAssessor}
+                      onChange={(e) => setAssessmentAssessor(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Employee Count */}

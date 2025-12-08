@@ -14,6 +14,7 @@ import { ExecutiveSummaryCard } from '@/components/analysis/ExecutiveSummaryCard
 import { useToast } from '@/hooks/use-toast';
 import { useAutoGenerateRisks } from '@/hooks/useAutoGenerateRisks';
 import { useProfileAutosave } from '@/hooks/useProfileAutosave';
+import { useAssessmentMetadataAutosave } from '@/hooks/useAssessmentMetadataAutosave';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Factory, AlertCircle, DollarSign, Shield, FileText, CheckCircle, XCircle } from 'lucide-react';
 import type { ManufacturingProfile } from '@shared/schema';
@@ -44,6 +45,14 @@ const IP_TYPE_OPTIONS = [
 export default function ManufacturingDashboard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+
+  // Track if we've initialized from server data to prevent race condition with autosave
+  const [initialized, setInitialized] = useState(false);
+
+  // Assessment metadata state
+  const [assessmentTitle, setAssessmentTitle] = useState<string>('');
+  const [assessmentLocation, setAssessmentLocation] = useState<string>('');
+  const [assessmentAssessor, setAssessmentAssessor] = useState<string>('');
 
   const [annualProductionValue, setAnnualProductionValue] = useState<string>('');
   const [shiftOperations, setShiftOperations] = useState<'1' | '2' | '24/7'>('1');
@@ -85,6 +94,23 @@ export default function ManufacturingDashboard() {
     },
   });
 
+  // Build assessment metadata for autosave
+  const metadataData = useMemo(() => ({
+    title: assessmentTitle,
+    location: assessmentLocation,
+    assessor: assessmentAssessor,
+  }), [assessmentTitle, assessmentLocation, assessmentAssessor]);
+
+  // Autosave assessment metadata changes - only enabled after initialization
+  useAssessmentMetadataAutosave({
+    assessmentId: id,
+    data: metadataData,
+    enabled: initialized,
+    onSaveSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/assessments/${id}`] });
+    },
+  });
+
   const { data: assessment, isLoading } = useQuery<Assessment>({
     queryKey: [`/api/assessments/${id}`],
     enabled: !!id,
@@ -101,31 +127,32 @@ export default function ManufacturingDashboard() {
   const profileSaved = !!assessment?.manufacturingProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
 
-  // Track if we've initialized from server data to prevent race condition with autosave
-  const [initialized, setInitialized] = useState(false);
-
   // Load profile data ONLY on initial load - not after autosave refetches
   useEffect(() => {
     // Only initialize once per assessment ID to prevent autosave race condition
     if (initialized) return;
     
-    if (assessment?.manufacturingProfile) {
-      const profile = assessment.manufacturingProfile;
-      setAnnualProductionValue(profile.annualProductionValue?.toString() ?? '');
-      setShiftOperations(profile.shiftOperations ?? '1');
-      setSelectedIpTypes(profile.ipTypes ?? []);
-      setHazmatPresent(profile.hazmatPresent ?? false);
+    if (assessment) {
+      // Load assessment metadata
+      setAssessmentTitle(assessment.title || '');
+      setAssessmentLocation((assessment as any).location || '');
+      setAssessmentAssessor((assessment as any).assessor || '');
       
-      // TCOR fields
-      setEmployeeCount((profile as any).employeeCount?.toString() ?? '');
-      setAnnualTurnoverRate((profile as any).annualTurnoverRate?.toString() ?? '');
-      setAvgHiringCost((profile as any).avgHiringCost?.toString() ?? '');
-      setAnnualLiabilityEstimates((profile as any).annualLiabilityEstimates?.toString() ?? '');
-      setSecurityIncidentsPerYear((profile as any).securityIncidentsPerYear?.toString() ?? '');
-      setBrandDamageEstimate((profile as any).brandDamageEstimate?.toString() ?? '');
-      setInitialized(true);
-    } else if (assessment && !assessment.manufacturingProfile) {
-      // Assessment loaded but no profile - initialize with defaults
+      if (assessment.manufacturingProfile) {
+        const profile = assessment.manufacturingProfile;
+        setAnnualProductionValue(profile.annualProductionValue?.toString() ?? '');
+        setShiftOperations(profile.shiftOperations ?? '1');
+        setSelectedIpTypes(profile.ipTypes ?? []);
+        setHazmatPresent(profile.hazmatPresent ?? false);
+        
+        // TCOR fields
+        setEmployeeCount((profile as any).employeeCount?.toString() ?? '');
+        setAnnualTurnoverRate((profile as any).annualTurnoverRate?.toString() ?? '');
+        setAvgHiringCost((profile as any).avgHiringCost?.toString() ?? '');
+        setAnnualLiabilityEstimates((profile as any).annualLiabilityEstimates?.toString() ?? '');
+        setSecurityIncidentsPerYear((profile as any).securityIncidentsPerYear?.toString() ?? '');
+        setBrandDamageEstimate((profile as any).brandDamageEstimate?.toString() ?? '');
+      }
       setInitialized(true);
     }
   }, [assessment, initialized]);
@@ -242,6 +269,54 @@ export default function ManufacturingDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Assessment Metadata Section */}
+              <div className="space-y-4 pb-4 border-b">
+                <div className="space-y-2">
+                  <Label htmlFor="assessmentTitle" className="text-sm font-medium">
+                    Assessment Name
+                  </Label>
+                  <Input
+                    id="assessmentTitle"
+                    data-testid="input-assessment-title"
+                    type="text"
+                    placeholder="e.g., Main Production Facility Assessment"
+                    value={assessmentTitle}
+                    onChange={(e) => setAssessmentTitle(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="assessmentLocation" className="text-sm font-medium">
+                      Location
+                    </Label>
+                    <Input
+                      id="assessmentLocation"
+                      data-testid="input-assessment-location"
+                      type="text"
+                      placeholder="e.g., 789 Manufacturing Way"
+                      value={assessmentLocation}
+                      onChange={(e) => setAssessmentLocation(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="assessmentAssessor" className="text-sm font-medium">
+                      Assessor Name
+                    </Label>
+                    <Input
+                      id="assessmentAssessor"
+                      data-testid="input-assessment-assessor"
+                      type="text"
+                      placeholder="e.g., Jane Doe, CPP"
+                      value={assessmentAssessor}
+                      onChange={(e) => setAssessmentAssessor(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="annualValue" className="text-sm sm:text-base">
                   Annual Production Value (USD)
