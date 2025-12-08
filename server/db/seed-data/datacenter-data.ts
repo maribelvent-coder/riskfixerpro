@@ -1,998 +1,766 @@
-import type { InsertThreatLibrary, InsertControlLibrary } from '@/shared/schema';
+/**
+ * Datacenter Threats and Controls Data
+ * Matches the IDs used in datacenter-interview-mapper.ts
+ */
 
-export const DATACENTER_THREATS: InsertThreatLibrary[] = [
+export interface DatacenterThreat {
+  id: string;
+  name: string;
+  category: string;
+  subcategory?: string;
+  description: string;
+  typicalLikelihood?: string;
+  typicalImpact?: string;
+  asIsCode?: string;
+  examples?: string[];
+  active: boolean;
+}
+
+export interface DatacenterControl {
+  id: string;
+  name: string;
+  category: string;
+  subcategory?: string;
+  controlType?: string;
+  description: string;
+  implementation?: string;
+  cost?: string;
+  effectiveness?: number;
+  frameworks?: string[];
+  active: boolean;
+}
+
+export const DATACENTER_THREATS: DatacenterThreat[] = [
   {
-    name: 'Power Failure - Total',
-    category: 'Technical',
-    subcategory: 'Infrastructure Failure',
-    description: 'Complete loss of utility power and backup systems causing data center downtime',
-    riskLevel: 'Critical',
-    likelihood: 'Low',
-    impact: 'Catastrophic',
-    examples: ['Grid failure exceeding UPS runtime', 'Generator failure during outage', 'Fuel delivery failure during extended outage'],
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Cooling System Failure',
-    category: 'Technical',
-    subcategory: 'HVAC Failure',
-    description: 'Loss of cooling causing servers to overheat and shut down',
-    riskLevel: 'Critical',
-    likelihood: 'Medium',
-    impact: 'Catastrophic',
-    examples: ['CRAC unit failure', 'Chiller malfunction', 'Cooling loop leak'],
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Cyber-Physical Attack',
-    category: 'Technical',
-    subcategory: 'Cyber Attack',
-    description: 'Coordinated attack on both digital systems and physical infrastructure',
-    riskLevel: 'Critical',
-    likelihood: 'Low',
-    impact: 'Catastrophic',
-    examples: ['Simultaneous network breach and HVAC manipulation', 'BMS compromise to disable fire suppression', 'Attack on power management systems'],
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Fire - Server Room',
-    category: 'Environmental',
-    subcategory: 'Fire Hazard',
-    description: 'Fire originating from electrical equipment, batteries, or cabling',
-    riskLevel: 'Critical',
-    likelihood: 'Low',
-    impact: 'Catastrophic',
-    examples: ['UPS battery thermal runaway', 'Electrical short in PDU', 'Cable tray fire'],
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Water Intrusion',
-    category: 'Environmental',
-    subcategory: 'Water Damage',
-    description: 'Water entering server rooms from leaks, floods, or cooling system failures',
-    riskLevel: 'Critical',
-    likelihood: 'Medium',
-    impact: 'Major',
-    examples: ['Roof leak during storm', 'Cooling pipe burst', 'Flood from adjacent space'],
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
+    id: 'unauthorized_physical_access',
     name: 'Unauthorized Physical Access',
-    category: 'Human',
-    subcategory: 'Physical Breach',
-    description: 'Unauthorized individuals gaining access to secure server areas',
-    riskLevel: 'Critical',
-    likelihood: 'Low',
-    impact: 'Major',
-    examples: ['Tailgating through mantrap', 'Stolen access credentials', 'Social engineering of security'],
-    frameworks: ['Data Center'],
-    isActive: true
+    category: 'Physical Intrusion',
+    description: 'Unauthorized individuals gaining entry to datacenter through perimeter breach, tailgating, or social engineering. Can lead to data theft, sabotage, or reconnaissance.',
+    typicalLikelihood: 'Medium',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-INT-001',
+    active: true
   },
   {
-    name: 'Equipment Theft',
-    category: 'Human',
-    subcategory: 'Theft',
-    description: 'Removal of servers, storage arrays, or networking equipment containing sensitive data',
-    riskLevel: 'High',
-    likelihood: 'Low',
-    impact: 'Major',
-    examples: ['After-hours server removal', 'Theft during maintenance window', 'Inside job by contractor'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'insider_threat_privileged_access',
+    name: 'Insider Threat - Privileged Access Abuse',
+    category: 'Insider Threat',
+    description: 'Malicious or negligent actions by employees, contractors, or vendors with authorized datacenter access. FBI estimates 60%+ of sabotage involves insiders.',
+    typicalLikelihood: 'Medium',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-INS-001',
+    active: true
   },
   {
-    name: 'DDoS Attack',
-    category: 'Technical',
-    subcategory: 'Cyber Attack',
-    description: 'Distributed denial of service attack overwhelming network infrastructure',
-    riskLevel: 'High',
-    likelihood: 'High',
-    impact: 'Major',
-    examples: ['Volumetric attack saturating bandwidth', 'Application-layer attack on web services', 'Reflection attack'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'tailgating_mantrap_bypass',
+    name: 'Tailgating / Man-trap Bypass',
+    category: 'Physical Intrusion',
+    description: 'Unauthorized entry by following authorized personnel through access control points. 30%+ of physical intrusions involve tailgating.',
+    typicalLikelihood: 'Medium',
+    typicalImpact: 'Major',
+    asIsCode: 'PSC.1-2012-INT-002',
+    active: true
   },
   {
-    name: 'Insider Data Exfiltration',
-    category: 'Human',
-    subcategory: 'Insider Threat',
-    description: 'Authorized personnel stealing or leaking sensitive data',
-    riskLevel: 'Critical',
-    likelihood: 'Medium',
-    impact: 'Catastrophic',
-    examples: ['Administrator copying customer databases', 'Contractor stealing intellectual property', 'Employee selling data to competitors'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'power_failure_extended',
+    name: 'Extended Power Failure',
+    category: 'Infrastructure',
+    description: 'Loss of utility power exceeding UPS and generator capacity, causing complete outage. Average datacenter downtime cost: $9,000/minute.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-INF-001',
+    active: true
   },
   {
-    name: 'Network Equipment Failure',
-    category: 'Technical',
-    subcategory: 'Infrastructure Failure',
-    description: 'Failure of core routers, switches, or firewalls causing connectivity loss',
-    riskLevel: 'High',
-    likelihood: 'Medium',
-    impact: 'Major',
-    examples: ['Core switch failure', 'Router software bug', 'Firewall crash'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'cooling_failure_thermal_event',
+    name: 'Cooling Failure / Thermal Event',
+    category: 'Infrastructure',
+    description: 'Loss of cooling causing equipment to exceed thermal limits. Cascading failures can occur within minutes.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-INF-002',
+    active: true
   },
   {
-    name: 'Earthquake',
+    id: 'fire_equipment_damage',
+    name: 'Fire / Equipment Damage',
+    category: 'Life Safety',
+    description: 'Fire in datacenter causing equipment destruction. Clean agent suppression critical - water destroys electronics.',
+    typicalLikelihood: 'Very Low',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-EMG-001',
+    active: true
+  },
+  {
+    id: 'water_intrusion_damage',
+    name: 'Water Intrusion / Equipment Damage',
     category: 'Environmental',
-    subcategory: 'Natural Disaster',
-    description: 'Seismic activity causing structural damage or equipment displacement',
-    riskLevel: 'High',
-    likelihood: 'Low',
-    impact: 'Catastrophic',
-    examples: ['Server racks toppling', 'Raised floor collapse', 'Utility infrastructure damage'],
-    frameworks: ['Data Center'],
-    isActive: true
+    description: 'Water damage from cooling system leaks, pipe bursts, or flooding. Leading cause of datacenter equipment damage.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Major',
+    asIsCode: 'PSC.1-2012-ENV-001',
+    active: true
   },
   {
-    name: 'Supply Chain Compromise',
-    category: 'Operational',
-    subcategory: 'Supply Chain',
-    description: 'Malicious hardware or software introduced through vendor equipment',
-    riskLevel: 'High',
-    likelihood: 'Low',
-    impact: 'Major',
-    examples: ['Backdoored network equipment', 'Counterfeit components with malware', 'Compromised firmware updates'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'theft_equipment_components',
+    name: 'Theft - Equipment/Components',
+    category: 'Theft',
+    description: 'Theft of servers, drives, memory, or other components. High value density makes datacenters attractive targets.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Major',
+    asIsCode: 'PSC.1-2012-THF-001',
+    active: true
   },
   {
-    name: 'Human Error - Configuration',
-    category: 'Human',
-    subcategory: 'Accidental',
-    description: 'Accidental misconfiguration causing service disruption or data loss',
-    riskLevel: 'High',
-    likelihood: 'High',
-    impact: 'Major',
-    examples: ['Incorrect firewall rule blocking production traffic', 'Accidental deletion of virtual machines', 'Storage array misconfiguration'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'sabotage_infrastructure',
+    name: 'Sabotage - Infrastructure',
+    category: 'Sabotage',
+    description: 'Intentional damage to power, cooling, fire suppression, or other critical infrastructure. EPO and manual release are primary targets.',
+    typicalLikelihood: 'Very Low',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-SAB-001',
+    active: true
   },
   {
-    name: 'Regulatory Audit Failure',
-    category: 'Operational',
-    subcategory: 'Compliance',
-    controlType: 'Detective',
-    description: 'Failure to meet SOC 2, ISO 27001, or other compliance requirements resulting in penalties',
-    riskLevel: 'Medium',
-    likelihood: 'Medium',
-    impact: 'Moderate',
-    examples: ['Missing access logs', 'Inadequate change management', 'Insufficient backup testing'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'cyber_physical_attack',
+    name: 'Cyber-Physical Attack',
+    category: 'Cyber',
+    description: 'Attack on physical security systems (access control, CCTV, BMS) through network exploitation. Can disable monitoring or enable unauthorized access.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Major',
+    asIsCode: 'PSC.1-2012-CYB-001',
+    active: true
   },
   {
-    name: 'Ransomware - Infrastructure',
-    category: 'Technical',
-    subcategory: 'Cyber Attack',
-    description: 'Ransomware encrypting production servers, backups, or management systems',
-    riskLevel: 'Critical',
-    likelihood: 'High',
-    impact: 'Catastrophic',
-    examples: ['Virtualization platform encryption', 'Backup system compromise', 'SAN encryption'],
-    frameworks: ['Data Center'],
-    isActive: true
+    id: 'social_engineering_entry',
+    name: 'Social Engineering - Unauthorized Entry',
+    category: 'Social Engineering',
+    description: 'Manipulating staff to gain unauthorized access through pretexting, impersonation, or deception.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Major',
+    asIsCode: 'PSC.1-2012-SOC-001',
+    active: true
+  },
+  {
+    id: 'terrorism_vehicle_borne',
+    name: 'Terrorism - Vehicle-Borne Attack',
+    category: 'Terrorism',
+    description: 'Vehicle ramming or vehicle-borne explosive device attack. Datacenters are critical infrastructure targets.',
+    typicalLikelihood: 'Very Low',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-TER-001',
+    active: true
+  },
+  {
+    id: 'natural_disaster_impact',
+    name: 'Natural Disaster Impact',
+    category: 'Natural Hazard',
+    description: 'Weather events, earthquakes, floods affecting facility operations. Extended utility outages common.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Critical',
+    asIsCode: 'PSC.1-2012-NAT-001',
+    active: true
+  },
+  {
+    id: 'vendor_contractor_breach',
+    name: 'Vendor/Contractor Security Breach',
+    category: 'Third Party',
+    description: 'Security incident caused by vendor, contractor, or service provider with datacenter access.',
+    typicalLikelihood: 'Low',
+    typicalImpact: 'Major',
+    asIsCode: 'PSC.1-2012-3RD-001',
+    active: true
+  },
+  {
+    id: 'environmental_contamination',
+    name: 'Environmental Contamination',
+    category: 'Environmental',
+    description: 'Airborne contaminants (dust, chemicals, smoke) entering facility and damaging equipment.',
+    typicalLikelihood: 'Very Low',
+    typicalImpact: 'Moderate',
+    asIsCode: 'PSC.1-2012-ENV-002',
+    active: true
   }
 ];
 
-export const DATACENTER_CONTROLS: InsertControlLibrary[] = [
-  // Physical Security Controls
+export const DATACENTER_CONTROLS: DatacenterControl[] = [
+  // Perimeter Controls
   {
-    name: 'Biometric Mantrap Entry',
-    category: 'Physical',
-    subcategory: 'Access Control',
+    id: 'high_security_fencing',
+    name: 'High Security Fencing',
+    category: 'Perimeter',
+    subcategory: 'Barriers',
     controlType: 'Preventive',
-    controlType: 'Preventive',
-    description: 'Two-door mantrap with biometric authentication (fingerprint or palm vein) preventing tailgating',
-    implementation: 'Install mantrap at primary server room entrance with interlocking doors. Require biometric scan for each door. Monitor for anti-passback violations.',
-    cost: 'High',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
+    description: '8ft+ anti-climb fencing with barbed wire or PIDS integration around datacenter perimeter',
+    effectiveness: 8,
+    active: true
   },
   {
-    name: 'Security Operations Center (SOC)',
-    category: 'Physical',
+    id: 'standoff_distance_100ft',
+    name: 'Standoff Distance (100ft+)',
+    category: 'Perimeter',
+    subcategory: 'Design',
+    controlType: 'Preventive',
+    description: 'Minimum 100ft standoff distance from public areas to building for blast protection',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'vehicle_barriers_k_rated',
+    name: 'Vehicle Barriers (K-Rated)',
+    category: 'Perimeter',
+    subcategory: 'Barriers',
+    controlType: 'Preventive',
+    description: 'K4-K12 rated bollards or barriers preventing vehicle-borne attacks',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'perimeter_intrusion_detection',
+    name: 'Perimeter Intrusion Detection System',
+    category: 'Perimeter',
+    subcategory: 'Detection',
+    controlType: 'Detective',
+    description: 'Fence-mounted or ground sensors detecting perimeter breach attempts',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'perimeter_lighting_iesna',
+    name: 'Perimeter Lighting (IESNA Standards)',
+    category: 'Perimeter',
+    subcategory: 'Deterrence',
+    controlType: 'Deterrent',
+    description: 'Security lighting meeting IESNA RP-20 standards for uniform coverage',
+    effectiveness: 6,
+    active: true
+  },
+  {
+    id: 'perimeter_cctv_coverage',
+    name: 'Perimeter CCTV Coverage',
+    category: 'Perimeter',
     subcategory: 'Surveillance',
     controlType: 'Detective',
-    description: '24/7 staffed security operations center monitoring all cameras, alarms, and access control systems',
-    implementation: 'Dedicated SOC room with video wall displaying all camera feeds, alarm panels, and building management system alerts. 24/7 staffing.',
-    cost: 'Very High',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
+    description: '100% CCTV coverage of perimeter with analytics capability',
+    effectiveness: 7,
+    active: true
   },
   {
-    name: 'CCTV - Server Room Interior',
-    category: 'Physical',
-    subcategory: 'Surveillance',
+    id: 'security_patrol_24x7',
+    name: 'Security Patrol (24/7)',
+    category: 'Perimeter',
+    subcategory: 'Guard Force',
     controlType: 'Detective',
-    description: 'High-definition cameras covering all server racks and aisles with 90-day retention',
-    implementation: 'Install cameras with sufficient coverage to read server labels and identify individuals. 4K resolution minimum. Separate storage from production systems.',
-    cost: 'Medium',
+    description: 'Armed or unarmed security patrols around facility perimeter',
     effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Perimeter Fence - 8ft with Anti-Climb',
-    category: 'Physical',
-    subcategory: 'Perimeter Security',
+    id: 'guard_checkpoint',
+    name: 'Guard Checkpoint',
+    category: 'Perimeter',
+    subcategory: 'Guard Force',
     controlType: 'Preventive',
-    description: 'Security fence with anti-climb features and intrusion detection',
-    implementation: '8ft chain-link or ornamental fence with angled barbed wire or anti-climb spikes. Install fence-mounted vibration sensors.',
-    cost: 'High',
-    effectiveness: 6,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Vehicle Barriers - Bollards',
-    category: 'Physical',
-    subcategory: 'Perimeter Security',
-    controlType: 'Preventive',
-    description: 'Crash-rated bollards preventing vehicle ramming attacks',
-    implementation: 'Install K-rated (K4 minimum) bollards around building perimeter, loading docks, and generator fuel tanks.',
-    cost: 'High',
+    description: 'Staffed checkpoint for vehicle and personnel screening at entry',
     effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
+  // Access Control
   {
-    name: 'Security Guard - Armed 24/7',
-    category: 'Physical',
-    subcategory: 'Personnel',
+    id: 'biometric_authentication',
+    name: 'Biometric Authentication',
+    category: 'Access Control',
+    subcategory: 'Identity Verification',
     controlType: 'Preventive',
-    description: 'Armed security officers providing access control and incident response',
-    implementation: 'Minimum 2 guards on duty at all times. One at lobby desk, one on patrol. Armed per local regulations.',
-    cost: 'Very High',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Visitor Escort Policy',
-    category: 'Physical',
-    subcategory: 'Access Control',
-    controlType: 'Preventive',
-    description: 'Mandatory escort of all non-employees in secure areas',
-    implementation: 'Visitors wear distinctive badges and must be accompanied at all times. Log all visits with timestamp and purpose.',
-    cost: 'Low',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Server Rack Locks',
-    category: 'Physical',
-    subcategory: 'Equipment Security',
-    controlType: 'Preventive',
-    description: 'Keyed or electronic locks on all server rack cabinet doors',
-    implementation: 'Install locks on front and rear rack doors. Use electronic locks with access logging for high-security environments.',
-    cost: 'Medium',
-    effectiveness: 6,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Power Infrastructure Controls
-  {
-    name: 'Dual Utility Power Feeds',
-    category: 'Technical',
-    subcategory: 'Power',
-    controlType: 'Preventive',
-    description: 'Redundant utility power from separate substations',
-    implementation: 'Contract with utility for two feeds from different substations. Install automatic transfer switch (ATS) to switch between feeds.',
-    cost: 'Very High',
+    description: 'Fingerprint, palm vein, or iris recognition for access control',
     effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'UPS System - N+1 Redundancy',
-    category: 'Technical',
-    subcategory: 'Power',
+    id: 'multi_factor_access',
+    name: 'Multi-Factor Authentication',
+    category: 'Access Control',
+    subcategory: 'Identity Verification',
     controlType: 'Preventive',
-    description: 'Uninterruptible power supply with one additional unit beyond minimum capacity requirement',
-    implementation: 'Size UPS for full data center load. Add one extra UPS module. Configure for parallel redundant operation.',
-    cost: 'Very High',
+    description: 'Card + PIN + biometric for high-security areas',
     effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Diesel Generator - N+1',
-    category: 'Technical',
-    subcategory: 'Power',
+    id: 'mantrap_portals',
+    name: 'Man-trap Portal System',
+    category: 'Access Control',
+    subcategory: 'Anti-Tailgating',
     controlType: 'Preventive',
-    description: 'Emergency generators with redundancy for extended power outages',
-    implementation: 'Install generators sized for 100% data center load plus one extra. Minimum 72-hour fuel capacity on-site.',
-    cost: 'Very High',
+    description: 'Interlocking door system with weight/occupancy detection preventing tailgating',
     effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Generator Fuel Tank - 7 Day Capacity',
-    category: 'Technical',
-    subcategory: 'Power',
-    controlType: 'Preventive',
-    description: 'Diesel fuel storage sufficient for one week of continuous operation',
-    implementation: 'Install double-wall fuel tank sized for 168 hours of runtime. Fuel delivery contract with 24-hour response.',
-    cost: 'High',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Generator Monthly Load Test',
-    category: 'Operational',
-    subcategory: 'Testing',
+    id: 'tailgating_detection',
+    name: 'Tailgating Detection System',
+    category: 'Access Control',
+    subcategory: 'Anti-Tailgating',
     controlType: 'Detective',
-    description: 'Monthly testing of generators under full load to ensure reliability',
-    implementation: 'Schedule monthly test with load bank. Test each generator individually and in parallel. Document runtime and fuel consumption.',
-    cost: 'Low',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'PDU Monitoring',
-    category: 'Technical',
-    subcategory: 'Power',
-    controlType: 'Preventive',
-    description: 'Real-time monitoring of power distribution unit load, voltage, and temperature',
-    implementation: 'Install intelligent PDUs with per-outlet monitoring. Integrate with DCIM system. Set alerts for 80% capacity.',
-    cost: 'Medium',
+    description: 'Optical sensors or video analytics detecting tailgating attempts',
     effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'A+B Power Distribution',
-    category: 'Technical',
-    subcategory: 'Power',
+    id: 'visitor_management_system',
+    name: 'Visitor Management System',
+    category: 'Access Control',
+    subcategory: 'Visitor Control',
     controlType: 'Preventive',
-    description: 'Dual power paths to all critical equipment from separate UPS systems',
-    implementation: 'Design electrical distribution with A-side and B-side paths. Dual power supplies in all servers. Configure for automatic failover.',
-    cost: 'High',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Cooling Infrastructure Controls
-  {
-    name: 'CRAC Units - N+1 Redundancy',
-    category: 'Technical',
-    subcategory: 'Cooling',
-    controlType: 'Preventive',
-    description: 'Computer room air conditioning with one extra unit beyond minimum requirement',
-    implementation: 'Size CRAC units for full heat load. Add one extra unit. Configure for automatic rotation and failover.',
-    cost: 'Very High',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Hot Aisle Containment',
-    category: 'Technical',
-    subcategory: 'Cooling',
-    controlType: 'Preventive',
-    description: 'Physical barriers containing hot air from server exhausts for efficient cooling',
-    implementation: 'Install doors and ceiling panels to enclose hot aisles. Ensure no gaps for hot air escape.',
-    cost: 'Medium',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Cold Aisle Containment',
-    category: 'Technical',
-    subcategory: 'Cooling',
-    controlType: 'Preventive',
-    description: 'Physical barriers containing cold supply air for server intakes',
-    implementation: 'Install doors and ceiling panels to enclose cold aisles. Maintain positive pressure to prevent hot air intrusion.',
-    cost: 'Medium',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Temperature & Humidity Monitoring',
-    category: 'Technical',
-    subcategory: 'Environmental Monitoring',
-    controlType: 'Detective',
-    description: 'Sensors throughout server room measuring temperature and humidity in real-time',
-    implementation: 'Install sensors in hot aisles, cold aisles, and above racks. Alert on deviations from ASHRAE guidelines (18-27°C, 40-60% RH).',
-    cost: 'Low',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Chilled Water Plant - Redundant',
-    category: 'Technical',
-    subcategory: 'Cooling',
-    controlType: 'Preventive',
-    description: 'Redundant chillers and cooling towers for building chilled water system',
-    implementation: 'Install N+1 chillers sized for full cooling load. Redundant cooling towers and pumps. Automatic switchover on failure.',
-    cost: 'Very High',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Raised Floor Airflow Management',
-    category: 'Technical',
-    subcategory: 'Cooling',
-    controlType: 'Preventive',
-    description: 'Proper sealing and design of raised floor plenum for efficient cold air delivery',
-    implementation: 'Seal all cable penetrations with brushed grommets. Install perforated tiles only in cold aisles. Maintain minimum 24" plenum depth.',
-    cost: 'Low',
+    description: 'Pre-registration, ID verification, badge printing, and tracking system',
     effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Fire Suppression Controls
-  {
-    name: 'VESDA Fire Detection',
-    category: 'Technical',
-    subcategory: 'Fire Protection',
-    controlType: 'Preventive',
-    description: 'Very Early Smoke Detection Apparatus using laser-based air sampling for earliest possible fire detection',
-    implementation: 'Install air sampling pipes throughout server room. Set multi-level alerts: Alert, Action, Fire 1, Fire 2.',
-    cost: 'High',
-    effectiveness: 10,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Clean Agent Suppression (FM-200/Novec)',
-    category: 'Technical',
-    subcategory: 'Fire Protection',
+    id: 'escort_requirements',
+    name: 'Escort Requirements',
+    category: 'Access Control',
+    subcategory: 'Visitor Control',
     controlType: 'Preventive',
-    description: 'Gas-based fire suppression safe for electronics and personnel',
-    implementation: 'Install FM-200 or Novec 1230 system sized for room volume. Include abort switch at exits. Test discharge annually.',
-    cost: 'Very High',
-    effectiveness: 10,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Pre-Action Sprinkler System',
-    category: 'Technical',
-    subcategory: 'Fire Protection',
-    controlType: 'Preventive',
-    description: 'Double-interlock sprinkler system requiring both smoke detection and sprinkler head activation',
-    implementation: 'Install dry-pipe pre-action system. Requires smoke detector activation AND thermal head release before water flows.',
-    cost: 'High',
+    description: 'Mandatory escort for all visitors and non-badged personnel',
     effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Water Leak Detection',
-    category: 'Technical',
-    subcategory: 'Environmental Monitoring',
-    controlType: 'Detective',
-    description: 'Sensors detecting water on floor or in ceiling to prevent equipment damage',
-    implementation: 'Install rope-style or spot sensors under raised floor, around CRAC units, and near cooling pipes. Alarm to SOC.',
-    cost: 'Low',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Fire-Rated Walls & Doors',
-    category: 'Physical',
-    subcategory: 'Fire Protection',
+    id: 'cabinet_level_locks',
+    name: 'Cabinet-Level Locks',
+    category: 'Access Control',
+    subcategory: 'Server Access',
     controlType: 'Preventive',
-    description: '2-hour fire-rated construction isolating data center from adjacent spaces',
-    implementation: 'Construct walls and doors to 2-hour fire rating minimum. Seal all penetrations with fire-rated materials.',
-    cost: 'High',
+    description: 'Electronic locks on individual server cabinets with audit logging',
     effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Network Security Controls
-  {
-    name: 'Next-Gen Firewall with IPS',
-    category: 'Technical',
-    subcategory: 'Cyber Defense',
-    controlType: 'Preventive',
-    description: 'Stateful firewall with intrusion prevention, application awareness, and threat intelligence',
-    implementation: 'Deploy redundant firewalls at network perimeter. Enable IPS signatures. Configure application-layer filtering.',
-    cost: 'High',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'DDoS Mitigation Service',
-    category: 'Technical',
-    subcategory: 'Cyber Defense',
-    controlType: 'Preventive',
-    description: 'Cloud-based or on-premise DDoS traffic scrubbing to maintain availability',
-    implementation: 'Contract with DDoS mitigation provider (Cloudflare, Akamai). Configure BGP routing for attack traffic redirection.',
-    cost: 'Medium',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Network Segmentation - VLANs',
-    category: 'Technical',
-    subcategory: 'Network Architecture',
-    controlType: 'Preventive',
-    description: 'Logical separation of production, management, and DMZ networks',
-    implementation: 'Create separate VLANs for server production traffic, out-of-band management, storage, and DMZ. Firewall between segments.',
-    cost: 'Low',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Network Traffic Analysis (NTA)',
-    category: 'Technical',
-    subcategory: 'Cyber Defense',
-    controlType: 'Preventive',
-    description: 'Continuous monitoring and analysis of network flows to detect anomalies',
-    implementation: 'Deploy NTA sensors on core switches. Use machine learning to baseline normal traffic. Alert on deviations.',
-    cost: 'Medium',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Out-of-Band Management Network',
-    category: 'Technical',
-    subcategory: 'Network Architecture',
-    controlType: 'Preventive',
-    description: 'Separate network for server management interfaces (IPMI, iLO) isolated from production',
-    implementation: 'Dedicated switches and VLANs for management interfaces. No routing to production network. Jump host access only.',
-    cost: 'Medium',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Network Redundancy - N+1 Switches',
-    category: 'Technical',
-    subcategory: 'Network Architecture',
-    controlType: 'Preventive',
-    description: 'Redundant core and distribution layer switches with automatic failover',
-    implementation: 'Pair of core switches in active-active or active-standby. Dual uplinks from all access switches. Sub-second failover.',
-    cost: 'High',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Cybersecurity Controls
-  {
-    name: 'Multi-Factor Authentication (MFA)',
-    category: 'Technical',
-    subcategory: 'Access Control',
-    controlType: 'Preventive',
-    description: 'Requirement for two authentication factors for all administrative access',
-    implementation: 'Enforce MFA for SSH, RDP, VPN, and web consoles. Use hardware tokens or authenticator apps. No SMS-based MFA.',
-    cost: 'Low',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Privileged Access Management (PAM)',
-    category: 'Technical',
-    subcategory: 'Access Control',
-    controlType: 'Preventive',
-    description: 'System managing, recording, and auditing all privileged account access',
-    implementation: 'Deploy PAM solution (CyberArk, BeyondTrust). Check out credentials on-demand. Record all sessions. Rotate passwords automatically.',
-    cost: 'High',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Security Information & Event Management (SIEM)',
-    category: 'Technical',
+    id: 'access_logging_audit',
+    name: 'Access Logging & Audit',
+    category: 'Access Control',
     subcategory: 'Monitoring',
     controlType: 'Detective',
-    description: 'Centralized logging and correlation of security events across all systems',
-    implementation: 'Deploy SIEM platform (Splunk, QRadar). Collect logs from firewalls, servers, applications. Create correlation rules for threats.',
-    cost: 'High',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Endpoint Detection & Response (EDR)',
-    category: 'Technical',
-    subcategory: 'Cyber Defense',
-    controlType: 'Preventive',
-    description: 'Advanced malware detection and automated response on servers and workstations',
-    implementation: 'Deploy EDR agents (CrowdStrike, SentinelOne). Enable behavioral detection. Configure automated isolation of compromised systems.',
-    cost: 'Medium',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Vulnerability Scanning - Weekly',
-    category: 'Operational',
-    subcategory: 'Security Operations',
-    controlType: 'Detective',
-    description: 'Automated scanning for security vulnerabilities in operating systems and applications',
-    implementation: 'Schedule authenticated scans weekly. Prioritize by CVSS score. Patch critical vulnerabilities within 48 hours.',
-    cost: 'Low',
+    description: 'Comprehensive logging of all access events with regular audit review',
     effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Patch Management Process',
-    category: 'Operational',
-    subcategory: 'Security Operations',
+    id: 'access_review_quarterly',
+    name: 'Quarterly Access Reviews',
+    category: 'Access Control',
+    subcategory: 'Administration',
     controlType: 'Detective',
-    description: 'Systematic process for testing and deploying security patches',
-    implementation: 'Test patches in non-production. Deploy critical patches within 30 days. Document exceptions with compensating controls.',
-    cost: 'Low',
+    description: 'Regular review of access rights to identify and remove unnecessary privileges',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'access_revocation_immediate',
+    name: 'Immediate Access Revocation',
+    category: 'Access Control',
+    subcategory: 'Administration',
+    controlType: 'Preventive',
+    description: 'Same-day access revocation for terminated personnel',
     effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Backup System - 3-2-1 Rule',
-    category: 'Operational',
-    subcategory: 'Business Continuity',
-    controlType: 'Corrective',
-    description: '3 copies of data, 2 different media types, 1 off-site copy',
-    implementation: 'Daily incremental, weekly full backups. One copy on disk, one on tape. Off-site tape storage or cloud backup.',
-    cost: 'Medium',
+    id: 'customer_access_segregation',
+    name: 'Customer Access Segregation',
+    category: 'Access Control',
+    subcategory: 'Multi-Tenant',
+    controlType: 'Preventive',
+    description: 'Physical or logical separation preventing cross-customer access',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'two_person_rule',
+    name: 'Two-Person Rule',
+    category: 'Access Control',
+    subcategory: 'High Security',
+    controlType: 'Preventive',
+    description: 'Dual authorization required for sensitive areas or operations',
+    effectiveness: 8,
+    active: true
+  },
+  // Surveillance
+  {
+    id: 'cctv_comprehensive_coverage',
+    name: 'CCTV Comprehensive Coverage',
+    category: 'Surveillance',
+    subcategory: 'Video',
+    controlType: 'Detective',
+    description: '100% camera coverage of all areas with no blind spots',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'cctv_hands_on_servers',
+    name: 'Hands-On-Server Cameras',
+    category: 'Surveillance',
+    subcategory: 'Video',
+    controlType: 'Detective',
+    description: 'High-resolution cameras focused on server racks capturing all interactions',
     effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Immutable Backup Storage',
-    category: 'Technical',
-    subcategory: 'Business Continuity',
+    id: 'video_analytics',
+    name: 'Video Analytics',
+    category: 'Surveillance',
+    subcategory: 'Video',
+    controlType: 'Detective',
+    description: 'AI-powered video analytics detecting suspicious behavior patterns',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'noc_soc_24x7',
+    name: 'NOC/SOC 24/7 Monitoring',
+    category: 'Surveillance',
+    subcategory: 'Monitoring',
+    controlType: 'Detective',
+    description: '24/7 staffed operations center monitoring all security systems',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'alarm_monitoring_central',
+    name: 'Central Alarm Monitoring',
+    category: 'Surveillance',
+    subcategory: 'Monitoring',
+    controlType: 'Detective',
+    description: 'All alarms monitored centrally with defined response procedures',
+    effectiveness: 8,
+    active: true
+  },
+  // Power Infrastructure
+  {
+    id: 'ups_n_plus_1',
+    name: 'UPS (N+1 Redundancy)',
+    category: 'Power',
+    subcategory: 'UPS',
+    controlType: 'Preventive',
+    description: 'Redundant UPS configuration ensuring continuity during component failure',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'redundant_utility_feeds',
+    name: 'Redundant Utility Feeds',
+    category: 'Power',
+    subcategory: 'Utility',
+    controlType: 'Preventive',
+    description: 'Dual utility feeds from independent substations',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'generator_automatic_transfer',
+    name: 'Generator Automatic Transfer',
+    category: 'Power',
+    subcategory: 'Generator',
+    controlType: 'Preventive',
+    description: 'Automatic transfer switch with <10 second transfer time',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'generator_fuel_72_hours',
+    name: 'Generator Fuel (72+ Hours)',
+    category: 'Power',
+    subcategory: 'Generator',
+    controlType: 'Preventive',
+    description: 'On-site fuel storage for minimum 72 hours of generator operation',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'fuel_storage_security',
+    name: 'Fuel Storage Security',
+    category: 'Power',
+    subcategory: 'Generator',
+    controlType: 'Preventive',
+    description: 'Physical security for fuel tanks preventing tampering or theft',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'epo_protection',
+    name: 'EPO Protection',
+    category: 'Power',
+    subcategory: 'Safety',
+    controlType: 'Preventive',
+    description: 'Emergency Power Off button protection preventing accidental or malicious activation',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'electrical_room_access',
+    name: 'Electrical Room Access Control',
+    category: 'Power',
+    subcategory: 'Access',
+    controlType: 'Preventive',
+    description: 'Restricted access to electrical rooms with logging',
+    effectiveness: 8,
+    active: true
+  },
+  // Cooling Infrastructure
+  {
+    id: 'cooling_redundancy',
+    name: 'Cooling Redundancy (N+1 or 2N)',
+    category: 'Cooling',
+    subcategory: 'HVAC',
+    controlType: 'Preventive',
+    description: 'Redundant cooling capacity ensuring operation during unit failure',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'temperature_humidity_monitoring',
+    name: 'Temperature & Humidity Monitoring',
+    category: 'Cooling',
+    subcategory: 'Environmental',
+    controlType: 'Detective',
+    description: 'Real-time monitoring with alerting for environmental conditions',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'hot_cold_aisle_containment',
+    name: 'Hot/Cold Aisle Containment',
+    category: 'Cooling',
+    subcategory: 'Design',
+    controlType: 'Preventive',
+    description: 'Physical containment improving cooling efficiency',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'chiller_plant_security',
+    name: 'Chiller Plant Security',
+    category: 'Cooling',
+    subcategory: 'Access',
+    controlType: 'Preventive',
+    description: 'Physical security for chiller plant preventing tampering',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'environmental_sensors',
+    name: 'Environmental Sensors',
+    category: 'Cooling',
+    subcategory: 'Environmental',
+    controlType: 'Detective',
+    description: 'Comprehensive sensor network for temperature, humidity, airflow',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'environmental_contamination_protection',
+    name: 'Environmental Contamination Protection',
+    category: 'Cooling',
+    subcategory: 'Environmental',
+    controlType: 'Preventive',
+    description: 'Air filtration and positive pressure preventing contamination ingress',
+    effectiveness: 7,
+    active: true
+  },
+  // Fire Protection
+  {
+    id: 'vesda_early_detection',
+    name: 'VESDA Early Detection',
+    category: 'Fire',
+    subcategory: 'Detection',
+    controlType: 'Detective',
+    description: 'Very Early Smoke Detection Apparatus providing earliest possible warning',
+    effectiveness: 9,
+    active: true
+  },
+  {
+    id: 'clean_agent_suppression',
+    name: 'Clean Agent Suppression',
+    category: 'Fire',
+    subcategory: 'Suppression',
     controlType: 'Corrective',
-    description: 'Backup storage that cannot be modified or deleted by ransomware',
-    implementation: 'Use write-once-read-many (WORM) tape or cloud storage with object lock. Minimum 30-day retention before deletion allowed.',
-    cost: 'Medium',
-    effectiveness: 10,
-    frameworks: ['Data Center'],
-    isActive: true
+    description: 'FM-200, Novec 1230, or inert gas suppression protecting electronics',
+    effectiveness: 9,
+    active: true
   },
   {
-    name: 'Backup Testing - Monthly',
-    category: 'Operational',
+    id: 'fire_zone_suppression',
+    name: 'Zone-Based Suppression',
+    category: 'Fire',
+    subcategory: 'Suppression',
+    controlType: 'Corrective',
+    description: 'Independent fire suppression zones limiting agent discharge area',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'manual_release_protection',
+    name: 'Manual Release Protection',
+    category: 'Fire',
+    subcategory: 'Safety',
+    controlType: 'Preventive',
+    description: 'Protected manual release controls preventing accidental discharge',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'fire_system_monitoring',
+    name: 'Fire System Monitoring',
+    category: 'Fire',
+    subcategory: 'Monitoring',
+    controlType: 'Detective',
+    description: '24/7 monitoring of fire detection and suppression systems',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'fire_system_testing_quarterly',
+    name: 'Fire System Testing (Quarterly)',
+    category: 'Fire',
+    subcategory: 'Maintenance',
+    controlType: 'Detective',
+    description: 'Regular testing of fire detection and suppression systems',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'water_leak_detection',
+    name: 'Water Leak Detection',
+    category: 'Fire',
+    subcategory: 'Environmental',
+    controlType: 'Detective',
+    description: 'Sensors detecting water leaks under raised floor and critical areas',
+    effectiveness: 8,
+    active: true
+  },
+  // Personnel Security
+  {
+    id: 'background_checks_comprehensive',
+    name: 'Comprehensive Background Checks',
+    category: 'Personnel',
+    subcategory: 'Screening',
+    controlType: 'Preventive',
+    description: 'Criminal, credit, education, and employment verification for all staff',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'security_training_annual',
+    name: 'Annual Security Training',
+    category: 'Personnel',
+    subcategory: 'Training',
+    controlType: 'Preventive',
+    description: 'Mandatory security awareness training for all personnel',
+    effectiveness: 6,
+    active: true
+  },
+  {
+    id: 'contractor_vetting',
+    name: 'Contractor Vetting',
+    category: 'Personnel',
+    subcategory: 'Screening',
+    controlType: 'Preventive',
+    description: 'Background screening and security requirements for all contractors',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'termination_procedures',
+    name: 'Termination Procedures',
+    category: 'Personnel',
+    subcategory: 'Administration',
+    controlType: 'Preventive',
+    description: 'Documented procedures for access revocation upon termination',
+    effectiveness: 8,
+    active: true
+  },
+  // Operations
+  {
+    id: 'incident_response_plan',
+    name: 'Incident Response Plan',
+    category: 'Operations',
+    subcategory: 'Planning',
+    controlType: 'Corrective',
+    description: 'Documented incident response procedures with regular testing',
+    effectiveness: 8,
+    active: true
+  },
+  {
+    id: 'tool_control',
+    name: 'Tool Control Program',
+    category: 'Operations',
+    subcategory: 'Physical Security',
+    controlType: 'Preventive',
+    description: 'Tracking and control of tools that could be used for theft or sabotage',
+    effectiveness: 6,
+    active: true
+  },
+  {
+    id: 'media_destruction',
+    name: 'Media Destruction',
+    category: 'Operations',
+    subcategory: 'Data Protection',
+    controlType: 'Preventive',
+    description: 'Secure destruction of storage media preventing data recovery',
+    effectiveness: 9,
+    active: true
+  },
+  // Compliance & Audit
+  {
+    id: 'audit_frequency_quarterly',
+    name: 'Quarterly Security Audits',
+    category: 'Compliance',
+    subcategory: 'Audit',
+    controlType: 'Detective',
+    description: 'Regular internal security audits of physical controls',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'penetration_testing_annual',
+    name: 'Annual Penetration Testing',
+    category: 'Compliance',
     subcategory: 'Testing',
     controlType: 'Detective',
-    description: 'Regular testing of backup restoration to verify recoverability',
-    implementation: 'Monthly test restore of random systems to isolated environment. Document restore time. Test DR failover quarterly.',
-    cost: 'Low',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Change Management Process',
-    category: 'Operational',
-    subcategory: 'Security Operations',
-    controlType: 'Detective',
-    description: 'Formal approval and documentation of all infrastructure changes',
-    implementation: 'Require change request tickets. Peer review of changes. Maintenance windows for high-risk changes. Rollback plan required.',
-    cost: 'Low',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Compliance & Audit Controls
-  {
-    name: 'SOC 2 Type II Audit - Annual',
-    category: 'Operational',
-    subcategory: 'Compliance',
-    controlType: 'Detective',
-    description: 'Annual third-party audit of security controls against AICPA SOC 2 criteria',
-    implementation: 'Engage qualified CPA firm. Provide evidence of control operation over 6-12 month period. Remediate exceptions.',
-    cost: 'High',
-    effectiveness: 10,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'ISO 27001 Certification',
-    category: 'Operational',
-    subcategory: 'Compliance',
-    controlType: 'Detective',
-    description: 'International standard for information security management systems',
-    implementation: 'Implement ISMS with policies, procedures, and controls. Annual certification audit. Internal audits quarterly.',
-    cost: 'High',
-    effectiveness: 10,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'PCI-DSS Compliance',
-    category: 'Operational',
-    subcategory: 'Compliance',
-    controlType: 'Detective',
-    description: 'Payment Card Industry Data Security Standard for organizations handling card data',
-    implementation: 'Quarterly vulnerability scans by approved vendor. Annual penetration test. Quarterly network segmentation testing.',
-    cost: 'Medium',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Access Log Retention - 1 Year',
-    category: 'Operational',
-    subcategory: 'Audit & Logging',
-    controlType: 'Detective',
-    description: 'Retention of all physical and logical access logs for forensic investigation',
-    implementation: 'Store badge swipe logs, server authentication logs, and firewall logs for minimum 12 months. Immutable storage.',
-    cost: 'Low',
+    description: 'Annual physical penetration testing by qualified third party',
     effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Security Awareness Training',
-    category: 'Operational',
-    subcategory: 'Personnel',
-    controlType: 'Preventive',
-    description: 'Annual mandatory training for all personnel on security policies and threats',
-    implementation: 'Online training modules covering phishing, social engineering, physical security. Annual completion required. Track compliance.',
-    cost: 'Low',
-    effectiveness: 6,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Background Checks - All Staff',
-    category: 'Operational',
-    subcategory: 'Personnel',
-    controlType: 'Preventive',
-    description: 'Criminal background checks for all employees and contractors with data center access',
-    implementation: 'Conduct background checks before granting access. Renew every 3 years. Document exceptions with compensating controls.',
-    cost: 'Low',
-    effectiveness: 6,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Incident Response Plan',
-    category: 'Operational',
-    subcategory: 'Security Operations',
+    id: 'vulnerability_scanning',
+    name: 'Vulnerability Scanning',
+    category: 'Compliance',
+    subcategory: 'Testing',
     controlType: 'Detective',
-    description: 'Documented procedures for responding to security incidents',
-    implementation: 'Define incident severity levels, escalation procedures, and communication plans. Test plan with tabletop exercises annually.',
-    cost: 'Low',
+    description: 'Regular scanning for physical security vulnerabilities',
     effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   },
   {
-    name: 'Disaster Recovery Plan',
-    category: 'Operational',
-    subcategory: 'Business Continuity',
-    controlType: 'Corrective',
-    description: 'Documented procedures for recovering IT systems after catastrophic event',
-    implementation: 'Document RPO/RTO for each system. Define recovery procedures. Test failover to DR site annually.',
-    cost: 'Low',
+    id: 'change_management',
+    name: 'Change Management',
+    category: 'Compliance',
+    subcategory: 'Process',
+    controlType: 'Preventive',
+    description: 'Documented change management for physical security systems',
+    effectiveness: 7,
+    active: true
+  },
+  {
+    id: 'soc2_type_ii',
+    name: 'SOC 2 Type II Certification',
+    category: 'Compliance',
+    subcategory: 'Certification',
+    controlType: 'Detective',
+    description: 'Annual SOC 2 Type II audit and certification',
     effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Business Continuity Plan',
-    category: 'Operational',
-    subcategory: 'Business Continuity',
-    controlType: 'Corrective',
-    description: 'Plan for maintaining critical business operations during facility outage',
-    implementation: 'Identify critical processes and dependencies. Define alternate operating procedures. Test with exercises annually.',
-    cost: 'Low',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Third-Party Risk Assessment',
-    category: 'Operational',
-    subcategory: 'Vendor Management',
-    controlType: 'Preventive',
-    description: 'Evaluation of security posture of vendors with access to systems or data',
-    implementation: 'Require security questionnaires (SIG, CAIQ). Review SOC 2 reports. Conduct on-site audits for high-risk vendors.',
-    cost: 'Low',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Building Management Controls
-  {
-    name: 'Building Management System (BMS)',
-    category: 'Technical',
-    subcategory: 'Facility Management',
-    controlType: 'Detective',
-    description: 'Integrated control system managing HVAC, power, lighting, and alarms',
-    implementation: 'Deploy BMS with dashboards for all facility systems. Set automated responses (e.g., cooling loss triggers alerts). Secure BMS network.',
-    cost: 'High',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Data Center Infrastructure Management (DCIM)',
-    category: 'Technical',
-    subcategory: 'Facility Management',
-    controlType: 'Detective',
-    description: 'Software providing real-time monitoring and management of power, cooling, and capacity',
-    implementation: 'Deploy DCIM platform integrating power meters, environmental sensors, and asset tracking. Generate capacity planning reports.',
-    cost: 'High',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Capacity Planning Process',
-    category: 'Operational',
-    subcategory: 'Facility Management',
-    controlType: 'Detective',
-    description: 'Systematic tracking and forecasting of power, cooling, and space utilization',
-    implementation: 'Monthly capacity reports showing utilization trends. Alert when power/cooling exceeds 70%. Plan expansion 18 months in advance.',
-    cost: 'Low',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Seismic Bracing',
-    category: 'Physical',
-    subcategory: 'Structural',
-    controlType: 'Preventive',
-    description: 'Earthquake-resistant mounting for racks, HVAC, and power equipment',
-    implementation: 'Install seismic bracing per local building codes. Anchor all racks to floor and ceiling. Brace CRAC units and UPS cabinets.',
-    cost: 'Medium',
-    effectiveness: 9,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Raised Floor System',
-    category: 'Physical',
-    subcategory: 'Infrastructure',
-    controlType: 'Preventive',
-    description: 'Elevated floor providing plenum for cooling airflow and cable management',
-    implementation: 'Install raised floor with 24-36" clearance. Heavy-duty tiles (1000+ lb rating). Cable ladder system for structured cabling.',
-    cost: 'High',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Cable Management System',
-    category: 'Physical',
-    subcategory: 'Infrastructure',
-    controlType: 'Preventive',
-    description: 'Structured system for organizing power and data cables reducing clutter and airflow blockage',
-    implementation: 'Install overhead cable trays or under-floor cable ladder. Label all cables. Color-code by type (power=red, network=blue).',
-    cost: 'Medium',
-    effectiveness: 6,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Asset Inventory Management',
-    category: 'Operational',
-    subcategory: 'Asset Management',
-    controlType: 'Detective',
-    description: 'Accurate tracking of all IT equipment with CMDB',
-    implementation: 'Maintain configuration management database. Barcode all equipment. Audit inventory quarterly. Track serial numbers and ownership.',
-    cost: 'Low',
-    effectiveness: 6,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Decommissioning Procedure',
-    category: 'Operational',
-    subcategory: 'Asset Management',
-    controlType: 'Detective',
-    description: 'Secure process for retiring equipment including data sanitization',
-    implementation: 'Document chain of custody. Wipe drives per NIST 800-88. Physically destroy drives containing sensitive data. Log disposition.',
-    cost: 'Low',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  
-  // Environmental Controls
-  {
-    name: 'Fire Extinguishers - Class C',
-    category: 'Physical',
-    subcategory: 'Fire Protection',
-    controlType: 'Preventive',
-    description: 'Portable fire extinguishers rated for electrical fires',
-    implementation: 'Place CO2 or dry chemical extinguishers throughout data center. Maximum 75ft travel distance. Monthly visual inspection.',
-    cost: 'Low',
-    effectiveness: 5,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Rodent Control Program',
-    category: 'Physical',
-    subcategory: 'Environmental',
-    controlType: 'Preventive',
-    description: 'Preventative measures to exclude rodents that can damage cabling',
-    implementation: 'Seal all penetrations. Quarterly pest control service. Inspect for droppings monthly. Bait stations outside building.',
-    cost: 'Low',
-    effectiveness: 5,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Humidity Control System',
-    category: 'Technical',
-    subcategory: 'Environmental',
-    controlType: 'Preventive',
-    description: 'Active humidification and dehumidification maintaining 40-60% relative humidity',
-    implementation: 'Install humidifiers in CRAC units. Dehumidification via chilled water. Monitor RH continuously. Alert on out-of-range conditions.',
-    cost: 'Medium',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Grounding & Bonding System',
-    category: 'Technical',
-    subcategory: 'Electrical',
-    controlType: 'Preventive',
-    description: 'Proper electrical grounding preventing static discharge and electrical faults',
-    implementation: 'Install ground bar in data center. Bond all racks, cable trays, and raised floor to ground. Test ground resistance annually.',
-    cost: 'Low',
-    effectiveness: 8,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Lightning Protection System',
-    category: 'Physical',
-    subcategory: 'Electrical',
-    controlType: 'Preventive',
-    description: 'Lightning rods and surge arrestors protecting facility from strikes',
-    implementation: 'Install lightning rods on roof. Surge arrestors on utility power feeds. Ground connection to earth ground system.',
-    cost: 'Medium',
-    effectiveness: 7,
-    frameworks: ['Data Center'],
-    isActive: true
-  },
-  {
-    name: 'Electrostatic Discharge (ESD) Protection',
-    category: 'Physical',
-    subcategory: 'Environmental',
-    controlType: 'Preventive',
-    description: 'Anti-static flooring and grounding straps preventing component damage',
-    implementation: 'Install conductive raised floor tiles. Provide ESD wrist straps at workbenches. Maintain 40-60% RH to reduce static.',
-    cost: 'Low',
-    effectiveness: 6,
-    frameworks: ['Data Center'],
-    isActive: true
+    active: true
   }
 ];
