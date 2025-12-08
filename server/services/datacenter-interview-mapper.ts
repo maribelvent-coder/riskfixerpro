@@ -28,7 +28,7 @@
 
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
-import { assessments, riskScenarios, threats } from '@shared/schema';
+import { assessments, riskScenarios, threatLibrary } from '@shared/schema';
 
 // ============================================================================
 // INTERFACES
@@ -52,8 +52,8 @@ export interface CalculatedRiskInputs {
 }
 
 export interface NewRiskScenario {
-  assessmentId: number;
-  threatId: number;
+  assessmentId: string;
+  threatLibraryId: string;
   threatLikelihood: number;
   vulnerability: number;
   impact: number;
@@ -71,7 +71,7 @@ export interface GeneratedScenarioResult {
   highRisks: number;
   mediumRisks: number;
   lowRisks: number;
-  riskScenarioIds: number[];
+  riskScenarioIds: string[];
 }
 
 export interface SecurityScoreResult {
@@ -1430,10 +1430,8 @@ export async function initializeRiskScenariosFromInterview(
     else if (riskLevel === 'medium') mediumCount++;
     else lowCount++;
 
-    // Look up threat ID in database
-    const threatRecord = await db.query.threats.findFirst({
-      where: eq(threats.name, threat.name),
-    });
+    // Look up threat ID in database using the mapper's threat.id
+    const [threatRecord] = await db.select().from(threatLibrary).where(eq(threatLibrary.id, threat.id)).limit(1);
 
     const scenarioDescription = generateScenarioDescription(
       interviewResponses,
@@ -1444,8 +1442,8 @@ export async function initializeRiskScenariosFromInterview(
     );
 
     scenarios.push({
-      assessmentId,
-      threatId: threatRecord?.id || 0,
+      assessmentId: assessmentId.toString(),
+      threatLibraryId: threatRecord?.id || threat.id,
       threatLikelihood,
       vulnerability,
       impact,
@@ -1458,21 +1456,23 @@ export async function initializeRiskScenariosFromInterview(
   }
 
   // Insert scenarios into database
-  const insertedIds: number[] = [];
+  const insertedIds: string[] = [];
   
   for (const scenario of scenarios) {
     try {
       const [inserted] = await db.insert(riskScenarios).values({
         assessmentId: scenario.assessmentId,
-        threatId: scenario.threatId,
-        threatLikelihood: scenario.threatLikelihood,
-        vulnerability: scenario.vulnerability,
-        impact: scenario.impact,
+        threatLibraryId: scenario.threatLibraryId,
+        scenario: scenario.scenarioDescription,
+        asset: 'Datacenter Facility',
+        likelihood: scenario.threatLikelihood.toString(),
+        impact: scenario.impact.toString(),
+        riskLevel: scenario.riskLevel,
+        likelihoodScore: scenario.threatLikelihood,
+        impactScore: scenario.impact,
         inherentRisk: scenario.inherentRisk,
         residualRisk: scenario.residualRisk,
         controlEffectiveness: scenario.controlEffectiveness,
-        riskLevel: scenario.riskLevel,
-        scenarioDescription: scenario.scenarioDescription,
       }).returning({ id: riskScenarios.id });
       
       if (inserted?.id) {
