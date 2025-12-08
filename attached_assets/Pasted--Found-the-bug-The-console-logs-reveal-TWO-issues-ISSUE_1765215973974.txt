@@ -1,0 +1,78 @@
+"Found the bug! The console logs reveal TWO issues:
+
+ISSUE 1: LOAD NOT FINDING SAVED RESPONSES
+
+Console shows: "Loaded 102 questions, 0 with saved responses"
+
+But we KNOW data was saved - we saw "SAVE SUCCESS" for multiple questions.
+The load query isn't finding the saved data.
+
+PLEASE CHECK:
+
+1. How does the load query find saved responses?
+   
+   Show me the code that loads questions with their answers.
+   
+   Is it matching on:
+   - assessment_id?
+   - question_id vs template_question_id?
+   - Some JOIN that's failing?
+
+2. Compare SAVE vs LOAD:
+
+   SAVE writes to: which table? which columns?
+   LOAD reads from: which table? which columns?
+   
+   Are they the same? Is there a mismatch?
+
+3. Check the database after saving:
+   
+   SELECT assessment_id, question_id, response, updated_at
+   FROM facility_survey_questions
+   WHERE assessment_id = [the test assessment ID]
+   AND response IS NOT NULL
+   ORDER BY updated_at DESC
+   LIMIT 10;
+   
+   Does this show saved data?
+
+4. Check what the load query returns:
+   
+   Add logging to the load function:
+   console.log('LOAD QUERY - assessment_id:', assessmentId);
+   console.log('LOAD RESULT - rows returned:', rows.length);
+   console.log('LOAD RESULT - with responses:', rows.filter(r => r.response).length);
+
+
+ISSUE 2: "CORPORATE OPERATIONS" TAB DOESN'T TRIGGER SAVE
+
+When clicking "Corporate Operations" (a different main tab, not a category within Facility Survey), there's NO console activity.
+
+This means the save-on-navigate code only works for CATEGORY switching within FacilitySurvey, NOT when leaving FacilitySurvey entirely.
+
+PLEASE FIX:
+
+1. Find where main tab navigation happens:
+   grep -rn 'Corporate Operations\|tab.*click\|setActiveTab' client/src/
+   
+2. Add save-before-leave to the FacilitySurvey component:
+
+   useEffect(() => {
+     // Save on unmount (when leaving FacilitySurvey for another tab)
+     return () => {
+       console.log('UNMOUNT: FacilitySurvey unmounting, flushing saves');
+       flushPendingChanges();
+     };
+   }, []);
+
+3. OR add beforeunload-style handler for tab changes:
+   
+   When ANY main tab is clicked, check if FacilitySurvey has unsaved changes
+   and save them before switching.
+
+
+PRIORITY:
+1. First fix the LOAD issue - data is being saved but not loaded
+2. Then fix the tab-switch save trigger
+
+The load issue is more critical because even manual saves won't help if load is broken."

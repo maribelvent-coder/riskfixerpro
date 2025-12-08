@@ -483,6 +483,34 @@ export function FacilitySurvey({
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [saveStatus]);
+  
+  // Flush pending changes when component unmounts (switching to another main tab)
+  useEffect(() => {
+    return () => {
+      if (pendingChangesMap.current.size > 0) {
+        console.log(`[FacilitySurvey] UNMOUNT: Component unmounting, flushing ${pendingChangesMap.current.size} pending changes`);
+        // Clear all timers
+        autosaveTimersMap.current.forEach((timer) => clearTimeout(timer));
+        autosaveTimersMap.current.clear();
+        
+        // Save all pending changes synchronously via navigator.sendBeacon or fetch with keepalive
+        const pendingEntries = Array.from(pendingChangesMap.current.entries());
+        pendingEntries.forEach(([templateId, { question, updateData }]) => {
+          const dbId = templateToDbIdMap.current.get(templateId) || question.id;
+          if (dbId) {
+            console.log(`[FacilitySurvey] UNMOUNT: Saving ${templateId} via keepalive`);
+            fetch(`/api/assessments/${assessmentId}/facility-survey-questions/${dbId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updateData),
+              keepalive: true, // Ensures request completes even after page navigation
+            }).catch(err => console.error('UNMOUNT save failed:', err));
+          }
+        });
+        pendingChangesMap.current.clear();
+      }
+    };
+  }, [assessmentId]);
 
   // Save facility survey mutation (for manual save/complete actions)
   // Uses individual saves to prevent data loss from bulk upsert

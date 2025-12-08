@@ -4750,7 +4750,13 @@ The facility should prioritize addressing critical risks immediately, particular
     async (req, res) => {
       try {
         const { id } = req.params;
+        console.log(`[LOAD DEBUG] Fetching facility-survey for assessment: ${id}`);
         const questions = await storage.getFacilitySurveyQuestions(id);
+        const withResponses = questions.filter(q => q.response !== null && q.response !== undefined && q.response !== '');
+        console.log(`[LOAD DEBUG] Total questions: ${questions.length}, with responses: ${withResponses.length}`);
+        if (withResponses.length > 0) {
+          console.log(`[LOAD DEBUG] Sample response:`, JSON.stringify(withResponses[0]));
+        }
         res.json(questions);
       } catch (error) {
         console.error("Error fetching facility survey:", error);
