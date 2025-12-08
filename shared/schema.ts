@@ -976,6 +976,11 @@ export const manufacturingProfileSchema = z.object({
   annualLiabilityEstimates: z.number().optional(),
   securityIncidentsPerYear: z.number().optional(),
   brandDamageEstimate: z.number().optional(),
+  // Dashboard-specific field names
+  annualProductionValue: z.number().optional(),
+  shiftOperations: z.string().optional(),
+  hazmatPresent: z.boolean().optional(),
+  ipTypes: z.array(z.string()).optional(),
 });
 
 export const datacenterProfileSchema = z.object({
@@ -994,6 +999,11 @@ export const datacenterProfileSchema = z.object({
   annualLiabilityEstimates: z.number().optional(),
   securityIncidentsPerYear: z.number().optional(),
   brandDamageEstimate: z.number().optional(),
+  employeeCount: z.number().optional(),
+  // Dashboard-specific field names
+  tierClassification: z.string().optional(),
+  uptimeSLA: z.string().optional(),
+  complianceRequirements: z.array(z.string()).optional(),
 });
 
 export const officeProfileSchema = z.object({
