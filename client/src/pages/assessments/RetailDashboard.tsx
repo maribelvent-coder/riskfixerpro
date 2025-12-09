@@ -150,17 +150,23 @@ export default function RetailDashboard() {
   });
 
   // Fetch control recommendations for ROI calculator
+  const hasRetailProfile = !!data?.assessment?.retailProfile;
+  console.log('[DASHBOARD] hasRetailProfile:', hasRetailProfile, 'retailProfile:', data?.assessment?.retailProfile);
+  
   const { data: recommendationsData, isLoading: recommendationsLoading } = useQuery<RecommendationsResponse>({
     queryKey: ['/api/assessments', id, 'retail-recommendations'],
     queryFn: async () => {
+      console.log('[DASHBOARD] Calling recommendations endpoint...');
       const response = await apiRequest('POST', `/api/assessments/${id}/retail-recommendations`, {});
       // apiRequest already returns Response object, need to parse JSON
       if (!response.ok) {
         throw new Error('Failed to fetch recommendations');
       }
-      return response.json();
+      const result = await response.json();
+      console.log('[DASHBOARD] Received recommendations:', result);
+      return result;
     },
-    enabled: !!data?.assessment?.retailProfile,
+    enabled: hasRetailProfile,
     staleTime: 30000,
   });
 
