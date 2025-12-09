@@ -5570,9 +5570,10 @@ The facility should prioritize addressing critical risks immediately, particular
         const { questionId } = req.params;
 
         // Validate: Only allow updating response, notes, and evidence fields
+        // Response can be string, number, boolean, null, OR array of strings (for checkbox/multi-select questions)
         const allowedUpdateSchema = z.object({
           response: z
-            .union([z.string(), z.number(), z.boolean(), z.null()])
+            .union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.string())])
             .optional(),
           notes: z.string().nullable().optional(),
           evidence: z.array(z.string()).nullable().optional(),
