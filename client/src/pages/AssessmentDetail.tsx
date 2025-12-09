@@ -365,7 +365,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const tabsAvailable = getTabsAvailability();
 
   const handleBack = () => {
-    setLocation("/assessments");
+    setLocation("/app/assessments");
   };
 
   const handleSave = (data: Partial<Assessment>) => {
