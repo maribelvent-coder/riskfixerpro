@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,6 +151,27 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
     
     return acc;
   }, {} as Record<string, Record<string, SurveyQuestion[]>>);
+
+  // Create a stable key for detecting section changes
+  const sectionKey = sectionCategory || (sectionCategories?.join(',') || '');
+
+  // Compute the first group's composite key for dependency tracking
+  const firstGroupKey = useMemo(() => {
+    if (Object.keys(groupedQuestions).length === 0) return null;
+    const firstCategory = Object.keys(groupedQuestions)[0];
+    const firstSubcategory = Object.keys(groupedQuestions[firstCategory])[0];
+    return firstSubcategory ? `${firstCategory}:${firstSubcategory}` : null;
+  }, [groupedQuestions]);
+
+  // Auto-expand the first subcategory when section changes or questions load
+  useEffect(() => {
+    // Set the first group as expanded when data is available
+    if (firstGroupKey) {
+      setExpandedCategories([firstGroupKey]);
+    } else {
+      setExpandedCategories([]);
+    }
+  }, [sectionKey, assessmentId, firstGroupKey]); // Include firstGroupKey so it runs when data loads
 
   // Calculate progress
   const totalQuestions = filteredQuestions.length;
@@ -452,8 +473,8 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
                       data: { notes: q.notes || '[Section Skipped]' }
                     });
                   });
-                  // Collapse this category
-                  setExpandedCategories(prev => prev.filter(c => c !== category));
+                  // Collapse all subcategories in this category
+                  setExpandedCategories(prev => prev.filter(c => !c.startsWith(`${category}:`)));
                 }}
                 data-testid={`button-skip-category-${category}`}
               >
@@ -468,8 +489,10 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
               value={expandedCategories}
               onValueChange={setExpandedCategories}
             >
-              {Object.entries(subcategories).map(([subcategory, questions]) => (
-                <AccordionItem key={subcategory} value={subcategory}>
+              {Object.entries(subcategories).map(([subcategory, questions]) => {
+                const compositeKey = `${category}:${subcategory}`;
+                return (
+                <AccordionItem key={compositeKey} value={compositeKey}>
                   <AccordionTrigger className="text-left">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{subcategory}</span>
@@ -555,7 +578,8 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
                     </div>
                   </AccordionContent>
                 </AccordionItem>
-              ))}
+              );
+              })}
             </Accordion>
           </CardContent>
         </Card>
