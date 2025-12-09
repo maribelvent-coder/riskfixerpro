@@ -2649,18 +2649,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const retailProfile = assessment.retailProfile as any || {};
         
         // Build complete store profile for control recommendations
-        // Note: storeFormat and merchandiseDisplay are distinct fields
-        // storeFormat = Mall, Standalone, Strip Center, Shopping Center
-        // merchandiseDisplay = Open Shelving, Locked Cabinets, Behind Counter, Service Only
+        // CRITICAL: storeFormat in StoreProfile type is used for control filtering
+        // and must use merchandiseDisplay values (Open Shelving, Service Only, etc.)
+        // NOT the physical store format (Mall, Standalone, etc.)
+        const merchandiseDisplayValue = storeProfile?.merchandiseDisplay || 
+          retailProfile.merchandiseDisplay || 'Open Shelving';
+        
+        console.log('[RECOMMENDATIONS] Raw retailProfile:', JSON.stringify(retailProfile, null, 2));
+        console.log('[RECOMMENDATIONS] Using merchandiseDisplay for filtering:', merchandiseDisplayValue);
+        
         const completeStoreProfile: StoreProfile = {
           squareFootage: storeProfile?.squareFootage || 
             (retailProfile.annualRevenue > 10000000 ? 25000 : 
              retailProfile.annualRevenue > 3000000 ? 12000 : 5000),
-          storeFormat: storeProfile?.storeFormat || retailProfile.storeFormat || 'Standalone',
+          // Use merchandiseDisplay for control filtering (Open Shelving, Service Only, etc.)
+          storeFormat: merchandiseDisplayValue,
           hasHighValueMerchandise: storeProfile?.hasHighValueMerchandise || 
             (retailProfile.highValueMerchandise?.length > 0),
           hasDressingRooms: storeProfile?.hasDressingRooms || 
-            (retailProfile.storeFormat?.toLowerCase().includes('apparel') || false),
+            (retailProfile.merchandiseDisplay?.toLowerCase().includes('apparel') || false),
           hasSelfCheckout: storeProfile?.hasSelfCheckout || false,
           operatingHours: storeProfile?.operatingHours || 'standard',
           annualRevenue: storeProfile?.annualRevenue || retailProfile.annualRevenue || 1000000,
@@ -2695,12 +2702,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        console.log('[RECOMMENDATIONS] Store profile:', JSON.stringify(completeStoreProfile, null, 2));
+        console.log('[RECOMMENDATIONS] Identified threats:', threatAssessments.length, threatAssessments.map(t => t.threatId));
+        console.log('[RECOMMENDATIONS] Survey responses count:', Object.keys(responses).length);
+        
         // Generate control recommendations
         const recommendations = generateRetailControlRecommendations(
           responses,
           completeStoreProfile,
           threatAssessments
         );
+
+        console.log('[RECOMMENDATIONS] Generated recommendations:', recommendations.length);
+        console.log('[RECOMMENDATIONS] Control IDs:', recommendations.map(r => r.control.id));
+        console.log('[RECOMMENDATIONS] Total costs:', recommendations.map(r => r.estimatedROI.implementationCost));
 
         // Calculate totals
         const totalInvestment = recommendations.reduce(

@@ -1391,21 +1391,28 @@ function getStoreSize(squareFootage: number): StoreSize {
  * Get controls applicable to a specific store profile
  */
 export function getApplicableControls(storeProfile: StoreProfile): RetailControl[] {
+  const storeFormatLower = storeProfile.storeFormat.toLowerCase();
+  console.log('[CONTROLS] Filtering for store format:', storeProfile.storeFormat);
+  
   return RETAIL_CONTROLS.filter((control) => {
     const { applicableWhen } = control;
 
-    // Check if store format matches
-    if (!applicableWhen.storeFormats.some((format) =>
-      storeProfile.storeFormat.toLowerCase().includes(format.toLowerCase()) ||
-      format.toLowerCase() === 'open shelving' // Default applicable
+    // FIRST: Check exclusions - if excluded, never include this control
+    if (applicableWhen.excludeWhen?.some((exclude) =>
+      storeFormatLower.includes(exclude.toLowerCase())
     )) {
+      console.log(`[CONTROLS] ${control.id} EXCLUDED by excludeWhen for format: ${storeProfile.storeFormat}`);
       return false;
     }
 
-    // Check exclusions
-    if (applicableWhen.excludeWhen?.some((exclude) =>
-      storeProfile.storeFormat.toLowerCase().includes(exclude.toLowerCase())
-    )) {
+    // SECOND: Check if store format matches one of the allowed formats
+    // A match occurs if the store format contains the allowed format string
+    const formatMatches = applicableWhen.storeFormats.some((format) =>
+      storeFormatLower.includes(format.toLowerCase())
+    );
+    
+    if (!formatMatches) {
+      // Don't log every non-match to avoid noise
       return false;
     }
 
