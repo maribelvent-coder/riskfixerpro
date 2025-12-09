@@ -443,12 +443,17 @@ export function calculateShrinkageRiskScore(
     allRiskFactors.push('Standalone location (higher exposure)');
   }
   
-  // Check EAS conditional penalty
+  // Check EAS conditional penalty - filter out EAS factors for service-only stores
   if (!shouldApplyEASVulnerability(profile.merchandiseDisplay)) {
-    // Note: EAS penalty not applied for service-only stores
-    if (allRiskFactors.some(f => f.toLowerCase().includes('eas'))) {
-      // Remove EAS-related factors for service-only stores
-    }
+    // Remove EAS-related factors for service-only stores (EAS not applicable)
+    const easRelatedTerms = ['eas', 'electronic article surveillance', 'tags', 'gates'];
+    const filteredFactors = allRiskFactors.filter(f => {
+      const lower = f.toLowerCase();
+      return !easRelatedTerms.some(term => lower.includes(term));
+    });
+    // Clear and replace with filtered factors
+    allRiskFactors.length = 0;
+    allRiskFactors.push(...filteredFactors);
   }
 
   // Risk level determination per framework thresholds
