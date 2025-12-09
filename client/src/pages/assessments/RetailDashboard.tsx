@@ -95,6 +95,49 @@ const MERCHANDISE_DISPLAY_OPTIONS: { value: MerchandiseDisplay; label: string; d
   },
 ];
 
+// Types for control recommendations (moved outside component to avoid hook issues)
+interface ControlRecommendation {
+  control: {
+    id: string;
+    name: string;
+    category: string;
+    controlCode: string;
+    implementationCostRange: { min: number; max: number };
+    effectivenessRange: { min: number; max: number };
+  };
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  reason: string;
+  addressedThreats: string[];
+  estimatedROI: {
+    implementationCost: number;
+    estimatedAnnualSavings: number;
+    paybackPeriodMonths: number;
+  };
+}
+
+interface RecommendationsResponse {
+  recommendations: ControlRecommendation[];
+  summary: {
+    totalRecommendations: number;
+    criticalCount: number;
+    highCount: number;
+    mediumCount: number;
+    lowCount: number;
+    totalInvestment: number;
+    totalAnnualSavings: number;
+    avgPaybackMonths: number;
+    projectedFiveYearSavings: number;
+  };
+}
+
+// Map priority to estimated reduction percentages based on industry data
+const priorityToReduction: Record<string, number> = {
+  critical: 35,
+  high: 25,
+  medium: 15,
+  low: 10,
+};
+
 export default function RetailDashboard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -107,40 +150,6 @@ export default function RetailDashboard() {
   });
 
   // Fetch control recommendations for ROI calculator
-  interface ControlRecommendation {
-    control: {
-      id: string;
-      name: string;
-      category: string;
-      controlCode: string;
-      implementationCostRange: { min: number; max: number };
-      effectivenessRange: { min: number; max: number };
-    };
-    priority: 'critical' | 'high' | 'medium' | 'low';
-    reason: string;
-    addressedThreats: string[];
-    estimatedROI: {
-      implementationCost: number;
-      estimatedAnnualSavings: number;
-      paybackPeriodMonths: number;
-    };
-  }
-
-  interface RecommendationsResponse {
-    recommendations: ControlRecommendation[];
-    summary: {
-      totalRecommendations: number;
-      criticalCount: number;
-      highCount: number;
-      mediumCount: number;
-      lowCount: number;
-      totalInvestment: number;
-      totalAnnualSavings: number;
-      avgPaybackMonths: number;
-      projectedFiveYearSavings: number;
-    };
-  }
-
   const { data: recommendationsData, isLoading: recommendationsLoading } = useQuery<RecommendationsResponse>({
     queryKey: ['/api/assessments', id, 'retail-recommendations'],
     queryFn: async () => {
@@ -387,15 +396,6 @@ export default function RetailDashboard() {
     annualLiabilityEstimates: parseFloat(annualLiabilityEstimates) || (assessment?.retailProfile as any)?.annualLiabilityEstimates || 0,
     securityIncidentsPerYear: parseFloat(securityIncidentsPerYear) || (assessment?.retailProfile as any)?.securityIncidentsPerYear || 0,
     brandDamageEstimate: parseFloat(brandDamageEstimate) || (assessment?.retailProfile as any)?.brandDamageEstimate || 0,
-  };
-
-  // Dynamic controls from recommendations - transform for ROI calculator
-  // Map priority to estimated reduction percentages based on industry data
-  const priorityToReduction: Record<string, number> = {
-    critical: 35,
-    high: 25,
-    medium: 15,
-    low: 10,
   };
 
   // Use recommendations data or fall back to sensible defaults
