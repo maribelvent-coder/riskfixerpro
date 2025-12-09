@@ -56,10 +56,23 @@ const AI_CONFIG = {
 // INTERFACES
 // ============================================================================
 
+export interface RetailProfile {
+  merchandiseDisplayModel?: string; // 'Open Shelving', 'Service Only', 'Display Cases', etc.
+  storeFormat?: string;
+  annualRevenue?: number;
+  shrinkageRate?: number;
+  highValueMerchandise?: string[];
+  operatingHours?: string;
+  hasEAS?: boolean;
+  hasCCTV?: boolean;
+  hasLPStaff?: boolean;
+}
+
 export interface RetailAssessmentContext {
   assessmentId: string;
   storeName?: string;
   interviewResponses: InterviewResponses;
+  retailProfile?: RetailProfile; // Added for store type context
   photoAnalysisFindings?: string[];
   incidentHistory?: RetailIncidentRecord[];
   shrinkageData?: ShrinkageProfile;
@@ -296,27 +309,51 @@ APPLICABLE STANDARDS FOR RETAIL STORE ASSESSMENTS:
 // ============================================================================
 
 function buildRetailStoreProfile(context: RetailAssessmentContext): string {
-  const { interviewResponses } = context;
+  const { interviewResponses, retailProfile } = context;
   
   const sections: string[] = ['## STORE PROFILE'];
   
+  // Merchandise Display Model - CRITICAL for appropriate control recommendations
+  const merchandiseModel = retailProfile?.merchandiseDisplayModel || 'Open Shelving';
+  const isServiceOnly = merchandiseModel.toLowerCase().includes('service only');
+  
+  sections.push(`
+### MERCHANDISE DISPLAY MODEL: ${merchandiseModel.toUpperCase()}
+${isServiceOnly ? `
+**SERVICE ONLY STORE** - Customers do NOT have direct access to merchandise.
+- All merchandise is behind counters or in locked cases
+- Staff retrieve items for customers
+- NO need for traditional anti-shoplifting controls (EAS tags, fitting room monitors)
+- Focus should be on: Cash handling, robbery prevention, employee safety, internal theft
+` : `
+Standard merchandise access model - customers can touch/handle merchandise.
+- Shoplifting controls (EAS, fitting room monitors) are relevant
+- Focus on shrinkage prevention across all categories
+`}
+`);
+
   // Store Characteristics
   sections.push(`
 ### Store Characteristics
-- Store Type: ${interviewResponses.store_profile_1 || 'Not specified'}
-- Annual Revenue: ${interviewResponses.store_profile_2 || 'Not specified'}
+- Store Type: ${interviewResponses.store_profile_1 || retailProfile?.storeFormat || 'Not specified'}
+- Merchandise Display: ${merchandiseModel}
+- Annual Revenue: ${interviewResponses.store_profile_2 || (retailProfile?.annualRevenue ? `$${retailProfile.annualRevenue.toLocaleString()}` : 'Not specified')}
 - Store Size (sq ft): ${interviewResponses.store_profile_3 || 'Not specified'}
 - Employee Count: ${interviewResponses.store_profile_4 || 'Not specified'}
-- Operating Hours: ${interviewResponses.store_profile_5 || 'Not specified'}
+- Operating Hours: ${interviewResponses.store_profile_5 || retailProfile?.operatingHours || 'Not specified'}
 - Location Type: ${interviewResponses.store_profile_6 || 'Not specified'}
 `);
 
   // Merchandise Profile
+  const highValueItems = retailProfile?.highValueMerchandise?.length 
+    ? retailProfile.highValueMerchandise.join(', ')
+    : (interviewResponses.store_profile_8a || 'Not specified');
+    
   sections.push(`
 ### Merchandise Profile
 - Inventory Value: ${interviewResponses.store_profile_7 || 'Not specified'}
-- High-Value Items: ${interviewResponses.store_profile_8 === 'yes' ? 'Yes' : 'No'}
-${interviewResponses.store_profile_8a ? `- High-Value Categories: ${Array.isArray(interviewResponses.store_profile_8a) ? interviewResponses.store_profile_8a.join(', ') : interviewResponses.store_profile_8a}` : ''}
+- High-Value Items: ${interviewResponses.store_profile_8 === 'yes' || (retailProfile?.highValueMerchandise?.length ?? 0) > 0 ? 'Yes' : 'No'}
+- High-Value Categories: ${highValueItems}
 `);
 
   return sections.join('\n');
@@ -886,14 +923,25 @@ export async function generateRetailRiskScenariosWithAI(
     incidentHistory?: RetailIncidentRecord[];
     capIndexData?: CAPIndexData;
     shrinkageData?: ShrinkageProfile;
+    retailProfile?: RetailProfile; // Added for store type context
   }
-): Promise<RetailGeneratedScenarioResult> {
+): Promise<RetailGeneratedScenarioResult & { aiRecommendations?: any[] }> {
   const startTime = Date.now();
   const useAI = options?.useAI !== false; // Default to true
+
+  // Debug logging for input
+  console.log('[AI-ASSESSMENT] === INPUT ===');
+  console.log('[AI-ASSESSMENT] Assessment ID:', assessmentId);
+  console.log('[AI-ASSESSMENT] Retail profile:', JSON.stringify(options?.retailProfile, null, 2));
+  console.log('[AI-ASSESSMENT] Merchandise display model:', options?.retailProfile?.merchandiseDisplayModel || 'NOT SET');
+  console.log('[AI-ASSESSMENT] Interview responses count:', Object.keys(interviewResponses).length);
+  console.log('[AI-ASSESSMENT] Sample responses:', JSON.stringify(Object.entries(interviewResponses).slice(0, 5)));
+  console.log('[AI-ASSESSMENT] Use AI:', useAI);
 
   const context: RetailAssessmentContext = {
     assessmentId,
     interviewResponses,
+    retailProfile: options?.retailProfile, // Pass retail profile for store type context
     photoAnalysisFindings: options?.photoFindings,
     incidentHistory: options?.incidentHistory,
     capIndexData: options?.capIndexData,
@@ -1023,6 +1071,55 @@ export async function generateRetailRiskScenariosWithAI(
     aiConfidence = aiSuccessCount > algorithmicFallbackCount ? 'medium' : 'low';
   }
 
+  // Aggregate AI recommendations from all threats (de-duplicate by controlId)
+  const aiRecommendationsMap = new Map<string, any>();
+  for (const result of results) {
+    for (const control of result.priorityControls) {
+      if (!aiRecommendationsMap.has(control.controlId)) {
+        aiRecommendationsMap.set(control.controlId, {
+          controlId: control.controlId,
+          controlName: control.controlName,
+          urgency: control.urgency,
+          rationale: control.rationale,
+          standardsReference: control.standardsReference,
+          estimatedCostRange: control.estimatedCostRange,
+          threatIds: [result.threatId],
+          inherentRiskScore: result.inherentRisk.normalizedScore,
+        });
+      } else {
+        // Add threat to existing control
+        const existing = aiRecommendationsMap.get(control.controlId);
+        existing.threatIds.push(result.threatId);
+        // Upgrade urgency if this threat is more urgent
+        if (control.urgency === 'immediate' && existing.urgency !== 'immediate') {
+          existing.urgency = 'immediate';
+        } else if (control.urgency === 'short_term' && existing.urgency === 'medium_term') {
+          existing.urgency = 'short_term';
+        }
+        // Track highest risk score
+        existing.inherentRiskScore = Math.max(existing.inherentRiskScore, result.inherentRisk.normalizedScore);
+      }
+    }
+  }
+
+  // Sort by urgency and risk score
+  const aiRecommendations = Array.from(aiRecommendationsMap.values())
+    .sort((a, b) => {
+      const urgencyOrder = { immediate: 0, short_term: 1, medium_term: 2 };
+      const urgencyDiff = urgencyOrder[a.urgency as keyof typeof urgencyOrder] - urgencyOrder[b.urgency as keyof typeof urgencyOrder];
+      if (urgencyDiff !== 0) return urgencyDiff;
+      return b.inherentRiskScore - a.inherentRiskScore;
+    });
+
+  // Debug logging for output
+  console.log('[AI-ASSESSMENT] === OUTPUT ===');
+  console.log('[AI-ASSESSMENT] Mode:', mode);
+  console.log('[AI-ASSESSMENT] AI success count:', aiSuccessCount);
+  console.log('[AI-ASSESSMENT] Algorithmic fallback count:', algorithmicFallbackCount);
+  console.log('[AI-ASSESSMENT] AI returned recommendations:', aiRecommendations.length);
+  console.log('[AI-ASSESSMENT] Top 3 recommendations:', aiRecommendations.slice(0, 3).map(r => `${r.controlName} (${r.urgency})`));
+  console.log('[AI-ASSESSMENT] Total scenarios stored:', riskScenarioIds.length);
+
   return {
     success: true,
     mode,
@@ -1035,6 +1132,7 @@ export async function generateRetailRiskScenariosWithAI(
     overallShrinkageRisk,
     aiConfidence,
     processingTimeMs: Date.now() - startTime,
+    aiRecommendations, // Aggregated AI-generated control recommendations
   };
 }
 

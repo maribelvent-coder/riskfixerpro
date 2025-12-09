@@ -2628,14 +2628,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               annualLossDollars: (validatedProfile.annualRevenue || 0) * ((validatedProfile.shrinkageRate || 0) / 100),
             };
 
+            // Build retail profile for store type context (especially merchandiseDisplayModel)
+            const retailProfileContext = {
+              merchandiseDisplayModel: validatedProfile.merchandiseDisplay,
+              storeFormat: validatedProfile.storeFormat,
+              annualRevenue: validatedProfile.annualRevenue,
+              shrinkageRate: validatedProfile.shrinkageRate,
+              highValueMerchandise: validatedProfile.highValueMerchandise,
+              operatingHours: validatedProfile.operatingHours,
+            };
+
+            console.log(`[RETAIL-PROFILE] Merchandise display model: ${retailProfileContext.merchandiseDisplayModel}`);
+
             scenarioResult = await generateRetailRiskScenariosWithAI(
               assessmentId,
               interviewResponses,
               {
                 useAI, // Respect tier limits
                 shrinkageData,
+                retailProfile: retailProfileContext, // Pass store type context to AI
               },
             );
+
+            // Store AI recommendations in assessment for ROI calculator to use
+            if (scenarioResult.aiRecommendations?.length > 0) {
+              console.log(`[RETAIL-PROFILE] Storing ${scenarioResult.aiRecommendations.length} AI recommendations`);
+              await storage.updateAssessment(assessmentId, {
+                retailProfile: {
+                  ...validatedProfile,
+                  _aiRecommendations: scenarioResult.aiRecommendations,
+                  _aiAssessmentMode: scenarioResult.mode,
+                  _aiConfidence: scenarioResult.aiConfidence,
+                },
+              });
+            }
           } else {
             // Fallback to algorithmic generation if no survey responses
             console.log(`📊 Using algorithmic assessment (no survey responses found)`);
@@ -2817,6 +2843,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const retailProfile = assessment.retailProfile as any || {};
+        
+        // Check for AI-generated recommendations stored in retailProfile
+        const aiRecommendations = retailProfile._aiRecommendations || [];
+        const aiAssessmentMode = retailProfile._aiAssessmentMode;
+        const aiConfidence = retailProfile._aiConfidence;
+        
+        console.log('[RECOMMENDATIONS] Checking for AI recommendations...');
+        console.log('[RECOMMENDATIONS] AI mode:', aiAssessmentMode, 'confidence:', aiConfidence);
+        console.log('[RECOMMENDATIONS] AI recommendations available:', aiRecommendations.length);
+        
+        // Use AI recommendations if available, otherwise fall back to algorithmic
+        if (aiRecommendations.length > 0) {
+          console.log('[RECOMMENDATIONS] Using AI-generated recommendations');
+          
+          // Convert AI recommendations to expected format
+          const recommendations = aiRecommendations.slice(0, 10).map((rec: any, index: number) => ({
+            control: {
+              id: rec.controlId,
+              name: rec.controlName,
+              description: rec.rationale,
+              standardsReference: rec.standardsReference,
+            },
+            priority: rec.urgency === 'immediate' ? 'critical' : 
+                      rec.urgency === 'short_term' ? 'high' : 'medium',
+            reason: rec.rationale,
+            addressedThreats: rec.threatIds || [],
+            estimatedROI: {
+              // Parse cost range or use defaults based on urgency
+              implementationCost: rec.estimatedCostRange 
+                ? parseInt(rec.estimatedCostRange.replace(/[^0-9]/g, '')) || 15000
+                : rec.urgency === 'immediate' ? 25000 : rec.urgency === 'short_term' ? 15000 : 8000,
+              estimatedAnnualSavings: Math.round(
+                (retailProfile.annualRevenue || 1000000) * 
+                (retailProfile.shrinkageRate || 2) / 100 * 
+                (rec.urgency === 'immediate' ? 0.25 : rec.urgency === 'short_term' ? 0.15 : 0.08)
+              ),
+              paybackPeriodMonths: rec.urgency === 'immediate' ? 8 : rec.urgency === 'short_term' ? 12 : 18,
+            },
+          }));
+
+          // Calculate totals
+          const totalInvestment = recommendations.reduce(
+            (sum: number, r: any) => sum + r.estimatedROI.implementationCost, 0
+          );
+          const totalAnnualSavings = recommendations.reduce(
+            (sum: number, r: any) => sum + r.estimatedROI.estimatedAnnualSavings, 0
+          );
+          const avgPaybackMonths = recommendations.length > 0
+            ? Math.round(recommendations.reduce(
+                (sum: number, r: any) => sum + r.estimatedROI.paybackPeriodMonths, 0
+              ) / recommendations.length)
+            : 0;
+
+          console.log('[RECOMMENDATIONS] AI recommendations mapped:', recommendations.length);
+          console.log('[RECOMMENDATIONS] AI control names:', recommendations.map((r: any) => r.control.name));
+
+          return res.json({
+            recommendations,
+            summary: {
+              totalRecommendations: recommendations.length,
+              criticalCount: recommendations.filter((r: any) => r.priority === 'critical').length,
+              highCount: recommendations.filter((r: any) => r.priority === 'high').length,
+              mediumCount: recommendations.filter((r: any) => r.priority === 'medium').length,
+              lowCount: recommendations.filter((r: any) => r.priority === 'low').length,
+              totalInvestment,
+              totalAnnualSavings,
+              avgPaybackMonths,
+              projectedFiveYearSavings: totalAnnualSavings * 5,
+            },
+            storeProfile: { 
+              storeFormat: retailProfile.merchandiseDisplay || 'Open Shelving',
+              annualRevenue: retailProfile.annualRevenue || 1000000,
+            },
+            source: 'ai',
+            aiMode: aiAssessmentMode,
+            aiConfidence,
+          });
+        }
+
+        // Fallback to algorithmic recommendations
+        console.log('[RECOMMENDATIONS] No AI recommendations, using algorithmic fallback');
         
         // Build complete store profile for control recommendations
         // CRITICAL: storeFormat in StoreProfile type is used for control filtering
