@@ -6485,14 +6485,15 @@ The facility should prioritize addressing critical risks immediately, particular
               field: 'storeFormat', 
               transform: (val: string) => {
                 // Map survey location type options to profile storeFormat options
-                // Survey options: 'Enclosed shopping mall (interior)', 'Strip center/Shopping plaza', 
-                //                 'Standalone building', 'Downtown/Urban street front', 'Airport/Transportation hub'
+                // Actual DB options: "Enclosed mall", "Strip mall/shopping center", "Standalone building",
+                //                    "Downtown/Urban street front", "Suburban retail plaza"
                 // Profile options: 'Mall', 'Standalone', 'Strip Center', 'Shopping Center'
-                if (val?.toLowerCase().includes('mall')) return 'Mall';
-                if (val?.toLowerCase().includes('standalone')) return 'Standalone';
-                if (val?.toLowerCase().includes('strip') || val?.toLowerCase().includes('plaza')) return 'Strip Center';
-                if (val?.toLowerCase().includes('downtown') || val?.toLowerCase().includes('urban')) return 'Standalone';
-                if (val?.toLowerCase().includes('airport') || val?.toLowerCase().includes('hub')) return 'Shopping Center';
+                const lower = val?.toLowerCase() || '';
+                if (lower.includes('enclosed mall')) return 'Mall';
+                if (lower.includes('standalone')) return 'Standalone';
+                if (lower.includes('strip mall') || lower.includes('shopping center')) return 'Strip Center';
+                if (lower.includes('downtown') || lower.includes('urban')) return 'Standalone';
+                if (lower.includes('suburban') || lower.includes('plaza')) return 'Shopping Center';
                 console.log(`[AUTO-SYNC] Could not map store_profile_6 value: ${val}`);
                 return null;
               }
@@ -6501,6 +6502,15 @@ The facility should prioritize addressing critical risks immediately, particular
               field: 'annualRevenue', 
               transform: (val: string) => {
                 // Parse revenue ranges to numeric values (use midpoint)
+                // Actual database options: "Under $1 million", "$1-5 million", "$5-15 million", 
+                //                          "$15-50 million", "Over $50 million", "Prefer not to disclose"
+                if (val?.includes('Under $1 million')) return 500000;
+                if (val?.includes('$1-5 million')) return 3000000;
+                if (val?.includes('$5-15 million')) return 10000000;
+                if (val?.includes('$15-50 million')) return 32500000;
+                if (val?.includes('Over $50 million')) return 75000000;
+                if (val?.includes('Prefer not to disclose')) return null;
+                // Also support legacy options from questionnaire file
                 if (val?.includes('Under $500K')) return 250000;
                 if (val?.includes('$500K - $1M')) return 750000;
                 if (val?.includes('$1M - $3M')) return 2000000;
@@ -6514,12 +6524,14 @@ The facility should prioritize addressing critical risks immediately, particular
               field: 'shrinkageRate', 
               transform: (val: string) => {
                 // Parse shrinkage ranges to numeric values (use midpoint)
+                // Actual DB options: "Under 1% (excellent)", "1-2% (acceptable)", "2-3% (elevated)",
+                //                    "3-5% (concerning)", "Over 5% (critical)", "Unknown/Not tracked"
                 if (val?.includes('Under 1%')) return 0.5;
                 if (val?.includes('1-2%')) return 1.5;
                 if (val?.includes('2-3%')) return 2.5;
                 if (val?.includes('3-5%')) return 4.0;
                 if (val?.includes('Over 5%')) return 6.0;
-                if (val?.includes('Unknown')) return null;
+                if (val?.includes('Unknown') || val?.includes('Not tracked')) return null;
                 console.log(`[AUTO-SYNC] Could not map shrinkage_1 value: ${val}`);
                 return null;
               }
@@ -6527,22 +6539,30 @@ The facility should prioritize addressing critical risks immediately, particular
             'store_profile_8a': { 
               field: 'highValueMerchandise', 
               transform: (val: any) => {
-                // Handle checklist responses (array of selected items)
-                // Map survey options to dashboard options
+                // Handle checklist responses - may be array directly or {selectedOptions: [...]}
+                // Actual DB options: "Electronics (phones, tablets, laptops)", "Jewelry/watches", 
+                //                    "Designer apparel/accessories", "Fragrances/cosmetics", "Alcohol/tobacco"
                 // Dashboard expects: 'electronics', 'jewelry', 'cosmetics', 'designer_apparel', 'handbags', 'alcohol'
+                let items: string[] = [];
                 if (Array.isArray(val)) {
+                  items = val;
+                } else if (val?.selectedOptions && Array.isArray(val.selectedOptions)) {
+                  items = val.selectedOptions;
+                }
+                
+                if (items.length > 0) {
                   const categoryMap: Record<string, string> = {
                     'Electronics (phones, tablets, laptops)': 'electronics',
-                    'Jewelry/Watches': 'jewelry',
-                    'Designer handbags/accessories': 'handbags',
-                    'Cosmetics/Fragrances (premium)': 'cosmetics',
-                    'Alcohol (premium/spirits)': 'alcohol',
+                    'Jewelry/watches': 'jewelry',
+                    'Designer apparel/accessories': 'designer_apparel',
+                    'Fragrances/cosmetics': 'cosmetics',
+                    'Alcohol/tobacco': 'alcohol',
                   };
-                  const mapped = val
+                  const mapped = items
                     .map(item => categoryMap[item])
                     .filter(Boolean);
-                  if (mapped.length === 0 && val.length > 0) {
-                    console.log(`[AUTO-SYNC] Could not map some store_profile_8a values: ${val.join(', ')}`);
+                  if (mapped.length === 0 && items.length > 0) {
+                    console.log(`[AUTO-SYNC] Could not map some store_profile_8a values: ${items.join(', ')}`);
                   }
                   return mapped.length > 0 ? mapped : null;
                 }
