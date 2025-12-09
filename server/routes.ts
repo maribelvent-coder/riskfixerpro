@@ -2680,7 +2680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!threatAssessments.length) {
           // Get risk scenarios from database
-          const scenarios = await storage.getRiskScenariosByAssessment(id);
+          const scenarios = await storage.getRiskScenarios(id);
           threatAssessments = scenarios.map(s => ({
             threatId: s.threat_id || s.threatType?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
             threatName: s.threatType || 'Unknown Threat',
