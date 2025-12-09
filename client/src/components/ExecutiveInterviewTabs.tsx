@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   MessageSquare, 
   User, 
@@ -204,46 +203,43 @@ export default function ExecutiveInterviewTabs({ assessmentId, onComplete }: Exe
         </CardHeader>
       </Card>
 
-      <Card data-testid="card-executive-interview-sections">
-        <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
-          <div className="border-b">
-            <ScrollArea className="w-full whitespace-nowrap">
-              <TabsList className="w-full justify-start h-auto p-0 bg-transparent rounded-none">
-                {SECTION_CONFIGS.map((section, index) => {
-                  const status = getSectionStatus(section.id);
-                  const progress = sectionProgress[section.id];
-                  const Icon = section.icon;
-                  
-                  return (
-                    <TabsTrigger
-                      key={section.id}
-                      value={section.id}
-                      className="flex-shrink-0 relative px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-muted/50 gap-2"
-                      data-testid={`tab-section-${section.id}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {status === 'complete' ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Icon className="h-4 w-4" />
-                        )}
-                        <span className="hidden sm:inline">{section.label}</span>
-                        <span className="sm:hidden">{section.shortLabel}</span>
-                      </div>
-                      {progress && progress.total > 0 && status !== 'complete' && (
-                        <Badge 
-                          variant="secondary" 
-                          className="ml-1 text-xs h-5 px-1.5"
-                        >
-                          {progress.answered}/{progress.total}
-                        </Badge>
+      <Card data-testid="card-executive-interview-sections" className="overflow-hidden min-w-0">
+        <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full min-w-0">
+          <div className="border-b horizontal-scroll-container">
+            <TabsList className="inline-flex w-max min-w-full justify-start h-auto p-0 bg-transparent rounded-none">
+              {SECTION_CONFIGS.map((section, index) => {
+                const status = getSectionStatus(section.id);
+                const progress = sectionProgress[section.id];
+                const Icon = section.icon;
+                
+                return (
+                  <TabsTrigger
+                    key={section.id}
+                    value={section.id}
+                    className="flex-shrink-0 relative px-3 sm:px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-muted/50 gap-1 sm:gap-2"
+                    data-testid={`tab-section-${section.id}`}
+                  >
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      {status === 'complete' ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                      ) : (
+                        <Icon className="h-4 w-4 shrink-0" />
                       )}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+                      <span className="hidden lg:inline whitespace-nowrap">{section.label}</span>
+                      <span className="lg:hidden whitespace-nowrap">{section.shortLabel}</span>
+                    </div>
+                    {progress && progress.total > 0 && status !== 'complete' && (
+                      <Badge 
+                        variant="secondary" 
+                        className="ml-1 text-xs h-5 px-1.5 shrink-0"
+                      >
+                        {progress.answered}/{progress.total}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
           </div>
 
           {SECTION_CONFIGS.map((section) => (

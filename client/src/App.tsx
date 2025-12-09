@@ -42,15 +42,17 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
       <SidebarProvider style={style as React.CSSProperties}>
-        <div className="flex h-screen w-full">
+        <div className="flex h-screen w-full overflow-hidden">
           <AppSidebar />
-          <div className="flex flex-col flex-1">
-            <header className="flex items-center justify-between p-4 border-b bg-background">
+          <div className="flex flex-col flex-1 min-w-0">
+            <header className="flex items-center justify-between gap-2 p-4 border-b bg-background shrink-0">
               <SidebarTrigger data-testid="button-sidebar-toggle" className="min-h-11 min-w-11 sm:min-h-9 sm:min-w-9" />
               <ThemeToggle />
             </header>
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6">
-              {children}
+            <main className="flex-1 overflow-y-auto overflow-x-auto p-3 sm:p-6 min-w-0">
+              <div className="w-full min-w-0">
+                {children}
+              </div>
             </main>
           </div>
         </div>
