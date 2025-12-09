@@ -112,6 +112,14 @@ import {
   type SurveyResponses,
 } from "./services/retail-controls";
 
+// Retail AI Risk Assessment Imports
+import {
+  generateRetailRiskScenariosWithAI,
+  assessSingleRetailThreat,
+  generateRetailNarrativeSummary,
+  RETAIL_STORE_THREATS,
+} from "./services/retail-ai-risk-assessment";
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -2627,6 +2635,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.error("Error updating retail profile:", error);
         res.status(500).json({ error: "Failed to update retail profile" });
+      }
+    },
+  );
+
+  // ============================================================================
+  // RETAIL AI RISK ASSESSMENT ROUTES
+  // ============================================================================
+
+  // Generate AI-powered retail risk scenarios
+  app.post(
+    "/api/assessments/:id/retail-interview/generate-risks-ai",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const {
+          interviewResponses,
+          useAI = true,
+          photoFindings,
+          incidentHistory,
+          capIndexData,
+          shrinkageData,
+        } = req.body;
+
+        const assessment = await storage.getAssessment(id);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        if (
+          assessment.templateId !== "retail-store" &&
+          assessment.templateId !== "retail"
+        ) {
+          return res.status(400).json({
+            error:
+              "Invalid assessment type. This endpoint is for Retail Store assessments only.",
+          });
+        }
+
+        const result = await generateRetailRiskScenariosWithAI(
+          id,
+          interviewResponses,
+          {
+            useAI,
+            photoFindings,
+            incidentHistory,
+            capIndexData,
+            shrinkageData,
+          },
+        );
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error generating retail risk scenarios:", error);
+        res.status(500).json({
+          error: "Failed to generate risk scenarios",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // Assess a single retail threat
+  app.post(
+    "/api/assessments/:id/retail-interview/assess-single-threat",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { threatId, interviewResponses, useAI = true } = req.body;
+
+        if (!threatId) {
+          return res.status(400).json({ error: "threatId is required" });
+        }
+
+        const validThreat = RETAIL_STORE_THREATS.find((t) => t.id === threatId);
+        if (!validThreat) {
+          return res.status(400).json({
+            error: "Invalid threatId",
+            validThreats: RETAIL_STORE_THREATS.map((t) => t.id),
+          });
+        }
+
+        const result = await assessSingleRetailThreat(
+          threatId,
+          interviewResponses,
+          { useAI },
+        );
+        res.json(result);
+      } catch (error) {
+        console.error("Error assessing single retail threat:", error);
+        res.status(500).json({
+          error: "Failed to assess threat",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
+  // List available retail threats for assessment
+  app.get(
+    "/api/retail-threats",
+    async (_req, res) => {
+      try {
+        res.json({
+          threats: RETAIL_STORE_THREATS.map((t) => ({
+            id: t.id,
+            name: t.name,
+            category: t.category,
+            asisCode: t.asisCode,
+          })),
+        });
+      } catch (error) {
+        console.error("Error listing retail threats:", error);
+        res.status(500).json({ error: "Failed to list retail threats" });
       }
     },
   );
