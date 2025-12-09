@@ -1,0 +1,70 @@
+"Wire the retail-controls.ts file to the RetailDashboard ROI Calculator.
+
+ATTACHED FILE: retail-controls.ts - A complete control effectiveness library with 50+ controls, ROI calculations, and recommendation logic.
+
+STEP 1: Add the file to the project
+
+Copy retail-controls.ts to: server/services/retail-controls.ts
+
+STEP 2: Create an API endpoint
+
+Add to server/routes.ts:
+
+import { 
+  generateControlRecommendations,
+  calculateControlROI,
+  getApplicableControls,
+  StoreProfile,
+  ThreatAssessment 
+} from './services/retail-controls';
+
+app.post('/api/assessments/:id/retail-recommendations', async (req, res) => {
+  const { id } = req.params;
+  const { surveyResponses, storeProfile, identifiedThreats } = req.body;
+  
+  const recommendations = generateControlRecommendations(
+    surveyResponses,
+    storeProfile,
+    identifiedThreats
+  );
+  
+  res.json({ recommendations });
+});
+
+STEP 3: Wire to RetailDashboard.tsx
+
+When user clicks "Save and Analyze" or views the ROI Calculator:
+
+1. Build storeProfile from retailProfile state:
+   {
+     squareFootage: estimated from revenue or format,
+     storeFormat: retailProfile.storeFormat,
+     hasHighValueMerchandise: retailProfile.highValueCategories?.length > 0,
+     hasDressingRooms: storeFormat includes 'apparel',
+     hasSelfCheckout: from survey,
+     operatingHours: 'standard',
+     annualRevenue: retailProfile.annualRevenue,
+     currentShrinkageRate: retailProfile.shrinkageRate / 100
+   }
+
+2. Build identifiedThreats from the T×V×I risk scenarios already calculated
+
+3. Call the endpoint with survey responses
+
+4. Display recommendations in ROI Calculator:
+   - Show each control with: name, implementation cost, annual savings, payback months
+   - Sort by priority (critical → high → medium → low)
+   - Show rationale with effectiveness source
+   - Calculate total investment and projected savings
+
+STEP 4: Update ROI panel visibility
+
+Hide the ROI Calculator panel if:
+- No recommendations returned (all controls already implemented), OR
+- Risk score is LOW (0-24) AND no recommendations have positive ROI
+
+STEP 5: Remove hardcoded values
+
+Replace the current hardcoded $180K / 3 controls with dynamic data from the recommendations.
+
+Show me the endpoint and the updated RetailDashboard component."

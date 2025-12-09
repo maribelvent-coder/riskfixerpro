@@ -1,0 +1,44 @@
+"Wire the retail controls from the database to the ROI Calculator.
+
+REFERENCE FILE: retail-controls-complete.sql (attached) contains 44 retail controls.
+
+STEP 1: Add control_code column and map all 44 controls
+
+ALTER TABLE controls ADD COLUMN IF NOT EXISTS control_code VARCHAR(100);
+
+UPDATE controls SET control_code = 'eas_system_tags' WHERE name = 'EAS System - Tags/Labels';
+UPDATE controls SET control_code = 'eas_system_gates' WHERE name = 'EAS System - Pedestals/Gates';
+UPDATE controls SET control_code = 'eas_deactivation_pos' WHERE name = 'EAS Deactivation at POS';
+UPDATE controls SET control_code = 'cctv_sales_floor' WHERE name = 'CCTV - Sales Floor Coverage';
+UPDATE controls SET control_code = 'cctv_pos_registers' WHERE name = 'CCTV - POS/Register Coverage';
+UPDATE controls SET control_code = 'cctv_cash_room' WHERE name = 'CCTV - Cash Room Coverage';
+UPDATE controls SET control_code = 'cctv_stockroom' WHERE name = 'CCTV - Stockroom Coverage';
+UPDATE controls SET control_code = 'cctv_parking_lot' WHERE name = 'CCTV - Parking Lot Coverage';
+UPDATE controls SET control_code = 'facial_recognition_system' WHERE name = 'Facial Recognition System';
+UPDATE controls SET control_code = 'drop_safe' WHERE name = 'Drop Safe';
+UPDATE controls SET control_code = 'time_delay_safe' WHERE name = 'Time-Delay Safe';
+UPDATE controls SET control_code = 'cash_limit_registers' WHERE name = 'Cash Limit - Registers';
+UPDATE controls SET control_code = 'dual_control_cash_procedures' WHERE name = 'Dual Control Cash Procedures';
+UPDATE controls SET control_code = 'armored_car_service' WHERE name = 'Armored Car Service';
+UPDATE controls SET control_code = 'reinforced_entrance_doors' WHERE name = 'Reinforced Entrance Doors';
+UPDATE controls SET control_code = 'security_gates_after_hours' WHERE name = 'Security Gates/Shutters (After Hours)';
+UPDATE controls SET control_code = 'bollards_storefront_protection' WHERE name = 'Bollards - Storefront Protection';
+UPDATE controls SET control_code = 'display_case_locks' WHERE name = 'Display Case Locks';
+UPDATE controls SET control_code = 'high_value_lockup' WHERE name = 'High-Value Lockup/Cage';
+UPDATE controls SET control_code = 'security_guard_uniformed' WHERE name = 'Security Guard - Uniformed';
+UPDATE controls SET control_code = 'loss_prevention_plain_clothes' WHERE name = 'Loss Prevention - Plain Clothes';
+UPDATE controls SET control_code = 'employee_background_checks' WHERE name = 'Employee Background Checks';
+UPDATE controls SET control_code = 'robbery_response_training' WHERE name = 'Robbery Response Training';
+UPDATE controls SET control_code = 'closing_procedures_two_person' WHERE name = 'Closing Procedures - Two Person';
+UPDATE controls SET control_code = 'receipt_checking_policy' WHERE name = 'Receipt Checking Policy';
+UPDATE controls SET control_code = 'bag_check_policy' WHERE name = 'Bag Check Policy';
+UPDATE controls SET control_code = 'employee_package_inspection' WHERE name = 'Employee Package Inspection';
+UPDATE controls SET control_code = 'high_value_display_security' WHERE name = 'High-Value Display Security';
+UPDATE controls SET control_code = 'merchandise_anchoring_tethers' WHERE name = 'Merchandise Anchoring/Tethers';
+UPDATE controls SET control_code = 'dressing_room_attendant' WHERE name = 'Dressing Room Attendant';
+UPDATE controls SET control_code = 'item_count_policy_dressing_room' WHERE name = 'Item Count Policy (Dressing Room)';
+UPDATE controls SET control_code = 'inventory_audit_cycle_counting' WHERE name = 'Inventory Audit - Cycle Counting';
+UPDATE controls SET control_code = 'refund_authorization_controls' WHERE name = 'Refund Authorization Controls';
+UPDATE controls SET control_code = 'cpted_principles_retail' WHERE name = 'CPTED Principles - Retail';
+UPDATE controls SET control_code = 'clear_sightlines_sales_floor' WHERE name = 'Clear Sightlines - Sales Floor';
+UPDATE controls SET control_code = 'mirrors_blind_spot_coverage' WHERE name = 'Mirrors - Bl
