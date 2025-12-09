@@ -1334,7 +1334,17 @@ const section11_external: RetailInterviewQuestion[] = [
   },
 ];
 
-// Export all sections combined
+// Business context question IDs that should NOT be in the survey
+// These are collected via Store Profile tab with exact values instead
+const BUSINESS_CONTEXT_QUESTION_IDS = new Set([
+  'store_profile_1',  // Store format - in Store Profile dropdown
+  'store_profile_2',  // Annual revenue - in Store Profile exact value input
+  'store_profile_8',  // High-value merchandise yes/no - in Store Profile
+  'store_profile_8a', // High-value categories - in Store Profile checkboxes
+  'shrinkage_1',      // Shrinkage rate - in Store Profile exact percentage input
+]);
+
+// Export all sections combined, filtering out business context questions
 export const RETAIL_STORE_INTERVIEW_QUESTIONS: RetailInterviewQuestion[] = [
   ...section1_storeProfile,
   ...section2_shrinkage,
@@ -1347,4 +1357,4 @@ export const RETAIL_STORE_INTERVIEW_QUESTIONS: RetailInterviewQuestion[] = [
   ...section9_merchandise,
   ...section10_refunds,
   ...section11_external,
-];
+].filter(q => !BUSINESS_CONTEXT_QUESTION_IDS.has(q.id));
