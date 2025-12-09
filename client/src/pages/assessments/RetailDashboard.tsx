@@ -352,6 +352,36 @@ export default function RetailDashboard() {
     }
   };
 
+  // Use recommendations data or fall back to sensible defaults
+  // Must be before early returns to satisfy React hooks rules
+  const proposedControls = useMemo(() => {
+    if (recommendationsData?.recommendations?.length) {
+      return recommendationsData.recommendations.slice(0, 5).map(rec => ({
+        name: rec.control.name,
+        estimatedCost: rec.estimatedROI.implementationCost,
+        reductionPercentage: priorityToReduction[rec.priority] || 15,
+      }));
+    }
+    // Fallback defaults when no recommendations available
+    return [
+      {
+        name: 'Electronic Article Surveillance (EAS) System',
+        estimatedCost: 25000,
+        reductionPercentage: 30,
+      },
+      {
+        name: 'POS & Merchandise Area CCTV (20 cameras)',
+        estimatedCost: 35000,
+        reductionPercentage: 25,
+      },
+      {
+        name: 'Loss Prevention Staff (2 FTE)',
+        estimatedCost: 120000,
+        reductionPercentage: 40,
+      },
+    ];
+  }, [recommendationsData]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -397,35 +427,6 @@ export default function RetailDashboard() {
     securityIncidentsPerYear: parseFloat(securityIncidentsPerYear) || (assessment?.retailProfile as any)?.securityIncidentsPerYear || 0,
     brandDamageEstimate: parseFloat(brandDamageEstimate) || (assessment?.retailProfile as any)?.brandDamageEstimate || 0,
   };
-
-  // Use recommendations data or fall back to sensible defaults
-  const proposedControls = useMemo(() => {
-    if (recommendationsData?.recommendations?.length) {
-      return recommendationsData.recommendations.slice(0, 5).map(rec => ({
-        name: rec.control.name,
-        estimatedCost: rec.estimatedROI.implementationCost,
-        reductionPercentage: priorityToReduction[rec.priority] || 15,
-      }));
-    }
-    // Fallback defaults when no recommendations available
-    return [
-      {
-        name: 'Electronic Article Surveillance (EAS) System',
-        estimatedCost: 25000,
-        reductionPercentage: 30,
-      },
-      {
-        name: 'POS & Merchandise Area CCTV (20 cameras)',
-        estimatedCost: 35000,
-        reductionPercentage: 25,
-      },
-      {
-        name: 'Loss Prevention Staff (2 FTE)',
-        estimatedCost: 120000,
-        reductionPercentage: 40,
-      },
-    ];
-  }, [recommendationsData]);
 
   return (
     <div className="space-y-4 sm:space-y-5 md:space-y-6 p-3 sm:p-4 md:p-6">
