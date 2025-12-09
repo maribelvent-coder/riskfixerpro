@@ -1,0 +1,50 @@
+"CRITICAL: The recommendations and AI analysis are completely disconnected from actual assessment data.
+
+EVIDENCE:
+- Service Only store → $180K, EAS recommended
+- Open Shelving store → $180K, EAS recommended (IDENTICAL)
+- AI Executive Summary is generic boilerplate regardless of survey answers
+
+TWO PROBLEMS TO FIX:
+
+PROBLEM 1: ROI Calculator showing hardcoded fallback, not dynamic recommendations
+
+The retail-controls.ts has getApplicableControls() which should filter out EAS for Service Only stores. But it's not being called OR its results aren't being used.
+
+DEBUG:
+1. In the /api/assessments/:id/retail-recommendations endpoint, add logging:
+   console.log('[RETAIL-REC] merchandiseDisplayModel:', storeProfile.merchandiseDisplayModel);
+   console.log('[RETAIL-REC] Applicable controls count:', applicableControls.length);
+   console.log('[RETAIL-REC] EAS in results:', recommendations.some(r => r.control.id.includes('eas')));
+
+2. In RetailDashboard.tsx, check if recommendations query is:
+   a) Actually being called
+   b) Returning data
+   c) Data being used vs. fallback
+
+3. Find where the $180K / 3 controls fallback is defined and trace why it's being used instead of dynamic data
+
+The ROI Calculator should show DIFFERENT controls for different store types.
+
+PROBLEM 2: AI Executive Summary is not using assessment data
+
+The AI analysis in Image 4 mentions "No documented electronic article surveillance system" - but this should change based on survey answers. If user answered YES to EAS, the AI shouldn't mention missing EAS.
+
+DEBUG:
+1. Find where the AI Executive Summary is generated
+2. Check what data is being passed to the GPT-4 prompt
+3. Add logging to show:
+   - What survey responses are being sent to AI
+   - What store profile data is included
+   - Whether it's actually calling OpenAI or returning cached/static text
+
+4. The AI prompt should include:
+   - ALL survey responses with actual answers
+   - Store profile (revenue, shrinkage, format, display model)
+   - Identified threats from T×V×I calculation
+   
+5. If survey says "Yes - we have EAS" the AI should NOT recommend EAS
+
+The AI should generate UNIQUE analysis for each assessment based on actual data.
+
+START WITH PROBLEM 1 - show me logs proving the recommendation engine is connected and filtering correctly. Then we'll fix the AI."
