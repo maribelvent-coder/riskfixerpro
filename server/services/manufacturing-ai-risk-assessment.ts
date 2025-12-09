@@ -42,9 +42,19 @@ import {
 // CONFIGURATION
 // ============================================================================
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+}
 
 const AI_CONFIG = {
   model: 'gpt-4o',
@@ -739,6 +749,11 @@ Assess this threat based on the interview responses and facility characteristics
 async function assessManufacturingThreatWithAI(
   request: ManufacturingThreatAssessmentRequest
 ): Promise<ManufacturingAIAssessmentResponse> {
+  const openai = getOpenAI();
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
+  
   const systemPrompt = MANUFACTURING_SYSTEM_PROMPT + '\n\n' + MANUFACTURING_INDUSTRY_STANDARDS;
   const userPrompt = generateManufacturingThreatAssessmentPrompt(request);
 
@@ -1346,6 +1361,11 @@ Focus on:
 5. Quick wins vs. strategic investments
 
 Do not use markdown formatting, headers, or bullet points. Write in flowing professional prose paragraphs.`;
+
+  const openai = getOpenAI();
+  if (!openai) {
+    return `Assessment Summary: ${results.length} threats assessed across the manufacturing facility. ${results.filter(r => r.inherentRisk.classification === 'critical' || r.inherentRisk.classification === 'high').length} threats rated high or critical risk. IP Theft Risk: ${ipTheftLevel}. Insider Threat Risk: ${insiderThreatLevel}. Priority attention required for ${topRisks[0]?.threatId.replace(/_/g, ' ')} and ${topRisks[1]?.threatId.replace(/_/g, ' ')}.`;
+  }
 
   try {
     const completion = await openai.chat.completions.create({

@@ -45,9 +45,19 @@ import type { InterviewResponses } from './warehouse-interview-questionnaire';
 // CONFIGURATION
 // ============================================================================
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+}
 
 const AI_CONFIG = {
   model: 'gpt-4o',
@@ -612,6 +622,11 @@ If data is insufficient for any element, flag it explicitly.`;
 async function assessWarehouseThreatWithAI(
   request: WarehouseThreatAssessmentRequest
 ): Promise<WarehouseAIAssessmentResponse> {
+  const openai = getOpenAI();
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
+  
   const systemPrompt = WAREHOUSE_SYSTEM_PROMPT + '\n\n' + WAREHOUSE_INDUSTRY_STANDARDS;
   const userPrompt = generateWarehouseThreatAssessmentPrompt(request);
 
@@ -1116,6 +1131,11 @@ ${highThreats.map(t => `- ${WAREHOUSE_THREATS.find(wt => wt.id === t.threatId)?.
 ${[...new Set(riskScenarios.flatMap(r => r.vulnerability.controlGaps))].slice(0, 10).map(g => `- ${g}`).join('\n')}
 
 Generate a professional ${narrativeType.replace(/_/g, ' ')} suitable for presentation to facility management and security leadership. Focus on actionable insights and prioritized recommendations based on TAPA FSR and ASIS standards.`;
+
+  const openai = getOpenAI();
+  if (!openai) {
+    return `## ${narrativeType.replace(/_/g, ' ').toUpperCase()}\n\nNarrative generation unavailable - OpenAI API key not configured.`;
+  }
 
   try {
     const completion = await openai.chat.completions.create({

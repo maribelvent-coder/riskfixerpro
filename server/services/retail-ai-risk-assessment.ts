@@ -40,9 +40,19 @@ import {
 // CONFIGURATION
 // ============================================================================
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+}
 
 const AI_CONFIG = {
   model: 'gpt-4o',
@@ -635,6 +645,11 @@ If data is insufficient for any element, flag it explicitly.`;
 async function assessRetailThreatWithAI(
   request: RetailThreatAssessmentRequest
 ): Promise<RetailAIAssessmentResponse> {
+  const openai = getOpenAI();
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
+  
   const systemPrompt = RETAIL_SYSTEM_PROMPT + '\n\n' + RETAIL_INDUSTRY_STANDARDS;
   const userPrompt = generateRetailThreatAssessmentPrompt(request);
 
@@ -1226,6 +1241,11 @@ ${topRisks.slice(0, 3).map(r => {
 }).join('\n\n')}
 
 Write in a professional tone suitable for presentation to store management and corporate leadership. Focus on actionable insights and ROI-justified recommendations. Reference NRF/LPRC industry benchmarks where relevant.`;
+
+  const openai = getOpenAI();
+  if (!openai) {
+    return 'Narrative summary generation unavailable - OpenAI API key not configured.';
+  }
 
   try {
     const completion = await openai.chat.completions.create({
