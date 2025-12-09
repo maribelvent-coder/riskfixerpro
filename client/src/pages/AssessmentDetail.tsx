@@ -233,7 +233,6 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         tabs: [
           { id: "executive-interview", label: "Executive Interview", icon: MessageSquare },
           { id: "executive-profile", label: isEPTemplate ? "Principal Profile" : "Executive Profile & Threat Assessment", icon: User },
-          { id: "digital-footprint", label: "Digital Footprint Analysis", icon: Shield },
           { id: "physical-security", label: "Physical Security Review", icon: Building },
           { id: "risk-analysis", label: "Risk Analysis", icon: Shield },
           { id: "treatment-plan", label: "Security Treatment Plan", icon: FileText },
@@ -802,55 +801,6 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               <ExecutiveSurveyQuestions 
                 assessmentId={assessmentId}
                 onComplete={() => setActiveTab('digital-footprint')}
-              />
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="digital-footprint" className="space-y-4">
-          {assessmentData?.templateId === 'executive-protection' ? (
-            // For EP template, digital footprint is covered in Part 1 - redirect to physical security
-            <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Digital Security Assessment
-                </CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Digital security and OSINT analysis is covered in Part 1: Executive Interview under the 
-                  "Digital Security Hygiene" and "Public Profile & Media Exposure" sections.
-                </p>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setActiveTab('executive-interview')}
-                  className="w-full sm:w-auto"
-                  data-testid="button-goto-executive-interview"
-                >
-                  Go to Executive Interview
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            // Legacy templates
-            <>
-              <Card>
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                    <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Digital Footprint Analysis
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    OSINT assessment, social media analysis, PII exposure, and dark web monitoring for the executive and their family.
-                  </p>
-                </CardHeader>
-              </Card>
-              
-              <ExecutiveSurveyQuestions 
-                assessmentId={assessmentId} 
-                sectionCategory="OSINT & Digital Footprint Analysis"
-                onComplete={() => setActiveTab('physical-security')}
               />
             </>
           )}
