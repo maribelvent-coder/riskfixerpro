@@ -20,6 +20,7 @@ import { ReportGenerator } from "@/components/ReportGenerator";
 import { AIReportGenerator } from "@/components/AIReportGenerator";
 import ExecutiveSurveyQuestions, { EP_PART1_CATEGORIES, EP_PART2_CATEGORIES } from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
+import ExecutiveInterviewTabs from "@/components/ExecutiveInterviewTabs";
 import OfficeBuildingInterview from "@/components/OfficeBuildingInterview";
 import { EnhancedRiskAssessment } from "@/components/EnhancedRiskAssessment";
 import { RiskAssessmentNBS } from "@/components/RiskAssessmentNBS";
@@ -751,30 +752,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             />
           ) : assessmentData?.templateId === 'executive-protection' ? (
             // Executive Protection Part 1 - Executive Interview (35 questions, 8 sections)
-            <>
-              <Card>
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                    <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Part 1: Executive Interview
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Comprehensive interview with the principal covering threat perception, public profile, daily routines, 
-                    family vulnerabilities, current security posture, travel patterns, digital security, and incident history.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <Badge variant="outline">35 Questions</Badge>
-                    <Badge variant="outline">8 Sections</Badge>
-                  </div>
-                </CardHeader>
-              </Card>
-              
-              <ExecutiveSurveyQuestions 
-                assessmentId={assessmentId}
-                sectionCategories={EP_PART1_CATEGORIES}
-                onComplete={() => setActiveTab('physical-security')}
-              />
-            </>
+            // Using tabbed navigation for better UX - each section is a separate sub-tab
+            <ExecutiveInterviewTabs 
+              assessmentId={assessmentId}
+              onComplete={() => setActiveTab('physical-security')}
+            />
           ) : (
             // Legacy Executive Templates - Old Interview Component
             <>
