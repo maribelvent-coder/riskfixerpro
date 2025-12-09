@@ -106,6 +106,55 @@ export default function RetailDashboard() {
     refetchOnMount: 'always',
   });
 
+  // Fetch control recommendations for ROI calculator
+  interface ControlRecommendation {
+    control: {
+      id: string;
+      name: string;
+      category: string;
+      controlCode: string;
+      implementationCostRange: { min: number; max: number };
+      effectivenessRange: { min: number; max: number };
+    };
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    reason: string;
+    addressedThreats: string[];
+    estimatedROI: {
+      implementationCost: number;
+      estimatedAnnualSavings: number;
+      paybackPeriodMonths: number;
+    };
+  }
+
+  interface RecommendationsResponse {
+    recommendations: ControlRecommendation[];
+    summary: {
+      totalRecommendations: number;
+      criticalCount: number;
+      highCount: number;
+      mediumCount: number;
+      lowCount: number;
+      totalInvestment: number;
+      totalAnnualSavings: number;
+      avgPaybackMonths: number;
+      projectedFiveYearSavings: number;
+    };
+  }
+
+  const { data: recommendationsData, isLoading: recommendationsLoading } = useQuery<RecommendationsResponse>({
+    queryKey: ['/api/assessments', id, 'retail-recommendations'],
+    queryFn: async () => {
+      const response = await apiRequest('POST', `/api/assessments/${id}/retail-recommendations`, {});
+      // apiRequest already returns Response object, need to parse JSON
+      if (!response.ok) {
+        throw new Error('Failed to fetch recommendations');
+      }
+      return response.json();
+    },
+    enabled: !!data?.assessment?.retailProfile,
+    staleTime: 30000,
+  });
+
   // Auto-generate risk scenarios when profile is saved (hybrid model - backend handles generation)
   const profileSaved = !!data?.assessment.retailProfile;
   const { scenariosExist } = useAutoGenerateRisks(id, profileSaved);
@@ -332,26 +381,51 @@ export default function RetailDashboard() {
   const roiAssessmentData = {
     annualRevenue: parseFloat(annualRevenue) || assessment?.retailProfile?.annualRevenue || 0,
     shrinkageRate: parseFloat(shrinkageRate) || assessment?.retailProfile?.shrinkageRate || 0,
+    employeeCount: parseFloat(employeeCount) || (assessment?.retailProfile as any)?.employeeCount || 0,
+    annualTurnoverRate: parseFloat(annualTurnoverRate) || (assessment?.retailProfile as any)?.annualTurnoverRate || 0,
+    avgHiringCost: parseFloat(avgHiringCost) || (assessment?.retailProfile as any)?.avgHiringCost || 0,
+    annualLiabilityEstimates: parseFloat(annualLiabilityEstimates) || (assessment?.retailProfile as any)?.annualLiabilityEstimates || 0,
+    securityIncidentsPerYear: parseFloat(securityIncidentsPerYear) || (assessment?.retailProfile as any)?.securityIncidentsPerYear || 0,
+    brandDamageEstimate: parseFloat(brandDamageEstimate) || (assessment?.retailProfile as any)?.brandDamageEstimate || 0,
   };
 
-  // Example proposed controls
-  const proposedControls = [
-    {
-      name: 'Electronic Article Surveillance (EAS) System',
-      estimatedCost: 25000,
-      reductionPercentage: 30,
-    },
-    {
-      name: 'POS & Merchandise Area CCTV (20 cameras)',
-      estimatedCost: 35000,
-      reductionPercentage: 25,
-    },
-    {
-      name: 'Loss Prevention Staff (2 FTE)',
-      estimatedCost: 120000,
-      reductionPercentage: 40,
-    },
-  ];
+  // Dynamic controls from recommendations - transform for ROI calculator
+  // Map priority to estimated reduction percentages based on industry data
+  const priorityToReduction: Record<string, number> = {
+    critical: 35,
+    high: 25,
+    medium: 15,
+    low: 10,
+  };
+
+  // Use recommendations data or fall back to sensible defaults
+  const proposedControls = useMemo(() => {
+    if (recommendationsData?.recommendations?.length) {
+      return recommendationsData.recommendations.slice(0, 5).map(rec => ({
+        name: rec.control.name,
+        estimatedCost: rec.estimatedROI.implementationCost,
+        reductionPercentage: priorityToReduction[rec.priority] || 15,
+      }));
+    }
+    // Fallback defaults when no recommendations available
+    return [
+      {
+        name: 'Electronic Article Surveillance (EAS) System',
+        estimatedCost: 25000,
+        reductionPercentage: 30,
+      },
+      {
+        name: 'POS & Merchandise Area CCTV (20 cameras)',
+        estimatedCost: 35000,
+        reductionPercentage: 25,
+      },
+      {
+        name: 'Loss Prevention Staff (2 FTE)',
+        estimatedCost: 120000,
+        reductionPercentage: 40,
+      },
+    ];
+  }, [recommendationsData]);
 
   return (
     <div className="space-y-4 sm:space-y-5 md:space-y-6 p-3 sm:p-4 md:p-6">

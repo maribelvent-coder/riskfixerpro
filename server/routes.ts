@@ -100,6 +100,18 @@ import {
   EP_THREAT_CONTROL_MAPPING,
 } from "./services/ep-interview-mapper";
 
+// Retail Controls & ROI Calculator Imports
+import {
+  generateControlRecommendations as generateRetailControlRecommendations,
+  calculateControlROI,
+  getApplicableControls,
+  getControlsForThreat,
+  RETAIL_CONTROLS,
+  type StoreProfile,
+  type ThreatAssessment,
+  type SurveyResponses,
+} from "./services/retail-controls";
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -2615,6 +2627,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.error("Error updating retail profile:", error);
         res.status(500).json({ error: "Failed to update retail profile" });
+      }
+    },
+  );
+
+  // Retail Control Recommendations for ROI Calculator
+  app.post(
+    "/api/assessments/:id/retail-recommendations",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { surveyResponses, storeProfile, identifiedThreats } = req.body;
+
+        // Build store profile from request or assessment data
+        const assessment = await storage.getAssessment(id);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        const retailProfile = assessment.retailProfile as any || {};
+        
+        // Build complete store profile for control recommendations
+        // Note: storeFormat and merchandiseDisplay are distinct fields
+        // storeFormat = Mall, Standalone, Strip Center, Shopping Center
+        // merchandiseDisplay = Open Shelving, Locked Cabinets, Behind Counter, Service Only
+        const completeStoreProfile: StoreProfile = {
+          squareFootage: storeProfile?.squareFootage || 
+            (retailProfile.annualRevenue > 10000000 ? 25000 : 
+             retailProfile.annualRevenue > 3000000 ? 12000 : 5000),
+          storeFormat: storeProfile?.storeFormat || retailProfile.storeFormat || 'Standalone',
+          hasHighValueMerchandise: storeProfile?.hasHighValueMerchandise || 
+            (retailProfile.highValueMerchandise?.length > 0),
+          hasDressingRooms: storeProfile?.hasDressingRooms || 
+            (retailProfile.storeFormat?.toLowerCase().includes('apparel') || false),
+          hasSelfCheckout: storeProfile?.hasSelfCheckout || false,
+          operatingHours: storeProfile?.operatingHours || 'standard',
+          annualRevenue: storeProfile?.annualRevenue || retailProfile.annualRevenue || 1000000,
+          currentShrinkageRate: storeProfile?.currentShrinkageRate || 
+            (retailProfile.shrinkageRate ? retailProfile.shrinkageRate / 100 : 0.015),
+        };
+
+        // Build threat assessments from risk scenarios or provided data
+        let threatAssessments: ThreatAssessment[] = identifiedThreats || [];
+        
+        if (!threatAssessments.length) {
+          // Get risk scenarios from database
+          const scenarios = await storage.getRiskScenariosByAssessment(id);
+          threatAssessments = scenarios.map(s => ({
+            threatId: s.threat_id || s.threatType?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
+            threatName: s.threatType || 'Unknown Threat',
+            riskLevel: (s.riskScore || 0) >= 75 ? 'critical' : 
+                       (s.riskScore || 0) >= 50 ? 'high' :
+                       (s.riskScore || 0) >= 25 ? 'medium' : 'low',
+            inherentRisk: s.riskScore || 0,
+          }));
+        }
+
+        // Get survey responses from database if not provided
+        let responses: SurveyResponses = surveyResponses || {};
+        if (Object.keys(responses).length === 0) {
+          const surveyQuestions = await storage.getFacilitySurveyQuestionsByAssessment(id);
+          for (const q of surveyQuestions) {
+            if (q.response !== null && q.response !== undefined && q.templateQuestionId) {
+              responses[q.templateQuestionId] = q.response;
+            }
+          }
+        }
+
+        // Generate control recommendations
+        const recommendations = generateRetailControlRecommendations(
+          responses,
+          completeStoreProfile,
+          threatAssessments
+        );
+
+        // Calculate totals
+        const totalInvestment = recommendations.reduce(
+          (sum, r) => sum + r.estimatedROI.implementationCost, 0
+        );
+        const totalAnnualSavings = recommendations.reduce(
+          (sum, r) => sum + r.estimatedROI.estimatedAnnualSavings, 0
+        );
+        const avgPaybackMonths = recommendations.length > 0
+          ? Math.round(recommendations.reduce(
+              (sum, r) => sum + r.estimatedROI.paybackPeriodMonths, 0
+            ) / recommendations.length)
+          : 0;
+
+        res.json({
+          recommendations,
+          summary: {
+            totalRecommendations: recommendations.length,
+            criticalCount: recommendations.filter(r => r.priority === 'critical').length,
+            highCount: recommendations.filter(r => r.priority === 'high').length,
+            mediumCount: recommendations.filter(r => r.priority === 'medium').length,
+            lowCount: recommendations.filter(r => r.priority === 'low').length,
+            totalInvestment,
+            totalAnnualSavings,
+            avgPaybackMonths,
+            projectedFiveYearSavings: totalAnnualSavings * 5,
+          },
+          storeProfile: completeStoreProfile,
+        });
+      } catch (error) {
+        console.error("Error generating retail recommendations:", error);
+        res.status(500).json({ error: "Failed to generate control recommendations" });
       }
     },
   );
