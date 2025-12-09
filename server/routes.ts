@@ -2592,13 +2592,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         try {
-          const { generateRetailRiskScenarios } = await import(
-            "./services/risk-engine/generators/retail"
-          );
-          const scenarioResult = await generateRetailRiskScenarios(
-            assessmentId,
-            storage,
-          );
+          // Step 1: Get survey responses from database
+          const surveyQuestions = await storage.getFacilitySurveyQuestions(assessmentId);
+          
+          // Step 2: Convert to InterviewResponses format
+          const interviewResponses: Record<string, any> = {};
+          for (const q of surveyQuestions) {
+            if (q.response !== null && q.response !== undefined && q.templateQuestionId) {
+              interviewResponses[q.templateQuestionId] = q.response;
+            }
+          }
+
+          const hasSurveyResponses = Object.keys(interviewResponses).length > 0;
+          console.log(`📋 Found ${Object.keys(interviewResponses).length} survey responses for AI assessment`);
+
+          let scenarioResult;
+
+          if (hasSurveyResponses) {
+            // Step 3 & 4: Use AI assessment with full context (if tier allows)
+            // Check if user has AI analysis access
+            const userId = req.user?.id || req.session?.userId;
+            const user = userId ? await storage.getUser(userId) : null;
+            const tier = (user?.accountTier || 'free') as AccountTier;
+            const useAI = canUseAIAnalysis(tier);
+            
+            if (useAI) {
+              console.log(`🤖 Using AI-powered assessment with survey responses (tier: ${tier})`);
+            } else {
+              console.log(`📊 AI not available for tier ${tier}, using algorithmic assessment`);
+            }
+            
+            // Build shrinkage data from profile
+            const shrinkageData = {
+              currentRate: (validatedProfile.shrinkageRate || 0) / 100,
+              annualLossDollars: (validatedProfile.annualRevenue || 0) * ((validatedProfile.shrinkageRate || 0) / 100),
+            };
+
+            scenarioResult = await generateRetailRiskScenariosWithAI(
+              assessmentId,
+              interviewResponses,
+              {
+                useAI, // Respect tier limits
+                shrinkageData,
+              },
+            );
+          } else {
+            // Fallback to algorithmic generation if no survey responses
+            console.log(`📊 Using algorithmic assessment (no survey responses found)`);
+            const { generateRetailRiskScenarios } = await import(
+              "./services/risk-engine/generators/retail"
+            );
+            scenarioResult = await generateRetailRiskScenarios(
+              assessmentId,
+              storage,
+            );
+          }
 
           console.log(`📊 Retail scenario generation result:`, scenarioResult);
 
