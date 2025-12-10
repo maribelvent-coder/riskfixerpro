@@ -1913,6 +1913,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Admin Sites Management - Get all sites across all organizations
+  app.get("/api/admin/sites", verifyAdminAccess, async (req, res) => {
+    try {
+      // Get all sites from all organizations
+      const allSites = await db.select().from(sites);
+      res.json(allSites);
+    } catch (error) {
+      console.error("Error fetching all sites:", error);
+      res.status(500).json({ error: "Failed to fetch sites" });
+    }
+  });
+
+  // Admin Sites Management - Create site for any organization
+  app.post("/api/admin/sites", verifyAdminAccess, async (req, res) => {
+    try {
+      const { name, address, city, state, zipCode, country, organizationId, userId } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: "Site name is required" });
+      }
+      if (!organizationId) {
+        return res.status(400).json({ error: "Organization ID is required" });
+      }
+
+      // Verify organization exists
+      const org = await storage.getOrganization(organizationId);
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      // Get a user from the organization to assign as owner if not provided
+      let siteUserId = userId;
+      if (!siteUserId) {
+        const members = await storage.getOrganizationMembers(organizationId);
+        if (members.length > 0) {
+          siteUserId = members[0].id;
+        }
+      }
+
+      const site = await storage.createSite({
+        name,
+        address: address || null,
+        city: city || null,
+        state: state || null,
+        zipCode: zipCode || null,
+        country: country || "USA",
+        organizationId,
+        userId: siteUserId || null,
+      });
+
+      res.status(201).json(site);
+    } catch (error) {
+      console.error("Error creating site:", error);
+      res.status(500).json({ error: "Failed to create site" });
+    }
+  });
+
+  // Admin Sites Management - Update site (including organization assignment)
+  app.patch("/api/admin/sites/:id", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, address, city, state, zipCode, country, organizationId } = req.body;
+
+      const site = await storage.getSite(id);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      // If changing organization, verify it exists
+      if (organizationId && organizationId !== site.organizationId) {
+        const org = await storage.getOrganization(organizationId);
+        if (!org) {
+          return res.status(404).json({ error: "Organization not found" });
+        }
+      }
+
+      const updateData: Record<string, any> = {};
+      if (name !== undefined) updateData.name = name;
+      if (address !== undefined) updateData.address = address;
+      if (city !== undefined) updateData.city = city;
+      if (state !== undefined) updateData.state = state;
+      if (zipCode !== undefined) updateData.zipCode = zipCode;
+      if (country !== undefined) updateData.country = country;
+      if (organizationId !== undefined) updateData.organizationId = organizationId;
+
+      const updated = await storage.updateSite(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating site:", error);
+      res.status(500).json({ error: "Failed to update site" });
+    }
+  });
+
+  // Admin Sites Management - Delete site
+  app.delete("/api/admin/sites/:id", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const site = await storage.getSite(id);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      await storage.deleteSite(id);
+      res.json({ message: "Site deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting site:", error);
+      res.status(500).json({ error: "Failed to delete site" });
+    }
+  });
+
+  // Admin User Management - Update user's organization
+  app.patch("/api/admin/users/:id/organization", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { organizationId, organizationRole } = req.body;
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Verify organization exists if provided
+      if (organizationId) {
+        const org = await storage.getOrganization(organizationId);
+        if (!org) {
+          return res.status(404).json({ error: "Organization not found" });
+        }
+      }
+
+      // Update user's organization
+      const updateData: Record<string, any> = {};
+      if (organizationId !== undefined) updateData.organizationId = organizationId;
+      if (organizationRole !== undefined) updateData.organizationRole = organizationRole;
+
+      await db.update(users).set(updateData).where(eq(users.id, id));
+      
+      const updated = await storage.getUser(id);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating user organization:", error);
+      res.status(500).json({ error: "Failed to update user organization" });
+    }
+  });
+
   // Template routes
   app.get("/api/templates", async (req, res) => {
     try {
