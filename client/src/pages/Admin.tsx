@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2 } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2, Link, Copy, Check } from "lucide-react";
 
 type User = {
   id: string;
@@ -62,6 +62,8 @@ export default function Admin() {
   const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
   const [showDeleteOrgDialog, setShowDeleteOrgDialog] = useState(false);
   const [orgLimits, setOrgLimits] = useState({ maxMembers: 0, maxSites: 0, maxAssessments: 0 });
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -71,28 +73,23 @@ export default function Admin() {
     queryKey: ["/api/admin/organizations"],
   });
 
-  const resetPasswordMutation = useMutation({
-    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+  const generateResetLinkMutation = useMutation({
+    mutationFn: async (userId: string) => {
       const response = await apiRequest(
         "POST",
-        `/api/admin/users/${userId}/reset-password`,
-        { newPassword: password }
+        `/api/admin/users/${userId}/generate-reset-link`,
+        {}
       );
       return response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Password reset successful",
-        description: `Password for ${selectedUser?.username} has been reset.`,
-      });
-      setShowResetDialog(false);
-      setNewPassword("");
-      setSelectedUser(null);
+    onSuccess: (data) => {
+      setResetLink(data.resetLink);
+      setLinkCopied(false);
     },
     onError: (error: any) => {
       toast({
-        title: "Password reset failed",
-        description: error.message || "Failed to reset password. Please try again.",
+        title: "Failed to generate reset link",
+        description: error.message || "Failed to generate reset link. Please try again.",
         variant: "destructive",
       });
     },
@@ -286,20 +283,29 @@ export default function Admin() {
   const handleResetPassword = (user: User) => {
     setSelectedUser(user);
     setShowResetDialog(true);
-    setNewPassword("");
+    setResetLink(null);
+    setLinkCopied(false);
+    // Automatically generate the reset link
+    generateResetLinkMutation.mutate(user.id);
   };
 
-  const handleConfirmReset = () => {
-    if (!selectedUser) return;
-    if (newPassword.length < 8) {
+  const handleCopyLink = async () => {
+    if (!resetLink) return;
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      setLinkCopied(true);
       toast({
-        title: "Invalid password",
-        description: "Password must be at least 8 characters long.",
+        title: "Link copied",
+        description: "Reset link copied to clipboard. Share it with the user.",
+      });
+      setTimeout(() => setLinkCopied(false), 3000);
+    } catch (err) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy link. Please select and copy manually.",
         variant: "destructive",
       });
-      return;
     }
-    resetPasswordMutation.mutate({ userId: selectedUser.id, password: newPassword });
   };
 
   const getTierColor = (tier: string) => {
@@ -587,45 +593,66 @@ export default function Admin() {
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <DialogContent data-testid="dialog-reset-password">
           <DialogHeader>
-            <DialogTitle>Reset Password</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Link className="h-5 w-5" />
+              Password Reset Link
+            </DialogTitle>
             <DialogDescription>
-              Reset the password for user: <strong>{selectedUser?.username}</strong>
+              Generate a password reset link for user: <strong>{selectedUser?.username}</strong>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="Enter new password (min 8 characters)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                data-testid="input-new-password"
-              />
-              <p className="text-sm text-muted-foreground">
-                Password must be at least 8 characters long
-              </p>
-            </div>
+            {generateResetLinkMutation.isPending ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Generating reset link...
+              </div>
+            ) : resetLink ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Reset Link</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={resetLink}
+                      className="font-mono text-xs"
+                      data-testid="input-reset-link"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyLink}
+                      data-testid="button-copy-link"
+                    >
+                      {linkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="bg-muted rounded-md p-3 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Share this link with the user. They can use it to set a new password.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This link expires in 24 hours.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-destructive">
+                Failed to generate reset link. Please try again.
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => {
                 setShowResetDialog(false);
-                setNewPassword("");
+                setResetLink(null);
                 setSelectedUser(null);
               }}
-              data-testid="button-cancel-reset"
+              data-testid="button-close-reset"
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmReset}
-              disabled={resetPasswordMutation.isPending || newPassword.length < 8}
-              data-testid="button-confirm-reset"
-            >
-              {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
