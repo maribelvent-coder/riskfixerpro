@@ -106,11 +106,11 @@ export function AppSidebar() {
   return (
     <Sidebar data-testid="sidebar-main">
       <SidebarHeader className="p-4 pb-3">
-        <div className="flex flex-col -my-2">
+        <div className="flex flex-col">
           <img 
             src={logoPath} 
             alt="RiskFixer - Security Site Survey" 
-            className="h-[4.5rem] w-auto object-cover object-center"
+            className="h-auto w-full object-contain"
             data-testid="logo-sidebar"
           />
         </div>
