@@ -1684,6 +1684,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/admin/users/:id", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Prevent deleting the last admin
+      if (user.isAdmin) {
+        const allUsers = await storage.getAllUsers();
+        const adminCount = allUsers.filter(u => u.isAdmin).length;
+        if (adminCount <= 1) {
+          return res.status(400).json({ error: "Cannot delete the last admin" });
+        }
+      }
+
+      // If user owns an organization, delete it first
+      if (user.organizationId) {
+        const org = await storage.getOrganization(user.organizationId);
+        if (org && org.ownerId === id) {
+          await storage.deleteOrganization(user.organizationId);
+        }
+      }
+
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  app.delete("/api/admin/organizations/:id", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const organization = await storage.getOrganization(id);
+      if (!organization) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      // Remove all members from organization first
+      const members = await storage.getOrganizationMembers(id);
+      for (const member of members) {
+        await storage.removeUserFromOrganization(member.id);
+      }
+
+      await storage.deleteOrganization(id);
+      res.json({ message: "Organization deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      res.status(500).json({ error: "Failed to delete organization" });
+    }
+  });
+
   app.get("/api/admin/organizations", verifyAdminAccess, async (req, res) => {
     try {
       const organizations = await storage.getAllOrganizations();

@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2 } from "lucide-react";
 
 type User = {
   id: string;
@@ -59,6 +59,8 @@ export default function Admin() {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showSeedConfirm, setShowSeedConfirm] = useState(false);
   const [showOrgLimitsDialog, setShowOrgLimitsDialog] = useState(false);
+  const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
+  const [showDeleteOrgDialog, setShowDeleteOrgDialog] = useState(false);
   const [orgLimits, setOrgLimits] = useState({ maxMembers: 0, maxSites: 0, maxAssessments: 0 });
 
   const { data: users, isLoading } = useQuery<User[]>({
@@ -175,6 +177,74 @@ export default function Admin() {
 
   const handleToggleAdmin = (user: User) => {
     toggleAdminMutation.mutate({ userId: user.id, isAdmin: !user.isAdmin });
+  };
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User deleted",
+        description: "The user has been permanently deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      setShowDeleteUserDialog(false);
+      setSelectedUser(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete user",
+        description: error.message || "Failed to delete user. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteOrgMutation = useMutation({
+    mutationFn: async (orgId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/organizations/${orgId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Organization deleted",
+        description: "The organization has been permanently deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowDeleteOrgDialog(false);
+      setSelectedOrg(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete organization",
+        description: error.message || "Failed to delete organization. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user);
+    setShowDeleteUserDialog(true);
+  };
+
+  const handleConfirmDeleteUser = () => {
+    if (!selectedUser) return;
+    deleteUserMutation.mutate(selectedUser.id);
+  };
+
+  const handleDeleteOrg = (org: Organization) => {
+    setSelectedOrg(org);
+    setShowDeleteOrgDialog(true);
+  };
+
+  const handleConfirmDeleteOrg = () => {
+    if (!selectedOrg) return;
+    deleteOrgMutation.mutate(selectedOrg.id);
   };
 
   const seedProductionMutation = useMutation({
@@ -354,16 +424,27 @@ export default function Admin() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs sm:text-sm"
-                          onClick={() => handleResetPassword(user)}
-                          data-testid={`button-reset-${user.id}`}
-                        >
-                          <Key className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Reset Password</span>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm"
+                            onClick={() => handleResetPassword(user)}
+                            data-testid={`button-reset-${user.id}`}
+                          >
+                            <Key className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Reset</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => handleDeleteUser(user)}
+                            data-testid={`button-delete-user-${user.id}`}
+                          >
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -429,16 +510,27 @@ export default function Admin() {
                         {new Date(org.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs sm:text-sm"
-                          onClick={() => handleEditOrgLimits(org)}
-                          data-testid={`button-edit-limits-${org.id}`}
-                        >
-                          <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Edit Limits</span>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm"
+                            onClick={() => handleEditOrgLimits(org)}
+                            data-testid={`button-edit-limits-${org.id}`}
+                          >
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => handleDeleteOrg(org)}
+                            data-testid={`button-delete-org-${org.id}`}
+                          >
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -662,6 +754,100 @@ export default function Admin() {
               data-testid="button-confirm-seed"
             >
               {seedProductionMutation.isPending ? "Seeding..." : "Yes, Seed Database"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={showDeleteUserDialog} onOpenChange={setShowDeleteUserDialog}>
+        <DialogContent data-testid="dialog-delete-user">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete User
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete user <strong>{selectedUser?.username}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+              <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                This action cannot be undone
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                This will delete the user and their associated organization if they are the owner.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteUserDialog(false);
+                setSelectedUser(null);
+              }}
+              disabled={deleteUserMutation.isPending}
+              data-testid="button-cancel-delete-user"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeleteUser}
+              disabled={deleteUserMutation.isPending}
+              data-testid="button-confirm-delete-user"
+            >
+              {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Organization Confirmation Dialog */}
+      <Dialog open={showDeleteOrgDialog} onOpenChange={setShowDeleteOrgDialog}>
+        <DialogContent data-testid="dialog-delete-org">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Organization
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete organization <strong>{selectedOrg?.name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+              <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                This action cannot be undone
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                All members will be removed from the organization. Their accounts will remain but without an organization.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteOrgDialog(false);
+                setSelectedOrg(null);
+              }}
+              disabled={deleteOrgMutation.isPending}
+              data-testid="button-cancel-delete-org"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeleteOrg}
+              disabled={deleteOrgMutation.isPending}
+              data-testid="button-confirm-delete-org"
+            >
+              {deleteOrgMutation.isPending ? "Deleting..." : "Delete Organization"}
             </Button>
           </DialogFooter>
         </DialogContent>
