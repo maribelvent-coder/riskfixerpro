@@ -1027,17 +1027,18 @@ export function SurveyWizard({
 
       <div className="px-4 sm:px-6 py-4 sm:py-6">
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-          {/* Sidebar - Category Navigation */}
+          {/* Sidebar - Category Navigation (Sticky) */}
           <div className={cn(
             "lg:w-64 flex-shrink-0",
             navOpen ? "block" : "hidden lg:block"
           )}>
-            <Card>
-              <CardContent className="p-3 sm:p-4">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Categories
-                </h3>
-                <nav className="space-y-1 max-h-[40vh] overflow-y-auto">
+            <div className="lg:sticky lg:top-4">
+              <Card>
+                <CardContent className="p-3 sm:p-4">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Categories
+                  </h3>
+                  <nav className="space-y-1 max-h-[35vh] overflow-y-auto">
                   {categories.map((category) => {
                     const stats = getCategoryStats(category);
                     const isActive = activeCategory === category;
@@ -1105,7 +1106,8 @@ export function SurveyWizard({
                   </div>
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </div>
           </div>
 
           {/* Main Content Area */}
