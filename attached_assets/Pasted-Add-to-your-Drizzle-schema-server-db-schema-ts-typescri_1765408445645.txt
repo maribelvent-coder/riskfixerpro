@@ -1,0 +1,97 @@
+Add to your Drizzle schema (`server/db/schema.ts`):
+
+```typescript
+export const reports = pgTable('reports', {
+  id: text('id').primaryKey(),
+  assessmentId: integer('assessment_id').references(() => assessments.id).notNull(),
+  type: text('type').notNull(), // 'executive_summary', 'full_assessment', 'gap_analysis'
+  typeName: text('type_name').notNull(),
+  filename: text('filename').notNull(),
+  pdfData: bytea('pdf_data'), // Store PDF binary
+  pageCount: integer('page_count').default(0),
+  fileSize: text('file_size'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+```
+
+## Task 7.2: Run Migration
+
+```bash
+npm run db:push
+# or
+npx drizzle-kit push:pg
+```
+
+---
+
+# STEP 8: TESTING CHECKLIST
+
+## Frontend Tests
+
+- [ ] Tab navigation switches correctly between all 5 tabs
+- [ ] Risk Profile shows "No data" state when no scenarios exist
+- [ ] Risk Profile displays correct T×V×I scores
+- [ ] Risk scenarios list sorts by score (highest first)
+- [ ] Clicking a scenario opens the detail modal
+- [ ] Report type selector highlights selected type
+- [ ] Generate Report button shows loading state
+- [ ] Report appears in history after generation
+- [ ] Download button triggers PDF download
+- [ ] Photo upload accepts multiple files
+- [ ] Photo grid displays thumbnails correctly
+- [ ] AI analysis runs and displays results
+
+## API Tests
+
+```bash
+# Test risk profile endpoint
+curl http://localhost:5000/api/assessments/1/risk-profile
+
+# Test report generation
+curl -X POST http://localhost:5000/api/assessments/1/reports/generate \
+  -H "Content-Type: application/json" \
+  -d '{"reportType": "full_assessment", "options": {"includeCoverPage": true}}'
+
+# Test report list
+curl http://localhost:5000/api/assessments/1/reports
+
+# Test report download
+curl http://localhost:5000/api/assessments/1/reports/{reportId}/download --output report.pdf
+```
+
+## PDF Quality Tests
+
+- [ ] Cover page renders with correct branding
+- [ ] Risk scores display correctly
+- [ ] Tables render without breaking across pages
+- [ ] Footer shows page numbers
+- [ ] PDF opens in standard viewers (Chrome, Adobe, Preview)
+
+---
+
+# SUMMARY
+
+## Step Order
+
+1. **Step 1:** Tab Navigation + Assessment Header
+2. **Step 2:** Risk Profile Tab (all dashboard components)
+3. **Step 3:** Reports Tab (frontend components)
+4. **Step 4:** Report Generation API (backend routes)
+5. **Step 5:** PDF Generation (Puppeteer + templates)
+6. **Step 6:** Photos Tab enhancements
+7. **Step 7:** Database schema updates
+8. **Step 8:** Testing
+
+## Files to Create
+
+| Location | File |
+|----------|------|
+| `client/src/components/layout/` | `TabNavigation.tsx`, `AssessmentHeader.tsx` |
+| `client/src/components/risk-profile/` | `RiskProfileTab.tsx`, `OverallRiskCard.tsx`, `RiskScenarioList.tsx`, `RecommendationsSummary.tsx`, `EvidenceTrail.tsx`, `ScenarioDetailModal.tsx` |
+| `client/src/components/reports/` | `ReportsTab.tsx`, `ReportTypeSelector.tsx`, `ReportOptions.tsx`, `ReportHistory.tsx` |
+| `client/src/components/photos/` | `PhotosTab.tsx` |
+| `server/services/report-generator/` | `index.ts`, `narrative-generator.ts`, `html-renderer.ts` |
+| `server/db/` | Update `schema.ts` with reports table |
+| `server/` | Update `routes.ts` with new endpoints |
+
+---
