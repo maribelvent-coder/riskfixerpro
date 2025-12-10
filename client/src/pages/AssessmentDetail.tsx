@@ -66,6 +66,138 @@ const SURVEY_TYPE_LABELS: Record<string, string> = {
   "executive-protection": "Executive Protection",
 };
 
+// Generate formatted HTML for survey data export
+function generateSurveyExportHTML(data: any): string {
+  const escapeHtml = (str: string) => {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const formatResponse = (response: any) => {
+    if (response === null || response === undefined) return '<em class="text-muted">No response</em>';
+    if (typeof response === 'boolean') return response ? 'Yes' : 'No';
+    if (typeof response === 'object') return `<pre>${escapeHtml(JSON.stringify(response, null, 2))}</pre>`;
+    return escapeHtml(String(response));
+  };
+
+  let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Survey Data Export - ${escapeHtml(data.assessment?.name || 'Assessment')}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+    .header { background: #1a1a2e; color: white; padding: 24px; border-radius: 8px; margin-bottom: 24px; }
+    .header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    .header .meta { opacity: 0.8; font-size: 14px; }
+    .site-info { background: white; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #4f46e5; }
+    .category { background: white; border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .category-header { background: #4f46e5; color: white; padding: 12px 16px; font-weight: 600; }
+    .question { border-bottom: 1px solid #e5e5e5; padding: 16px; }
+    .question:last-child { border-bottom: none; }
+    .question-text { font-weight: 500; margin-bottom: 8px; }
+    .response { background: #f0f9ff; padding: 12px; border-radius: 4px; margin-top: 8px; }
+    .notes { background: #fef3c7; padding: 12px; border-radius: 4px; margin-top: 8px; font-style: italic; }
+    .evidence { margin-top: 12px; }
+    .evidence img { max-width: 300px; border-radius: 4px; margin: 4px; }
+    .evidence-link { color: #4f46e5; text-decoration: none; display: inline-block; margin: 4px; }
+    .stats { display: flex; gap: 16px; margin-top: 16px; }
+    .stat { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 4px; }
+    .subcategory { color: #666; font-size: 12px; margin-bottom: 4px; }
+    .standard { font-size: 11px; color: #888; margin-top: 4px; }
+    pre { background: #f8f8f8; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+    .text-muted { color: #999; }
+    .json-export { background: white; padding: 16px; border-radius: 8px; margin-top: 24px; }
+    .json-export summary { cursor: pointer; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${escapeHtml(data.assessment?.name || 'Survey Data Export')}</h1>
+    <div class="meta">
+      Template: ${escapeHtml(data.assessment?.templateId || 'N/A')} | 
+      Status: ${escapeHtml(data.assessment?.status || 'N/A')} | 
+      Exported: ${new Date(data.exportedAt).toLocaleString()}
+    </div>
+    <div class="stats">
+      <div class="stat">Total Questions: ${data.surveyData?.totalQuestions || 0}</div>
+      <div class="stat">Answered: ${data.surveyData?.answeredQuestions || 0}</div>
+      <div class="stat">Completion: ${data.surveyData?.totalQuestions ? Math.round((data.surveyData.answeredQuestions / data.surveyData.totalQuestions) * 100) : 0}%</div>
+    </div>
+  </div>`;
+
+  if (data.site) {
+    html += `
+  <div class="site-info">
+    <strong>${escapeHtml(data.site.name)}</strong><br>
+    ${escapeHtml([data.site.address, data.site.city, data.site.state, data.site.zip].filter(Boolean).join(', '))}
+  </div>`;
+  }
+
+  // Render each category
+  const categories = data.surveyData?.categories || {};
+  for (const [categoryName, questions] of Object.entries(categories)) {
+    const questionList = questions as any[];
+    html += `
+  <div class="category">
+    <div class="category-header">${escapeHtml(categoryName)} (${questionList.length} questions)</div>`;
+    
+    for (const q of questionList) {
+      html += `
+    <div class="question">
+      ${q.subcategory ? `<div class="subcategory">${escapeHtml(q.subcategory)}</div>` : ''}
+      <div class="question-text">${escapeHtml(q.question)}</div>
+      <div class="response"><strong>Response:</strong> ${formatResponse(q.response)}</div>`;
+      
+      if (q.notes) {
+        html += `
+      <div class="notes"><strong>Notes:</strong> ${escapeHtml(q.notes)}</div>`;
+      }
+      
+      if (q.evidence && q.evidence.length > 0) {
+        html += `
+      <div class="evidence"><strong>Evidence Photos:</strong><br>`;
+        for (const photo of q.evidence) {
+          const url = typeof photo === 'string' ? photo : photo.url;
+          if (url) {
+            html += `<a href="${escapeHtml(url)}" target="_blank" class="evidence-link">${escapeHtml(url.split('/').pop() || 'Photo')}</a>`;
+          }
+        }
+        html += `</div>`;
+      }
+      
+      if (q.standard) {
+        html += `
+      <div class="standard">Standard: ${escapeHtml(q.standard)}</div>`;
+      }
+      
+      html += `
+    </div>`;
+    }
+    
+    html += `
+  </div>`;
+  }
+
+  // Add raw JSON export at the bottom
+  html += `
+  <details class="json-export">
+    <summary>View Raw JSON Data</summary>
+    <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+  </details>
+</body>
+</html>`;
+
+  return html;
+}
+
 interface AssessmentDetailProps {
   assessmentId?: string;
 }
