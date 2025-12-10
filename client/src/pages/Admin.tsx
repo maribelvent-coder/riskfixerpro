@@ -148,6 +148,35 @@ export default function Admin() {
     },
   });
 
+  const toggleAdminMutation = useMutation({
+    mutationFn: async ({ userId, isAdmin }: { userId: string; isAdmin: boolean }) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/users/${userId}/admin`,
+        { isAdmin }
+      );
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Admin status updated",
+        description: variables.isAdmin ? "User is now an admin." : "Admin privileges removed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update admin status",
+        description: error.message || "Failed to update admin status. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleToggleAdmin = (user: User) => {
+    toggleAdminMutation.mutate({ userId: user.id, isAdmin: !user.isAdmin });
+  };
+
   const seedProductionMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/admin/seed-production", {});
@@ -309,12 +338,17 @@ export default function Admin() {
                         </Select>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        {user.isAdmin && (
-                          <Badge variant="secondary" className="bg-accent-orange text-white text-[10px] sm:text-xs">
-                            <Shield className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-                            Admin
-                          </Badge>
-                        )}
+                        <Button
+                          variant={user.isAdmin ? "default" : "outline"}
+                          size="sm"
+                          className={`text-[10px] sm:text-xs ${user.isAdmin ? "bg-accent-orange hover:bg-accent-orange/90" : ""}`}
+                          onClick={() => handleToggleAdmin(user)}
+                          disabled={toggleAdminMutation.isPending}
+                          data-testid={`button-toggle-admin-${user.id}`}
+                        >
+                          <Shield className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
+                          {user.isAdmin ? "Admin" : "Make Admin"}
+                        </Button>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs sm:text-sm hidden md:table-cell">
                         {new Date(user.createdAt).toLocaleDateString()}

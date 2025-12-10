@@ -224,6 +224,12 @@ export class DbStorage implements IStorage {
       .where(eq(schema.users.id, userId));
   }
 
+  async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
+    await db.update(schema.users)
+      .set({ isAdmin })
+      .where(eq(schema.users.id, userId));
+  }
+
   // Password reset token methods
   async createPasswordResetToken(insertToken: InsertPasswordResetToken): Promise<PasswordResetToken> {
     const results = await db.insert(schema.passwordResetTokens).values(insertToken).returning();

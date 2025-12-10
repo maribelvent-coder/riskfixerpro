@@ -89,6 +89,7 @@ export interface IStorage {
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
   updateUserEmail(userId: string, email: string): Promise<void>;
   updateUserAccountTier(userId: string, accountTier: string): Promise<void>;
+  updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void>;
 
   // Password reset token methods
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
@@ -490,6 +491,14 @@ export class MemStorage implements IStorage {
     const user = this.users.get(userId);
     if (user) {
       user.accountTier = accountTier;
+      this.users.set(userId, user);
+    }
+  }
+
+  async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.isAdmin = isAdmin;
       this.users.set(userId, user);
     }
   }

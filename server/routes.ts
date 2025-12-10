@@ -1653,6 +1653,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/users/:id/admin", verifyAdminAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isAdmin } = req.body;
+
+      if (typeof isAdmin !== "boolean") {
+        return res.status(400).json({ error: "isAdmin must be a boolean" });
+      }
+
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Prevent removing admin from the last admin
+      if (!isAdmin) {
+        const allUsers = await storage.getAllUsers();
+        const adminCount = allUsers.filter(u => u.isAdmin).length;
+        if (adminCount <= 1 && user.isAdmin) {
+          return res.status(400).json({ error: "Cannot remove the last admin" });
+        }
+      }
+
+      await storage.updateUserAdminStatus(id, isAdmin);
+      res.json({ message: "Admin status updated successfully", isAdmin });
+    } catch (error) {
+      console.error("Error updating admin status:", error);
+      res.status(500).json({ error: "Failed to update admin status" });
+    }
+  });
+
   app.get("/api/admin/organizations", verifyAdminAccess, async (req, res) => {
     try {
       const organizations = await storage.getAllOrganizations();
