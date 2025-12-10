@@ -7,11 +7,12 @@ import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Save, Shield, CheckCircle } from "lucide-react";
+import { Save, Shield, CheckCircle, LayoutGrid } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { ExecutiveInterviewQuestion, ExecutiveInterviewResponse } from "@shared/schema";
+import ExecutiveInterviewWizard from "./ExecutiveInterviewWizard";
 
 interface ExecutiveInterviewProps {
   assessmentId: string;
@@ -19,6 +20,7 @@ interface ExecutiveInterviewProps {
 }
 
 export default function ExecutiveInterview({ assessmentId, onComplete }: ExecutiveInterviewProps) {
+  const [useWizard, setUseWizard] = useState(true); // Default to new wizard view
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
@@ -174,6 +176,18 @@ export default function ExecutiveInterview({ assessmentId, onComplete }: Executi
     );
   }
 
+  // Render the new wizard view if enabled
+  if (useWizard) {
+    return (
+      <ExecutiveInterviewWizard
+        assessmentId={assessmentId}
+        onComplete={onComplete}
+        onSwitchToClassic={() => setUseWizard(false)}
+      />
+    );
+  }
+
+  // Classic view (original accordion layout)
   return (
     <div className="space-y-3 sm:space-y-6">
       {/* Header with Progress */}
@@ -189,9 +203,21 @@ export default function ExecutiveInterview({ assessmentId, onComplete }: Executi
                 Conduct a comprehensive interview with the executive to gather critical security information
               </p>
             </div>
-            <Badge variant={progressPercent === 100 ? "default" : "secondary"} className="text-[10px] sm:text-xs">
-              {answeredQuestions} / {totalQuestions} Questions
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUseWizard(true)}
+                className="text-xs"
+                data-testid="button-switch-wizard"
+              >
+                <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+                New View
+              </Button>
+              <Badge variant={progressPercent === 100 ? "default" : "secondary"} className="text-[10px] sm:text-xs">
+                {answeredQuestions} / {totalQuestions} Questions
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-6">
