@@ -1599,9 +1599,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const token = randomBytes(32).toString("hex");
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+        // Hash the token before storing (same as request-password-reset flow)
+        const tokenHash = await bcrypt.hash(token, 10);
+
         await storage.createPasswordResetToken({
           userId: id,
-          token,
+          token: tokenHash,
           expiresAt,
           used: false,
         });
