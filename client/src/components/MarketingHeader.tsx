@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import logoPath from "@assets/logo_1759576687177.jpeg";
+import logoPath from "@assets/riskfixer-logo-trimmed.png";
 import { useAuth } from "@/hooks/useAuth";
 
 export function MarketingHeader() {
@@ -10,12 +10,11 @@ export function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 bg-white border-b">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-8">
-        <Link href="/" data-testid="link-home" className="flex-shrink-0 overflow-hidden flex items-center h-[85px]">
+        <Link href="/" data-testid="link-home" className="flex-shrink-0 flex items-center">
           <img 
             src={logoPath} 
             alt="RiskFixer Logo" 
-            className="h-[220px] w-auto object-cover transition-transform hover:scale-105"
-            style={{ objectPosition: 'center 45%' }}
+            className="h-12 w-auto transition-transform hover:scale-105"
             data-testid="img-logo"
           />
         </Link>

@@ -597,7 +597,7 @@ export default function ExecutiveInterviewWizard({
                           "transition-all ring-2",
                           hasIssue 
                             ? "border-amber-300 bg-amber-50/30 dark:bg-amber-950/20 ring-amber-200 dark:ring-amber-800"
-                            : "ring-sky-100 dark:ring-sky-900/50"
+                            : "ring-teal-100 dark:ring-teal-900/50"
                         )}
                       >
                         {/* Question Header */}
@@ -611,15 +611,15 @@ export default function ExecutiveInterviewWizard({
                           }
                         >
                           <div className="flex items-start gap-2 sm:gap-3">
-                            {/* Question Number - brighter colors */}
+                            {/* Question Number - brighter colors matching logo */}
                             <div
                               className={cn(
                                 "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs sm:text-sm font-medium",
                                 hasIssue
                                   ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
                                   : isAnswered
-                                    ? "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300"
-                                    : "bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-400"
+                                    ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300"
+                                    : "bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-400"
                               )}
                             >
                               {q.questionNumber}
