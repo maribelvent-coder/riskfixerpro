@@ -17,6 +17,7 @@ import {
 import { generateRiskIntelligenceReport } from "./riskIntelligence";
 import type { RiskIntelligenceReport, ThreatIntelligence } from "./riskIntelligence";
 import { calculateTemplateMetrics } from "./reporting/template-metrics";
+import { ObjectStorageService, ObjectNotFoundError } from "../objectStorage";
 
 export interface ComprehensiveReportData {
   // Core Assessment Data
@@ -179,7 +180,8 @@ export async function aggregateReportData(
   }
 
   // Extract photo evidence from assessment questions (handles missing data)
-  const photoEvidence = extractPhotoEvidence(assessment);
+  // Convert images to base64 data URLs so they work in standalone HTML reports
+  const photoEvidence = await extractPhotoEvidenceWithBase64(assessment);
 
   // Generate prioritized recommendations (handles missing data)
   const recommendations = generateRecommendations(assessment, geoIntel);
@@ -277,12 +279,12 @@ function calculateRiskSummary(scenarios: RiskScenario[]) {
   };
 }
 
-function extractPhotoEvidence(assessment: AssessmentWithQuestions): Array<{
+async function extractPhotoEvidenceWithBase64(assessment: AssessmentWithQuestions): Promise<Array<{
   url: string;
   caption?: string;
   section: string;
-}> {
-  const photos: Array<{ url: string; caption?: string; section: string }> = [];
+}>> {
+  const photos: Array<{ url: string; caption?: string; section: string; path: string }> = [];
 
   // Extract from facility survey questions (with null safety)
   if (assessment.facilityQuestions && Array.isArray(assessment.facilityQuestions)) {
@@ -292,6 +294,7 @@ function extractPhotoEvidence(assessment: AssessmentWithQuestions): Array<{
           if (path && typeof path === 'string') {
             photos.push({
               url: path,
+              path: path,
               caption: q.question || undefined,
               section: 'Facility Survey'
             });
@@ -309,6 +312,7 @@ function extractPhotoEvidence(assessment: AssessmentWithQuestions): Array<{
           if (path && typeof path === 'string') {
             photos.push({
               url: path,
+              path: path,
               caption: q.question || undefined,
               section: 'Executive Interview'
             });
@@ -318,7 +322,47 @@ function extractPhotoEvidence(assessment: AssessmentWithQuestions): Array<{
     });
   }
 
-  return photos;
+  // Convert images to base64 data URLs
+  const objectStorageService = new ObjectStorageService();
+  const photosWithBase64 = await Promise.all(
+    photos.map(async (photo) => {
+      try {
+        const file = await objectStorageService.getEvidenceFile(photo.path);
+        const [metadata] = await file.getMetadata();
+        const contentType = metadata.contentType || 'image/jpeg';
+        
+        // Download file content as buffer
+        const chunks: Buffer[] = [];
+        const stream = file.createReadStream();
+        
+        await new Promise<void>((resolve, reject) => {
+          stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+          stream.on('end', () => resolve());
+          stream.on('error', reject);
+        });
+        
+        const buffer = Buffer.concat(chunks);
+        const base64 = buffer.toString('base64');
+        const dataUrl = `data:${contentType};base64,${base64}`;
+        
+        return {
+          url: dataUrl,
+          caption: photo.caption,
+          section: photo.section
+        };
+      } catch (error) {
+        console.error(`Failed to load image ${photo.path}:`, error);
+        // Return placeholder for failed images
+        return {
+          url: photo.path, // Keep original path as fallback
+          caption: photo.caption,
+          section: photo.section
+        };
+      }
+    })
+  );
+
+  return photosWithBase64;
 }
 
 function generateRecommendations(
