@@ -27,40 +27,59 @@ export function EvidenceUploader({
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("photo", file);
-      formData.append("questionId", questionId);
-      formData.append("questionType", questionType);
-
-      return new Promise<{ success: boolean; evidencePath: string; filename: string }>(
-        (resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-
-          xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable) {
-              const progress = Math.round((e.loaded / e.total) * 100);
-              setUploadProgress(progress);
-            }
-          });
-
-          xhr.addEventListener("load", () => {
-            setUploadProgress(null);
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve(JSON.parse(xhr.responseText));
-            } else {
-              reject(new Error(JSON.parse(xhr.responseText).error || "Upload failed"));
-            }
-          });
-
-          xhr.addEventListener("error", () => {
-            setUploadProgress(null);
-            reject(new Error("Network error"));
-          });
-
-          xhr.open("POST", `/api/assessments/${assessmentId}/evidence`);
-          xhr.send(formData);
+      const response = await apiRequest(
+        "POST",
+        `/api/assessments/${assessmentId}/evidence/upload-url`,
+        {
+          questionId,
+          questionType,
+          filename: file.name,
         }
       );
+
+      const { uploadURL, evidencePath } = await response.json();
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            const progress = Math.round((e.loaded / e.total) * 100);
+            setUploadProgress(progress);
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          setUploadProgress(null);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error("Upload to storage failed"));
+          }
+        });
+
+        xhr.addEventListener("error", () => {
+          setUploadProgress(null);
+          reject(new Error("Network error during upload"));
+        });
+
+        xhr.open("PUT", uploadURL);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.send(file);
+      });
+
+      await apiRequest(
+        "POST",
+        `/api/assessments/${assessmentId}/evidence/register`,
+        {
+          questionId,
+          questionType,
+          evidencePath,
+          filename: file.name,
+        }
+      );
+
+      return { success: true, evidencePath, filename: file.name };
     },
     onSuccess: () => {
       toast({

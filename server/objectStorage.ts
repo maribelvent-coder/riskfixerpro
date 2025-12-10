@@ -107,6 +107,40 @@ export class ObjectStorageService {
     };
   }
 
+  async setEvidenceMetadata(
+    evidencePath: string,
+    assessmentId: string,
+    questionId: string,
+    filename: string
+  ): Promise<void> {
+    if (!evidencePath.startsWith('/evidence/')) {
+      throw new Error("Invalid evidence path");
+    }
+
+    const objectName = evidencePath.slice(10);
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${objectName}`;
+    const ext = filename.split('.').pop() || 'jpg';
+
+    const { bucketName, objectName: parsedObjectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(parsedObjectName);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw new ObjectNotFoundError();
+    }
+
+    await file.setMetadata({
+      contentType: getContentType(ext),
+      metadata: {
+        assessmentId,
+        questionId,
+        originalFilename: filename,
+      },
+    });
+  }
+
   async uploadEvidence(
     buffer: Buffer,
     filename: string,

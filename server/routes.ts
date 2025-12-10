@@ -7488,111 +7488,7 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
-  // Evidence Upload/Download/Delete routes
-  app.post(
-    "/api/assessments/:id/evidence",
-    verifyAssessmentOwnership,
-    upload.fields([{ name: "photo", maxCount: 1 }]),
-    async (req, res) => {
-      try {
-        const { questionId, questionType } = req.body;
-
-        if (!questionId || !questionType) {
-          return res
-            .status(400)
-            .json({ error: "questionId and questionType are required" });
-        }
-
-        if (!["facility", "assessment"].includes(questionType)) {
-          return res
-            .status(400)
-            .json({ error: "questionType must be 'facility' or 'assessment'" });
-        }
-
-        const files = req.files as {
-          [fieldname: string]: Express.Multer.File[];
-        };
-        if (!files || !files.photo || files.photo.length === 0) {
-          return res.status(400).json({ error: "No file uploaded" });
-        }
-
-        const file = files.photo[0];
-        const assessmentId = req.params.id;
-        const objectStorageService = new ObjectStorageService();
-
-        const evidencePath = await objectStorageService.uploadEvidence(
-          file.buffer,
-          file.originalname,
-          assessmentId,
-          questionId,
-        );
-
-        if (questionType === "facility") {
-          const question = await storage.getFacilitySurveyQuestion(questionId);
-          if (!question || question.assessmentId !== assessmentId) {
-            await objectStorageService.deleteEvidence(evidencePath);
-            return res.status(404).json({ error: "Question not found" });
-          }
-
-          const currentEvidence = question.evidence || [];
-          if (currentEvidence.length >= 10) {
-            await objectStorageService.deleteEvidence(evidencePath);
-            return res
-              .status(400)
-              .json({ error: "Maximum 10 evidence photos per question" });
-          }
-
-          const updatedQuestion = await storage.appendFacilityQuestionEvidence(
-            questionId,
-            evidencePath,
-          );
-
-          if (!updatedQuestion) {
-            await objectStorageService.deleteEvidence(evidencePath);
-            return res.status(500).json({ error: "Failed to update question" });
-          }
-        } else {
-          const question = await storage.getAssessmentQuestion(questionId);
-          if (!question || question.assessmentId !== assessmentId) {
-            await objectStorageService.deleteEvidence(evidencePath);
-            return res.status(404).json({ error: "Question not found" });
-          }
-
-          const currentEvidence = question.evidence || [];
-          if (currentEvidence.length >= 10) {
-            await objectStorageService.deleteEvidence(evidencePath);
-            return res
-              .status(400)
-              .json({ error: "Maximum 10 evidence photos per question" });
-          }
-
-          const updatedQuestion =
-            await storage.appendAssessmentQuestionEvidence(
-              questionId,
-              evidencePath,
-            );
-
-          if (!updatedQuestion) {
-            await objectStorageService.deleteEvidence(evidencePath);
-            return res.status(500).json({ error: "Failed to update question" });
-          }
-        }
-
-        res.json({
-          success: true,
-          evidencePath,
-          filename: file.originalname,
-        });
-      } catch (error: any) {
-        console.error("Error uploading evidence:", error);
-        if (error.message === "Only image files are allowed") {
-          return res.status(400).json({ error: error.message });
-        }
-        res.status(500).json({ error: "Failed to upload evidence" });
-      }
-    },
-  );
-
+  // Evidence Upload/Download/Delete routes (presigned URL approach)
   app.get("/evidence/:path(*)", async (req, res) => {
     try {
       const userId = req.session.userId;
@@ -7727,6 +7623,21 @@ The facility should prioritize addressing critical risks immediately, particular
         }
 
         const assessmentId = req.params.id;
+        const objectStorageService = new ObjectStorageService();
+
+        try {
+          await objectStorageService.setEvidenceMetadata(
+            evidencePath,
+            assessmentId,
+            questionId,
+            filename || "photo.jpg",
+          );
+        } catch (metaError) {
+          console.error("Error setting evidence metadata:", metaError);
+          return res.status(400).json({ 
+            error: "Failed to verify uploaded file. Please try uploading again." 
+          });
+        }
 
         if (questionType === "facility") {
           const question = await storage.getFacilitySurveyQuestion(questionId);
