@@ -494,7 +494,7 @@ export default function ExecutiveInterviewWizard({
                       <span className="text-muted-foreground">
                         Issues Found
                       </span>
-                      <span className="font-medium text-teal-600">
+                      <span className="font-medium text-blue-600">
                         {issuesCount}
                       </span>
                     </div>
@@ -596,7 +596,7 @@ export default function ExecutiveInterviewWizard({
                         className={cn(
                           "transition-all ring-2",
                           hasIssue 
-                            ? "border-teal-300 bg-teal-50/30 dark:bg-teal-950/20 ring-teal-200 dark:ring-teal-800"
+                            ? "border-blue-400 bg-blue-50/30 dark:bg-blue-950/20 ring-blue-300 dark:ring-blue-800"
                             : "ring-slate-200 dark:ring-slate-700/50"
                         )}
                       >
@@ -611,15 +611,15 @@ export default function ExecutiveInterviewWizard({
                           }
                         >
                           <div className="flex items-start gap-2 sm:gap-3">
-                            {/* Question Number - dark blue matching logo */}
+                            {/* Question Number - royal blue */}
                             <div
                               className={cn(
                                 "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs sm:text-sm font-medium",
                                 hasIssue
-                                  ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                                   : isAnswered
-                                    ? "bg-blue-900 text-blue-100 dark:bg-blue-800 dark:text-blue-100"
-                                    : "bg-slate-700 text-slate-100 dark:bg-slate-600 dark:text-slate-100"
+                                    ? "bg-blue-600 text-white dark:bg-blue-500 dark:text-white"
+                                    : "bg-blue-500 text-white dark:bg-blue-400 dark:text-white"
                               )}
                             >
                               {q.questionNumber}
@@ -634,14 +634,14 @@ export default function ExecutiveInterviewWizard({
                                 {/* Status indicators */}
                                 <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                                   {hasNotes && (
-                                    <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500" />
+                                    <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500" />
                                   )}
                                   {isAnswered && (
                                     <CheckCircle
                                       className={cn(
                                         "w-4 h-4 sm:w-5 sm:h-5",
                                         hasIssue
-                                          ? "text-teal-500"
+                                          ? "text-blue-500"
                                           : "text-primary"
                                       )}
                                     />
