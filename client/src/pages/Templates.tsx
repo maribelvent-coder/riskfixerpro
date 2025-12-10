@@ -55,12 +55,8 @@ export default function Templates() {
         surveyParadigm: template.surveyParadigm
       });
     },
-    onSuccess: (data, template) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/assessments"] });
-      toast({
-        title: "Assessment Created",
-        description: `Created new assessment from ${template.name} template`,
-      });
       setLocation(`/app/assessments/${data.id}`);
     },
     onError: (error: any) => {

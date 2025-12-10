@@ -104,10 +104,6 @@ export default function NewAssessment() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/assessments"] });
-      toast({
-        title: "Assessment Created",
-        description: "Your new assessment has been created successfully",
-      });
       setLocation(`/app/assessments/${data.id}`);
     },
     onError: (error: any) => {
