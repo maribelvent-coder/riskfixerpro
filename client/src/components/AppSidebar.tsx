@@ -110,7 +110,7 @@ export function AppSidebar() {
           <img 
             src={logoPath} 
             alt="RiskFixer - Security Site Survey" 
-            className="h-20 w-auto object-cover object-center scale-110"
+            className="h-[4.5rem] w-auto object-cover object-center"
             data-testid="logo-sidebar"
           />
         </div>
