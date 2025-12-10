@@ -6,7 +6,7 @@ import { generateReportNarratives } from './narrative-generator';
 import { renderReportHTML } from './html-renderer';
 
 export interface GenerateReportOptions {
-  assessmentId: number;
+  assessmentId: string;
   reportType: 'executive_summary' | 'full_assessment' | 'gap_analysis';
   options: {
     includeCoverPage: boolean;
@@ -18,7 +18,7 @@ export interface GenerateReportOptions {
   scenarios: any[];
 }
 
-export async function generateReport(params: GenerateReportOptions) {
+export async function generateReportWithPDF(params: GenerateReportOptions) {
   const { assessmentId, reportType, options, assessment, scenarios } = params;
   
   const narratives = await generateReportNarratives({
@@ -74,27 +74,28 @@ export async function generateReport(params: GenerateReportOptions) {
     gap_analysis: 'Gap Analysis Report',
   };
   
-  const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const filename = `${assessment.name.replace(/\s+/g, '_')}_${reportType}_${new Date().toISOString().split('T')[0]}.pdf`;
   
-  await db.insert(reports).values({
-    assessmentId,
+  const [insertedReport] = await db.insert(reports).values({
+    assessmentId: assessmentId,
+    type: reportType,
     reportType: reportType,
     title: reportTypeNames[reportType],
     format: 'pdf',
     status: 'completed',
     content: pdfBuffer.toString('base64'),
+    fileSize: `${Math.round(pdfBuffer.length / 1024)} KB`,
     generatedAt: new Date(),
-  });
+  }).returning();
   
   return {
-    reportId,
+    reportId: insertedReport.id,
     filename,
-    downloadUrl: `/api/assessments/${assessmentId}/reports/${reportId}/download`,
+    downloadUrl: `/api/assessments/${assessmentId}/reports/${insertedReport.id}/download`,
   };
 }
 
-export async function listReports(assessmentId: number) {
+export async function listReportsForAssessment(assessmentId: string) {
   const reportsList = await db.query.reports.findMany({
     where: eq(reports.assessmentId, assessmentId),
     orderBy: [desc(reports.generatedAt)],
@@ -102,18 +103,18 @@ export async function listReports(assessmentId: number) {
   
   return reportsList.map(r => ({
     id: r.id,
-    type: r.reportType,
+    type: r.reportType || r.type,
     typeName: r.title,
     createdAt: r.generatedAt,
     pageCount: 0,
-    fileSize: r.content ? `${Math.round(r.content.length / 1024)} KB` : '0 KB',
+    fileSize: r.fileSize || (r.content ? `${Math.round(r.content.length / 1024)} KB` : '0 KB'),
     downloadUrl: `/api/assessments/${assessmentId}/reports/${r.id}/download`,
   }));
 }
 
-export async function getReportById(reportId: string) {
+export async function getReportByIdFromDB(reportId: string) {
   const report = await db.query.reports.findFirst({
-    where: eq(reports.id, parseInt(reportId)),
+    where: eq(reports.id, reportId),
   });
   
   if (!report) return null;

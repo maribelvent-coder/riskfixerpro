@@ -365,6 +365,8 @@ export const reports = pgTable("reports", {
   status: text("status").notNull().default("pending"),
   filePath: text("file_path"),
   fileSize: text("file_size"),
+  content: text("content"),
+  reportType: text("report_type"),
   createdAt: timestamp("created_at").default(sql`now()`),
   generatedAt: timestamp("generated_at"),
 });
