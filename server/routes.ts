@@ -1581,31 +1581,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post(
-    "/api/admin/users/:id/reset-password",
+    "/api/admin/users/:id/generate-reset-link",
     verifyAdminAccess,
     async (req, res) => {
       try {
         const { id } = req.params;
-        const { newPassword } = req.body;
-
-        if (!newPassword || newPassword.length < 8) {
-          return res
-            .status(400)
-            .json({ error: "Password must be at least 8 characters" });
-        }
 
         const user = await storage.getUser(id);
         if (!user) {
           return res.status(404).json({ error: "User not found" });
         }
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await storage.updateUserPassword(id, hashedPassword);
+        // Invalidate any existing tokens for this user
+        await storage.invalidateUserPasswordResetTokens(id);
 
-        res.json({ message: "Password reset successfully" });
+        // Generate a new reset token
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        await storage.createPasswordResetToken({
+          userId: id,
+          token,
+          expiresAt,
+          used: false,
+        });
+
+        // Build the reset link using the request host
+        const protocol = req.headers["x-forwarded-proto"] || "https";
+        const host = req.headers.host || "localhost:5000";
+        const resetLink = `${protocol}://${host}/reset-password?token=${token}`;
+
+        res.json({ 
+          message: "Reset link generated successfully",
+          resetLink,
+          expiresIn: "24 hours"
+        });
       } catch (error) {
-        console.error("Error resetting password:", error);
-        res.status(500).json({ error: "Failed to reset password" });
+        console.error("Error generating reset link:", error);
+        res.status(500).json({ error: "Failed to generate reset link" });
       }
     },
   );
