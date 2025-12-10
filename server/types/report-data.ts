@@ -15,6 +15,43 @@ export interface ReportDataPackage {
   recommendations: Recommendation[];
   riskScores: RiskScoreData;
   tcorData?: TCORData;
+  geographicIntelligence?: GeographicIntelligence;
+}
+
+export interface GeographicIntelligence {
+  crimeData: CrimeDataSummary;
+  siteIncidents: SiteIncidentData[];
+  pointsOfInterest: POIData[];
+  riskContext: string;
+}
+
+export interface CrimeDataSummary {
+  totalIncidents: number;
+  recentIncidents: number;
+  crimeTypes: { type: string; count: number; severity: string }[];
+  timeRange: { start: string; end: string };
+  hotspots: string[];
+  trendDirection: 'increasing' | 'stable' | 'decreasing';
+  riskLevel: 'critical' | 'high' | 'medium' | 'low';
+}
+
+export interface SiteIncidentData {
+  id: string;
+  title: string;
+  description: string;
+  incidentDate: string;
+  incidentType: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  resolution?: string;
+}
+
+export interface POIData {
+  id: string;
+  name: string;
+  poiType: string;
+  distance?: number;
+  riskLevel: 'critical' | 'high' | 'medium' | 'low' | 'neutral';
+  notes?: string;
 }
 
 export interface PrincipalProfile {

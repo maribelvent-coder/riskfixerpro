@@ -4,8 +4,11 @@ export function renderReportHTML(data: any): string {
     scenarios,
     executiveSummary,
     conclusion,
+    geographicNarrative,
+    geographicIntelligence,
     options,
     reportType,
+    hasGeographicData,
   } = data;
   
   const threatScores = scenarios.map((s: any) => s.threatLikelihood || 0);
@@ -226,6 +229,111 @@ export function renderReportHTML(data: any): string {
     </div>
   </div>
   
+  ${(options.includeGeographicData && hasGeographicData && geographicIntelligence) ? `
+  <!-- GEOGRAPHIC RISK INTELLIGENCE -->
+  <div class="content-page">
+    <h1>GEOGRAPHIC RISK INTELLIGENCE</h1>
+    
+    ${geographicNarrative ? `
+    <div style="margin-bottom: 1.5rem;">
+      ${geographicNarrative.split('\n\n').map((p: string) => `<p>${p}</p>`).join('')}
+    </div>
+    ` : ''}
+    
+    ${geographicIntelligence.crimeData && geographicIntelligence.crimeData.totalIncidents > 0 ? `
+    <h2>Crime Data Summary</h2>
+    <div class="score-grid">
+      <div class="score-item">
+        <div class="score-value">${geographicIntelligence.crimeData.totalIncidents}</div>
+        <div class="score-label">Total Incidents</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value">${geographicIntelligence.crimeData.recentIncidents}</div>
+        <div class="score-label">Past 12 Months</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value" style="text-transform: capitalize;">${geographicIntelligence.crimeData.trendDirection}</div>
+        <div class="score-label">Trend</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value"><span class="risk-${geographicIntelligence.crimeData.riskLevel}">${geographicIntelligence.crimeData.riskLevel.toUpperCase()}</span></div>
+        <div class="score-label">Crime Risk</div>
+      </div>
+    </div>
+    
+    ${geographicIntelligence.crimeData.crimeTypes && geographicIntelligence.crimeData.crimeTypes.length > 0 ? `
+    <h3>Crime Types</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Crime Type</th>
+          <th>Count</th>
+          <th>Severity</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${geographicIntelligence.crimeData.crimeTypes.slice(0, 10).map((c: any) => `
+          <tr>
+            <td>${c.type}</td>
+            <td>${c.count}</td>
+            <td><span class="risk-${c.severity}">${c.severity.toUpperCase()}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
+    ` : ''}
+    
+    ${geographicIntelligence.siteIncidents && geographicIntelligence.siteIncidents.length > 0 ? `
+    <h2>Documented Site Incidents</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Severity</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${geographicIntelligence.siteIncidents.slice(0, 10).map((i: any) => `
+          <tr>
+            <td>${i.incidentDate ? new Date(i.incidentDate).toLocaleDateString() : 'N/A'}</td>
+            <td>${i.incidentType}</td>
+            <td>${i.description?.substring(0, 100)}${i.description?.length > 100 ? '...' : ''}</td>
+            <td><span class="risk-${i.severity}">${i.severity.toUpperCase()}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
+    
+    ${geographicIntelligence.pointsOfInterest && geographicIntelligence.pointsOfInterest.filter((p: any) => p.riskLevel === 'critical' || p.riskLevel === 'high').length > 0 ? `
+    <h2>High-Risk Points of Interest</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Risk Level</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${geographicIntelligence.pointsOfInterest.filter((p: any) => p.riskLevel === 'critical' || p.riskLevel === 'high').map((p: any) => `
+          <tr>
+            <td>${p.name}</td>
+            <td>${p.poiType}</td>
+            <td><span class="risk-${p.riskLevel}">${p.riskLevel.toUpperCase()}</span></td>
+            <td>${p.notes || '-'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
+  </div>
+  ` : ''}
+  
   <!-- RISK SCENARIOS -->
   <div class="content-page">
     <h1>RISK SCENARIOS</h1>
@@ -244,7 +352,7 @@ export function renderReportHTML(data: any): string {
       <tbody>
         ${scenarios.map((s: any) => `
           <tr>
-            <td>${s.threatId?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</td>
+            <td>${(s.threatId || s.scenario || 'Unknown')?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</td>
             <td>${s.threatLikelihood}</td>
             <td>${s.vulnerability}</td>
             <td>${s.impact}</td>

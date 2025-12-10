@@ -4,6 +4,7 @@ import { reports } from '@shared/schema';
 import { eq, desc } from 'drizzle-orm';
 import { generateReportNarratives } from './narrative-generator';
 import { renderReportHTML } from './html-renderer';
+import type { GeographicIntelligence } from '../../types/report-data';
 
 export interface GenerateReportOptions {
   assessmentId: string;
@@ -16,15 +17,17 @@ export interface GenerateReportOptions {
   };
   assessment: any;
   scenarios: any[];
+  geographicIntelligence?: GeographicIntelligence;
 }
 
 export async function generateReportWithPDF(params: GenerateReportOptions) {
-  const { assessmentId, reportType, options, assessment, scenarios } = params;
+  const { assessmentId, reportType, options, assessment, scenarios, geographicIntelligence } = params;
   
   const narratives = await generateReportNarratives({
     reportType,
     assessment,
     scenarios,
+    geographicIntelligence,
   });
   
   const reportData = {
@@ -34,6 +37,7 @@ export async function generateReportWithPDF(params: GenerateReportOptions) {
     options,
     assessment,
     scenarios,
+    geographicIntelligence,
     generatedAt: new Date().toISOString(),
   };
   

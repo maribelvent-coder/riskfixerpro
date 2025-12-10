@@ -8,9 +8,12 @@ import {
   sites,
   executiveProfiles,
   interviewFindings,
-  documentedIncidents
+  documentedIncidents,
+  crimeIncidents,
+  siteIncidents,
+  pointsOfInterest
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc, gte } from "drizzle-orm";
 import type { 
   ReportDataPackage, 
   ThreatDomain, 
@@ -20,7 +23,11 @@ import type {
   Recommendation,
   RiskScoreData,
   FacilityProfile,
-  PrincipalProfile
+  PrincipalProfile,
+  GeographicIntelligence,
+  CrimeDataSummary,
+  SiteIncidentData,
+  POIData
 } from "../../types/report-data";
 import type { AssessmentType } from "../../types/report-recipe";
 
@@ -258,6 +265,134 @@ function mapTemplateToAssessmentType(templateId: string | null): AssessmentType 
   return 'office-building';
 }
 
+async function fetchGeographicIntelligence(siteId: string, assessmentId: string): Promise<GeographicIntelligence | undefined> {
+  try {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const [crimeList, incidentList, poiList] = await Promise.all([
+      db.select().from(crimeIncidents)
+        .where(eq(crimeIncidents.assessmentId, assessmentId))
+        .orderBy(desc(crimeIncidents.incidentDate)),
+      db.select().from(siteIncidents)
+        .where(eq(siteIncidents.siteId, siteId))
+        .orderBy(desc(siteIncidents.incidentDate)),
+      db.select().from(pointsOfInterest)
+        .where(eq(pointsOfInterest.siteId, siteId))
+    ]);
+
+    if (crimeList.length === 0 && incidentList.length === 0 && poiList.length === 0) {
+      return undefined;
+    }
+
+    const crimeTypeCounts = new Map<string, { count: number; severity: string }>();
+    for (const crime of crimeList) {
+      const type = crime.incidentType || 'Unknown';
+      const existing = crimeTypeCounts.get(type) || { count: 0, severity: 'medium' };
+      existing.count++;
+      if (crime.severity === 'critical' || crime.severity === 'high') {
+        existing.severity = crime.severity;
+      }
+      crimeTypeCounts.set(type, existing);
+    }
+
+    const recentCrimes = crimeList.filter(c => {
+      const date = c.incidentDate ? new Date(c.incidentDate) : null;
+      return date && date >= oneYearAgo;
+    });
+
+    const totalCrimes = crimeList.length;
+    let crimeRiskLevel: 'critical' | 'high' | 'medium' | 'low' = 'low';
+    if (totalCrimes > 50 || recentCrimes.length > 20) crimeRiskLevel = 'critical';
+    else if (totalCrimes > 25 || recentCrimes.length > 10) crimeRiskLevel = 'high';
+    else if (totalCrimes > 10 || recentCrimes.length > 5) crimeRiskLevel = 'medium';
+
+    const crimeData: CrimeDataSummary = {
+      totalIncidents: totalCrimes,
+      recentIncidents: recentCrimes.length,
+      crimeTypes: Array.from(crimeTypeCounts.entries()).map(([type, data]) => ({
+        type,
+        count: data.count,
+        severity: data.severity
+      })).sort((a, b) => b.count - a.count),
+      timeRange: {
+        start: crimeList.length > 0 ? (crimeList[crimeList.length - 1].incidentDate?.toISOString() || '') : '',
+        end: crimeList.length > 0 ? (crimeList[0].incidentDate?.toISOString() || '') : ''
+      },
+      hotspots: [...new Set(crimeList.map(c => c.location).filter(Boolean))].slice(0, 5) as string[],
+      trendDirection: recentCrimes.length > totalCrimes / 2 ? 'increasing' : 'stable',
+      riskLevel: crimeRiskLevel
+    };
+
+    const siteIncidentData: SiteIncidentData[] = incidentList.map(i => ({
+      id: i.id,
+      title: i.title || 'Incident',
+      description: i.description || '',
+      incidentDate: i.incidentDate?.toISOString() || '',
+      incidentType: i.incidentType || 'Unknown',
+      severity: (i.severity as 'critical' | 'high' | 'medium' | 'low') || 'medium',
+      resolution: i.resolution || undefined
+    }));
+
+    const poiData: POIData[] = poiList.map(p => ({
+      id: p.id,
+      name: p.name,
+      poiType: p.poiType || 'Unknown',
+      distance: p.distance ? parseFloat(String(p.distance)) : undefined,
+      riskLevel: mapPOIRisk(p.poiType || ''),
+      notes: p.notes || undefined
+    }));
+
+    const riskContext = buildRiskContext(crimeData, siteIncidentData, poiData);
+
+    return {
+      crimeData,
+      siteIncidents: siteIncidentData,
+      pointsOfInterest: poiData,
+      riskContext
+    };
+  } catch (error) {
+    console.error('[ReportDataAssembler] Error fetching geographic intelligence:', error);
+    return undefined;
+  }
+}
+
+function mapPOIRisk(poiType: string): 'critical' | 'high' | 'medium' | 'low' | 'neutral' {
+  const type = poiType.toLowerCase();
+  if (type.includes('protest') || type.includes('crime') || type.includes('gang')) return 'critical';
+  if (type.includes('bar') || type.includes('club') || type.includes('liquor')) return 'high';
+  if (type.includes('transit') || type.includes('parking') || type.includes('homeless')) return 'medium';
+  if (type.includes('school') || type.includes('hospital') || type.includes('police')) return 'low';
+  return 'neutral';
+}
+
+function buildRiskContext(
+  crimeData: CrimeDataSummary,
+  siteIncidents: SiteIncidentData[],
+  pois: POIData[]
+): string {
+  const parts: string[] = [];
+  
+  if (crimeData.totalIncidents > 0) {
+    const topCrimes = crimeData.crimeTypes.slice(0, 3).map(c => c.type).join(', ');
+    parts.push(`Crime data shows ${crimeData.totalIncidents} incidents in the area (${crimeData.recentIncidents} in the past year). Primary crime types: ${topCrimes}. Overall crime risk level: ${crimeData.riskLevel.toUpperCase()}.`);
+  }
+  
+  if (siteIncidents.length > 0) {
+    const criticalIncidents = siteIncidents.filter(i => i.severity === 'critical' || i.severity === 'high');
+    parts.push(`${siteIncidents.length} documented site incidents on record${criticalIncidents.length > 0 ? `, including ${criticalIncidents.length} critical/high severity events` : ''}.`);
+  }
+  
+  const highRiskPOIs = pois.filter(p => p.riskLevel === 'critical' || p.riskLevel === 'high');
+  if (highRiskPOIs.length > 0) {
+    parts.push(`${highRiskPOIs.length} high-risk points of interest identified in proximity to the site.`);
+  }
+  
+  return parts.length > 0 
+    ? parts.join(' ') 
+    : 'No significant geographic risk factors identified in available data.';
+}
+
 export async function assembleReportData(assessmentId: string): Promise<ReportDataPackage> {
   console.log(`[ReportDataAssembler] Assembling data for assessment: ${assessmentId}`);
   
@@ -364,6 +499,11 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
     };
   }
 
+  let geographicIntelligence: GeographicIntelligence | undefined;
+  if (assessment.siteId) {
+    geographicIntelligence = await fetchGeographicIntelligence(assessment.siteId, assessmentId);
+  }
+
   const reportData: ReportDataPackage = {
     assessmentId,
     assessmentType,
@@ -376,7 +516,8 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
     siteWalkFindings,
     interviewFindings: mappedInterviewFindings,
     recommendations,
-    riskScores
+    riskScores,
+    geographicIntelligence
   };
 
   console.log(`[ReportDataAssembler] Data assembled successfully:
@@ -385,7 +526,8 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
   - Documented Incidents: ${mappedDocumentedIncidents.length}
   - Site Walk Findings: ${siteWalkFindings.length}
   - Recommendations: ${recommendations.length}
-  - Overall Risk Level: ${riskScores.riskLevel}`);
+  - Overall Risk Level: ${riskScores.riskLevel}
+  - Geographic Intelligence: ${geographicIntelligence ? 'included' : 'not available'}`);
 
   return reportData;
 }
