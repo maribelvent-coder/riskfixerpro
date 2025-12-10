@@ -372,6 +372,40 @@ export function SiteGeoIntel({ site: initialSite }: SiteGeoIntelProps) {
     },
   });
 
+  // Fetch crime data from Crimeometer API
+  const crimeometerFetchMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/sites/${site.id}/crimeometer/fetch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ months: 12 }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Failed to fetch crime data" }));
+        throw new Error(error.message || error.error || "Failed to fetch crime data from Crimeometer");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", site.id] });
+      const summary = data?.data?.summary;
+      toast({
+        title: "Crime data fetched",
+        description: summary 
+          ? `Found ${summary.totalIncidents} incidents (${summary.violentCrimes} violent, ${summary.propertyCrimes} property)`
+          : "Crime data imported successfully from Crimeometer.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Fetch failed",
+        description: error.message,
+      });
+    },
+  });
+
   const hasCoordinates = site.latitude && site.longitude;
   const center = hasCoordinates
     ? { lat: parseFloat(site.latitude!), lng: parseFloat(site.longitude!) }
@@ -562,7 +596,21 @@ export function SiteGeoIntel({ site: initialSite }: SiteGeoIntelProps) {
                 </div>
               ) : crimeSources.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2 flex-wrap">
+                    <Button
+                      onClick={() => crimeometerFetchMutation.mutate()}
+                      size="sm"
+                      variant="outline"
+                      disabled={!hasCoordinates || crimeometerFetchMutation.isPending}
+                      data-testid="button-fetch-crimeometer"
+                    >
+                      {crimeometerFetchMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      Fetch from Crimeometer
+                    </Button>
                     <Button
                       onClick={() => setImportDialogOpen(true)}
                       size="sm"
@@ -585,16 +633,36 @@ export function SiteGeoIntel({ site: initialSite }: SiteGeoIntelProps) {
                 <div className="text-center py-8 space-y-4">
                   <div className="text-muted-foreground">
                     <p className="text-sm">No crime data available for this site.</p>
-                    <p className="text-xs mt-2">Import crime data to view statistics.</p>
+                    <p className="text-xs mt-2">
+                      {hasCoordinates 
+                        ? "Fetch live data from Crimeometer or import manually."
+                        : "Geocode the site first, then fetch crime data."}
+                    </p>
                   </div>
-                  <Button
-                    onClick={() => setImportDialogOpen(true)}
-                    size="sm"
-                    data-testid="button-import-crime-data-empty"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Import Crime Data
-                  </Button>
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    <Button
+                      onClick={() => crimeometerFetchMutation.mutate()}
+                      size="sm"
+                      variant="outline"
+                      disabled={!hasCoordinates || crimeometerFetchMutation.isPending}
+                      data-testid="button-fetch-crimeometer-empty"
+                    >
+                      {crimeometerFetchMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      Fetch from Crimeometer
+                    </Button>
+                    <Button
+                      onClick={() => setImportDialogOpen(true)}
+                      size="sm"
+                      data-testid="button-import-crime-data-empty"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Import Crime Data
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
