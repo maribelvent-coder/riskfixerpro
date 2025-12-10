@@ -86,6 +86,9 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
   const queryClient = useQueryClient();
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  
+  // Local state for optimistic updates - show changes instantly while backend processes
+  const [optimisticUpdates, setOptimisticUpdates] = useState<Map<string, Partial<SurveyQuestion>>>(new Map());
 
   // Handle PDF export
   const handleExportPDF = async () => {
@@ -187,7 +190,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
     ? ['/api/assessments', assessmentId, 'assessment-questions']
     : ['/api/assessments', assessmentId, 'facility-survey-questions'];
 
-  // Update question mutation
+  // Update question mutation with optimistic updates for instant UI feedback
   const updateQuestionMutation = useMutation({
     mutationFn: async ({ questionId, data }: { questionId: string; data: Partial<SurveyQuestion> }) => {
       // Only send allowed fields to match backend validation
@@ -210,17 +213,36 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
       
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: questionQueryKey });
-      toast({
-        title: "Saved",
-        description: "Question response updated successfully",
+    onMutate: async ({ questionId, data }) => {
+      // Optimistically update local state immediately for snappy UI
+      setOptimisticUpdates(prev => {
+        const next = new Map(prev);
+        const existing = next.get(questionId) || {};
+        next.set(questionId, { ...existing, ...data });
+        return next;
       });
     },
-    onError: () => {
+    onSuccess: (_, { questionId }) => {
+      // Silently sync - no toast needed for routine saves
+      // Clear optimistic update for this question since server confirmed
+      setOptimisticUpdates(prev => {
+        const next = new Map(prev);
+        next.delete(questionId);
+        return next;
+      });
+      // Background refresh to sync with server
+      queryClient.invalidateQueries({ queryKey: questionQueryKey });
+    },
+    onError: (_, { questionId }) => {
+      // Rollback optimistic update on error
+      setOptimisticUpdates(prev => {
+        const next = new Map(prev);
+        next.delete(questionId);
+        return next;
+      });
       toast({
         title: "Error",
-        description: "Failed to save response",
+        description: "Failed to save response. Please try again.",
         variant: "destructive",
       });
     },
@@ -228,6 +250,11 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
 
   // Render input based on question type
   const renderInput = (question: SurveyQuestion) => {
+    // Get optimistic value if pending, otherwise use server value
+    const optimistic = optimisticUpdates.get(question.id);
+    const effectiveResponse = optimistic?.response !== undefined ? optimistic.response : question.response;
+    const effectiveNotes = optimistic?.notes !== undefined ? optimistic.notes : question.notes;
+    
     const handleSave = (field: string, value: any) => {
       updateQuestionMutation.mutate({
         questionId: question.id,
@@ -244,7 +271,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
           return (
             <div className="space-y-2">
               <RadioGroup
-                value={question.response as string || ''}
+                value={effectiveResponse as string || ''}
                 onValueChange={(value) => handleSave('response', value)}
               >
                 <div className="flex flex-col gap-2">
@@ -270,7 +297,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         return (
           <Textarea
             placeholder="Enter your response..."
-            value={question.response as string || ''}
+            value={effectiveResponse as string || ''}
             onChange={(e) => {
               const value = e.target.value;
               setTimeout(() => handleSave('response', value), 500);
@@ -282,9 +309,9 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
       
       case 'multi_select':
         if (options && options.length > 0) {
-          const selectedValues = Array.isArray(question.response) 
-            ? question.response 
-            : (question.response ? [question.response] : []);
+          const selectedValues = Array.isArray(effectiveResponse) 
+            ? effectiveResponse 
+            : (effectiveResponse ? [effectiveResponse] : []);
           
           return (
             <div className="space-y-2">
@@ -320,7 +347,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         return (
           <Textarea
             placeholder="Enter your response..."
-            value={question.response as string || ''}
+            value={effectiveResponse as string || ''}
             onChange={(e) => {
               const value = e.target.value;
               setTimeout(() => handleSave('response', value), 500);
@@ -335,7 +362,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         return (
           <div className="space-y-2">
             <RadioGroup
-              value={question.response as string || ''}
+              value={effectiveResponse as string || ''}
               onValueChange={(value) => handleSave('response', value)}
             >
               <div className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -360,7 +387,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         return (
           <div className="space-y-2">
             <RadioGroup
-              value={question.response as string || ''}
+              value={effectiveResponse as string || ''}
               onValueChange={(value) => handleSave('response', value)}
             >
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -381,7 +408,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         return (
           <Textarea
             placeholder="Enter your response..."
-            value={question.response as string || ''}
+            value={effectiveResponse as string || ''}
             onChange={(e) => {
               // Auto-save after typing stops
               const value = e.target.value;
@@ -547,9 +574,19 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
                             <Label className="text-xs text-muted-foreground">Additional Notes</Label>
                             <Textarea
                               placeholder="Add notes, observations, or recommendations..."
-                              value={question.notes || ''}
+                              value={(optimisticUpdates.get(question.id)?.notes !== undefined 
+                                ? optimisticUpdates.get(question.id)?.notes 
+                                : question.notes) || ''}
                               onChange={(e) => {
                                 const value = e.target.value;
+                                // Optimistically update immediately
+                                setOptimisticUpdates(prev => {
+                                  const next = new Map(prev);
+                                  const existing = next.get(question.id) || {};
+                                  next.set(question.id, { ...existing, notes: value });
+                                  return next;
+                                });
+                                // Then save to backend
                                 setTimeout(() => {
                                   updateQuestionMutation.mutate({
                                     questionId: question.id,
