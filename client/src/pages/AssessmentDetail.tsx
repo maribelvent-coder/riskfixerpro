@@ -29,7 +29,7 @@ import RetailDashboard from "@/pages/assessments/RetailDashboard";
 import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
 import OfficeDashboard from "@/pages/assessments/OfficeDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -201,6 +201,45 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       toast({
         title: "Report Generation Failed",
         description: "Failed to generate comprehensive report. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Export raw survey data mutation
+  const exportSurveyDataMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('GET', `/api/assessments/${assessmentId}/survey-export`);
+      const exportData = await response.json();
+      
+      // Generate formatted HTML for better readability
+      const html = generateSurveyExportHTML(exportData);
+      
+      // Create blob and download
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = `${exportData.assessment?.name || 'Survey'}_Data_Export_${new Date().toISOString().split('T')[0]}.html`;
+      link.download = fileName.replace(/[^a-z0-9.-]/gi, '_');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      return { fileName };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Survey Data Exported",
+        description: "Your complete survey data has been downloaded.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error exporting survey data:", error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export survey data. Please try again.",
         variant: "destructive",
       });
     },
@@ -565,6 +604,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Export as HTML
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Raw Data</DropdownMenuLabel>
+                  <DropdownMenuItem
+                    onClick={() => exportSurveyDataMutation.mutate()}
+                    disabled={exportSurveyDataMutation.isPending}
+                    data-testid="menu-item-export-survey-data"
+                  >
+                    <Database className="h-4 w-4 mr-2" />
+                    Export Survey Data
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
