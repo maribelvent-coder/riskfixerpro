@@ -11,9 +11,11 @@ import {
   documentedIncidents,
   crimeIncidents,
   siteIncidents,
-  pointsOfInterest
+  pointsOfInterest,
+  crimeSources,
+  crimeObservations
 } from "@shared/schema";
-import { eq, desc, gte } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import type { 
   ReportDataPackage, 
   ThreatDomain, 
@@ -27,7 +29,8 @@ import type {
   GeographicIntelligence,
   CrimeDataSummary,
   SiteIncidentData,
-  POIData
+  POIData,
+  CAPIndexUpload
 } from "../../types/report-data";
 import type { AssessmentType } from "../../types/report-recipe";
 
@@ -265,12 +268,87 @@ function mapTemplateToAssessmentType(templateId: string | null): AssessmentType 
   return 'office-building';
 }
 
+async function fetchCAPIndexData(siteId: string, assessmentId: string): Promise<CAPIndexUpload | undefined> {
+  try {
+    // Query by assessmentId first (more specific), then fallback to siteId
+    let sourcesList = await db.select().from(crimeSources)
+      .where(eq(crimeSources.assessmentId, assessmentId))
+      .orderBy(desc(crimeSources.importDate));
+
+    // If no assessment-specific sources, try site-level sources
+    if (sourcesList.length === 0 && siteId) {
+      sourcesList = await db.select().from(crimeSources)
+        .where(eq(crimeSources.siteId, siteId))
+        .orderBy(desc(crimeSources.importDate));
+    }
+
+    if (sourcesList.length === 0) {
+      return undefined;
+    }
+
+    const latestSource = sourcesList[0];
+    
+    const [observation] = await db.select().from(crimeObservations)
+      .where(eq(crimeObservations.crimeSourceId, latestSource.id))
+      .limit(1);
+
+    if (!observation) {
+      return undefined;
+    }
+
+    // Parse and normalize JSON data
+    const parseViolentCrimes = (data: unknown): CAPIndexUpload['violentCrimes'] => {
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (!parsed || typeof parsed !== 'object') return { total: 0, rate_per_100k: 0 };
+      return {
+        total: Number(parsed.total) || 0,
+        rate_per_100k: Number(parsed.rate_per_100k) || 0,
+        breakdown: parsed.breakdown ? {
+          murder: Number(parsed.breakdown.murder) || undefined,
+          assault: Number(parsed.breakdown.assault) || undefined,
+          robbery: Number(parsed.breakdown.robbery) || undefined,
+          rape: Number(parsed.breakdown.rape) || undefined,
+        } : undefined
+      };
+    };
+
+    const parsePropertyCrimes = (data: unknown): CAPIndexUpload['propertyCrimes'] => {
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (!parsed || typeof parsed !== 'object') return { total: 0, rate_per_100k: 0 };
+      return {
+        total: Number(parsed.total) || 0,
+        rate_per_100k: Number(parsed.rate_per_100k) || 0,
+        breakdown: parsed.breakdown ? {
+          burglary: Number(parsed.breakdown.burglary) || undefined,
+          theft: Number(parsed.breakdown.theft) || undefined,
+          auto_theft: Number(parsed.breakdown.auto_theft) || undefined,
+        } : undefined
+      };
+    };
+
+    return {
+      overallCrimeIndex: Number(observation.overallCrimeIndex) || 0,
+      violentCrimes: parseViolentCrimes(observation.violentCrimes),
+      propertyCrimes: parsePropertyCrimes(observation.propertyCrimes),
+      comparisonRating: observation.comparisonRating as CAPIndexUpload['comparisonRating'],
+      dataTimePeriod: latestSource.dataTimePeriod || undefined,
+      dataSource: latestSource.dataSource,
+      city: latestSource.city || undefined,
+      state: latestSource.state || undefined,
+      importDate: latestSource.importDate?.toISOString() || new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('[ReportDataAssembler] Error fetching CAP Index data:', error);
+    return undefined;
+  }
+}
+
 async function fetchGeographicIntelligence(siteId: string, assessmentId: string): Promise<GeographicIntelligence | undefined> {
   try {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-    const [crimeList, incidentList, poiList] = await Promise.all([
+    const [crimeList, incidentList, poiList, capIndexData] = await Promise.all([
       db.select().from(crimeIncidents)
         .where(eq(crimeIncidents.assessmentId, assessmentId))
         .orderBy(desc(crimeIncidents.incidentDate)),
@@ -278,10 +356,11 @@ async function fetchGeographicIntelligence(siteId: string, assessmentId: string)
         .where(eq(siteIncidents.siteId, siteId))
         .orderBy(desc(siteIncidents.incidentDate)),
       db.select().from(pointsOfInterest)
-        .where(eq(pointsOfInterest.siteId, siteId))
+        .where(eq(pointsOfInterest.siteId, siteId)),
+      fetchCAPIndexData(siteId, assessmentId)
     ]);
 
-    if (crimeList.length === 0 && incidentList.length === 0 && poiList.length === 0) {
+    if (crimeList.length === 0 && incidentList.length === 0 && poiList.length === 0 && !capIndexData) {
       return undefined;
     }
 
@@ -343,12 +422,13 @@ async function fetchGeographicIntelligence(siteId: string, assessmentId: string)
       notes: p.notes || undefined
     }));
 
-    const riskContext = buildRiskContext(crimeData, siteIncidentData, poiData);
+    const riskContext = buildRiskContext(crimeData, siteIncidentData, poiData, capIndexData);
 
     return {
       crimeData,
       siteIncidents: siteIncidentData,
       pointsOfInterest: poiData,
+      capIndexData,
       riskContext
     };
   } catch (error) {
@@ -369,9 +449,17 @@ function mapPOIRisk(poiType: string): 'critical' | 'high' | 'medium' | 'low' | '
 function buildRiskContext(
   crimeData: CrimeDataSummary,
   siteIncidents: SiteIncidentData[],
-  pois: POIData[]
+  pois: POIData[],
+  capIndexData?: CAPIndexUpload
 ): string {
   const parts: string[] = [];
+  
+  if (capIndexData && capIndexData.overallCrimeIndex > 0) {
+    const ratingText = capIndexData.comparisonRating 
+      ? ` (${capIndexData.comparisonRating.replace('_', ' ')} compared to national average)`
+      : '';
+    parts.push(`CAP Index Score: ${capIndexData.overallCrimeIndex}${ratingText}. Violent crime rate: ${capIndexData.violentCrimes.rate_per_100k}/100k. Property crime rate: ${capIndexData.propertyCrimes.rate_per_100k}/100k.`);
+  }
   
   if (crimeData.totalIncidents > 0) {
     const topCrimes = crimeData.crimeTypes.slice(0, 3).map(c => c.type).join(', ');

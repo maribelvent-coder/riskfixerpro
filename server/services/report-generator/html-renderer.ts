@@ -240,6 +240,54 @@ export function renderReportHTML(data: any): string {
     </div>
     ` : ''}
     
+    ${geographicIntelligence.capIndexData ? `
+    <h2>CAP Index Crime Data</h2>
+    <div class="score-grid">
+      <div class="score-item">
+        <div class="score-value">${geographicIntelligence.capIndexData.overallCrimeIndex}</div>
+        <div class="score-label">CAP Index Score</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value">${geographicIntelligence.capIndexData.violentCrimes?.rate_per_100k || 0}</div>
+        <div class="score-label">Violent/100K</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value">${geographicIntelligence.capIndexData.propertyCrimes?.rate_per_100k || 0}</div>
+        <div class="score-label">Property/100K</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value" style="text-transform: capitalize;">${geographicIntelligence.capIndexData.comparisonRating?.replace('_', ' ') || 'N/A'}</div>
+        <div class="score-label">vs National Avg</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Crime Category</th>
+          <th>Total</th>
+          <th>Rate per 100K</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Violent Crimes</td>
+          <td>${geographicIntelligence.capIndexData.violentCrimes?.total || 0}</td>
+          <td>${geographicIntelligence.capIndexData.violentCrimes?.rate_per_100k || 0}</td>
+        </tr>
+        <tr>
+          <td>Property Crimes</td>
+          <td>${geographicIntelligence.capIndexData.propertyCrimes?.total || 0}</td>
+          <td>${geographicIntelligence.capIndexData.propertyCrimes?.rate_per_100k || 0}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text-xs" style="color: #718096; margin-top: 0.5rem;">
+      Data Source: ${geographicIntelligence.capIndexData.dataSource} | 
+      Period: ${geographicIntelligence.capIndexData.dataTimePeriod || 'N/A'} | 
+      Location: ${geographicIntelligence.capIndexData.city || ''}${geographicIntelligence.capIndexData.city && geographicIntelligence.capIndexData.state ? ', ' : ''}${geographicIntelligence.capIndexData.state || ''}
+    </p>
+    ` : ''}
+    
     ${geographicIntelligence.crimeData && geographicIntelligence.crimeData.totalIncidents > 0 ? `
     <h2>Crime Data Summary</h2>
     <div class="score-grid">

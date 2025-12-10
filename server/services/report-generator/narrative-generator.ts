@@ -15,6 +15,12 @@ function buildGeoIntelContext(geoIntel?: GeographicIntelligence): string {
   
   const parts: string[] = [];
   
+  const capIndex = geoIntel.capIndexData;
+  if (capIndex && capIndex.overallCrimeIndex > 0) {
+    const ratingText = capIndex.comparisonRating ? ` (${capIndex.comparisonRating.replace('_', ' ')} vs national average)` : '';
+    parts.push(`CAP INDEX DATA: Overall Crime Score: ${capIndex.overallCrimeIndex}${ratingText}. Violent crime rate: ${capIndex.violentCrimes?.rate_per_100k || 0}/100K. Property crime rate: ${capIndex.propertyCrimes?.rate_per_100k || 0}/100K. Data period: ${capIndex.dataTimePeriod || 'N/A'}.`);
+  }
+  
   const crimeData = geoIntel.crimeData;
   if (crimeData && crimeData.totalIncidents > 0) {
     const topCrimes = (crimeData.crimeTypes || []).slice(0, 5)
@@ -106,7 +112,8 @@ Return ONLY the narrative text.
   let geographicNarrative = '';
   const hasGeoData = geographicIntelligence && (
     (geographicIntelligence.crimeData?.totalIncidents ?? 0) > 0 || 
-    (geographicIntelligence.siteIncidents?.length ?? 0) > 0
+    (geographicIntelligence.siteIncidents?.length ?? 0) > 0 ||
+    (geographicIntelligence.capIndexData?.overallCrimeIndex ?? 0) > 0
   );
   if (hasGeoData) {
     const geoNarrativePrompt = `

@@ -22,7 +22,37 @@ export interface GeographicIntelligence {
   crimeData: CrimeDataSummary;
   siteIncidents: SiteIncidentData[];
   pointsOfInterest: POIData[];
+  capIndexData?: CAPIndexUpload;
   riskContext: string;
+}
+
+export interface CAPIndexUpload {
+  overallCrimeIndex: number;
+  violentCrimes: {
+    total: number;
+    rate_per_100k: number;
+    breakdown?: {
+      murder?: number;
+      assault?: number;
+      robbery?: number;
+      rape?: number;
+    };
+  };
+  propertyCrimes: {
+    total: number;
+    rate_per_100k: number;
+    breakdown?: {
+      burglary?: number;
+      theft?: number;
+      auto_theft?: number;
+    };
+  };
+  comparisonRating?: 'very_high' | 'high' | 'average' | 'low' | 'very_low';
+  dataTimePeriod?: string;
+  dataSource: string;
+  city?: string;
+  state?: string;
+  importDate: string;
 }
 
 export interface CrimeDataSummary {
