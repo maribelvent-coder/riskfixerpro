@@ -5904,6 +5904,40 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
+  // NEW: Unified EP Dashboard endpoint - aggregates interview data, AI scoring, and recommendations
+  // This is the main endpoint for the redesigned EP dashboard
+  app.post(
+    "/api/assessments/:id/ep-dashboard",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { interviewResponses, attachments = [] } = req.body;
+        
+        if (!interviewResponses || typeof interviewResponses !== 'object') {
+          return res.status(400).json({ error: 'Interview responses required' });
+        }
+        
+        // Import the EP AI assessment engine
+        const { getEPDashboardData } = await import('./services/ep-ai-risk-assessment');
+        
+        const dashboardData = await getEPDashboardData(id, interviewResponses, attachments);
+        
+        if (!dashboardData) {
+          return res.status(500).json({ error: 'Failed to generate dashboard data' });
+        }
+        
+        res.json(dashboardData);
+      } catch (error) {
+        console.error("Error generating EP dashboard:", error);
+        res.status(500).json({ 
+          error: "Failed to generate EP dashboard",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    },
+  );
+
   // Assessment Questions routes (for executive paradigm objective assessment questions)
   app.get(
     "/api/assessments/:id/assessment-questions",
