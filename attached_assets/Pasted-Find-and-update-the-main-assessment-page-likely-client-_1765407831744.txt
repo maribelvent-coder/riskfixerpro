@@ -1,0 +1,115 @@
+Find and update the main assessment page (likely `client/src/pages/assessment/[id].tsx` or similar):
+
+```typescript
+import { useState, useEffect } from 'react';
+import { useParams } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { TabNavigation, AssessmentTab } from '@/components/layout/TabNavigation';
+import { AssessmentHeader } from '@/components/layout/AssessmentHeader';
+import { InterviewTab } from '@/components/interview/InterviewTab';
+import { RiskProfileTab } from '@/components/risk-profile/RiskProfileTab';
+import { ReportsTab } from '@/components/reports/ReportsTab';
+import { PhotosTab } from '@/components/photos/PhotosTab';
+import { SettingsTab } from '@/components/settings/SettingsTab';
+
+export default function AssessmentPage() {
+  const { id } = useParams<{ id: string }>();
+  const [activeTab, setActiveTab] = useState<AssessmentTab>('interview');
+  
+  // Fetch assessment data
+  const { data: assessment, isLoading } = useQuery({
+    queryKey: ['assessment', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/assessments/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch assessment');
+      return res.json();
+    },
+  });
+  
+  // Fetch risk profile data
+  const { data: riskProfile } = useQuery({
+    queryKey: ['risk-profile', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/assessments/${id}/risk-profile`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!id,
+  });
+  
+  // Fetch reports
+  const { data: reports } = useQuery({
+    queryKey: ['reports', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/assessments/${id}/reports`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!id,
+  });
+  
+  // Fetch photos
+  const { data: photos } = useQuery({
+    queryKey: ['photos', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/assessments/${id}/photos`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!id,
+  });
+  
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  
+  if (!assessment) {
+    return <div className="flex items-center justify-center h-screen">Assessment not found</div>;
+  }
+  
+  // Calculate interview progress
+  const interviewProgress = assessment.interviewProgress || 0;
+  
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AssessmentHeader
+        assessmentName={assessment.name}
+        facilityType={assessment.facilityType}
+        address={assessment.address}
+        createdAt={assessment.createdAt}
+        status={assessment.status}
+        overallRisk={riskProfile?.overallRisk}
+      />
+      
+      <TabNavigation
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        interviewProgress={interviewProgress}
+        hasRiskData={!!riskProfile?.scenarios?.length}
+        reportCount={reports?.length || 0}
+        photoCount={photos?.length || 0}
+      />
+      
+      <main className="p-6">
+        {activeTab === 'interview' && (
+          <InterviewTab assessmentId={parseInt(id)} facilityType={assessment.facilityType} />
+        )}
+        {activeTab === 'risk-profile' && (
+          <RiskProfileTab assessmentId={parseInt(id)} riskProfile={riskProfile} />
+        )}
+        {activeTab === 'reports' && (
+          <ReportsTab assessmentId={parseInt(id)} reports={reports || []} />
+        )}
+        {activeTab === 'photos' && (
+          <PhotosTab assessmentId={parseInt(id)} photos={photos || []} />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsTab assessmentId={parseInt(id)} assessment={assessment} />
+        )}
+      </main>
+    </div>
+  );
+}
+```
+
+---
