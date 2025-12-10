@@ -39,6 +39,8 @@ type User = {
   accountTier: string;
   isAdmin: boolean;
   createdAt: string;
+  organizationId: string | null;
+  organizationRole: string | null;
 };
 
 type Organization = {
@@ -48,6 +50,19 @@ type Organization = {
   maxMembers: number;
   maxSites: number;
   maxAssessments: number;
+  createdAt: string;
+};
+
+type Site = {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  country: string | null;
+  organizationId: string | null;
+  userId: string | null;
   createdAt: string;
 };
 
@@ -64,6 +79,13 @@ export default function Admin() {
   const [orgLimits, setOrgLimits] = useState({ maxMembers: 0, maxSites: 0, maxAssessments: 0 });
   const [resetLink, setResetLink] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showCreateSiteDialog, setShowCreateSiteDialog] = useState(false);
+  const [showEditSiteDialog, setShowEditSiteDialog] = useState(false);
+  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+  const [showDeleteSiteDialog, setShowDeleteSiteDialog] = useState(false);
+  const [siteForm, setSiteForm] = useState({ name: "", address: "", city: "", state: "", zipCode: "", country: "USA", organizationId: "" });
+  const [showUserOrgDialog, setShowUserOrgDialog] = useState(false);
+  const [userOrgData, setUserOrgData] = useState({ organizationId: "", organizationRole: "member" });
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
@@ -71,6 +93,10 @@ export default function Admin() {
 
   const { data: organizations, isLoading: orgsLoading } = useQuery<Organization[]>({
     queryKey: ["/api/admin/organizations"],
+  });
+
+  const { data: allSites, isLoading: sitesLoading } = useQuery<Site[]>({
+    queryKey: ["/api/admin/sites"],
   });
 
   const generateResetLinkMutation = useMutation({
@@ -224,6 +250,71 @@ export default function Admin() {
     },
   });
 
+  // Site mutations
+  const createSiteMutation = useMutation({
+    mutationFn: async (data: typeof siteForm) => {
+      const response = await apiRequest("POST", "/api/admin/sites", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Site created", description: "The site has been created successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sites"] });
+      setShowCreateSiteDialog(false);
+      setSiteForm({ name: "", address: "", city: "", state: "", zipCode: "", country: "USA", organizationId: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to create site", description: error.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const updateSiteMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof siteForm> }) => {
+      const response = await apiRequest("PATCH", `/api/admin/sites/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Site updated", description: "The site has been updated successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sites"] });
+      setShowEditSiteDialog(false);
+      setSelectedSite(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update site", description: error.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const deleteSiteMutation = useMutation({
+    mutationFn: async (siteId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/sites/${siteId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Site deleted", description: "The site has been permanently deleted." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sites"] });
+      setShowDeleteSiteDialog(false);
+      setSelectedSite(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to delete site", description: error.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const updateUserOrgMutation = useMutation({
+    mutationFn: async ({ userId, organizationId, organizationRole }: { userId: string; organizationId: string; organizationRole: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/organization`, { organizationId, organizationRole });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "User updated", description: "User organization assignment updated." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowUserOrgDialog(false);
+      setSelectedUser(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update user", description: error.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
   const handleDeleteUser = (user: User) => {
     setSelectedUser(user);
     setShowDeleteUserDialog(true);
@@ -242,6 +333,37 @@ export default function Admin() {
   const handleConfirmDeleteOrg = () => {
     if (!selectedOrg) return;
     deleteOrgMutation.mutate(selectedOrg.id);
+  };
+
+  const handleEditSite = (site: Site) => {
+    setSelectedSite(site);
+    setSiteForm({
+      name: site.name,
+      address: site.address || "",
+      city: site.city || "",
+      state: site.state || "",
+      zipCode: site.zipCode || "",
+      country: site.country || "USA",
+      organizationId: site.organizationId || "",
+    });
+    setShowEditSiteDialog(true);
+  };
+
+  const handleDeleteSite = (site: Site) => {
+    setSelectedSite(site);
+    setShowDeleteSiteDialog(true);
+  };
+
+  const handleEditUserOrg = (user: User) => {
+    setSelectedUser(user);
+    setUserOrgData({ organizationId: (user as any).organizationId || "", organizationRole: (user as any).organizationRole || "member" });
+    setShowUserOrgDialog(true);
+  };
+
+  const getOrgName = (orgId: string | null) => {
+    if (!orgId || !organizations) return "Unassigned";
+    const org = organizations.find(o => o.id === orgId);
+    return org?.name || "Unknown";
   };
 
   const seedProductionMutation = useMutation({
@@ -384,9 +506,10 @@ export default function Admin() {
                 <TableHeader>
                   <TableRow className="text-xs sm:text-sm">
                     <TableHead className="text-xs sm:text-sm">Username</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Organization</TableHead>
                     <TableHead className="text-xs sm:text-sm">Account Tier</TableHead>
-                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Role</TableHead>
-                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Created</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">Role</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Created</TableHead>
                     <TableHead className="text-xs sm:text-sm text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -396,13 +519,25 @@ export default function Admin() {
                       <TableCell className="font-medium text-xs sm:text-sm">
                         {user.username}
                       </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-[10px] sm:text-xs"
+                          onClick={() => handleEditUserOrg(user)}
+                          data-testid={`button-user-org-${user.id}`}
+                        >
+                          <Building2 className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
+                          {getOrgName(user.organizationId)}
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <Select
                           value={user.accountTier}
                           onValueChange={(tier) => handleChangeTier(user.id, tier)}
                           disabled={changeTierMutation.isPending}
                         >
-                          <SelectTrigger className="w-[100px] sm:w-[140px] text-xs sm:text-sm h-8 sm:h-9" data-testid={`select-tier-${user.id}`}>
+                          <SelectTrigger className="w-[100px] sm:w-[120px] text-xs sm:text-sm h-8 sm:h-9" data-testid={`select-tier-${user.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -413,7 +548,7 @@ export default function Admin() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">
+                      <TableCell className="hidden md:table-cell">
                         <Button
                           variant={user.isAdmin ? "default" : "outline"}
                           size="sm"
@@ -426,7 +561,7 @@ export default function Admin() {
                           {user.isAdmin ? "Admin" : "Make Admin"}
                         </Button>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs sm:text-sm hidden md:table-cell">
+                      <TableCell className="text-muted-foreground text-xs sm:text-sm hidden lg:table-cell">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
@@ -533,6 +668,98 @@ export default function Admin() {
                             className="text-xs sm:text-sm text-destructive hover:bg-destructive hover:text-destructive-foreground"
                             onClick={() => handleDeleteOrg(org)}
                             data-testid={`button-delete-org-${org.id}`}
+                          >
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sites Management Card */}
+      <Card className="mt-4 sm:mt-6 lg:mt-8 p-3 sm:p-6">
+        <CardHeader className="p-0 pb-3 sm:pb-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              <CardTitle className="text-base sm:text-lg">Sites Management</CardTitle>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setSiteForm({ name: "", address: "", city: "", state: "", zipCode: "", country: "USA", organizationId: "" });
+                setShowCreateSiteDialog(true);
+              }}
+              data-testid="button-create-site"
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Create Site
+            </Button>
+          </div>
+          <CardDescription className="text-xs sm:text-sm">
+            Create and manage sites across all organizations
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {sitesLoading ? (
+            <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
+              Loading sites...
+            </div>
+          ) : !allSites || allSites.length === 0 ? (
+            <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
+              No sites found. Create a site to get started.
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-xs sm:text-sm">
+                    <TableHead className="text-xs sm:text-sm">Name</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Organization</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden sm:table-cell">City</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden md:table-cell">State</TableHead>
+                    <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Created</TableHead>
+                    <TableHead className="text-xs sm:text-sm text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allSites.map((site) => (
+                    <TableRow key={site.id} data-testid={`row-site-${site.id}`} className="text-xs sm:text-sm">
+                      <TableCell className="font-medium text-xs sm:text-sm">{site.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] sm:text-xs">
+                          {getOrgName(site.organizationId)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm hidden sm:table-cell">{site.city || "-"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm hidden md:table-cell">{site.state || "-"}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs sm:text-sm hidden lg:table-cell">
+                        {new Date(site.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm"
+                            onClick={() => handleEditSite(site)}
+                            data-testid={`button-edit-site-${site.id}`}
+                          >
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => handleDeleteSite(site)}
+                            data-testid={`button-delete-site-${site.id}`}
                           >
                             <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
@@ -875,6 +1102,298 @@ export default function Admin() {
               data-testid="button-confirm-delete-org"
             >
               {deleteOrgMutation.isPending ? "Deleting..." : "Delete Organization"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Site Dialog */}
+      <Dialog open={showCreateSiteDialog} onOpenChange={setShowCreateSiteDialog}>
+        <DialogContent data-testid="dialog-create-site">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Create Site
+            </DialogTitle>
+            <DialogDescription>
+              Create a new site and assign it to an organization
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="site-name">Site Name *</Label>
+              <Input
+                id="site-name"
+                value={siteForm.name}
+                onChange={(e) => setSiteForm({ ...siteForm, name: e.target.value })}
+                placeholder="Enter site name"
+                data-testid="input-site-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="site-org">Organization *</Label>
+              <Select
+                value={siteForm.organizationId}
+                onValueChange={(value) => setSiteForm({ ...siteForm, organizationId: value })}
+              >
+                <SelectTrigger data-testid="select-site-org">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations?.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="site-city">City</Label>
+                <Input
+                  id="site-city"
+                  value={siteForm.city}
+                  onChange={(e) => setSiteForm({ ...siteForm, city: e.target.value })}
+                  placeholder="City"
+                  data-testid="input-site-city"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="site-state">State</Label>
+                <Input
+                  id="site-state"
+                  value={siteForm.state}
+                  onChange={(e) => setSiteForm({ ...siteForm, state: e.target.value })}
+                  placeholder="State"
+                  data-testid="input-site-state"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="site-address">Address</Label>
+              <Input
+                id="site-address"
+                value={siteForm.address}
+                onChange={(e) => setSiteForm({ ...siteForm, address: e.target.value })}
+                placeholder="Street address"
+                data-testid="input-site-address"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="site-zip">Zip Code</Label>
+                <Input
+                  id="site-zip"
+                  value={siteForm.zipCode}
+                  onChange={(e) => setSiteForm({ ...siteForm, zipCode: e.target.value })}
+                  placeholder="Zip"
+                  data-testid="input-site-zip"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="site-country">Country</Label>
+                <Input
+                  id="site-country"
+                  value={siteForm.country}
+                  onChange={(e) => setSiteForm({ ...siteForm, country: e.target.value })}
+                  placeholder="Country"
+                  data-testid="input-site-country"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateSiteDialog(false)} data-testid="button-cancel-create-site">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createSiteMutation.mutate(siteForm)}
+              disabled={!siteForm.name || !siteForm.organizationId || createSiteMutation.isPending}
+              data-testid="button-confirm-create-site"
+            >
+              {createSiteMutation.isPending ? "Creating..." : "Create Site"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Site Dialog */}
+      <Dialog open={showEditSiteDialog} onOpenChange={setShowEditSiteDialog}>
+        <DialogContent data-testid="dialog-edit-site">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit Site
+            </DialogTitle>
+            <DialogDescription>
+              Update site details and organization assignment
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-site-name">Site Name *</Label>
+              <Input
+                id="edit-site-name"
+                value={siteForm.name}
+                onChange={(e) => setSiteForm({ ...siteForm, name: e.target.value })}
+                data-testid="input-edit-site-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-site-org">Organization *</Label>
+              <Select
+                value={siteForm.organizationId}
+                onValueChange={(value) => setSiteForm({ ...siteForm, organizationId: value })}
+              >
+                <SelectTrigger data-testid="select-edit-site-org">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations?.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-site-city">City</Label>
+                <Input
+                  id="edit-site-city"
+                  value={siteForm.city}
+                  onChange={(e) => setSiteForm({ ...siteForm, city: e.target.value })}
+                  data-testid="input-edit-site-city"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-site-state">State</Label>
+                <Input
+                  id="edit-site-state"
+                  value={siteForm.state}
+                  onChange={(e) => setSiteForm({ ...siteForm, state: e.target.value })}
+                  data-testid="input-edit-site-state"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-site-address">Address</Label>
+              <Input
+                id="edit-site-address"
+                value={siteForm.address}
+                onChange={(e) => setSiteForm({ ...siteForm, address: e.target.value })}
+                data-testid="input-edit-site-address"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditSiteDialog(false)} data-testid="button-cancel-edit-site">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => selectedSite && updateSiteMutation.mutate({ id: selectedSite.id, data: siteForm })}
+              disabled={!siteForm.name || updateSiteMutation.isPending}
+              data-testid="button-confirm-edit-site"
+            >
+              {updateSiteMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Site Confirmation Dialog */}
+      <Dialog open={showDeleteSiteDialog} onOpenChange={setShowDeleteSiteDialog}>
+        <DialogContent data-testid="dialog-delete-site">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Site
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete site <strong>{selectedSite?.name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+              <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                This action cannot be undone
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                All assessments and data associated with this site will also be deleted.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowDeleteSiteDialog(false); setSelectedSite(null); }} data-testid="button-cancel-delete-site">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => selectedSite && deleteSiteMutation.mutate(selectedSite.id)}
+              disabled={deleteSiteMutation.isPending}
+              data-testid="button-confirm-delete-site"
+            >
+              {deleteSiteMutation.isPending ? "Deleting..." : "Delete Site"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Organization Assignment Dialog */}
+      <Dialog open={showUserOrgDialog} onOpenChange={setShowUserOrgDialog}>
+        <DialogContent data-testid="dialog-user-org">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Assign Organization
+            </DialogTitle>
+            <DialogDescription>
+              Assign user <strong>{selectedUser?.username}</strong> to an organization
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="user-org">Organization</Label>
+              <Select
+                value={userOrgData.organizationId}
+                onValueChange={(value) => setUserOrgData({ ...userOrgData, organizationId: value })}
+              >
+                <SelectTrigger data-testid="select-user-org">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations?.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user-role">Role</Label>
+              <Select
+                value={userOrgData.organizationRole}
+                onValueChange={(value) => setUserOrgData({ ...userOrgData, organizationRole: value })}
+              >
+                <SelectTrigger data-testid="select-user-role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">Owner</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowUserOrgDialog(false); setSelectedUser(null); }} data-testid="button-cancel-user-org">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => selectedUser && updateUserOrgMutation.mutate({ userId: selectedUser.id, ...userOrgData })}
+              disabled={!userOrgData.organizationId || updateUserOrgMutation.isPending}
+              data-testid="button-confirm-user-org"
+            >
+              {updateUserOrgMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
