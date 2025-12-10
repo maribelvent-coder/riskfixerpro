@@ -167,7 +167,12 @@ function generateSurveyExportHTML(data: any): string {
         for (const photo of q.evidence) {
           const url = typeof photo === 'string' ? photo : photo.url;
           if (url) {
-            html += `<a href="${escapeHtml(url)}" target="_blank" class="evidence-link">${escapeHtml(url.split('/').pop() || 'Photo')}</a>`;
+            // Check if it's a base64 data URL or a regular path
+            if (url.startsWith('data:image')) {
+              html += `<img src="${url}" alt="Evidence photo" style="max-width: 300px; border-radius: 4px; margin: 4px;">`;
+            } else {
+              html += `<a href="${escapeHtml(url)}" target="_blank" class="evidence-link">${escapeHtml(url.split('/').pop() || 'Photo')}</a>`;
+            }
           }
         }
         html += `</div>`;

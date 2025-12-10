@@ -5416,13 +5416,49 @@ The facility should prioritize addressing critical risks immediately, particular
           }
         }
 
-        // Organize questions by category
+        // Organize questions by category and convert evidence to base64
+        const objectStorageService = new ObjectStorageService();
         const categorizedQuestions: Record<string, any[]> = {};
+        
         for (const q of surveyQuestions) {
           const category = q.category || 'Uncategorized';
           if (!categorizedQuestions[category]) {
             categorizedQuestions[category] = [];
           }
+          
+          // Convert evidence paths to base64 data URLs
+          const evidenceWithBase64: string[] = [];
+          if (q.evidence && Array.isArray(q.evidence)) {
+            for (const evidencePath of q.evidence) {
+              if (evidencePath && typeof evidencePath === 'string') {
+                try {
+                  const file = await objectStorageService.getEvidenceFile(evidencePath);
+                  const [metadata] = await file.getMetadata();
+                  const contentType = metadata.contentType || 'image/jpeg';
+                  
+                  // Download file content as buffer
+                  const chunks: Buffer[] = [];
+                  const stream = file.createReadStream();
+                  
+                  await new Promise<void>((resolve, reject) => {
+                    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                    stream.on('end', () => resolve());
+                    stream.on('error', reject);
+                  });
+                  
+                  const buffer = Buffer.concat(chunks);
+                  const base64 = buffer.toString('base64');
+                  const dataUrl = `data:${contentType};base64,${base64}`;
+                  evidenceWithBase64.push(dataUrl);
+                } catch (error) {
+                  console.error(`Failed to load image ${evidencePath}:`, error);
+                  // Keep original path as fallback
+                  evidenceWithBase64.push(evidencePath);
+                }
+              }
+            }
+          }
+          
           categorizedQuestions[category].push({
             id: q.id,
             templateId: q.templateId,
@@ -5431,7 +5467,7 @@ The facility should prioritize addressing critical risks immediately, particular
             type: q.type,
             response: q.response,
             notes: q.notes,
-            evidence: q.evidence || [],
+            evidence: evidenceWithBase64,
             standard: q.standard,
           });
         }
