@@ -5917,17 +5917,32 @@ The facility should prioritize addressing critical risks immediately, particular
           return res.status(404).json({ error: 'Assessment not found' });
         }
         
+        // Load interview responses to calculate completion
+        const dbResponses = await storage.getExecutiveInterviewResponses(id);
+        const totalQuestions = 43;
+        const answeredCount = dbResponses.length;
+        const interviewCompletion = Math.round((answeredCount / totalQuestions) * 100);
+        
         // Return cached dashboard data if available
         if (assessment.epDashboardCache) {
           return res.json({
             cached: true,
             interviewHash: assessment.epInterviewHash,
+            interviewCompletion,
+            answeredQuestions: answeredCount,
+            totalQuestions,
             ...(assessment.epDashboardCache as object),
           });
         }
         
-        // No cached data available
-        return res.json({ cached: false, data: null });
+        // No cached data available - return interview status only
+        return res.json({ 
+          cached: false, 
+          data: null,
+          interviewCompletion,
+          answeredQuestions: answeredCount,
+          totalQuestions,
+        });
       } catch (error) {
         console.error("Error fetching EP dashboard cache:", error);
         res.status(500).json({ error: "Failed to fetch EP dashboard" });
@@ -5935,36 +5950,71 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
-  // POST endpoint for generating/refreshing EP Dashboard - aggregates interview data, AI scoring, and recommendations
+  // POST endpoint for generating/refreshing EP Dashboard - loads ALL interview data from DB, runs through mapper → AI engine
   app.post(
     "/api/assessments/:id/ep-dashboard",
     verifyAssessmentOwnership,
     async (req, res) => {
       try {
         const { id } = req.params;
-        const { interviewResponses, attachments = [], forceRefresh = false } = req.body;
+        const { forceRefresh = false } = req.body;
         
-        if (!interviewResponses || typeof interviewResponses !== 'object') {
-          return res.status(400).json({ error: 'Interview responses required' });
+        const assessment = await storage.getAssessment(id);
+        if (!assessment) {
+          return res.status(404).json({ error: 'Assessment not found' });
         }
+        
+        // Load ALL interview responses from database (per 6-Layer Architecture)
+        const dbResponses = await storage.getExecutiveInterviewResponses(id);
+        const surveyQuestions = await storage.getAssessmentQuestions(id);
+        
+        // Convert DB responses to key-value object for mapper
+        const interviewResponses: Record<string, any> = {};
+        for (const r of dbResponses) {
+          interviewResponses[r.questionId] = r.response;
+        }
+        // Also include survey question responses
+        for (const q of surveyQuestions) {
+          if (q.response !== null && q.response !== undefined) {
+            interviewResponses[q.questionId] = q.response;
+          }
+        }
+        
+        // Calculate interview completion percentage
+        const totalQuestions = 43; // EP Interview has 43 questions
+        const answeredCount = dbResponses.length;
+        const interviewCompletion = Math.round((answeredCount / totalQuestions) * 100);
         
         // Generate hash of interview responses for cache validation
         const interviewHash = JSON.stringify(Object.keys(interviewResponses).sort().map(k => [k, interviewResponses[k]]));
         const hashKey = Buffer.from(interviewHash).toString('base64').slice(0, 32);
         
         // Check cache if not forcing refresh
-        const assessment = await storage.getAssessment(id);
-        if (!forceRefresh && assessment?.epDashboardCache && assessment?.epInterviewHash === hashKey) {
+        if (!forceRefresh && assessment.epDashboardCache && assessment.epInterviewHash === hashKey) {
           return res.json({
             cached: true,
+            interviewCompletion,
+            answeredQuestions: answeredCount,
+            totalQuestions,
             ...(assessment.epDashboardCache as object),
+          });
+        }
+        
+        // Validate minimum data for analysis
+        if (answeredCount < 5) {
+          return res.status(400).json({ 
+            error: 'Insufficient interview data',
+            message: `Please complete more of the Executive Interview. Currently ${answeredCount}/${totalQuestions} questions answered.`,
+            interviewCompletion,
+            answeredQuestions: answeredCount,
+            totalQuestions,
           });
         }
         
         // Import the EP AI assessment engine
         const { getEPDashboardData } = await import('./services/ep-ai-risk-assessment');
         
-        const dashboardData = await getEPDashboardData(id, interviewResponses, attachments);
+        const dashboardData = await getEPDashboardData(id, interviewResponses, []);
         
         if (!dashboardData) {
           return res.status(500).json({ error: 'Failed to generate dashboard data' });
@@ -5976,7 +6026,13 @@ The facility should prioritize addressing critical risks immediately, particular
           epInterviewHash: hashKey,
         });
         
-        res.json({ cached: false, ...dashboardData });
+        res.json({ 
+          cached: false, 
+          interviewCompletion,
+          answeredQuestions: answeredCount,
+          totalQuestions,
+          ...dashboardData 
+        });
       } catch (error) {
         console.error("Error generating EP dashboard:", error);
         res.status(500).json({ 
