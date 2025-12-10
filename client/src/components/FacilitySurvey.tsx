@@ -199,14 +199,8 @@ export function FacilitySurvey({
               localQuestion.notes !== serverQuestion.notes
                 ? localQuestion.notes
                 : serverQuestion.notes,
-            // Preserve local evidence if modified
-            evidence:
-              localQuestion.evidence &&
-              localQuestion.evidence.length > 0 &&
-              JSON.stringify(localQuestion.evidence) !==
-                JSON.stringify(serverQuestion.evidence)
-                ? localQuestion.evidence
-                : serverQuestion.evidence,
+            // Always use server evidence - evidence changes happen via API, not locally
+            evidence: serverQuestion.evidence,
             // Preserve local recommendations if modified
             recommendations:
               localQuestion.recommendations &&
