@@ -5,7 +5,7 @@ import { openaiService } from "./openai-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
 import { db } from "./db";
-import { assessments, riskScenarios } from "@shared/schema";
+import { assessments, riskScenarios, sites } from "@shared/schema";
 import { TenantStorage } from "./tenant-storage";
 import {
   attachTenantContext,
