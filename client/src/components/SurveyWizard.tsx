@@ -991,18 +991,6 @@ export function SurveyWizard({
               })}
             </div>
 
-            {/* Switch to Classic View */}
-            {onSwitchToClassic && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs"
-                onClick={onSwitchToClassic}
-                data-testid="button-switch-classic"
-              >
-                Switch to Classic View
-              </Button>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -1046,122 +1034,154 @@ export function SurveyWizard({
               </div>
             </div>
 
-            {/* Question Card */}
-            <Card className="flex-1">
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                {/* Question Text */}
-                <div className="space-y-3">
-                  <h3 className="text-lg font-semibold leading-snug">
-                    {currentQuestion.question}
-                  </h3>
-
-                  {/* Standard Reference */}
-                  {currentQuestion.standard && (
-                    <div className="bg-muted/50 p-3 rounded-md text-sm">
-                      <span className="font-medium text-muted-foreground">
-                        Standard:{" "}
-                      </span>
-                      {currentQuestion.standard}
-                    </div>
-                  )}
-                </div>
-
-                {/* Response Input */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Your Response</Label>
-                  {renderQuestionInput(currentQuestion)}
-                </div>
-
-                {/* Collapsible Notes */}
-                <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-between"
-                      data-testid="button-toggle-notes"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        <span>Notes & Observations</span>
-                        {currentQuestion.notes && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            Has notes
-                          </Badge>
-                        )}
+            {/* Question Card - Royal Blue styling for issues */}
+            {(() => {
+              const hasIssue = currentQuestion.type === "yes-no" && 
+                ((currentQuestion.riskDirection === "negative" && currentQuestion.response === "yes") ||
+                 (currentQuestion.riskDirection !== "negative" && currentQuestion.response === "no"));
+              
+              return (
+                <Card className={cn(
+                  "flex-1 transition-all ring-2",
+                  hasIssue 
+                    ? "border-blue-400 bg-blue-50/30 dark:bg-blue-950/20 ring-blue-300 dark:ring-blue-800"
+                    : "ring-slate-200 dark:ring-slate-700/50"
+                )}>
+                  <CardContent className="p-4 sm:p-6 space-y-4">
+                    {/* Question Header with Royal Blue Number */}
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0",
+                        hasIssue
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                          : currentQuestion.response
+                            ? "bg-blue-600 text-white dark:bg-blue-500 dark:text-white"
+                            : "bg-blue-500 text-white dark:bg-blue-400 dark:text-white"
+                      )}>
+                        {globalQuestionNumber}
                       </div>
-                      {notesOpen ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <Textarea
-                      value={currentQuestion.notes || ""}
-                      onChange={(e) =>
-                        updateQuestion(
-                          currentQuestion.templateId,
-                          "notes",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Document specific observations, conditions, or concerns..."
-                      rows={3}
-                      className="text-sm"
-                      data-testid={`textarea-${currentQuestion.templateId}-notes`}
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Collapsible Evidence */}
-                <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-between"
-                      data-testid="button-toggle-evidence"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Camera className="h-4 w-4" />
-                        <span>Photo Evidence</span>
-                        {currentQuestion.evidence &&
-                          currentQuestion.evidence.length > 0 && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              {currentQuestion.evidence.length} photo
-                              {currentQuestion.evidence.length > 1 ? "s" : ""}
+                      <div className="flex-1 min-w-0 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="text-lg font-semibold leading-snug">
+                            {currentQuestion.question}
+                          </h3>
+                          {hasIssue && (
+                            <Badge className="bg-blue-500 text-white shrink-0">
+                              Issue
                             </Badge>
                           )}
+                        </div>
+
+                        {/* Standard Reference */}
+                        {currentQuestion.standard && (
+                          <div className="bg-muted/50 p-3 rounded-md text-sm">
+                            <span className="font-medium text-muted-foreground">
+                              Standard:{" "}
+                            </span>
+                            {currentQuestion.standard}
+                          </div>
+                        )}
                       </div>
-                      {evidenceOpen ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <EvidenceUploader
-                      assessmentId={assessmentId}
-                      questionId={currentQuestion.dbId || ""}
-                      questionType="facility"
-                      evidence={currentQuestion.evidence || []}
-                      onUpdate={() =>
-                        queryClient.invalidateQueries({
-                          queryKey: [
-                            "/api/assessments",
-                            assessmentId,
-                            "facility-survey",
-                          ],
-                        })
-                      }
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
-              </CardContent>
-            </Card>
+                    </div>
+
+                    {/* Response Input */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Your Response</Label>
+                      {renderQuestionInput(currentQuestion)}
+                    </div>
+
+                    {/* Collapsible Notes */}
+                    <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-between"
+                          data-testid="button-toggle-notes"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Notes & Observations</span>
+                            {currentQuestion.notes && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                Has notes
+                              </Badge>
+                            )}
+                          </div>
+                          {notesOpen ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2">
+                        <Textarea
+                          value={currentQuestion.notes || ""}
+                          onChange={(e) =>
+                            updateQuestion(
+                              currentQuestion.templateId,
+                              "notes",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Document specific observations, conditions, or concerns..."
+                          rows={3}
+                          className="text-sm"
+                          data-testid={`textarea-${currentQuestion.templateId}-notes`}
+                        />
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Collapsible Evidence */}
+                    <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-between"
+                          data-testid="button-toggle-evidence"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Camera className="h-4 w-4" />
+                            <span>Photo Evidence</span>
+                            {currentQuestion.evidence &&
+                              currentQuestion.evidence.length > 0 && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {currentQuestion.evidence.length} photo
+                                  {currentQuestion.evidence.length > 1 ? "s" : ""}
+                                </Badge>
+                              )}
+                          </div>
+                          {evidenceOpen ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2">
+                        <EvidenceUploader
+                          assessmentId={assessmentId}
+                          questionId={currentQuestion.dbId || ""}
+                          questionType="facility"
+                          evidence={currentQuestion.evidence || []}
+                          onUpdate={() =>
+                            queryClient.invalidateQueries({
+                              queryKey: [
+                                "/api/assessments",
+                                assessmentId,
+                                "facility-survey",
+                              ],
+                            })
+                          }
+                        />
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Navigation Footer */}
             <div className="flex items-center justify-between gap-4 pt-4">

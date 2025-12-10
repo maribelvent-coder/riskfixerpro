@@ -633,18 +633,16 @@ export default function ExecutiveInterviewWizard({
 
                                 {/* Status indicators */}
                                 <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                                  {hasIssue && (
+                                    <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5">
+                                      Issue
+                                    </Badge>
+                                  )}
                                   {hasNotes && (
                                     <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500" />
                                   )}
-                                  {isAnswered && (
-                                    <CheckCircle
-                                      className={cn(
-                                        "w-4 h-4 sm:w-5 sm:h-5",
-                                        hasIssue
-                                          ? "text-blue-500"
-                                          : "text-primary"
-                                      )}
-                                    />
+                                  {isAnswered && !hasIssue && (
+                                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                   )}
                                 </div>
                               </div>
@@ -822,9 +820,17 @@ export default function ExecutiveInterviewWizard({
       </div>
 
       {/* Focus Mode Overlay */}
-      {viewMode === "focus" && focusQuestion && (
+      {viewMode === "focus" && focusQuestion && (() => {
+        const focusHasIssue = localResponses[focusQuestion.id]?.yesNoResponse === false;
+        
+        return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 flex items-center justify-center p-4 sm:p-6">
-          <Card className="max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
+          <Card className={cn(
+            "max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl ring-2",
+            focusHasIssue 
+              ? "border-blue-400 bg-blue-50/30 dark:bg-blue-950/20 ring-blue-300 dark:ring-blue-800"
+              : "ring-slate-200 dark:ring-slate-700/50"
+          )}>
             {/* Focus Mode Header */}
             <div className="px-4 sm:px-6 py-3 sm:py-4 border-b flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-3">
@@ -836,6 +842,11 @@ export default function ExecutiveInterviewWizard({
                 <span className="text-xs sm:text-sm font-medium text-primary">
                   {activeCategory}
                 </span>
+                {focusHasIssue && (
+                  <Badge className="bg-blue-500 text-white text-xs">
+                    Issue
+                  </Badge>
+                )}
               </div>
               <button
                 onClick={() => setViewMode("standard")}
@@ -969,7 +980,8 @@ export default function ExecutiveInterviewWizard({
             </div>
           </Card>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
