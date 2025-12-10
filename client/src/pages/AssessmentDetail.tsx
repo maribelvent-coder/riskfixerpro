@@ -29,7 +29,6 @@ import RetailDashboard from "@/pages/assessments/RetailDashboard";
 import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
 import OfficeDashboard from "@/pages/assessments/OfficeDashboard";
-import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
 import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -228,11 +227,9 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     const templateId = assessmentData?.templateId || "";
     
     if (paradigm === "executive") {
-      const isEPTemplate = templateId === 'executive-protection';
       return {
         tabs: [
           { id: "executive-interview", label: "Executive Interview", icon: MessageSquare },
-          { id: "executive-profile", label: isEPTemplate ? "Principal Profile" : "Executive Profile & Threat Assessment", icon: User },
           { id: "physical-security", label: "Physical Security Review", icon: Building },
           { id: "risk-analysis", label: "Risk Analysis", icon: Shield },
           { id: "treatment-plan", label: "Security Treatment Plan", icon: FileText },
@@ -773,34 +770,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               
               <ExecutiveInterview 
                 assessmentId={assessmentId}
-                onComplete={() => setActiveTab('executive-profile')}
-              />
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="executive-profile" className="space-y-4">
-          {assessmentData?.templateId === 'executive-protection' ? (
-            // Executive Protection Framework - Principal Profile Dashboard
-            <ExecutiveDashboard />
-          ) : (
-            // Legacy Executive Templates - Survey Questions
-            <>
-              <Card>
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Executive Profile & Threat Assessment
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Comprehensive assessment of the executive's profile, public visibility, and threat landscape based on industry, position, and known threats.
-                  </p>
-                </CardHeader>
-              </Card>
-              
-              <ExecutiveSurveyQuestions 
-                assessmentId={assessmentId}
-                onComplete={() => setActiveTab('digital-footprint')}
+                onComplete={() => setActiveTab('physical-security')}
               />
             </>
           )}
