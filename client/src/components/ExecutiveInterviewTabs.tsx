@@ -15,11 +15,14 @@ import {
   Users, 
   AlertTriangle,
   CheckCircle,
-  ChevronRight
+  ChevronRight,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { AssessmentQuestion, AssessmentWithQuestions } from "@shared/schema";
 import ExecutiveSurveyQuestions, { EP_PART1_CATEGORIES } from "./ExecutiveSurveyQuestions";
+import ExecutiveInterviewWizard from "./ExecutiveInterviewWizard";
 
 interface ExecutiveInterviewTabsProps {
   assessmentId: string;
@@ -104,6 +107,7 @@ const SECTION_CONFIGS: SectionConfig[] = [
 
 export default function ExecutiveInterviewTabs({ assessmentId, onComplete }: ExecutiveInterviewTabsProps) {
   const [activeSection, setActiveSection] = useState(SECTION_CONFIGS[0].id);
+  const [useWizard, setUseWizard] = useState(false);
 
   const { data: assessment } = useQuery<AssessmentWithQuestions>({
     queryKey: ['/api/assessments', assessmentId],
@@ -169,6 +173,17 @@ export default function ExecutiveInterviewTabs({ assessmentId, onComplete }: Exe
     return 'pending';
   };
 
+  // Render the new wizard view if enabled
+  if (useWizard) {
+    return (
+      <ExecutiveInterviewWizard
+        assessmentId={assessmentId}
+        onComplete={onComplete}
+        onSwitchToClassic={() => setUseWizard(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card data-testid="card-executive-interview-overview">
@@ -183,7 +198,17 @@ export default function ExecutiveInterviewTabs({ assessmentId, onComplete }: Exe
                 Comprehensive interview covering threat perception, routines, and security posture
               </CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUseWizard(true)}
+                className="text-xs"
+                data-testid="button-switch-wizard"
+              >
+                <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+                New View
+              </Button>
               <Badge variant="outline" data-testid="badge-question-count">
                 {totalProgress.answered}/{totalProgress.total} Questions
               </Badge>
