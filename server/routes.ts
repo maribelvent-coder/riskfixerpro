@@ -7696,6 +7696,85 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
+  app.post(
+    "/api/assessments/:id/evidence/upload",
+    verifyAssessmentOwnership,
+    upload.single("file"),
+    async (req, res) => {
+      try {
+        const { questionId, questionType } = req.body;
+        const file = req.file;
+
+        if (!file) {
+          return res.status(400).json({ error: "No file uploaded" });
+        }
+
+        if (!questionId || !questionType) {
+          return res.status(400).json({
+            error: "questionId and questionType are required",
+          });
+        }
+
+        if (!["facility", "assessment"].includes(questionType)) {
+          return res
+            .status(400)
+            .json({ error: "questionType must be 'facility' or 'assessment'" });
+        }
+
+        const assessmentId = req.params.id;
+
+        if (questionType === "facility") {
+          const question = await storage.getFacilitySurveyQuestion(questionId);
+          if (!question || question.assessmentId !== assessmentId) {
+            return res.status(404).json({ error: "Question not found" });
+          }
+
+          const currentEvidence = question.evidence || [];
+          if (currentEvidence.length >= 10) {
+            return res
+              .status(400)
+              .json({ error: "Maximum 10 evidence photos per question" });
+          }
+        } else {
+          const question = await storage.getAssessmentQuestion(questionId);
+          if (!question || question.assessmentId !== assessmentId) {
+            return res.status(404).json({ error: "Question not found" });
+          }
+
+          const currentEvidence = question.evidence || [];
+          if (currentEvidence.length >= 10) {
+            return res
+              .status(400)
+              .json({ error: "Maximum 10 evidence photos per question" });
+          }
+        }
+
+        const objectStorageService = new ObjectStorageService();
+        const evidencePath = await objectStorageService.uploadEvidence(
+          file.buffer,
+          file.originalname,
+          assessmentId,
+          questionId,
+        );
+
+        if (questionType === "facility") {
+          await storage.appendFacilityQuestionEvidence(questionId, evidencePath);
+        } else {
+          await storage.appendAssessmentQuestionEvidence(questionId, evidencePath);
+        }
+
+        res.json({
+          success: true,
+          evidencePath,
+          filename: file.originalname,
+        });
+      } catch (error: any) {
+        console.error("Error uploading evidence:", error);
+        res.status(500).json({ error: "Failed to upload evidence" });
+      }
+    },
+  );
+
   app.delete(
     "/api/assessments/:id/evidence",
     verifyAssessmentOwnership,

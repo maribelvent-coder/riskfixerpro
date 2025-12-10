@@ -27,19 +27,12 @@ export function EvidenceUploader({
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      const response = await apiRequest(
-        "POST",
-        `/api/assessments/${assessmentId}/evidence/upload-url`,
-        {
-          questionId,
-          questionType,
-          filename: file.name,
-        }
-      );
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("questionId", questionId);
+      formData.append("questionType", questionType);
 
-      const { uploadURL, evidencePath } = await response.json();
-
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<{ success: boolean; evidencePath: string; filename: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
         xhr.upload.addEventListener("progress", (e) => {
@@ -52,9 +45,19 @@ export function EvidenceUploader({
         xhr.addEventListener("load", () => {
           setUploadProgress(null);
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch {
+              reject(new Error("Invalid server response"));
+            }
           } else {
-            reject(new Error("Upload to storage failed"));
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error || "Upload failed"));
+            } catch {
+              reject(new Error("Upload failed"));
+            }
           }
         });
 
@@ -63,23 +66,12 @@ export function EvidenceUploader({
           reject(new Error("Network error during upload"));
         });
 
-        xhr.open("PUT", uploadURL);
-        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-        xhr.send(file);
+        xhr.open("POST", `/api/assessments/${assessmentId}/evidence/upload`);
+        xhr.withCredentials = true;
+        xhr.send(formData);
       });
 
-      await apiRequest(
-        "POST",
-        `/api/assessments/${assessmentId}/evidence/register`,
-        {
-          questionId,
-          questionType,
-          evidencePath,
-          filename: file.name,
-        }
-      );
-
-      return { success: true, evidencePath, filename: file.name };
+      return result;
     },
     onSuccess: () => {
       toast({
