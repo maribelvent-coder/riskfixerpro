@@ -14,7 +14,7 @@ export function MarketingHeader() {
           <img 
             src={logoPath} 
             alt="RiskFixer Logo" 
-            className="h-[5.75rem] w-auto transition-transform hover:scale-105"
+            className="h-[17.25rem] w-auto transition-transform hover:scale-105"
             data-testid="img-logo"
           />
         </Link>
