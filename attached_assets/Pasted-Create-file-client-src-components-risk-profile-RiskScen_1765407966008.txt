@@ -1,0 +1,94 @@
+Create file: `client/src/components/risk-profile/RiskScenarioList.tsx`
+
+```typescript
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChevronRight } from 'lucide-react';
+
+interface RiskScenario {
+  id: number;
+  threatName: string;
+  threatId: string;
+  inherentRisk: number;
+  riskLevel: 'critical' | 'high' | 'medium' | 'low';
+  scenarioDescription: string;
+  threatLikelihood: number;
+  vulnerability: number;
+  impact: number;
+}
+
+interface RiskScenarioListProps {
+  scenarios: RiskScenario[];
+  onViewScenario: (scenario: RiskScenario) => void;
+  maxVisible?: number;
+}
+
+const RISK_LEVEL_CONFIG = {
+  critical: { color: 'bg-red-500', textColor: 'text-red-700', icon: '🔴' },
+  high: { color: 'bg-orange-500', textColor: 'text-orange-700', icon: '🟠' },
+  medium: { color: 'bg-yellow-500', textColor: 'text-yellow-700', icon: '🟡' },
+  low: { color: 'bg-green-500', textColor: 'text-green-700', icon: '🟢' },
+};
+
+export function RiskScenarioList({
+  scenarios,
+  onViewScenario,
+  maxVisible = 8,
+}: RiskScenarioListProps) {
+  const [showAll, setShowAll] = useState(false);
+  
+  // Sort by inherent risk (highest first)
+  const sortedScenarios = [...scenarios].sort((a, b) => b.inherentRisk - a.inherentRisk);
+  const visibleScenarios = showAll ? sortedScenarios : sortedScenarios.slice(0, maxVisible);
+  
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-lg">Risk Scenarios ({scenarios.length})</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {visibleScenarios.map((scenario) => {
+            const config = RISK_LEVEL_CONFIG[scenario.riskLevel];
+            
+            return (
+              <button
+                key={scenario.id}
+                onClick={() => onViewScenario(scenario)}
+                className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span>{config.icon}</span>
+                  <div>
+                    <div className="font-medium text-gray-900">{scenario.threatName}</div>
+                    <div className="text-sm text-gray-500">
+                      T:{scenario.threatLikelihood} × V:{scenario.vulnerability} × I:{scenario.impact}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`font-bold ${config.textColor}`}>
+                    {scenario.inherentRisk}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        
+        {scenarios.length > maxVisible && (
+          <Button
+            variant="ghost"
+            className="w-full mt-4"
+            onClick={() => setShowAll(!showAll)}
+          >
+            {showAll ? 'Show Less' : `View All ${scenarios.length} Scenarios`}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+```
