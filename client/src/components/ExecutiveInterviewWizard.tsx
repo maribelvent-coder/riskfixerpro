@@ -784,7 +784,6 @@ export default function ExecutiveInterviewWizard({
               {currentCategoryIndex === categories.length - 1 ? (
                 <Button
                   onClick={onComplete}
-                  disabled={progressPercent < 80}
                   className="flex items-center gap-2"
                   data-testid="button-complete-interview"
                 >
