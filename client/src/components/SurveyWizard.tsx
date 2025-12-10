@@ -961,10 +961,10 @@ export function SurveyWizard({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       {/* Top Navigation Bar */}
-      <div className="bg-card border-b sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+      <div className="bg-card border-b border-t rounded-t-lg">
+        <div className="px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
             <div>
               <h1 className="text-base sm:text-lg font-semibold">
@@ -1025,14 +1025,14 @@ export function SurveyWizard({
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <div className="px-4 sm:px-6 py-4 sm:py-6">
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* Sidebar - Category Navigation */}
           <div className={cn(
             "lg:w-64 flex-shrink-0",
             navOpen ? "block" : "hidden lg:block"
           )}>
-            <Card className="sticky top-28 sm:top-32">
+            <Card>
               <CardContent className="p-3 sm:p-4">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                   Categories
