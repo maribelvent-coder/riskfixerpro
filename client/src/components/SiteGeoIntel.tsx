@@ -50,6 +50,15 @@ function getCrimeCount(crimeData: unknown): string {
   return 'N/A';
 }
 
+// Helper to extract dual-radius data from coverage area
+function getDualRadiusData(coverageArea: any): { radius5mi: any; radius10mi: any } | null {
+  if (!coverageArea || typeof coverageArea !== 'object') return null;
+  if (coverageArea.radius5mi && coverageArea.radius10mi) {
+    return { radius5mi: coverageArea.radius5mi, radius10mi: coverageArea.radius10mi };
+  }
+  return null;
+}
+
 // Component to display a crime source with its observations
 function CrimeSourceDisplay({ 
   source, 
@@ -63,6 +72,9 @@ function CrimeSourceDisplay({
   const [showCharts, setShowCharts] = useState(false);
   const sourceObservations = observations.filter(obs => obs.crimeSourceId === source.id);
   const latestObservation = sourceObservations[0]; // Most recent observation
+  
+  // Check for dual-radius data in coverageArea
+  const dualRadius = getDualRadiusData(source.coverageArea);
 
   return (
     <div className="space-y-4" data-testid={`crime-source-${source.id}`}>
@@ -102,7 +114,7 @@ function CrimeSourceDisplay({
             {latestObservation?.overallCrimeIndex !== null && latestObservation?.overallCrimeIndex !== undefined && (
               <div className="text-center">
                 <div className="text-3xl font-bold">{latestObservation.overallCrimeIndex}</div>
-                <div className="text-xs text-muted-foreground">Crime Index</div>
+                <div className="text-xs text-muted-foreground">Crime Index (5mi)</div>
               </div>
             )}
             <div className="flex gap-1">
@@ -128,7 +140,84 @@ function CrimeSourceDisplay({
           </div>
         </div>
 
-        {latestObservation ? (
+        {/* Dual Radius Display - Show both 5mi and 10mi results */}
+        {dualRadius ? (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 5 Mile Radius */}
+            <div className="p-3 rounded-lg border bg-muted/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="text-xs font-semibold">Within 5 Miles</Badge>
+                <span className="text-xs text-muted-foreground">
+                  Pop: {(dualRadius.radius5mi.populationCount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="text-center p-2 rounded bg-background">
+                  <div className="text-lg font-bold">{(dualRadius.radius5mi.totalIncidents || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                </div>
+                <div className="text-center p-2 rounded bg-background">
+                  <div className="text-lg font-bold text-red-600">{(dualRadius.radius5mi.violentTotal || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Violent</div>
+                </div>
+                <div className="text-center p-2 rounded bg-background">
+                  <div className="text-lg font-bold text-orange-600">{(dualRadius.radius5mi.propertyTotal || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Property</div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Crime Index:</span>
+                <Badge 
+                  variant="outline"
+                  className={
+                    dualRadius.radius5mi.crimeIndex >= 50 ? "border-red-500 text-red-700" :
+                    dualRadius.radius5mi.crimeIndex >= 30 ? "border-yellow-500 text-yellow-700" :
+                    "border-green-500 text-green-700"
+                  }
+                >
+                  {dualRadius.radius5mi.crimeIndex} - {(dualRadius.radius5mi.comparisonRating || '').replace(/_/g, ' ').toUpperCase()}
+                </Badge>
+              </div>
+            </div>
+            
+            {/* 10 Mile Radius */}
+            <div className="p-3 rounded-lg border bg-muted/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="text-xs font-semibold">Within 10 Miles</Badge>
+                <span className="text-xs text-muted-foreground">
+                  Pop: {(dualRadius.radius10mi.populationCount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="text-center p-2 rounded bg-background">
+                  <div className="text-lg font-bold">{(dualRadius.radius10mi.totalIncidents || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                </div>
+                <div className="text-center p-2 rounded bg-background">
+                  <div className="text-lg font-bold text-red-600">{(dualRadius.radius10mi.violentTotal || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Violent</div>
+                </div>
+                <div className="text-center p-2 rounded bg-background">
+                  <div className="text-lg font-bold text-orange-600">{(dualRadius.radius10mi.propertyTotal || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Property</div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Crime Index:</span>
+                <Badge 
+                  variant="outline"
+                  className={
+                    dualRadius.radius10mi.crimeIndex >= 50 ? "border-red-500 text-red-700" :
+                    dualRadius.radius10mi.crimeIndex >= 30 ? "border-yellow-500 text-yellow-700" :
+                    "border-green-500 text-green-700"
+                  }
+                >
+                  {dualRadius.radius10mi.crimeIndex} - {(dualRadius.radius10mi.comparisonRating || '').replace(/_/g, ' ').toUpperCase()}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        ) : latestObservation ? (
           <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
             {latestObservation.violentCrimes ? (
               <div className="p-2 rounded bg-muted/50">
@@ -390,11 +479,15 @@ export function SiteGeoIntel({ site: initialSite }: SiteGeoIntelProps) {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crime-sources", site.id] });
       const summary = data?.data?.summary;
+      let description = "Crime data imported successfully from Crimeometer.";
+      if (summary?.radius5mi && summary?.radius10mi) {
+        description = `5mi: ${summary.radius5mi.totalIncidents.toLocaleString()} incidents | 10mi: ${summary.radius10mi.totalIncidents.toLocaleString()} incidents`;
+      } else if (summary?.totalIncidents !== undefined) {
+        description = `Found ${summary.totalIncidents} incidents (${summary.violentCrimes} violent, ${summary.propertyCrimes} property)`;
+      }
       toast({
         title: "Crime data fetched",
-        description: summary 
-          ? `Found ${summary.totalIncidents} incidents (${summary.violentCrimes} violent, ${summary.propertyCrimes} property)`
-          : "Crime data imported successfully from Crimeometer.",
+        description,
       });
     },
     onError: (error: Error) => {

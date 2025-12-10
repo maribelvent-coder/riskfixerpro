@@ -1643,18 +1643,75 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
 
       console.log(`[Crimeometer] Fetching crime data for site ${siteId} at ${lat}, ${lon}`);
 
-      // Fetch crime statistics from Crimeometer
-      const stats = await getCrimeStatsByLocation({
-        lat,
-        lon,
-        datetimeIni,
-        datetimeEnd,
-        distance: "5mi",
-      });
+      // Helper function to parse crime stats
+      const parseCrimeStats = (stats: any) => {
+        const incidentTypes = stats.incidents_types || stats.incident_types || [];
+        const violentTypes = ['Assault', 'Robbery', 'Homicide', 'Murder', 'Rape', 'Sexual Assault', 'Kidnapping', 'Aggravated Assault'];
+        const propertyTypes = ['Burglary', 'Theft', 'Larceny', 'Motor Vehicle Theft', 'Arson', 'Vandalism', 'Shoplifting', 'Breaking & Entering'];
+        
+        let violentTotal = 0;
+        let propertyTotal = 0;
+        let otherTotal = 0;
+        const violentBreakdown: Record<string, number> = {};
+        const propertyBreakdown: Record<string, number> = {};
+        const otherBreakdown: Record<string, number> = {};
 
-      console.log(`[Crimeometer] Received stats:`, JSON.stringify(stats).slice(0, 500));
+        for (const incident of incidentTypes) {
+          const type = incident.incident_type || incident.type || '';
+          const count = incident.incident_type_count || incident.incident_count || incident.count || 0;
+          const isViolent = violentTypes.some(v => type.toLowerCase().includes(v.toLowerCase()));
+          const isProperty = propertyTypes.some(p => type.toLowerCase().includes(p.toLowerCase()));
+          
+          if (isViolent) {
+            violentTotal += count;
+            violentBreakdown[type] = count;
+          } else if (isProperty) {
+            propertyTotal += count;
+            propertyBreakdown[type] = count;
+          } else {
+            otherTotal += count;
+            otherBreakdown[type] = count;
+          }
+        }
 
-      // Create crime source entry
+        const totalIncidents = stats.incidents_count || stats.total_incidents || violentTotal + propertyTotal + otherTotal;
+        const populationCount = stats.population_count || 0;
+        const crimeIndex = Math.min(100, Math.round((totalIncidents / 100) * 10));
+        
+        let comparisonRating = "average";
+        if (crimeIndex >= 70) comparisonRating = "very_high";
+        else if (crimeIndex >= 50) comparisonRating = "high";
+        else if (crimeIndex >= 30) comparisonRating = "average";
+        else if (crimeIndex >= 15) comparisonRating = "low";
+        else comparisonRating = "very_low";
+
+        return {
+          totalIncidents,
+          populationCount,
+          violentTotal,
+          propertyTotal,
+          otherTotal,
+          violentBreakdown,
+          propertyBreakdown,
+          otherBreakdown,
+          crimeIndex,
+          comparisonRating,
+        };
+      };
+
+      // Fetch crime statistics at both 5mi and 10mi radius
+      const [stats5mi, stats10mi] = await Promise.all([
+        getCrimeStatsByLocation({ lat, lon, datetimeIni, datetimeEnd, distance: "5mi" }),
+        getCrimeStatsByLocation({ lat, lon, datetimeIni, datetimeEnd, distance: "10mi" }),
+      ]);
+
+      console.log(`[Crimeometer] 5mi stats:`, JSON.stringify(stats5mi).slice(0, 300));
+      console.log(`[Crimeometer] 10mi stats:`, JSON.stringify(stats10mi).slice(0, 300));
+
+      const parsed5mi = parseCrimeStats(stats5mi);
+      const parsed10mi = parseCrimeStats(stats10mi);
+
+      // Create crime source entry with both radius data
       const crimeSource = await storage.createCrimeSource({
         siteId,
         dataSource: "crimeometer",
@@ -1663,68 +1720,26 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
         city: site.city || undefined,
         county: site.county || undefined,
         state: site.state || undefined,
-        coverageArea: { latitude: lat, longitude: lon, radius: "5mi" },
+        coverageArea: { 
+          latitude: lat, 
+          longitude: lon, 
+          radius: "5mi/10mi",
+          radius5mi: parsed5mi,
+          radius10mi: parsed10mi,
+        },
         dataQuality: "api",
-        notes: `Fetched from Crimeometer API on ${new Date().toISOString()}`,
+        notes: `Fetched from Crimeometer API on ${new Date().toISOString()} (dual radius: 5mi and 10mi)`,
       });
 
-      // Parse and create crime observation
-      // Note: Crimeometer API returns 'incidents_types' (with 's') and 'incident_type_count'
-      const incidentTypes = (stats as any).incidents_types || (stats as any).incident_types || [];
-      
-      // Categorize crimes into violent, property, and other
-      const violentTypes = ['Assault', 'Robbery', 'Homicide', 'Murder', 'Rape', 'Sexual Assault', 'Kidnapping', 'Aggravated Assault'];
-      const propertyTypes = ['Burglary', 'Theft', 'Larceny', 'Motor Vehicle Theft', 'Arson', 'Vandalism', 'Shoplifting', 'Breaking & Entering'];
-      
-      let violentTotal = 0;
-      let propertyTotal = 0;
-      let otherTotal = 0;
-      
-      const violentBreakdown: Record<string, number> = {};
-      const propertyBreakdown: Record<string, number> = {};
-      const otherBreakdown: Record<string, number> = {};
-
-      for (const incident of incidentTypes) {
-        const type = incident.incident_type || incident.type || '';
-        const count = incident.incident_type_count || incident.incident_count || incident.count || 0;
-        
-        const isViolent = violentTypes.some(v => type.toLowerCase().includes(v.toLowerCase()));
-        const isProperty = propertyTypes.some(p => type.toLowerCase().includes(p.toLowerCase()));
-        
-        if (isViolent) {
-          violentTotal += count;
-          violentBreakdown[type] = count;
-        } else if (isProperty) {
-          propertyTotal += count;
-          propertyBreakdown[type] = count;
-        } else {
-          otherTotal += count;
-          otherBreakdown[type] = count;
-        }
-      }
-
-      // Note: Crimeometer API returns 'incidents_count' not 'total_incidents'
-      const totalIncidents = (stats as any).incidents_count || (stats as any).total_incidents || violentTotal + propertyTotal + otherTotal;
-      
-      // Calculate a crime index (normalized score 0-100)
-      // Based on incidents per area - higher is worse
-      const crimeIndex = Math.min(100, Math.round((totalIncidents / 100) * 10));
-
-      // Determine comparison rating based on crime index
-      let comparisonRating = "average";
-      if (crimeIndex >= 70) comparisonRating = "very_high";
-      else if (crimeIndex >= 50) comparisonRating = "high";
-      else if (crimeIndex >= 30) comparisonRating = "average";
-      else if (crimeIndex >= 15) comparisonRating = "low";
-      else comparisonRating = "very_low";
-
+      // Create observation using the 5mi data as primary (for backwards compatibility)
+      // but store 10mi data in the source's coverageArea
       const observation = await storage.createCrimeObservation({
         crimeSourceId: crimeSource.id,
-        violentCrimes: { total: violentTotal, breakdown: violentBreakdown },
-        propertyCrimes: { total: propertyTotal, breakdown: propertyBreakdown },
-        otherCrimes: { total: otherTotal, breakdown: otherBreakdown },
-        overallCrimeIndex: crimeIndex,
-        comparisonRating,
+        violentCrimes: { total: parsed5mi.violentTotal, breakdown: parsed5mi.violentBreakdown },
+        propertyCrimes: { total: parsed5mi.propertyTotal, breakdown: parsed5mi.propertyBreakdown },
+        otherCrimes: { total: parsed5mi.otherTotal, breakdown: parsed5mi.otherBreakdown },
+        overallCrimeIndex: parsed5mi.crimeIndex,
+        comparisonRating: parsed5mi.comparisonRating,
         startDate: new Date(datetimeIni),
         endDate: new Date(datetimeEnd),
       });
@@ -1735,12 +1750,24 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
           source: crimeSource,
           observation,
           summary: {
-            totalIncidents,
-            violentCrimes: violentTotal,
-            propertyCrimes: propertyTotal,
-            otherCrimes: otherTotal,
-            crimeIndex,
-            comparisonRating,
+            radius5mi: {
+              totalIncidents: parsed5mi.totalIncidents,
+              populationCount: parsed5mi.populationCount,
+              violentCrimes: parsed5mi.violentTotal,
+              propertyCrimes: parsed5mi.propertyTotal,
+              otherCrimes: parsed5mi.otherTotal,
+              crimeIndex: parsed5mi.crimeIndex,
+              comparisonRating: parsed5mi.comparisonRating,
+            },
+            radius10mi: {
+              totalIncidents: parsed10mi.totalIncidents,
+              populationCount: parsed10mi.populationCount,
+              violentCrimes: parsed10mi.violentTotal,
+              propertyCrimes: parsed10mi.propertyTotal,
+              otherCrimes: parsed10mi.otherTotal,
+              crimeIndex: parsed10mi.crimeIndex,
+              comparisonRating: parsed10mi.comparisonRating,
+            },
           },
         },
       });
