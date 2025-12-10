@@ -8229,19 +8229,19 @@ The facility should prioritize addressing critical risks immediately, particular
     getAllRecipes,
     getRecipe,
   } = await import("./services/reporting/report-generator");
-  const { isAnthropicConfigured } = await import(
-    "./services/anthropic-service"
-  );
+  // Check if AI services are configured (OpenAI)
+  const isAIConfigured = () => !!process.env.OPENAI_API_KEY;
 
-  // Check if Anthropic API is configured (public - no auth needed)
+  // Check if AI API is configured (public - no auth needed)
   app.get("/api/reports/status", async (_req, res) => {
     try {
-      const configured = isAnthropicConfigured();
+      const configured = isAIConfigured();
       res.json({
-        anthropicConfigured: configured,
+        anthropicConfigured: configured, // Keep for backwards compatibility
+        aiConfigured: configured,
         message: configured
           ? "Ready to generate reports"
-          : "Anthropic API key not configured",
+          : "OpenAI API key not configured",
       });
     } catch (error) {
       console.error("Error checking report status:", error);
@@ -8303,10 +8303,10 @@ The facility should prioritize addressing critical risks immediately, particular
             .json({ error: "Assessment not found or access denied" });
         }
 
-        if (!isAnthropicConfigured()) {
+        if (!isAIConfigured()) {
           return res.status(503).json({
             error: "Report generation unavailable",
-            message: "Anthropic API key is not configured",
+            message: "OpenAI API key is not configured",
           });
         }
 
@@ -8543,10 +8543,10 @@ The facility should prioritize addressing critical risks immediately, particular
             .json({ error: "Assessment not found or access denied" });
         }
 
-        if (!isAnthropicConfigured()) {
+        if (!isAIConfigured()) {
           return res.status(503).json({
             error: "Report generation unavailable",
-            message: "Anthropic API key is not configured",
+            message: "OpenAI API key is not configured",
           });
         }
 

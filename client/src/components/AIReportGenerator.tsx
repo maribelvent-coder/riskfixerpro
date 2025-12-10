@@ -304,7 +304,7 @@ export function AIReportGenerator({
               <div>
                 <p className="font-medium text-destructive">AI Generation Unavailable</p>
                 <p className="text-sm text-muted-foreground">
-                  The Anthropic API is not configured. Please contact your administrator.
+                  The OpenAI API is not configured. Please contact your administrator.
                 </p>
               </div>
             </div>
