@@ -603,7 +603,7 @@ export default function ExecutivePhysicalSecurityWizard({
                       questionType="assessment"
                       evidence={response.evidence || []}
                       onUpdate={() => {
-                        queryClient.invalidateQueries({ queryKey: questionQueryKey });
+                        queryClient.refetchQueries({ queryKey: questionQueryKey });
                       }}
                     />
                   </div>
