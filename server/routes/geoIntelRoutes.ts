@@ -6,6 +6,12 @@ import { searchFBIAgencies, getFBIAgencyCrimeData, convertFBIStatsToOurFormat } 
 import { getBJSCrimeStatistics } from "../services/bjsNibrsData.js";
 import { getFBICrimeStatistics } from "../services/fbiCdeData.js";
 import { getCityCrimeStatistics, getAvailableCities } from "../services/cityCrimeData.js";
+import {
+  getCrimeStatsByLocation,
+  getCrimeIncidentsByLocation,
+  isCrimeometerConfigured,
+  getDateRangeLastMonths,
+} from "../services/crimeometerData.js";
 import multer from "multer";
 import { z } from "zod";
 import { parse } from "csv-parse/sync";
@@ -1584,5 +1590,166 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
       console.error("Threat intelligence error:", error);
       res.status(500).json({ error: error.message || "Failed to get threat intelligence" });
     }
+  });
+
+  // ===================================================================
+  // CRIMEOMETER INTEGRATION ROUTES
+  // ===================================================================
+
+  // Fetch crime data from Crimeometer for a site
+  app.post("/api/sites/:siteId/crimeometer/fetch", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      // Check if Crimeometer is configured
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ 
+          error: "Crimeometer API not configured",
+          message: "Please add CRIMEOMETER_API_KEY to secrets" 
+        });
+      }
+
+      const { siteId } = req.params;
+      const { months = 12 } = req.body; // Default to last 12 months
+
+      const site = await storage.getSite(siteId);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+
+      // Verify ownership
+      const user = await storage.getUser(userId);
+      const hasAccess = site.userId === userId || 
+                       (user && user.organizationId && site.organizationId === user.organizationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Ensure site has coordinates
+      if (!site.latitude || !site.longitude) {
+        return res.status(400).json({ 
+          error: "Site has no coordinates",
+          message: "Please geocode the site first" 
+        });
+      }
+
+      const lat = parseFloat(site.latitude);
+      const lon = parseFloat(site.longitude);
+      const { datetimeIni, datetimeEnd } = getDateRangeLastMonths(months);
+
+      console.log(`[Crimeometer] Fetching crime data for site ${siteId} at ${lat}, ${lon}`);
+
+      // Fetch crime statistics from Crimeometer
+      const stats = await getCrimeStatsByLocation({
+        lat,
+        lon,
+        datetimeIni,
+        datetimeEnd,
+        distance: "5mi",
+      });
+
+      console.log(`[Crimeometer] Received stats:`, JSON.stringify(stats).slice(0, 500));
+
+      // Create crime source entry
+      const crimeSource = await storage.createCrimeSource({
+        siteId,
+        dataSource: "crimeometer",
+        importDate: new Date(),
+        dataTimePeriod: `Last ${months} months`,
+        city: site.city || undefined,
+        county: site.county || undefined,
+        state: site.state || undefined,
+        coverageArea: { latitude: lat, longitude: lon, radius: "5mi" },
+        dataQuality: "api",
+        notes: `Fetched from Crimeometer API on ${new Date().toISOString()}`,
+      });
+
+      // Parse and create crime observation
+      const incidentTypes = (stats as any).incident_types || [];
+      
+      // Categorize crimes into violent, property, and other
+      const violentTypes = ['Assault', 'Robbery', 'Homicide', 'Murder', 'Rape', 'Sexual Assault', 'Kidnapping', 'Aggravated Assault'];
+      const propertyTypes = ['Burglary', 'Theft', 'Larceny', 'Motor Vehicle Theft', 'Arson', 'Vandalism', 'Shoplifting', 'Breaking & Entering'];
+      
+      let violentTotal = 0;
+      let propertyTotal = 0;
+      let otherTotal = 0;
+      
+      const violentBreakdown: Record<string, number> = {};
+      const propertyBreakdown: Record<string, number> = {};
+      const otherBreakdown: Record<string, number> = {};
+
+      for (const incident of incidentTypes) {
+        const type = incident.incident_type || incident.type || '';
+        const count = incident.incident_count || incident.count || 0;
+        
+        const isViolent = violentTypes.some(v => type.toLowerCase().includes(v.toLowerCase()));
+        const isProperty = propertyTypes.some(p => type.toLowerCase().includes(p.toLowerCase()));
+        
+        if (isViolent) {
+          violentTotal += count;
+          violentBreakdown[type] = count;
+        } else if (isProperty) {
+          propertyTotal += count;
+          propertyBreakdown[type] = count;
+        } else {
+          otherTotal += count;
+          otherBreakdown[type] = count;
+        }
+      }
+
+      const totalIncidents = (stats as any).total_incidents || violentTotal + propertyTotal + otherTotal;
+      
+      // Calculate a crime index (normalized score 0-100)
+      // Based on incidents per area - higher is worse
+      const crimeIndex = Math.min(100, Math.round((totalIncidents / 100) * 10));
+
+      // Determine comparison rating based on crime index
+      let comparisonRating = "average";
+      if (crimeIndex >= 70) comparisonRating = "very_high";
+      else if (crimeIndex >= 50) comparisonRating = "high";
+      else if (crimeIndex >= 30) comparisonRating = "average";
+      else if (crimeIndex >= 15) comparisonRating = "low";
+      else comparisonRating = "very_low";
+
+      const observation = await storage.createCrimeObservation({
+        crimeSourceId: crimeSource.id,
+        violentCrimes: { total: violentTotal, breakdown: violentBreakdown },
+        propertyCrimes: { total: propertyTotal, breakdown: propertyBreakdown },
+        otherCrimes: { total: otherTotal, breakdown: otherBreakdown },
+        overallCrimeIndex: crimeIndex,
+        comparisonRating,
+        startDate: new Date(datetimeIni),
+        endDate: new Date(datetimeEnd),
+      });
+
+      res.json({
+        success: true,
+        data: {
+          source: crimeSource,
+          observation,
+          summary: {
+            totalIncidents,
+            violentCrimes: violentTotal,
+            propertyCrimes: propertyTotal,
+            otherCrimes: otherTotal,
+            crimeIndex,
+            comparisonRating,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error("Crimeometer fetch error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch crime data from Crimeometer" });
+    }
+  });
+
+  // Check Crimeometer API status
+  app.get("/api/crimeometer/configured", async (_req, res) => {
+    res.json({ configured: isCrimeometerConfigured() });
   });
 }
