@@ -75,6 +75,16 @@ Core entities managed by the platform include Assessments, Sites/Locations, Asse
 ### AI Services
 -   **OpenAI API**: For GPT-5 integration, including GPT-4o Vision for crime data extraction.
 
+### Crime Data Services
+-   **Crimeometer API** (December 2025): Comprehensive crime data integration providing:
+    - Crime incidents by location (lat/lon) or city (name/key)
+    - Crime statistics with filtering by incident type
+    - Sex offender registry data by location, zipcode, or name search
+    - 911 calls for service by location or city
+    - Service file: `server/services/crimeometerData.ts`
+    - API routes: `/api/crimeometer/*` (status, coverage, incidents, stats, sex-offenders, calls)
+    - Requires: `CRIMEOMETER_API_KEY` secret
+
 ### UI/UX Libraries
 -   **Radix UI**: Headless component primitives.
 -   **Tailwind CSS**: Utility-first CSS framework.
