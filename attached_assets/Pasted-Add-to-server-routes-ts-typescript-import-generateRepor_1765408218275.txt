@@ -1,0 +1,170 @@
+Add to `server/routes.ts`:
+
+```typescript
+import { generateReport, getReportById, listReports } from './services/report-generator';
+
+// Generate a new report
+app.post('/api/assessments/:id/reports/generate', async (req, res) => {
+  try {
+    const assessmentId = parseInt(req.params.id);
+    const { reportType, options } = req.body;
+    
+    // Validate assessment exists
+    const assessment = await db.query.assessments.findFirst({
+      where: eq(assessments.id, assessmentId),
+    });
+    
+    if (!assessment) {
+      return res.status(404).json({ success: false, error: 'Assessment not found' });
+    }
+    
+    // Check if risk data exists
+    const scenarios = await db.query.riskScenarios.findMany({
+      where: eq(riskScenarios.assessmentId, assessmentId),
+    });
+    
+    if (scenarios.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No risk data available. Please generate risks first.',
+      });
+    }
+    
+    // Generate the report
+    const result = await generateReport({
+      assessmentId,
+      reportType,
+      options,
+      assessment,
+      scenarios,
+    });
+    
+    return res.json({
+      success: true,
+      reportId: result.reportId,
+      downloadUrl: `/api/assessments/${assessmentId}/reports/${result.reportId}/download`,
+    });
+    
+  } catch (error) {
+    console.error('[Report Generation] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate report',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// List all reports for an assessment
+app.get('/api/assessments/:id/reports', async (req, res) => {
+  try {
+    const assessmentId = parseInt(req.params.id);
+    const reports = await listReports(assessmentId);
+    return res.json(reports);
+  } catch (error) {
+    console.error('[List Reports] Error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to list reports' });
+  }
+});
+
+// Download a report
+app.get('/api/assessments/:id/reports/:reportId/download', async (req, res) => {
+  try {
+    const reportId = req.params.reportId;
+    const report = await getReportById(reportId);
+    
+    if (!report) {
+      return res.status(404).json({ success: false, error: 'Report not found' });
+    }
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${report.filename}"`);
+    res.send(report.pdfBuffer);
+    
+  } catch (error) {
+    console.error('[Download Report] Error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to download report' });
+  }
+});
+
+// Get risk profile data for dashboard
+app.get('/api/assessments/:id/risk-profile', async (req, res) => {
+  try {
+    const assessmentId = parseInt(req.params.id);
+    
+    // Get assessment
+    const assessment = await db.query.assessments.findFirst({
+      where: eq(assessments.id, assessmentId),
+    });
+    
+    if (!assessment) {
+      return res.status(404).json({ success: false, error: 'Assessment not found' });
+    }
+    
+    // Get scenarios
+    const scenarios = await db.query.riskScenarios.findMany({
+      where: eq(riskScenarios.assessmentId, assessmentId),
+    });
+    
+    if (scenarios.length === 0) {
+      return res.json(null);
+    }
+    
+    // Calculate aggregate scores
+    const threatScores = scenarios.map(s => s.threatLikelihood);
+    const vulnScores = scenarios.map(s => s.vulnerability);
+    const impactScores = scenarios.map(s => s.impact);
+    
+    const avgThreat = Math.round(threatScores.reduce((a, b) => a + b, 0) / threatScores.length);
+    const avgVuln = Math.round(vulnScores.reduce((a, b) => a + b, 0) / vulnScores.length);
+    const avgImpact = Math.round(impactScores.reduce((a, b) => a + b, 0) / impactScores.length);
+    const overallScore = avgThreat * avgVuln * avgImpact;
+    
+    // Classify overall risk
+    let overallClassification = 'NEGLIGIBLE';
+    if (overallScore > 75) overallClassification = 'CRITICAL';
+    else if (overallScore > 50) overallClassification = 'ELEVATED';
+    else if (overallScore > 25) overallClassification = 'MODERATE';
+    else if (overallScore > 10) overallClassification = 'LOW';
+    
+    // Get rating label for individual scores
+    const getRating = (score: number) => {
+      if (score >= 5) return 'Critical';
+      if (score >= 4) return 'Significant';
+      if (score >= 3) return 'Moderate';
+      if (score >= 2) return 'Low';
+      return 'Minimal';
+    };
+    
+    return res.json({
+      threatScore: avgThreat,
+      threatRating: getRating(avgThreat),
+      vulnerabilityScore: avgVuln,
+      vulnerabilityRating: getRating(avgVuln),
+      impactScore: avgImpact,
+      impactRating: getRating(avgImpact),
+      overallScore,
+      overallClassification,
+      aiConfidence: assessment.aiConfidence || 'medium',
+      lastUpdated: assessment.updatedAt || assessment.createdAt,
+      scenarios: scenarios.map(s => ({
+        id: s.id,
+        threatName: s.threatId?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown Threat',
+        threatId: s.threatId,
+        inherentRisk: s.inherentRisk,
+        riskLevel: s.riskLevel,
+        scenarioDescription: s.scenarioDescription,
+        threatLikelihood: s.threatLikelihood,
+        vulnerability: s.vulnerability,
+        impact: s.impact,
+      })),
+      recommendations: [], // TODO: Load from controls/recommendations table
+      evidence: [], // TODO: Load evidence trail
+    });
+    
+  } catch (error) {
+    console.error('[Risk Profile] Error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to load risk profile' });
+  }
+});
+```
