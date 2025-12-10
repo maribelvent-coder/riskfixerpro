@@ -8596,6 +8596,104 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
+  // Get risk profile data for dashboard
+  app.get(
+    "/api/assessments/:id/risk-profile",
+    requireOrganizationPermission,
+    async (req, res) => {
+      try {
+        const assessmentId = parseInt(req.params.id);
+        const organizationId = req.organizationId;
+
+        if (!organizationId) {
+          return res.status(403).json({ error: "Organization context required" });
+        }
+
+        const tenantStorage = new TenantStorage(db as any, organizationId);
+        const assessment = await tenantStorage.getAssessment(assessmentId.toString());
+
+        if (!assessment) {
+          return res.status(404).json({ success: false, error: "Assessment not found" });
+        }
+
+        // Get scenarios
+        const scenarios = await db.query.riskScenarios.findMany({
+          where: eq(riskScenarios.assessmentId, assessmentId),
+        });
+
+        if (scenarios.length === 0) {
+          return res.json(null);
+        }
+
+        // Calculate aggregate scores
+        const threatScores = scenarios.map((s) => s.threatLikelihood || 0);
+        const vulnScores = scenarios.map((s) => s.vulnerability || 0);
+        const impactScores = scenarios.map((s) => s.impact || 0);
+
+        const avgThreat = Math.round(
+          threatScores.reduce((a, b) => a + b, 0) / threatScores.length
+        );
+        const avgVuln = Math.round(
+          vulnScores.reduce((a, b) => a + b, 0) / vulnScores.length
+        );
+        const avgImpact = Math.round(
+          impactScores.reduce((a, b) => a + b, 0) / impactScores.length
+        );
+        const overallScore = avgThreat * avgVuln * avgImpact;
+
+        // Classify overall risk
+        let overallClassification = "NEGLIGIBLE";
+        if (overallScore > 75) overallClassification = "CRITICAL";
+        else if (overallScore > 50) overallClassification = "ELEVATED";
+        else if (overallScore > 25) overallClassification = "MODERATE";
+        else if (overallScore > 10) overallClassification = "LOW";
+
+        // Get rating label for individual scores
+        const getRating = (score: number) => {
+          if (score >= 5) return "Critical";
+          if (score >= 4) return "Significant";
+          if (score >= 3) return "Moderate";
+          if (score >= 2) return "Low";
+          return "Minimal";
+        };
+
+        return res.json({
+          threatScore: avgThreat,
+          threatRating: getRating(avgThreat),
+          vulnerabilityScore: avgVuln,
+          vulnerabilityRating: getRating(avgVuln),
+          impactScore: avgImpact,
+          impactRating: getRating(avgImpact),
+          overallScore,
+          overallClassification,
+          aiConfidence: (assessment as any).aiConfidence || "medium",
+          lastUpdated: (assessment as any).updatedAt || (assessment as any).createdAt,
+          scenarios: scenarios.map((s) => ({
+            id: s.id,
+            threatName:
+              s.threatId
+                ?.replace(/_/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase()) || "Unknown Threat",
+            threatId: s.threatId,
+            inherentRisk: s.inherentRisk,
+            riskLevel: s.riskLevel,
+            scenarioDescription: s.scenarioDescription,
+            threatLikelihood: s.threatLikelihood,
+            vulnerability: s.vulnerability,
+            impact: s.impact,
+          })),
+          recommendations: [],
+          evidence: [],
+        });
+      } catch (error) {
+        console.error("[Risk Profile] Error:", error);
+        return res
+          .status(500)
+          .json({ success: false, error: "Failed to load risk profile" });
+      }
+    }
+  );
+
   // ============================================================================
   // CRIMEOMETER API ROUTES
   // ============================================================================

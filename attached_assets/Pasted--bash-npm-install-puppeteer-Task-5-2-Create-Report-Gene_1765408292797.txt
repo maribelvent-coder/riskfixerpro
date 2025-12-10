@@ -1,0 +1,546 @@
+
+```bash
+npm install puppeteer
+```
+
+## Task 5.2: Create Report Generator Service
+
+Create file: `server/services/report-generator/index.ts`
+
+```typescript
+import puppeteer from 'puppeteer';
+import { db } from '../../db';
+import { reports } from '../../db/schema';
+import { eq, desc } from 'drizzle-orm';
+import { generateReportNarratives } from './narrative-generator';
+import { renderReportHTML } from './html-renderer';
+
+export interface GenerateReportOptions {
+  assessmentId: number;
+  reportType: 'executive_summary' | 'full_assessment' | 'gap_analysis';
+  options: {
+    includeCoverPage: boolean;
+    includeGeographicData: boolean;
+    includePhotoAppendix: boolean;
+    includeCostEstimates: boolean;
+  };
+  assessment: any;
+  scenarios: any[];
+}
+
+export async function generateReport(params: GenerateReportOptions) {
+  const { assessmentId, reportType, options, assessment, scenarios } = params;
+  
+  // 1. Generate AI narratives
+  const narratives = await generateReportNarratives({
+    reportType,
+    assessment,
+    scenarios,
+  });
+  
+  // 2. Build full report data object
+  const reportData = {
+    ...narratives,
+    assessmentId,
+    reportType,
+    options,
+    assessment,
+    scenarios,
+    generatedAt: new Date().toISOString(),
+  };
+  
+  // 3. Render HTML
+  const html = renderReportHTML(reportData);
+  
+  // 4. Generate PDF with Puppeteer
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+  
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  
+  const pdfBuffer = await page.pdf({
+    format: 'Letter',
+    margin: {
+      top: '0.75in',
+      bottom: '0.75in',
+      left: '0.75in',
+      right: '0.75in',
+    },
+    printBackground: true,
+    displayHeaderFooter: true,
+    headerTemplate: '<div></div>',
+    footerTemplate: `
+      <div style="font-size: 9px; width: 100%; text-align: center; color: #666; padding: 0 0.5in;">
+        <span>CONFIDENTIAL</span> — 
+        <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+      </div>
+    `,
+  });
+  
+  await browser.close();
+  
+  // 5. Save to database
+  const reportTypeNames: Record<string, string> = {
+    executive_summary: 'Executive Summary',
+    full_assessment: 'Full Assessment Report',
+    gap_analysis: 'Gap Analysis Report',
+  };
+  
+  const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const filename = `${assessment.name.replace(/\s+/g, '_')}_${reportType}_${new Date().toISOString().split('T')[0]}.pdf`;
+  
+  // Store in database
+  await db.insert(reports).values({
+    id: reportId,
+    assessmentId,
+    type: reportType,
+    typeName: reportTypeNames[reportType],
+    filename,
+    pdfData: pdfBuffer,
+    pageCount: 0,
+    fileSize: `${Math.round(pdfBuffer.length / 1024)} KB`,
+    createdAt: new Date(),
+  });
+  
+  return {
+    reportId,
+    filename,
+    downloadUrl: `/api/assessments/${assessmentId}/reports/${reportId}/download`,
+  };
+}
+
+export async function listReports(assessmentId: number) {
+  const reportsList = await db.query.reports.findMany({
+    where: eq(reports.assessmentId, assessmentId),
+    orderBy: [desc(reports.createdAt)],
+  });
+  
+  return reportsList.map(r => ({
+    id: r.id,
+    type: r.type,
+    typeName: r.typeName,
+    createdAt: r.createdAt,
+    pageCount: r.pageCount,
+    fileSize: r.fileSize,
+    downloadUrl: `/api/assessments/${assessmentId}/reports/${r.id}/download`,
+  }));
+}
+
+export async function getReportById(reportId: string) {
+  const report = await db.query.reports.findFirst({
+    where: eq(reports.id, reportId),
+  });
+  
+  if (!report) return null;
+  
+  return {
+    ...report,
+    pdfBuffer: report.pdfData,
+  };
+}
+```
+
+## Task 5.3: Create Narrative Generator
+
+Create file: `server/services/report-generator/narrative-generator.ts`
+
+```typescript
+import OpenAI from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+interface GenerateNarrativesParams {
+  reportType: string;
+  assessment: any;
+  scenarios: any[];
+}
+
+export async function generateReportNarratives(params: GenerateNarrativesParams) {
+  const { reportType, assessment, scenarios } = params;
+  
+  // Generate executive summary narrative
+  const executiveSummaryPrompt = `
+You are writing an executive summary for a ${assessment.facilityType} security assessment report.
+Write in a professional consulting tone. Use narrative prose, not bullet points.
+
+ASSESSMENT:
+- Name: ${assessment.name}
+- Type: ${assessment.facilityType}
+- Date: ${new Date(assessment.createdAt).toLocaleDateString()}
+
+RISK SCENARIOS (${scenarios.length} total):
+${scenarios.slice(0, 5).map(s => 
+  `- ${s.threatId}: Risk Score ${s.inherentRisk}/125 (T:${s.threatLikelihood} V:${s.vulnerability} I:${s.impact})`
+).join('\n')}
+
+Generate a 2-3 paragraph executive summary that:
+1. Introduces the assessment scope and methodology
+2. Highlights the key risk findings
+3. Provides forward-looking guidance on priorities
+
+Return ONLY the narrative text, no JSON or formatting.
+`;
+
+  const executiveSummaryResponse = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: executiveSummaryPrompt }],
+    max_tokens: 1000,
+  });
+  
+  const executiveSummary = executiveSummaryResponse.choices[0]?.message?.content || '';
+  
+  // Generate conclusion narrative
+  const conclusionPrompt = `
+Write a 2-paragraph conclusion for a security assessment of ${assessment.name}.
+
+Key findings were:
+${scenarios.slice(0, 3).map(s => `- ${s.threatId}: ${s.riskLevel} risk`).join('\n')}
+
+The conclusion should:
+1. Synthesize the main findings
+2. Recommend where to begin implementation
+3. End with a forward-looking statement
+
+Return ONLY the narrative text.
+`;
+
+  const conclusionResponse = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: conclusionPrompt }],
+    max_tokens: 500,
+  });
+  
+  const conclusion = conclusionResponse.choices[0]?.message?.content || '';
+  
+  return {
+    executiveSummary,
+    conclusion,
+  };
+}
+```
+
+## Task 5.4: Create HTML Renderer
+
+Create file: `server/services/report-generator/html-renderer.ts`
+
+```typescript
+export function renderReportHTML(data: any): string {
+  const {
+    assessment,
+    scenarios,
+    executiveSummary,
+    conclusion,
+    options,
+    reportType,
+  } = data;
+  
+  // Calculate overall scores
+  const threatScores = scenarios.map((s: any) => s.threatLikelihood);
+  const vulnScores = scenarios.map((s: any) => s.vulnerability);
+  const impactScores = scenarios.map((s: any) => s.impact);
+  
+  const avgThreat = Math.round(threatScores.reduce((a: number, b: number) => a + b, 0) / threatScores.length);
+  const avgVuln = Math.round(vulnScores.reduce((a: number, b: number) => a + b, 0) / vulnScores.length);
+  const avgImpact = Math.round(impactScores.reduce((a: number, b: number) => a + b, 0) / impactScores.length);
+  const overallScore = avgThreat * avgVuln * avgImpact;
+  
+  let overallClassification = 'NEGLIGIBLE';
+  let riskColor = '#22C55E';
+  if (overallScore > 75) { overallClassification = 'CRITICAL'; riskColor = '#EF4444'; }
+  else if (overallScore > 50) { overallClassification = 'ELEVATED'; riskColor = '#F97316'; }
+  else if (overallScore > 25) { overallClassification = 'MODERATE'; riskColor = '#EAB308'; }
+  else if (overallScore > 10) { overallClassification = 'LOW'; riskColor = '#3B82F6'; }
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page { size: Letter; margin: 0; }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .cover-page {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+      color: white;
+      page-break-after: always;
+    }
+    
+    .cover-logo {
+      font-size: 36pt;
+      font-weight: bold;
+      margin-bottom: 2rem;
+    }
+    
+    .cover-title {
+      font-size: 24pt;
+      margin-bottom: 1rem;
+    }
+    
+    .cover-subtitle {
+      font-size: 14pt;
+      opacity: 0.9;
+      margin-bottom: 3rem;
+    }
+    
+    .cover-risk-badge {
+      display: inline-block;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      font-size: 18pt;
+      font-weight: bold;
+      margin-bottom: 3rem;
+    }
+    
+    .cover-meta {
+      font-size: 11pt;
+      opacity: 0.8;
+    }
+    
+    .content-page {
+      padding: 0.75in;
+      page-break-after: always;
+    }
+    
+    h1 {
+      font-size: 24pt;
+      color: #1a365d;
+      border-bottom: 3px solid #1a365d;
+      padding-bottom: 0.5rem;
+      margin-top: 0;
+    }
+    
+    h2 {
+      font-size: 16pt;
+      color: #2d3748;
+      margin-top: 1.5rem;
+    }
+    
+    h3 {
+      font-size: 13pt;
+      color: #4a5568;
+    }
+    
+    .score-box {
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .score-item {
+      text-align: center;
+      padding: 1rem;
+      background: #f7fafc;
+      border-radius: 8px;
+    }
+    
+    .score-value {
+      font-size: 24pt;
+      font-weight: bold;
+      color: #1a365d;
+    }
+    
+    .score-label {
+      font-size: 10pt;
+      color: #718096;
+      text-transform: uppercase;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 10pt;
+    }
+    
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    
+    th {
+      background: #f7fafc;
+      font-weight: bold;
+    }
+    
+    .risk-critical { background: #EF4444; color: white; padding: 2px 8px; border-radius: 4px; }
+    .risk-high { background: #F97316; color: white; padding: 2px 8px; border-radius: 4px; }
+    .risk-medium { background: #EAB308; color: black; padding: 2px 8px; border-radius: 4px; }
+    .risk-low { background: #22C55E; color: white; padding: 2px 8px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  ${options.includeCoverPage ? `
+  <!-- COVER PAGE -->
+  <div class="cover-page">
+    <div class="cover-logo">RiskFixer</div>
+    <div class="cover-title">Security Assessment Report</div>
+    <div class="cover-subtitle">${assessment.name}</div>
+    <div class="cover-risk-badge" style="background: ${riskColor};">
+      OVERALL RISK: ${overallClassification}<br>
+      <span style="font-size: 14pt;">Score: ${overallScore}/125</span>
+    </div>
+    <div class="cover-meta">
+      <strong>CONFIDENTIAL</strong><br><br>
+      Assessment Date: ${new Date(assessment.createdAt).toLocaleDateString()}<br>
+      Prepared by: RiskFixer Security Consulting
+    </div>
+  </div>
+  ` : ''}
+  
+  <!-- EXECUTIVE SUMMARY -->
+  <div class="content-page">
+    <h1>EXECUTIVE SUMMARY</h1>
+    
+    <div class="score-box">
+      <div style="font-size: 14pt; font-weight: bold; color: ${riskColor};">
+        OVERALL RISK RATING: ${overallClassification}
+      </div>
+      <div style="font-size: 18pt; font-weight: bold; margin-top: 0.5rem;">
+        Score: ${overallScore}/125
+      </div>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+      ${executiveSummary.split('\n\n').map((p: string) => `<p>${p}</p>`).join('')}
+    </div>
+    
+    <h2>Risk Score Breakdown</h2>
+    <div class="score-grid">
+      <div class="score-item">
+        <div class="score-value">${avgThreat}/5</div>
+        <div class="score-label">Threat</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value">${avgVuln}/5</div>
+        <div class="score-label">Vulnerability</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value">${avgImpact}/5</div>
+        <div class="score-label">Impact</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value" style="color: ${riskColor};">${overallScore}</div>
+        <div class="score-label">Overall</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- RISK SCENARIOS -->
+  <div class="content-page">
+    <h1>RISK SCENARIOS</h1>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>T</th>
+          <th>V</th>
+          <th>I</th>
+          <th>Risk</th>
+          <th>Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${scenarios.map((s: any) => `
+          <tr>
+            <td>${s.threatId?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</td>
+            <td>${s.threatLikelihood}</td>
+            <td>${s.vulnerability}</td>
+            <td>${s.impact}</td>
+            <td><strong>${s.inherentRisk}</strong></td>
+            <td><span class="risk-${s.riskLevel}">${s.riskLevel?.toUpperCase()}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- CONCLUSION -->
+  <div class="content-page">
+    <h1>CONCLUSION</h1>
+    ${conclusion.split('\n\n').map((p: string) => `<p>${p}</p>`).join('')}
+    
+    <h2>Data Sources</h2>
+    <ul>
+      <li>Assessment Date: ${new Date(assessment.createdAt).toLocaleDateString()}</li>
+      <li>Methodology: ASIS International Security Risk Assessment (SRA) Standard</li>
+      <li>Risk Calculation: T × V × I Formula</li>
+    </ul>
+  </div>
+  
+  <!-- APPENDIX: RATING SCALE -->
+  <div class="content-page">
+    <h1>APPENDIX: T×V×I Rating Scale</h1>
+    
+    <h2>Component Ratings (1-5)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Score</th>
+          <th>Rating</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1/5</td><td>Minimal</td><td>Minimal threat/vulnerability/impact</td></tr>
+        <tr><td>2/5</td><td>Low</td><td>Low threat/vulnerability/impact</td></tr>
+        <tr><td>3/5</td><td>Moderate</td><td>Moderate threat/vulnerability/impact</td></tr>
+        <tr><td>4/5</td><td>Significant</td><td>Significant threat/vulnerability/impact</td></tr>
+        <tr><td>5/5</td><td>Critical</td><td>Critical threat/vulnerability/impact</td></tr>
+      </tbody>
+    </table>
+    
+    <h2>Overall Risk Classification (1-125)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Score Range</th>
+          <th>Classification</th>
+          <th>Action Required</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1–10</td><td class="risk-low">NEGLIGIBLE</td><td>Accept risk; document only</td></tr>
+        <tr><td>11–25</td><td style="background: #3B82F6; color: white; padding: 2px 8px; border-radius: 4px;">LOW</td><td>Monitor and review quarterly</td></tr>
+        <tr><td>26–50</td><td class="risk-medium">MODERATE</td><td>Address within 90 days</td></tr>
+        <tr><td>51–75</td><td class="risk-high">ELEVATED</td><td>Address within 30 days</td></tr>
+        <tr><td>76–125</td><td class="risk-critical">CRITICAL</td><td>Immediate action required</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
+`;
+}
+```
