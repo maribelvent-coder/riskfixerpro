@@ -24,11 +24,14 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
+  LayoutGrid,
+  LayoutList,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { FacilitySurveyQuestion } from "@shared/schema";
 import { EvidenceUploader } from "./EvidenceUploader";
+import { SurveyWizard } from "./SurveyWizard";
 
 interface FacilitySurveyProps {
   assessmentId: string;
@@ -86,6 +89,7 @@ export function FacilitySurvey({
   const [currentCategory, setCurrentCategory] = useState(0);
   const [isPersisting, setIsPersisting] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [viewMode, setViewMode] = useState<'classic' | 'wizard'>('wizard'); // Default to new wizard view
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1207,6 +1211,39 @@ export function FacilitySurvey({
     );
   }
 
+  // Render the wizard view if selected
+  if (viewMode === 'wizard') {
+    return (
+      <div className="space-y-3 sm:space-y-4">
+        {/* View Mode Toggle Header */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Building className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="text-sm sm:text-base font-semibold">{surveyType} Survey</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode('classic')}
+            className="flex items-center gap-2 text-xs"
+            data-testid="button-switch-classic"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Classic View</span>
+          </Button>
+        </div>
+        
+        <SurveyWizard
+          assessmentId={assessmentId}
+          templateId={templateId}
+          onComplete={onComplete}
+          onSwitchToClassic={() => setViewMode('classic')}
+        />
+      </div>
+    );
+  }
+
+  // Classic view (original layout)
   return (
     <div className="space-y-3 sm:space-y-6">
       {/* Header */}
@@ -1225,12 +1262,24 @@ export function FacilitySurvey({
                 and systems
               </p>
             </div>
-            <Badge
-              variant="outline"
-              className="text-[10px] sm:text-xs shrink-0"
-            >
-              Survey
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setViewMode('wizard')}
+                className="flex items-center gap-2 text-xs"
+                data-testid="button-switch-wizard"
+              >
+                <LayoutList className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Focused View</span>
+              </Button>
+              <Badge
+                variant="outline"
+                className="text-[10px] sm:text-xs shrink-0"
+              >
+                Survey
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-6">
