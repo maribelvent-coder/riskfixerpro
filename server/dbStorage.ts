@@ -89,6 +89,72 @@ export class DbStorage implements IStorage {
   }
 
   async deleteOrganization(id: string): Promise<boolean> {
+    // First, get all assessments for this organization to delete their related data
+    const orgAssessments = await db.select().from(schema.assessments)
+      .where(eq(schema.assessments.organizationId, id));
+    
+    // Delete related data for each assessment
+    for (const assessment of orgAssessments) {
+      // Delete assessment-related data
+      await db.delete(schema.assessmentQuestions).where(eq(schema.assessmentQuestions.assessmentId, assessment.id));
+      await db.delete(schema.executiveInterviewResponses).where(eq(schema.executiveInterviewResponses.assessmentId, assessment.id));
+      await db.delete(schema.identifiedThreats).where(eq(schema.identifiedThreats.assessmentId, assessment.id));
+      await db.delete(schema.riskAssets).where(eq(schema.riskAssets.assessmentId, assessment.id));
+      await db.delete(schema.riskScenarios).where(eq(schema.riskScenarios.assessmentId, assessment.id));
+      await db.delete(schema.vulnerabilities).where(eq(schema.vulnerabilities.assessmentId, assessment.id));
+      await db.delete(schema.controls).where(eq(schema.controls.assessmentId, assessment.id));
+      await db.delete(schema.treatmentPlans).where(eq(schema.treatmentPlans.assessmentId, assessment.id));
+      await db.delete(schema.riskInsights).where(eq(schema.riskInsights.assessmentId, assessment.id));
+      await db.delete(schema.reports).where(eq(schema.reports.assessmentId, assessment.id));
+      await db.delete(schema.loadingDocks).where(eq(schema.loadingDocks.assessmentId, assessment.id));
+      await db.delete(schema.crimeDataImports).where(eq(schema.crimeDataImports.assessmentId, assessment.id));
+      await db.delete(schema.executiveProfiles).where(eq(schema.executiveProfiles.assessmentId, assessment.id));
+      await db.delete(schema.generatedReports).where(eq(schema.generatedReports.assessmentId, assessment.id));
+      await db.delete(schema.interviewFindings).where(eq(schema.interviewFindings.assessmentId, assessment.id));
+      await db.delete(schema.documentedIncidents).where(eq(schema.documentedIncidents.assessmentId, assessment.id));
+      
+      // Delete crime sources and their observations
+      const crimeSources = await db.select().from(schema.crimeSources)
+        .where(eq(schema.crimeSources.assessmentId, assessment.id));
+      for (const source of crimeSources) {
+        await db.delete(schema.crimeObservations).where(eq(schema.crimeObservations.crimeSourceId, source.id));
+      }
+      await db.delete(schema.crimeSources).where(eq(schema.crimeSources.assessmentId, assessment.id));
+    }
+    
+    // Delete all assessments for this organization
+    await db.delete(schema.assessments).where(eq(schema.assessments.organizationId, id));
+    
+    // Get all sites for this organization to delete their related data
+    const orgSites = await db.select().from(schema.sites)
+      .where(eq(schema.sites.organizationId, id));
+    
+    for (const site of orgSites) {
+      await db.delete(schema.pointsOfInterest).where(eq(schema.pointsOfInterest.siteId, site.id));
+      await db.delete(schema.siteIncidents).where(eq(schema.siteIncidents.siteId, site.id));
+      await db.delete(schema.facilityZones).where(eq(schema.facilityZones.siteId, site.id));
+      
+      // Delete crime sources linked to site and their observations
+      const siteCrimeSources = await db.select().from(schema.crimeSources)
+        .where(eq(schema.crimeSources.siteId, site.id));
+      for (const source of siteCrimeSources) {
+        await db.delete(schema.crimeObservations).where(eq(schema.crimeObservations.crimeSourceId, source.id));
+      }
+      await db.delete(schema.crimeSources).where(eq(schema.crimeSources.siteId, site.id));
+    }
+    
+    // Delete all sites for this organization
+    await db.delete(schema.sites).where(eq(schema.sites.organizationId, id));
+    
+    // Delete organization invitations
+    await db.delete(schema.organizationInvitations).where(eq(schema.organizationInvitations.organizationId, id));
+    
+    // Remove organization reference from members (but don't delete the users)
+    await db.update(schema.users)
+      .set({ organizationId: null, organizationRole: 'member' })
+      .where(eq(schema.users.organizationId, id));
+    
+    // Finally delete the organization
     const results = await db.delete(schema.organizations)
       .where(eq(schema.organizations.id, id))
       .returning();
