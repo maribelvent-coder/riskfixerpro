@@ -222,16 +222,9 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
         return next;
       });
     },
-    onSuccess: (_, { questionId }) => {
-      // Silently sync - no toast needed for routine saves
-      // Clear optimistic update for this question since server confirmed
-      setOptimisticUpdates(prev => {
-        const next = new Map(prev);
-        next.delete(questionId);
-        return next;
-      });
-      // Background refresh to sync with server
-      queryClient.invalidateQueries({ queryKey: questionQueryKey });
+    onSuccess: () => {
+      // Success - keep optimistic state (no flicker)
+      // Data will sync when user navigates away and returns
     },
     onError: (_, { questionId }) => {
       // Rollback optimistic update on error
