@@ -201,6 +201,24 @@ export default function ExecutiveDashboard() {
   const [dashboardData, setDashboardData] = useState<EPDashboardData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Fetch cached dashboard data on mount
+  const { data: cachedDashboard, isLoading: isCacheLoading } = useQuery<{
+    cached: boolean;
+    interviewHash?: string;
+    overviewMetrics?: EPDashboardData['overviewMetrics'];
+    threatMatrix?: EPDashboardData['threatMatrix'];
+  } & Partial<EPDashboardData>>({
+    queryKey: ['/api/assessments', id, 'ep-dashboard'],
+    enabled: !!id,
+  });
+
+  // Hydrate dashboard data from cache on load
+  useEffect(() => {
+    if (cachedDashboard && cachedDashboard.cached && cachedDashboard.overviewMetrics && !dashboardData) {
+      setDashboardData(cachedDashboard as EPDashboardData);
+    }
+  }, [cachedDashboard, dashboardData]);
+
   const metadataData = useMemo(() => ({
     title: assessmentTitle,
     location: assessmentLocation,
@@ -299,9 +317,11 @@ export default function ExecutiveDashboard() {
     onSuccess: (data) => {
       setDashboardData(data);
       setIsAnalyzing(false);
+      // Invalidate cache query so next load uses fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'ep-dashboard'] });
       toast({
         title: 'Analysis Complete',
-        description: `Generated ${data.threatMatrix.length} threat assessments. Risk Level: ${data.overviewMetrics.riskClassification.toUpperCase()}`,
+        description: `Generated ${data.threatMatrix?.length || 0} threat assessments. Risk Level: ${data.overviewMetrics?.riskClassification?.toUpperCase() || 'UNKNOWN'}`,
       });
     },
     onError: (error: any) => {
@@ -342,7 +362,7 @@ export default function ExecutiveDashboard() {
     toast({ title: 'Survey Exported', description: 'Survey data downloaded as JSON file.' });
   };
 
-  if (isLoading) {
+  if (isLoading || isCacheLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -407,7 +427,17 @@ export default function ExecutiveDashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {!dashboardData ? (
+          {isAnalyzing ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin mb-4" />
+                <h3 className="text-lg font-medium mb-2">Analyzing Threats...</h3>
+                <p className="text-muted-foreground">
+                  AI is evaluating 12 threat scenarios using the T×V×I×E framework.
+                </p>
+              </CardContent>
+            </Card>
+          ) : !dashboardData ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

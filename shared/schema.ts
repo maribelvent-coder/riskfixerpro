@@ -149,6 +149,8 @@ export const assessments = pgTable("assessments", {
   manufacturingProfile: jsonb("manufacturing_profile"),
   datacenterProfile: jsonb("datacenter_profile"),
   officeProfile: jsonb("office_profile"),
+  epDashboardCache: jsonb("ep_dashboard_cache"), // Cached EP AI dashboard results with interview hash for staleness check
+  epInterviewHash: text("ep_interview_hash"), // Hash of interview responses to detect changes
 });
 
 export const templateQuestions = pgTable("template_questions", {

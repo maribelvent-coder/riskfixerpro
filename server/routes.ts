@@ -5904,18 +5904,61 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
-  // NEW: Unified EP Dashboard endpoint - aggregates interview data, AI scoring, and recommendations
-  // This is the main endpoint for the redesigned EP dashboard
+  // GET endpoint for cached EP dashboard data
+  app.get(
+    "/api/assessments/:id/ep-dashboard",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const assessment = await storage.getAssessment(id);
+        
+        if (!assessment) {
+          return res.status(404).json({ error: 'Assessment not found' });
+        }
+        
+        // Return cached dashboard data if available
+        if (assessment.epDashboardCache) {
+          return res.json({
+            cached: true,
+            interviewHash: assessment.epInterviewHash,
+            ...(assessment.epDashboardCache as object),
+          });
+        }
+        
+        // No cached data available
+        return res.json({ cached: false, data: null });
+      } catch (error) {
+        console.error("Error fetching EP dashboard cache:", error);
+        res.status(500).json({ error: "Failed to fetch EP dashboard" });
+      }
+    },
+  );
+
+  // POST endpoint for generating/refreshing EP Dashboard - aggregates interview data, AI scoring, and recommendations
   app.post(
     "/api/assessments/:id/ep-dashboard",
     verifyAssessmentOwnership,
     async (req, res) => {
       try {
         const { id } = req.params;
-        const { interviewResponses, attachments = [] } = req.body;
+        const { interviewResponses, attachments = [], forceRefresh = false } = req.body;
         
         if (!interviewResponses || typeof interviewResponses !== 'object') {
           return res.status(400).json({ error: 'Interview responses required' });
+        }
+        
+        // Generate hash of interview responses for cache validation
+        const interviewHash = JSON.stringify(Object.keys(interviewResponses).sort().map(k => [k, interviewResponses[k]]));
+        const hashKey = Buffer.from(interviewHash).toString('base64').slice(0, 32);
+        
+        // Check cache if not forcing refresh
+        const assessment = await storage.getAssessment(id);
+        if (!forceRefresh && assessment?.epDashboardCache && assessment?.epInterviewHash === hashKey) {
+          return res.json({
+            cached: true,
+            ...(assessment.epDashboardCache as object),
+          });
         }
         
         // Import the EP AI assessment engine
@@ -5927,7 +5970,13 @@ The facility should prioritize addressing critical risks immediately, particular
           return res.status(500).json({ error: 'Failed to generate dashboard data' });
         }
         
-        res.json(dashboardData);
+        // Cache the results
+        await storage.updateAssessment(id, {
+          epDashboardCache: dashboardData,
+          epInterviewHash: hashKey,
+        });
+        
+        res.json({ cached: false, ...dashboardData });
       } catch (error) {
         console.error("Error generating EP dashboard:", error);
         res.status(500).json({ 
