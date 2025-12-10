@@ -5383,6 +5383,93 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
+  // Survey Data Export - comprehensive dump of all questions, answers, notes, and evidence
+  app.get(
+    "/api/assessments/:id/survey-export",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        // Get the assessment details
+        const assessment = await storage.getAssessment(id);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        // Get site information if available
+        let site = null;
+        if (assessment.siteId) {
+          site = await storage.getSite(assessment.siteId);
+        }
+
+        // Get all facility survey questions with responses
+        const surveyQuestions = await storage.getFacilitySurveyQuestions(id);
+
+        // Get executive interview responses if applicable
+        let executiveResponses: any[] = [];
+        if (assessment.templateId === 'executive-protection') {
+          try {
+            executiveResponses = await storage.getExecutiveInterviewResponses(id);
+          } catch (e) {
+            console.log("No executive interview responses found");
+          }
+        }
+
+        // Organize questions by category
+        const categorizedQuestions: Record<string, any[]> = {};
+        for (const q of surveyQuestions) {
+          const category = q.category || 'Uncategorized';
+          if (!categorizedQuestions[category]) {
+            categorizedQuestions[category] = [];
+          }
+          categorizedQuestions[category].push({
+            id: q.id,
+            templateId: q.templateId,
+            subcategory: q.subcategory,
+            question: q.question,
+            type: q.type,
+            response: q.response,
+            notes: q.notes,
+            evidence: q.evidence || [],
+            standard: q.standard,
+          });
+        }
+
+        // Build export data structure
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          assessment: {
+            id: assessment.id,
+            name: assessment.name,
+            templateId: assessment.templateId,
+            status: assessment.status,
+            createdAt: assessment.createdAt,
+            updatedAt: assessment.updatedAt,
+          },
+          site: site ? {
+            name: site.name,
+            address: site.address,
+            city: site.city,
+            state: site.state,
+            zip: site.zip,
+          } : null,
+          surveyData: {
+            totalQuestions: surveyQuestions.length,
+            answeredQuestions: surveyQuestions.filter(q => q.response !== null && q.response !== undefined && q.response !== '').length,
+            categories: categorizedQuestions,
+          },
+          executiveInterviewResponses: executiveResponses.length > 0 ? executiveResponses : undefined,
+        };
+
+        res.json(exportData);
+      } catch (error) {
+        console.error("Error exporting survey data:", error);
+        res.status(500).json({ error: "Failed to export survey data" });
+      }
+    },
+  );
+
   // Executive Interview routes
   app.get(
     "/api/assessments/:id/executive-interview/questions",
