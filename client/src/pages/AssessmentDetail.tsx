@@ -387,7 +387,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const paradigm = assessmentData?.surveyParadigm || "facility";
   const defaultTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
-  const [usePhysicalSecurityWizard, setUsePhysicalSecurityWizard] = useState(false);
+  const [usePhysicalSecurityWizard, setUsePhysicalSecurityWizard] = useState(true);
   
   // Set initial tab based on paradigm after data loads (only once to prevent reset on refetch)
   useEffect(() => {
