@@ -30,7 +30,8 @@ import RetailDashboard from "@/pages/assessments/RetailDashboard";
 import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
 import OfficeDashboard from "@/pages/assessments/OfficeDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database } from "lucide-react";
+import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
+import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database, UserCheck } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +56,7 @@ const TEMPLATE_CONFIG: Record<string, { tabId: string; label: string; icon: type
   "manufacturing-facility": { tabId: "manufacturing", label: "Production Operations", icon: Factory, dashboardComponent: ManufacturingDashboard },
   "data-center": { tabId: "datacenter", label: "Infrastructure Operations", icon: Server, dashboardComponent: DatacenterDashboard },
   "office-building": { tabId: "office", label: "Corporate Operations", icon: Building2, dashboardComponent: OfficeDashboard },
+  "executive-protection": { tabId: "executive", label: "Executive Protection", icon: UserCheck, dashboardComponent: ExecutiveDashboard },
 };
 
 // Survey type display names for dynamic headings
@@ -383,21 +385,28 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     },
   });
   
-  // Derive initial tab directly from assessment data (defaults to facility-survey for loading state)
-  const paradigm = assessmentData?.surveyParadigm || "facility";
-  const defaultTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
-  const [activeTab, setActiveTab] = useState<string>(defaultTab);
+  // Start with undefined tab - will be set after data loads
+  const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   // Classic view sunsetted - wizard is now the only view
   
   // Set initial tab based on paradigm after data loads (only once to prevent reset on refetch)
   useEffect(() => {
     if (assessmentData && !hasInitializedTab.current) {
       const paradigm = assessmentData.surveyParadigm || "facility";
-      const correctTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
+      const templateId = assessmentData.templateId || "";
+      let correctTab: string;
+      if (paradigm === "executive") {
+        correctTab = templateId === "executive-protection" ? "executive" : "executive-interview";
+      } else {
+        correctTab = "facility-survey";
+      }
       setActiveTab(correctTab);
       hasInitializedTab.current = true;
     }
   }, [assessmentData]);
+  
+  // Helper to check if this is an EP assessment
+  const isEPAssessment = assessmentData?.templateId === "executive-protection";
 
   // Get paradigm-specific workflow configuration
   const getWorkflowConfig = () => {
@@ -405,6 +414,20 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     const templateId = assessmentData?.templateId || "";
     
     if (paradigm === "executive") {
+      // Executive Protection uses the new unified EP Dashboard
+      if (templateId === "executive-protection") {
+        return {
+          tabs: [
+            { id: "executive", label: "EP Dashboard", icon: UserCheck },
+            { id: "reports", label: "AI Reports", icon: FileText }
+          ],
+          phases: [
+            { label: "Assessment", completed: false },
+            { label: "Reports", completed: false }
+          ]
+        };
+      }
+      // Legacy executive templates use old workflow
       return {
         tabs: [
           { id: "executive-interview", label: "Executive Interview", icon: MessageSquare },
@@ -492,11 +515,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     const isSpecializedTemplate = specializedTemplates.includes(templateId);
     
     if (paradigm === "executive") {
-      // Executive paradigm - all tabs available from start for now
+      // Executive paradigm - all tabs available from start
+      // New EP Dashboard for executive-protection, legacy tabs for others
       return workflowConfig.tabs.reduce((acc, tab) => ({
         ...acc,
         [tab.id]: true
-      }), {});
+      }), {} as Record<string, boolean>);
     }
     
     // Check if specialized template profile is saved
@@ -604,7 +628,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   };
 
   // Show loading state while data or activeTab are not ready
-  if (isLoading || !activeTab) {
+  // Also wait for initial tab to be correctly set based on actual assessment data
+  if (isLoading || !activeTab || !hasInitializedTab.current) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -774,7 +799,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     </div>
 
       {/* Main Content - Paradigm-Aware Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4 w-full min-w-0">
+      <Tabs value={activeTab || ''} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4 w-full min-w-0">
         <div className="w-full min-w-0 horizontal-scroll-container pb-1">
           <TabsList className="inline-flex gap-1 p-1 w-max bg-muted/50">
             {workflowConfig.tabs.map((tab) => {
@@ -796,58 +821,62 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </TabsList>
         </div>
 
-        {/* Facility Physical Security Survey */}
-        <TabsContent value="facility-survey" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                {getSurveyTypeLabel(assessmentData?.templateId || undefined)} Survey
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Professional assessment of existing physical security controls following ASIS and ANSI standards.
-              </p>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <FacilitySurvey 
-                key={`facility-survey-${activeTab === 'facility-survey' ? 'active' : 'inactive'}`}
-                assessmentId={assessmentId}
-                templateId={assessmentData?.templateId || undefined}
-                onComplete={handleFacilitySurveyComplete}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ASIS Risk Assessment - Quantitative framework for facility assessments */}
-        <TabsContent value="risk-assessment" className="space-y-4">
-          {assessmentData.surveyParadigm === "facility" ? (
-            <RiskAssessmentNBS 
-              assessmentId={assessmentId}
-              onComplete={handleRiskAssessmentComplete}
-            />
-          ) : (
+        {/* Facility Physical Security Survey - Not for EP assessments */}
+        {!isEPAssessment && (
+          <TabsContent value="facility-survey" className="space-y-4">
             <Card>
               <CardHeader className="p-4 sm:p-6">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Security Risk Assessment
+                  <Building className="h-4 w-4 sm:h-5 sm:w-5" />
+                  {getSurveyTypeLabel(assessmentData?.templateId || undefined)} Survey
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  Systematic identification and analysis of security risks using ASIS International methodology.
+                  Professional assessment of existing physical security controls following ASIS and ANSI standards.
                 </p>
               </CardHeader>
               <CardContent className="p-4 sm:p-6">
-                <AssessmentForm 
+                <FacilitySurvey 
+                  key={`facility-survey-${activeTab === 'facility-survey' ? 'active' : 'inactive'}`}
                   assessmentId={assessmentId}
-                  phase="risk-assessment"
-                  onSave={handleSave}
-                  onSubmit={handleRiskAssessmentComplete}
+                  templateId={assessmentData?.templateId || undefined}
+                  onComplete={handleFacilitySurveyComplete}
                 />
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
+
+        {/* ASIS Risk Assessment - Quantitative framework for facility assessments - Not for EP */}
+        {!isEPAssessment && (
+          <TabsContent value="risk-assessment" className="space-y-4">
+            {assessmentData.surveyParadigm === "facility" ? (
+              <RiskAssessmentNBS 
+                assessmentId={assessmentId}
+                onComplete={handleRiskAssessmentComplete}
+              />
+            ) : (
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Security Risk Assessment
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Systematic identification and analysis of security risks using ASIS International methodology.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <AssessmentForm 
+                    assessmentId={assessmentId}
+                    phase="risk-assessment"
+                    onSave={handleSave}
+                    onSubmit={handleRiskAssessmentComplete}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
 
         {/* AI-Powered Risk Analysis - Temporarily Disabled */}
         {/* <TabsContent value="analysis" className="space-y-4">
@@ -896,6 +925,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           <OfficeDashboard />
         </TabsContent>
 
+        {/* Executive Protection Tab */}
+        <TabsContent value="executive" className="space-y-4">
+          <ExecutiveDashboard />
+        </TabsContent>
+
         {/* Professional Reports */}
         <TabsContent value="reports" className="space-y-4">
           <AIReportGenerator
@@ -925,55 +959,38 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </Card>
         </TabsContent>
 
-        {/* Executive Protection Paradigm Tabs */}
-        <TabsContent value="executive-interview" className="space-y-4 min-w-0 overflow-hidden">
-          {assessmentData?.templateId === 'office-building' ? (
-            // Office Building Security Interview (91 questions, 13 sections)
-            <OfficeBuildingInterview 
-              assessmentId={assessmentId}
-              assessmentStatus={assessmentData?.status}
-              onComplete={() => setActiveTab('executive-profile')}
-            />
-          ) : assessmentData?.templateId === 'executive-protection' ? (
-            // Executive Protection Part 1 - Executive Interview (35 questions, 8 sections)
-            // Using tabbed navigation for better UX - each section is a separate sub-tab
-            <ExecutiveInterviewTabs 
-              assessmentId={assessmentId}
-              onComplete={() => setActiveTab('physical-security')}
-            />
-          ) : (
-            // Legacy Executive Templates - Old Interview Component
-            <>
-              <Card>
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                    <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Executive Interview
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Conduct a comprehensive interview with the executive to gather critical security information about their daily routines, travel patterns, digital footprint, and threat awareness.
-                  </p>
-                </CardHeader>
-              </Card>
-              
-              <ExecutiveInterview 
-                assessmentId={assessmentId}
-                onComplete={() => setActiveTab('physical-security')}
-              />
-            </>
-          )}
-        </TabsContent>
+        {/* Legacy Executive Paradigm Tabs - NOT for EP assessments using new dashboard */}
+        {!isEPAssessment && (
+          <>
+            <TabsContent value="executive-interview" className="space-y-4 min-w-0 overflow-hidden">
+              {assessmentData?.templateId === 'office-building' ? (
+                <OfficeBuildingInterview 
+                  assessmentId={assessmentId}
+                  assessmentStatus={assessmentData?.status}
+                  onComplete={() => setActiveTab('executive-profile')}
+                />
+              ) : (
+                <>
+                  <Card>
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Executive Interview
+                      </CardTitle>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Conduct a comprehensive interview with the executive to gather critical security information.
+                      </p>
+                    </CardHeader>
+                  </Card>
+                  <ExecutiveInterview 
+                    assessmentId={assessmentId}
+                    onComplete={() => setActiveTab('physical-security')}
+                  />
+                </>
+              )}
+            </TabsContent>
 
-        <TabsContent value="physical-security" className="space-y-4">
-          {assessmentData?.templateId === 'executive-protection' ? (
-            // Executive Protection Part 2 - Wizard view only (classic view sunsetted)
-            <ExecutivePhysicalSecurityWizard
-              assessmentId={assessmentId}
-              onComplete={() => setActiveTab('risk-analysis')}
-            />
-          ) : (
-            // Legacy templates - old category filtering
-            <>
+            <TabsContent value="physical-security" className="space-y-4">
               <Card>
                 <CardHeader className="p-4 sm:p-6">
                   <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -981,91 +998,83 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                     Physical Security Review
                   </CardTitle>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    Assessment of residential security, executive office protection, travel routes, and pattern-of-life analysis.
+                    Assessment of residential security, executive office protection, and travel routes.
                   </p>
                 </CardHeader>
               </Card>
-              
               <ExecutiveSurveyQuestions 
                 assessmentId={assessmentId} 
                 sectionCategory="Residential Security Assessment"
               />
-              
               <ExecutiveSurveyQuestions 
                 assessmentId={assessmentId} 
                 sectionCategory="Executive Office & Corporate Security"
                 onComplete={() => setActiveTab('risk-analysis')}
               />
-            </>
-          )}
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="risk-analysis" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                Executive Risk Analysis
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Comprehensive risk analysis combining digital footprint findings, physical security assessment, and threat intelligence.
-              </p>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <EnhancedRiskAssessment 
-                assessmentId={assessmentId}
-                onComplete={() => setActiveTab('treatment-plan')}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <TabsContent value="risk-analysis" className="space-y-4">
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Executive Risk Analysis
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Comprehensive risk analysis combining all findings with threat intelligence.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <EnhancedRiskAssessment 
+                    assessmentId={assessmentId}
+                    onComplete={() => setActiveTab('treatment-plan')}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        <TabsContent value="treatment-plan" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
-                Security Treatment Plan
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Protective measures, security controls, procedures, and recommendations for executive protection.
-              </p>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <p className="text-xs sm:text-sm text-muted-foreground">Treatment planning controls are managed within the Risk Analysis tab above. Navigate to Risk Analysis to define and implement security controls for identified risks.</p>
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveTab('risk-analysis')}
-                className="mt-4 w-full sm:w-auto text-xs sm:text-sm min-h-9 sm:min-h-10"
-                data-testid="button-goto-risk-analysis"
-              >
-                Go to Risk Analysis
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <TabsContent value="treatment-plan" className="space-y-4">
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Security Treatment Plan
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Treatment planning controls are managed within the Risk Analysis tab.</p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab('risk-analysis')}
+                    className="mt-4"
+                    data-testid="button-goto-risk-analysis"
+                  >
+                    Go to Risk Analysis
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        <TabsContent value="executive-summary" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                Executive Summary & Reports
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Final executive summary with key findings, priority risks, and recommended protective measures.
-              </p>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <ReportGenerator 
-                assessmentId={assessmentId}
-                onGenerate={handleGenerateReport}
-                onDownload={handleDownloadReport}
-                onShare={handleShareReport}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <TabsContent value="executive-summary" className="space-y-4">
+              <Card>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Executive Summary & Reports
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <ReportGenerator 
+                    assessmentId={assessmentId}
+                    onGenerate={handleGenerateReport}
+                    onDownload={handleDownloadReport}
+                    onShare={handleShareReport}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </>
+        )}
       </Tabs>
 
       {/* Progress Summary */}
