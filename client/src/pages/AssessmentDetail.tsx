@@ -396,7 +396,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       const templateId = assessmentData.templateId || "";
       let correctTab: string;
       if (paradigm === "executive") {
-        correctTab = templateId === "executive-protection" ? "executive" : "executive-interview";
+        // EP assessments start with interview, legacy executive starts with executive-interview
+        correctTab = templateId === "executive-protection" ? "ep-interview" : "executive-interview";
       } else {
         correctTab = "facility-survey";
       }
@@ -414,15 +415,19 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     const templateId = assessmentData?.templateId || "";
     
     if (paradigm === "executive") {
-      // Executive Protection uses the new unified EP Dashboard
+      // Executive Protection: Interview collects data → Dashboard shows AI results
       if (templateId === "executive-protection") {
         return {
           tabs: [
+            { id: "ep-interview", label: "Executive Interview", icon: MessageSquare },
+            { id: "ep-physical", label: "Physical Security", icon: Building },
             { id: "executive", label: "EP Dashboard", icon: UserCheck },
             { id: "reports", label: "AI Reports", icon: FileText }
           ],
           phases: [
-            { label: "Assessment", completed: false },
+            { label: "Interview", completed: false },
+            { label: "Physical Security", completed: false },
+            { label: "Analysis", completed: false },
             { label: "Reports", completed: false }
           ]
         };
@@ -925,7 +930,38 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           <OfficeDashboard />
         </TabsContent>
 
-        {/* Executive Protection Tab */}
+        {/* EP Interview Tab - Data collection for EP assessments */}
+        {isEPAssessment && (
+          <TabsContent value="ep-interview" className="space-y-4 min-w-0 overflow-hidden">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Executive Interview
+                </CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Comprehensive interview covering daily routines, travel patterns, digital footprint, and threat awareness. This data feeds the AI risk analysis.
+                </p>
+              </CardHeader>
+            </Card>
+            <ExecutiveInterviewTabs 
+              assessmentId={assessmentId}
+              onComplete={() => setActiveTab('ep-physical')}
+            />
+          </TabsContent>
+        )}
+
+        {/* EP Physical Security Tab - Security assessment for EP assessments */}
+        {isEPAssessment && (
+          <TabsContent value="ep-physical" className="space-y-4">
+            <ExecutivePhysicalSecurityWizard
+              assessmentId={assessmentId}
+              onComplete={() => setActiveTab('executive')}
+            />
+          </TabsContent>
+        )}
+
+        {/* Executive Protection Dashboard Tab - AI-generated analysis results */}
         <TabsContent value="executive" className="space-y-4">
           <ExecutiveDashboard />
         </TabsContent>
