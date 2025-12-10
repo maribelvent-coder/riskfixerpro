@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, gt, sql, desc } from "drizzle-orm";
+import { eq, and, gt, sql, desc, asc } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import type { IStorage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -657,8 +657,16 @@ export class DbStorage implements IStorage {
 
   // Assessment Questions methods
   async getAssessmentQuestions(assessmentId: string): Promise<AssessmentQuestion[]> {
+    // Order by orderIndex first (matches template seeding), then category/subcategory as tie-breakers
+    // Use NULLS LAST to handle any records with null orderIndex
     return await db.select().from(schema.assessmentQuestions)
-      .where(eq(schema.assessmentQuestions.assessmentId, assessmentId));
+      .where(eq(schema.assessmentQuestions.assessmentId, assessmentId))
+      .orderBy(
+        asc(schema.assessmentQuestions.orderIndex),
+        asc(schema.assessmentQuestions.category),
+        asc(schema.assessmentQuestions.subcategory),
+        asc(schema.assessmentQuestions.id)
+      );
   }
 
   async getAssessmentQuestion(questionId: string): Promise<AssessmentQuestion | null> {
