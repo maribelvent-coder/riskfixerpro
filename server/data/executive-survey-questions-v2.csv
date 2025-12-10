@@ -34,7 +34,6 @@ P1.S8.Q32,Do you have emergency contact protocols established?,,Emergency prepar
 P1.S8.Q33,Has your family received emergency or security awareness training?,,Family security training,Medium
 P1.S8.Q34,Do you have duress codes or signals established?,,Emergency communication systems,High
 P1.S8.Q35,Overall how secure do you feel in your daily life?,,Baseline security perception,Medium
-P2.S9.Q1,Estimated net worth range per public records,,Executive profile assessment,High
 P2.S9.Q2,Primary industry sector association,,Industry-specific risk factors,Medium
 P2.S9.Q3,Verified media coverage level,,Public exposure verification,High
 P2.S9.Q4,Publicly available personal information discovered,,PII exposure assessment,High

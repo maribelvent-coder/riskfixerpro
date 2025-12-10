@@ -34,21 +34,6 @@ const EP_QUESTIONS: EPQuestion[] = [
     required: true,
   },
   {
-    id: 'ep_net_worth_range',
-    section: 'Executive Profile & Threat Perception',
-    questionText: 'What is your estimated net worth range?',
-    questionType: 'single_select',
-    options: [
-      { value: 'over_100m', label: 'Over $100 million' },
-      { value: '50m_to_100m', label: '$50 million - $100 million' },
-      { value: '10m_to_50m', label: '$10 million - $50 million' },
-      { value: '5m_to_10m', label: '$5 million - $10 million' },
-      { value: 'under_5m', label: 'Under $5 million' },
-      { value: 'prefer_not_disclose', label: 'Prefer not to disclose' },
-    ],
-    required: true,
-  },
-  {
     id: 'ep_industry_sector',
     section: 'Executive Profile & Threat Perception',
     questionText: 'What industry sector are you primarily associated with?',
