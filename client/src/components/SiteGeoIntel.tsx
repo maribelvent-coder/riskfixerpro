@@ -163,11 +163,25 @@ function CrimeSourceDisplay({
   );
 }
 
-export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
+export function SiteGeoIntel({ site: initialSite }: SiteGeoIntelProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("map");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [incidentUploadOpen, setIncidentUploadOpen] = useState(false);
+
+  // Fetch fresh site data to get updated coordinates after geocoding
+  const { data: freshSite } = useQuery<Site>({
+    queryKey: ["/api/sites", initialSite.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/sites/${initialSite.id}`);
+      if (!response.ok) throw new Error("Failed to fetch site");
+      return response.json();
+    },
+    initialData: initialSite,
+  });
+
+  // Use fresh site data (falls back to initial if query hasn't completed)
+  const site = freshSite || initialSite;
 
   // Fetch POIs for this site
   const { data: pois = [], isLoading: poisLoading } = useQuery<PointOfInterest[]>({
@@ -223,8 +237,11 @@ export function SiteGeoIntel({ site }: SiteGeoIntelProps) {
     mutationFn: async () => {
       return apiRequest("POST", `/api/sites/${site.id}/geocode`, {});
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sites"] });
+    onSuccess: async () => {
+      // Invalidate both the sites list and this specific site query
+      await queryClient.invalidateQueries({ queryKey: ["/api/sites"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sites", initialSite.id] });
+      await queryClient.refetchQueries({ queryKey: ["/api/sites", initialSite.id] });
       toast({
         title: "Site geocoded",
         description: "Coordinates have been retrieved successfully.",
