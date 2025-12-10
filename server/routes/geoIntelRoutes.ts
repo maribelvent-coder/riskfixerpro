@@ -1669,7 +1669,8 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
       });
 
       // Parse and create crime observation
-      const incidentTypes = (stats as any).incident_types || [];
+      // Note: Crimeometer API returns 'incidents_types' (with 's') and 'incident_type_count'
+      const incidentTypes = (stats as any).incidents_types || (stats as any).incident_types || [];
       
       // Categorize crimes into violent, property, and other
       const violentTypes = ['Assault', 'Robbery', 'Homicide', 'Murder', 'Rape', 'Sexual Assault', 'Kidnapping', 'Aggravated Assault'];
@@ -1685,7 +1686,7 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
 
       for (const incident of incidentTypes) {
         const type = incident.incident_type || incident.type || '';
-        const count = incident.incident_count || incident.count || 0;
+        const count = incident.incident_type_count || incident.incident_count || incident.count || 0;
         
         const isViolent = violentTypes.some(v => type.toLowerCase().includes(v.toLowerCase()));
         const isProperty = propertyTypes.some(p => type.toLowerCase().includes(p.toLowerCase()));
@@ -1702,7 +1703,8 @@ export function registerGeoIntelRoutes(app: express.Application, storage: IStora
         }
       }
 
-      const totalIncidents = (stats as any).total_incidents || violentTotal + propertyTotal + otherTotal;
+      // Note: Crimeometer API returns 'incidents_count' not 'total_incidents'
+      const totalIncidents = (stats as any).incidents_count || (stats as any).total_incidents || violentTotal + propertyTotal + otherTotal;
       
       // Calculate a crime index (normalized score 0-100)
       // Based on incidents per area - higher is worse
