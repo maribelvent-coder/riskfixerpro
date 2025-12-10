@@ -270,13 +270,13 @@ export function SurveyWizard({
   // Get subcategories for a category
   const getSubcategories = (category: string) => {
     const categoryQuestions = getCategoryQuestions(category);
-    return Array.from(new Set(categoryQuestions.map((q) => q.subcategory)));
+    return Array.from(new Set(categoryQuestions.map((q) => q.subcategory || "General")));
   };
 
   // Get questions for a subcategory
   const getSubcategoryQuestions = (category: string, subcategory: string) => {
     return getCategoryQuestions(category).filter(
-      (q) => q.subcategory === subcategory
+      (q) => (q.subcategory || "General") === subcategory
     );
   };
 
@@ -1158,7 +1158,7 @@ export function SurveyWizard({
               if (subcategoryQuestions.length === 0) return null;
 
               return (
-                <div key={subcategory} className="mb-6" data-testid={`subgroup-${subcategory.toLowerCase().replace(/\s+/g, "-")}`}>
+                <div key={subcategory} className="mb-6" data-testid={`subgroup-${(subcategory || "general").toLowerCase().replace(/\s+/g, "-")}`}>
                   {/* Subcategory Header */}
                   <div className="flex items-center gap-3 mb-3 px-1">
                     <div className="h-px flex-1 bg-border" />
