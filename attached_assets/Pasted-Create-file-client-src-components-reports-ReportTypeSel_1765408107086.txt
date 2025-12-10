@@ -1,0 +1,97 @@
+Create file: `client/src/components/reports/ReportTypeSelector.tsx`
+
+```typescript
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { FileText, FileBarChart, ClipboardList } from 'lucide-react';
+
+export type ReportType = 'executive_summary' | 'full_assessment' | 'gap_analysis';
+
+interface ReportTypeOption {
+  id: ReportType;
+  title: string;
+  description: string;
+  pages: string;
+  icon: React.ElementType;
+}
+
+const REPORT_TYPES: ReportTypeOption[] = [
+  {
+    id: 'executive_summary',
+    title: 'Executive Summary',
+    description: 'High-level overview for C-suite and board presentations',
+    pages: '1-2 pages',
+    icon: FileText,
+  },
+  {
+    id: 'full_assessment',
+    title: 'Full Assessment',
+    description: 'Complete technical report with all findings and recommendations',
+    pages: '15-25 pages',
+    icon: FileBarChart,
+  },
+  {
+    id: 'gap_analysis',
+    title: 'Gap Analysis',
+    description: 'Technical remediation guide with specifications and costs',
+    pages: '8-12 pages',
+    icon: ClipboardList,
+  },
+];
+
+interface ReportTypeSelectorProps {
+  selectedType: ReportType;
+  onSelect: (type: ReportType) => void;
+}
+
+export function ReportTypeSelector({ selectedType, onSelect }: ReportTypeSelectorProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {REPORT_TYPES.map((type) => {
+        const Icon = type.icon;
+        const isSelected = selectedType === type.id;
+        
+        return (
+          <Card
+            key={type.id}
+            className={cn(
+              'p-4 cursor-pointer transition-all hover:shadow-md',
+              isSelected
+                ? 'ring-2 ring-blue-500 bg-blue-50'
+                : 'hover:bg-gray-50'
+            )}
+            onClick={() => onSelect(type.id)}
+          >
+            <div className="flex items-start gap-3">
+              <div className={cn(
+                'w-10 h-10 rounded-lg flex items-center justify-center',
+                isSelected ? 'bg-blue-100' : 'bg-gray-100'
+              )}>
+                <Icon className={cn(
+                  'h-5 w-5',
+                  isSelected ? 'text-blue-600' : 'text-gray-600'
+                )} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900">{type.title}</h3>
+                <p className="text-sm text-gray-500 mt-1">{type.description}</p>
+                <p className="text-xs text-gray-400 mt-2">{type.pages}</p>
+              </div>
+              <div className={cn(
+                'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                isSelected
+                  ? 'border-blue-500 bg-blue-500'
+                  : 'border-gray-300'
+              )}>
+                {isSelected && (
+                  <div className="w-2 h-2 rounded-full bg-white" />
+                )}
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+```
