@@ -23,7 +23,6 @@ export function EvidenceUploader({
 }: EvidenceUploaderProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const uploadMutation = useMutation({
@@ -147,24 +146,29 @@ export function EvidenceUploader({
     );
   }
 
+  const handleTakePhoto = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute('capture', 'environment');
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleUploadPhoto = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.removeAttribute('capture');
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileSelect}
-          className="hidden"
-          data-testid={`input-camera-${questionId}`}
-        />
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileSelect}
-          className="hidden"
+          style={{ display: 'none' }}
           data-testid={`input-file-${questionId}`}
         />
 
@@ -172,7 +176,7 @@ export function EvidenceUploader({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => cameraInputRef.current?.click()}
+          onClick={handleTakePhoto}
           disabled={uploadMutation.isPending || uploadProgress !== null}
           data-testid={`button-camera-${questionId}`}
         >
@@ -193,7 +197,7 @@ export function EvidenceUploader({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleUploadPhoto}
           disabled={uploadMutation.isPending || uploadProgress !== null}
           data-testid={`button-upload-${questionId}`}
         >
