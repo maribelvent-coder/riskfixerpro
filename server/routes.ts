@@ -120,6 +120,23 @@ import {
   RETAIL_STORE_THREATS,
 } from "./services/retail-ai-risk-assessment";
 
+// Crimeometer API Imports
+import {
+  getCrimeCoverage,
+  getCrimeIncidentsByLocation,
+  getCrimeIncidentsByCityName,
+  getCrimeIncidentsByCityKey,
+  getCrimeStatsByLocation,
+  getCrimeStatsByCityKey,
+  getCrimeStatsByCityName,
+  getSexOffendersByLocation,
+  getSexOffendersByZipcode,
+  getSexOffendersByName,
+  getCallsForServiceByLocation,
+  getCallsForServiceByCityKey,
+  isCrimeometerConfigured,
+} from "./services/crimeometerData";
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -8306,6 +8323,306 @@ The facility should prioritize addressing critical risks immediately, particular
       }
     },
   );
+
+  // ============================================================================
+  // CRIMEOMETER API ROUTES
+  // ============================================================================
+
+  // Check if Crimeometer is configured
+  app.get("/api/crimeometer/status", async (_req, res) => {
+    res.json({ configured: isCrimeometerConfigured() });
+  });
+
+  // Get crime coverage areas
+  app.get("/api/crimeometer/coverage", async (_req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ 
+          error: "Crimeometer API not configured",
+          message: "Please set the CRIMEOMETER_API_KEY secret" 
+        });
+      }
+      const coverage = await getCrimeCoverage();
+      res.json(coverage);
+    } catch (error: any) {
+      console.error("Crimeometer coverage error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get crime incidents by location
+  app.get("/api/crimeometer/incidents/location", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { lat, lon, datetime_ini, datetime_end, distance, page } = req.query;
+      
+      if (!lat || !lon || !datetime_ini || !datetime_end) {
+        return res.status(400).json({ 
+          error: "Missing required parameters: lat, lon, datetime_ini, datetime_end" 
+        });
+      }
+
+      const incidents = await getCrimeIncidentsByLocation({
+        lat: parseFloat(lat as string),
+        lon: parseFloat(lon as string),
+        datetimeIni: datetime_ini as string,
+        datetimeEnd: datetime_end as string,
+        distance: distance as string,
+        page: page ? parseInt(page as string) : undefined,
+      });
+      res.json(incidents);
+    } catch (error: any) {
+      console.error("Crimeometer incidents error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get crime incidents by city name
+  app.get("/api/crimeometer/incidents/city", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { cityname, citykey, datetime_ini, datetime_end, page } = req.query;
+      
+      if (!datetime_ini || !datetime_end) {
+        return res.status(400).json({ 
+          error: "Missing required parameters: datetime_ini, datetime_end" 
+        });
+      }
+
+      if (citykey) {
+        const incidents = await getCrimeIncidentsByCityKey({
+          citykey: citykey as string,
+          datetimeIni: datetime_ini as string,
+          datetimeEnd: datetime_end as string,
+          page: page ? parseInt(page as string) : undefined,
+        });
+        return res.json(incidents);
+      }
+
+      if (cityname) {
+        const incidents = await getCrimeIncidentsByCityName({
+          cityname: cityname as string,
+          datetimeIni: datetime_ini as string,
+          datetimeEnd: datetime_end as string,
+          page: page ? parseInt(page as string) : undefined,
+        });
+        return res.json(incidents);
+      }
+
+      return res.status(400).json({ error: "Either cityname or citykey is required" });
+    } catch (error: any) {
+      console.error("Crimeometer city incidents error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get crime statistics by location
+  app.get("/api/crimeometer/stats/location", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { lat, lon, datetime_ini, datetime_end, distance, incident_type, page } = req.query;
+      
+      if (!lat || !lon || !datetime_ini || !datetime_end) {
+        return res.status(400).json({ 
+          error: "Missing required parameters: lat, lon, datetime_ini, datetime_end" 
+        });
+      }
+
+      const incidentTypes = incident_type 
+        ? (Array.isArray(incident_type) ? incident_type as string[] : [incident_type as string])
+        : undefined;
+
+      const stats = await getCrimeStatsByLocation({
+        lat: parseFloat(lat as string),
+        lon: parseFloat(lon as string),
+        datetimeIni: datetime_ini as string,
+        datetimeEnd: datetime_end as string,
+        distance: distance as string,
+        incidentTypes,
+        page: page ? parseInt(page as string) : undefined,
+      });
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Crimeometer stats error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get crime statistics by city
+  app.get("/api/crimeometer/stats/city", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { cityname, citykey, datetime_ini, datetime_end } = req.query;
+      
+      if (!datetime_ini || !datetime_end) {
+        return res.status(400).json({ 
+          error: "Missing required parameters: datetime_ini, datetime_end" 
+        });
+      }
+
+      if (citykey) {
+        const stats = await getCrimeStatsByCityKey({
+          citykey: citykey as string,
+          datetimeIni: datetime_ini as string,
+          datetimeEnd: datetime_end as string,
+        });
+        return res.json(stats);
+      }
+
+      if (cityname) {
+        const stats = await getCrimeStatsByCityName({
+          cityname: cityname as string,
+          datetimeIni: datetime_ini as string,
+          datetimeEnd: datetime_end as string,
+        });
+        return res.json(stats);
+      }
+
+      return res.status(400).json({ error: "Either cityname or citykey is required" });
+    } catch (error: any) {
+      console.error("Crimeometer city stats error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get sex offenders by location
+  app.get("/api/crimeometer/sex-offenders/location", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { lat, lon, distance, page } = req.query;
+      
+      if (!lat || !lon) {
+        return res.status(400).json({ error: "Missing required parameters: lat, lon" });
+      }
+
+      const offenders = await getSexOffendersByLocation({
+        lat: parseFloat(lat as string),
+        lon: parseFloat(lon as string),
+        distance: distance as string,
+        page: page ? parseInt(page as string) : undefined,
+      });
+      res.json(offenders);
+    } catch (error: any) {
+      console.error("Crimeometer sex offenders error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get sex offenders by zipcode
+  app.get("/api/crimeometer/sex-offenders/zipcode", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { zipcode, exact, page } = req.query;
+      
+      if (!zipcode) {
+        return res.status(400).json({ error: "Missing required parameter: zipcode" });
+      }
+
+      const offenders = await getSexOffendersByZipcode({
+        zipcode: zipcode as string,
+        exactZipcode: exact === "true",
+        page: page ? parseInt(page as string) : undefined,
+      });
+      res.json(offenders);
+    } catch (error: any) {
+      console.error("Crimeometer sex offenders zipcode error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Search sex offenders by name
+  app.get("/api/crimeometer/sex-offenders/search", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { name, first_name, last_name, exact_name, alias, birthdate, birthdate_year, zipcode, page } = req.query;
+
+      const offenders = await getSexOffendersByName({
+        name: name as string,
+        firstName: first_name as string,
+        lastName: last_name as string,
+        exactName: exact_name as string,
+        alias: alias as string,
+        birthdate: birthdate as string,
+        birthdateYear: birthdate_year ? parseInt(birthdate_year as string) : undefined,
+        zipcode: zipcode as string,
+        page: page ? parseInt(page as string) : undefined,
+      });
+      res.json(offenders);
+    } catch (error: any) {
+      console.error("Crimeometer sex offenders search error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get 911 calls for service by location
+  app.get("/api/crimeometer/calls/location", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { lat, lon, datetime_ini, datetime_end, distance, page } = req.query;
+      
+      if (!lat || !lon || !datetime_ini || !datetime_end) {
+        return res.status(400).json({ 
+          error: "Missing required parameters: lat, lon, datetime_ini, datetime_end" 
+        });
+      }
+
+      const calls = await getCallsForServiceByLocation({
+        lat: parseFloat(lat as string),
+        lon: parseFloat(lon as string),
+        datetimeIni: datetime_ini as string,
+        datetimeEnd: datetime_end as string,
+        distance: distance as string,
+        page: page ? parseInt(page as string) : undefined,
+      });
+      res.json(calls);
+    } catch (error: any) {
+      console.error("Crimeometer calls for service error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get 911 calls for service by city
+  app.get("/api/crimeometer/calls/city", async (req, res) => {
+    try {
+      if (!isCrimeometerConfigured()) {
+        return res.status(503).json({ error: "Crimeometer API not configured" });
+      }
+      const { citykey, datetime_ini, datetime_end, page } = req.query;
+      
+      if (!citykey || !datetime_ini || !datetime_end) {
+        return res.status(400).json({ 
+          error: "Missing required parameters: citykey, datetime_ini, datetime_end" 
+        });
+      }
+
+      const calls = await getCallsForServiceByCityKey({
+        citykey: citykey as string,
+        datetimeIni: datetime_ini as string,
+        datetimeEnd: datetime_end as string,
+        page: page ? parseInt(page as string) : undefined,
+      });
+      res.json(calls);
+    } catch (error: any) {
+      console.error("Crimeometer city calls error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
