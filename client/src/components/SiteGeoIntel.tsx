@@ -11,7 +11,9 @@ import { IncidentImportDialog } from "@/components/IncidentImportDialog";
 import { CrimeDataCharts } from "@/components/CrimeDataCharts";
 import { RiskIntelligencePanel } from "@/components/RiskIntelligencePanel";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download, BarChart3, X, Target } from "lucide-react";
+import { MapPin, Navigation, AlertTriangle, Building2, Loader2, Trash2, Plus, Shield, Upload, Download, BarChart3, X, Target, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { Site, PointOfInterest, CrimeSource, CrimeObservation, SiteIncident } from "@shared/schema";
 
 interface SiteGeoIntelProps {
@@ -57,6 +59,72 @@ function getDualRadiusData(coverageArea: any): { radius5mi: any; radius10mi: any
     return { radius5mi: coverageArea.radius5mi, radius10mi: coverageArea.radius10mi };
   }
   return null;
+}
+
+// Crime Index explanation component
+function CrimeIndexExplainer() {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" data-testid="button-crime-index-info">
+          <Info className="h-4 w-4" />
+          What does the Crime Index mean?
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-3">
+        <div className="p-4 rounded-lg border bg-muted/30 space-y-4 text-sm">
+          <div>
+            <h4 className="font-semibold mb-2">Crimeometer Safety Index (CSI)</h4>
+            <p className="text-muted-foreground">
+              The CSI is a 0-100 scale crime risk score based on actual police reports, normalized by population 
+              so you can fairly compare a small suburb to a major city.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            <div className="p-2 rounded bg-green-500/10 border border-green-500/30 text-center">
+              <div className="font-bold text-green-700">0-25</div>
+              <div className="text-xs text-muted-foreground">Very Low</div>
+            </div>
+            <div className="p-2 rounded bg-green-500/10 border border-green-500/30 text-center">
+              <div className="font-bold text-green-600">26-49</div>
+              <div className="text-xs text-muted-foreground">Low</div>
+            </div>
+            <div className="p-2 rounded bg-yellow-500/10 border border-yellow-500/30 text-center">
+              <div className="font-bold text-yellow-600">50</div>
+              <div className="text-xs text-muted-foreground">U.S. Average</div>
+            </div>
+            <div className="p-2 rounded bg-orange-500/10 border border-orange-500/30 text-center">
+              <div className="font-bold text-orange-600">51-74</div>
+              <div className="text-xs text-muted-foreground">High</div>
+            </div>
+            <div className="p-2 rounded bg-red-500/10 border border-red-500/30 text-center">
+              <div className="font-bold text-red-600">75-100</div>
+              <div className="text-xs text-muted-foreground">Very High</div>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h5 className="font-medium">How it's calculated:</h5>
+            <ol className="list-decimal list-inside text-muted-foreground space-y-1">
+              <li>Crime Rate = (Total incidents ÷ Population) × 1,000</li>
+              <li>U.S. benchmark: ~65 crimes per 1,000 people = CSI of 50</li>
+              <li>Lower crime rate → CSI below 50 (safer than average)</li>
+              <li>Higher crime rate → CSI above 50 (riskier than average)</li>
+            </ol>
+          </div>
+          
+          <div className="text-xs text-muted-foreground border-t pt-3">
+            <strong>Why dual radius?</strong> A quiet suburban site may show low crime at 5 miles, 
+            but elevated crime at 10 miles if a major city is nearby. This helps distinguish 
+            local safety from regional crime patterns.
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 // Component to display a crime source with its observations
@@ -681,6 +749,7 @@ export function SiteGeoIntel({ site: initialSite }: SiteGeoIntelProps) {
               <CardDescription>
                 Crime statistics and safety metrics for this location
               </CardDescription>
+              <CrimeIndexExplainer />
             </CardHeader>
             <CardContent>
               {crimeLoading ? (
