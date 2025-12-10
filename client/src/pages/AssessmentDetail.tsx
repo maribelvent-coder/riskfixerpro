@@ -17,7 +17,7 @@ import { FacilitySurvey } from "@/components/FacilitySurvey";
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { RiskAnalysis } from "@/components/RiskAnalysis";
 import { ReportGenerator } from "@/components/ReportGenerator";
-import { AIReportGenerator } from "@/components/AIReportGenerator";
+import { ReportsTab } from "@/components/reports/ReportsTab";
 import ExecutiveSurveyQuestions, { EP_PART1_CATEGORIES, EP_PART2_CATEGORIES } from "@/components/ExecutiveSurveyQuestions";
 import ExecutiveInterview from "@/components/ExecutiveInterview";
 import ExecutiveInterviewTabs from "@/components/ExecutiveInterviewTabs";
@@ -968,31 +968,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         {/* Professional Reports */}
         <TabsContent value="reports" className="space-y-4">
-          <AIReportGenerator
-            assessmentId={assessmentId}
-            assessmentName={assessmentData?.title || 'Assessment'}
-            assessmentType={assessmentData?.templateId || 'executive-protection'}
-          />
-          
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
-                Additional Report Options
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Generate additional reports using pre-built templates
-              </p>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <ReportGenerator 
-                assessmentId={assessmentId}
-                onGenerate={handleGenerateReport}
-                onDownload={handleDownloadReport}
-                onShare={handleShareReport}
-              />
-            </CardContent>
-          </Card>
+          <ReportsTab assessmentId={assessmentId} />
         </TabsContent>
 
         {/* Legacy Executive Paradigm Tabs - NOT for EP assessments using new dashboard */}
