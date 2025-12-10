@@ -7628,6 +7628,163 @@ The facility should prioritize addressing critical risks immediately, particular
     }
   });
 
+  app.post(
+    "/api/assessments/:id/evidence/upload-url",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { questionId, questionType, filename } = req.body;
+
+        if (!questionId || !questionType || !filename) {
+          return res.status(400).json({
+            error: "questionId, questionType, and filename are required",
+          });
+        }
+
+        if (!["facility", "assessment"].includes(questionType)) {
+          return res
+            .status(400)
+            .json({ error: "questionType must be 'facility' or 'assessment'" });
+        }
+
+        const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp", "heic"];
+        const ext = filename.split(".").pop()?.toLowerCase() || "";
+        if (!allowedExtensions.includes(ext)) {
+          return res.status(400).json({
+            error: "Only image files are allowed (jpg, jpeg, png, gif, webp, heic)",
+          });
+        }
+
+        const assessmentId = req.params.id;
+
+        if (questionType === "facility") {
+          const question = await storage.getFacilitySurveyQuestion(questionId);
+          if (!question || question.assessmentId !== assessmentId) {
+            return res.status(404).json({ error: "Question not found" });
+          }
+
+          const currentEvidence = question.evidence || [];
+          if (currentEvidence.length >= 10) {
+            return res
+              .status(400)
+              .json({ error: "Maximum 10 evidence photos per question" });
+          }
+        } else {
+          const question = await storage.getAssessmentQuestion(questionId);
+          if (!question || question.assessmentId !== assessmentId) {
+            return res.status(404).json({ error: "Question not found" });
+          }
+
+          const currentEvidence = question.evidence || [];
+          if (currentEvidence.length >= 10) {
+            return res
+              .status(400)
+              .json({ error: "Maximum 10 evidence photos per question" });
+          }
+        }
+
+        const objectStorageService = new ObjectStorageService();
+        const { uploadURL, evidencePath } =
+          await objectStorageService.getEvidenceUploadURL(
+            assessmentId,
+            questionId,
+            filename,
+          );
+
+        res.json({
+          uploadURL,
+          evidencePath,
+          method: "PUT",
+        });
+      } catch (error: any) {
+        console.error("Error generating upload URL:", error);
+        res.status(500).json({ error: "Failed to generate upload URL" });
+      }
+    },
+  );
+
+  app.post(
+    "/api/assessments/:id/evidence/register",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { questionId, questionType, evidencePath, filename } = req.body;
+
+        if (!questionId || !questionType || !evidencePath) {
+          return res.status(400).json({
+            error: "questionId, questionType, and evidencePath are required",
+          });
+        }
+
+        if (!["facility", "assessment"].includes(questionType)) {
+          return res
+            .status(400)
+            .json({ error: "questionType must be 'facility' or 'assessment'" });
+        }
+
+        if (!evidencePath.startsWith("/evidence/")) {
+          return res.status(400).json({ error: "Invalid evidence path" });
+        }
+
+        const assessmentId = req.params.id;
+
+        if (questionType === "facility") {
+          const question = await storage.getFacilitySurveyQuestion(questionId);
+          if (!question || question.assessmentId !== assessmentId) {
+            return res.status(404).json({ error: "Question not found" });
+          }
+
+          const currentEvidence = question.evidence || [];
+          if (currentEvidence.length >= 10) {
+            return res
+              .status(400)
+              .json({ error: "Maximum 10 evidence photos per question" });
+          }
+
+          const updatedQuestion = await storage.appendFacilityQuestionEvidence(
+            questionId,
+            evidencePath,
+          );
+
+          if (!updatedQuestion) {
+            return res.status(500).json({ error: "Failed to update question" });
+          }
+        } else {
+          const question = await storage.getAssessmentQuestion(questionId);
+          if (!question || question.assessmentId !== assessmentId) {
+            return res.status(404).json({ error: "Question not found" });
+          }
+
+          const currentEvidence = question.evidence || [];
+          if (currentEvidence.length >= 10) {
+            return res
+              .status(400)
+              .json({ error: "Maximum 10 evidence photos per question" });
+          }
+
+          const updatedQuestion =
+            await storage.appendAssessmentQuestionEvidence(
+              questionId,
+              evidencePath,
+            );
+
+          if (!updatedQuestion) {
+            return res.status(500).json({ error: "Failed to update question" });
+          }
+        }
+
+        res.json({
+          success: true,
+          evidencePath,
+          filename: filename || "photo",
+        });
+      } catch (error: any) {
+        console.error("Error registering evidence:", error);
+        res.status(500).json({ error: "Failed to register evidence" });
+      }
+    },
+  );
+
   app.delete(
     "/api/assessments/:id/evidence",
     verifyAssessmentOwnership,
