@@ -227,11 +227,11 @@ export function EvidenceUploader({
       </div>
 
       {evidence.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 max-w-2xl">
           {evidence.map((path, index) => (
             <Card
               key={path}
-              className="relative group overflow-hidden aspect-square"
+              className="relative group overflow-hidden aspect-square max-w-[120px]"
               data-testid={`card-evidence-${questionId}-${index}`}
             >
               <img
