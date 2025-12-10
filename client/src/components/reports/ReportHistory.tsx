@@ -19,7 +19,7 @@ interface ReportHistoryProps {
 }
 
 export function ReportHistory({ reports, onPreview, onDownload }: ReportHistoryProps) {
-  if (reports.length === 0) {
+  if (!reports || reports.length === 0) {
     return null;
   }
   

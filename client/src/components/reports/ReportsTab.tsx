@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ReportTypeSelector, ReportType } from './ReportTypeSelector';
@@ -9,20 +9,27 @@ import { Loader2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ReportsTabProps {
-  assessmentId: number;
-  reports: any[];
+  assessmentId: string;
   hasGeographicData?: boolean;
   hasPhotos?: boolean;
 }
 
 export function ReportsTab({
   assessmentId,
-  reports,
   hasGeographicData = false,
   hasPhotos = false,
 }: ReportsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const { data: reports = [] } = useQuery<any[]>({
+    queryKey: ['/api/assessments', assessmentId, 'reports'],
+    queryFn: async () => {
+      const res = await fetch(`/api/assessments/${assessmentId}/reports`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
   
   const [selectedType, setSelectedType] = useState<ReportType>('full_assessment');
   const [options, setOptions] = useState<ReportOptionsState>({
@@ -53,7 +60,7 @@ export function ReportsTab({
         title: 'Report Generated',
         description: 'Your report is ready for download.',
       });
-      queryClient.invalidateQueries({ queryKey: ['reports', assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, 'reports'] });
       
       if (data.downloadUrl) {
         window.open(data.downloadUrl, '_blank');
