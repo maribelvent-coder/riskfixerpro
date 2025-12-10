@@ -30,7 +30,6 @@ import type {
 interface ExecutiveInterviewWizardProps {
   assessmentId: string;
   onComplete?: () => void;
-  onSwitchToClassic?: () => void;
 }
 
 type ViewMode = "standard" | "compact" | "focus";
@@ -38,7 +37,6 @@ type ViewMode = "standard" | "compact" | "focus";
 export default function ExecutiveInterviewWizard({
   assessmentId,
   onComplete,
-  onSwitchToClassic,
 }: ExecutiveInterviewWizardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -410,17 +408,6 @@ export default function ExecutiveInterviewWizard({
                   Focus
                 </button>
               </div>
-              {onSwitchToClassic && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onSwitchToClassic}
-                  className="text-xs"
-                  data-testid="button-switch-classic"
-                >
-                  Classic
-                </Button>
-              )}
             </div>
           </div>
 

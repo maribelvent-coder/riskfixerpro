@@ -28,7 +28,6 @@ import type { AssessmentWithQuestions } from "@shared/schema";
 interface ExecutivePhysicalSecurityWizardProps {
   assessmentId: string;
   onComplete?: () => void;
-  onSwitchToClassic?: () => void;
 }
 
 interface SurveyQuestion {
@@ -48,7 +47,6 @@ type ViewMode = "standard" | "compact" | "focus";
 export default function ExecutivePhysicalSecurityWizard({
   assessmentId,
   onComplete,
-  onSwitchToClassic,
 }: ExecutivePhysicalSecurityWizardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -878,17 +876,6 @@ export default function ExecutivePhysicalSecurityWizard({
                   Focus
                 </button>
               </div>
-              {onSwitchToClassic && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onSwitchToClassic}
-                  className="text-xs"
-                  data-testid="button-switch-classic"
-                >
-                  Classic
-                </Button>
-              )}
             </div>
           </div>
 

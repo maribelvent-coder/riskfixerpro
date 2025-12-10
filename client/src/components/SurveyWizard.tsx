@@ -46,7 +46,6 @@ interface SurveyWizardProps {
   assessmentId: string;
   templateId?: string;
   onComplete?: () => void;
-  onSwitchToClassic?: () => void;
 }
 
 interface SurveyQuestion {
@@ -88,7 +87,6 @@ export function SurveyWizard({
   assessmentId,
   templateId,
   onComplete,
-  onSwitchToClassic,
 }: SurveyWizardProps) {
   const surveyType = templateId
     ? SURVEY_TYPE_LABELS[templateId] || "Facility"

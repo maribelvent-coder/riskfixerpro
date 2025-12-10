@@ -387,7 +387,7 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const paradigm = assessmentData?.surveyParadigm || "facility";
   const defaultTab = paradigm === "executive" ? "executive-interview" : "facility-survey";
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
-  const [usePhysicalSecurityWizard, setUsePhysicalSecurityWizard] = useState(true);
+  // Classic view sunsetted - wizard is now the only view
   
   // Set initial tab based on paradigm after data loads (only once to prevent reset on refetch)
   useEffect(() => {
@@ -966,53 +966,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
 
         <TabsContent value="physical-security" className="space-y-4">
           {assessmentData?.templateId === 'executive-protection' ? (
-            // Executive Protection Part 2 - Professional Assessment with wizard toggle
-            usePhysicalSecurityWizard ? (
-              <ExecutivePhysicalSecurityWizard
-                assessmentId={assessmentId}
-                onComplete={() => setActiveTab('risk-analysis')}
-                onSwitchToClassic={() => setUsePhysicalSecurityWizard(false)}
-              />
-            ) : (
-              <>
-                <Card>
-                  <CardHeader className="p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                          <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                          Part 2: Professional Security Assessment
-                        </CardTitle>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          Comprehensive residential security evaluation covering perimeter, exterior, interior, safe room, 
-                          lighting, surveillance, alarms, and more.
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setUsePhysicalSecurityWizard(true)}
-                          className="text-xs"
-                          data-testid="button-switch-wizard-physical"
-                        >
-                          <Building className="h-3.5 w-3.5 mr-1.5" />
-                          New View
-                        </Button>
-                        <Badge variant="outline">78 Questions</Badge>
-                        <Badge variant="outline">14 Sections</Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-                
-                <ExecutiveSurveyQuestions 
-                  assessmentId={assessmentId}
-                  sectionCategories={EP_PART2_CATEGORIES}
-                  onComplete={() => setActiveTab('risk-analysis')}
-                />
-              </>
-            )
+            // Executive Protection Part 2 - Wizard view only (classic view sunsetted)
+            <ExecutivePhysicalSecurityWizard
+              assessmentId={assessmentId}
+              onComplete={() => setActiveTab('risk-analysis')}
+            />
           ) : (
             // Legacy templates - old category filtering
             <>
