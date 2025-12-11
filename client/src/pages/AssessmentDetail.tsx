@@ -31,7 +31,12 @@ import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
 import OfficeDashboard from "@/pages/assessments/OfficeDashboard";
 import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database, UserCheck } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database, UserCheck, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Site } from "@shared/schema";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -213,6 +218,9 @@ interface AssessmentDetailProps {
 export default function AssessmentDetail({ assessmentId = "demo-001" }: AssessmentDetailProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSiteId, setEditSiteId] = useState<string | null>(null);
   const hasInitializedTab = useRef(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -238,6 +246,11 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const { data: siteData } = useQuery<{ id: string; name: string }>({
     queryKey: ["/api/sites", assessmentData?.siteId],
     enabled: !!assessmentData?.siteId
+  });
+
+  // Fetch all sites for edit dialog
+  const { data: allSites = [] } = useQuery<Site[]>({
+    queryKey: ["/api/sites"],
   });
 
   // Update assessment mutation
@@ -638,6 +651,42 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     console.log("Sharing report:", reportId);
   };
 
+  // Open edit dialog and populate with current values
+  const handleOpenEditDialog = () => {
+    if (assessmentData) {
+      setEditTitle(assessmentData.title);
+      setEditSiteId(assessmentData.siteId || null);
+      setEditDialogOpen(true);
+    }
+  };
+
+  // Save edited assessment details
+  const handleSaveEdit = () => {
+    const updates: Partial<Assessment> = {
+      title: editTitle,
+    };
+    
+    if (editSiteId) {
+      const selectedSite = allSites.find(s => s.id === editSiteId);
+      updates.siteId = editSiteId;
+      if (selectedSite) {
+        updates.location = `${selectedSite.name} - ${selectedSite.city}, ${selectedSite.state}`;
+      }
+    } else {
+      updates.siteId = null;
+    }
+    
+    updateAssessmentMutation.mutate(updates, {
+      onSuccess: () => {
+        setEditDialogOpen(false);
+        toast({
+          title: "Assessment Updated",
+          description: "Assessment details have been saved.",
+        });
+      },
+    });
+  };
+
   // Show loading state while data or activeTab are not ready
   // Also wait for initial tab to be correctly set based on actual assessment data
   if (isLoading || !activeTab || !hasInitializedTab.current) {
@@ -681,9 +730,20 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           <div className="flex flex-col gap-2 sm:gap-3">
             {/* Title Row */}
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate max-w-full" data-testid="heading-assessment-title">
-                {assessmentData.title}
-              </h1>
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold truncate max-w-full" data-testid="heading-assessment-title">
+                  {assessmentData.title}
+                </h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleOpenEditDialog}
+                  data-testid="button-edit-assessment"
+                  className="h-7 w-7 flex-shrink-0"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </div>
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <Badge 
                   variant={assessmentData.status === "completed" ? "default" : "secondary"}
@@ -1144,6 +1204,68 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Assessment Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent data-testid="dialog-edit-assessment" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Assessment</DialogTitle>
+            <DialogDescription>
+              Update the assessment name and associated site.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Assessment Name</Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Enter assessment name"
+                data-testid="input-edit-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-site">Associated Site</Label>
+              <Select
+                value={editSiteId || "none"}
+                onValueChange={(value) => setEditSiteId(value === "none" ? null : value)}
+              >
+                <SelectTrigger id="edit-site" data-testid="select-edit-site">
+                  <SelectValue placeholder="Select a site" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No site selected</SelectItem>
+                  {allSites.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name} - {site.city}, {site.state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Linking to a site enables geographic intelligence features
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              data-testid="button-cancel-edit"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={!editTitle.trim() || updateAssessmentMutation.isPending}
+              data-testid="button-save-edit"
+            >
+              {updateAssessmentMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
