@@ -673,12 +673,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         updates.location = `${selectedSite.name} - ${selectedSite.city}, ${selectedSite.state}`;
       }
     } else {
+      // Clear both siteId and location when no site selected
       updates.siteId = null;
+      updates.location = "";
     }
     
     updateAssessmentMutation.mutate(updates, {
       onSuccess: () => {
         setEditDialogOpen(false);
+        // Invalidate site query to refresh site data
+        queryClient.invalidateQueries({ queryKey: ["/api/sites", assessmentData?.siteId] });
         toast({
           title: "Assessment Updated",
           description: "Assessment details have been saved.",
