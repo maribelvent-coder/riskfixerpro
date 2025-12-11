@@ -36,6 +36,9 @@ import {
   InterviewResponses,
 } from '../ep-interview-mapper';
 
+// Import response normalization helpers
+import { getResponseValue, getResponseBool } from '../ep-interview-mapper-v2';
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
@@ -310,29 +313,32 @@ function buildEPProfileContext(context: EPAssessmentContext): string {
   // Public Profile
   sections.push(`
 ### Public Visibility
-- Profile Level: ${interviewResponses.ep_public_profile || 'Not specified'}
-- Media Coverage: ${interviewResponses.ep_media_coverage || 'Not specified'}
-- Industry Sector: ${interviewResponses.ep_industry_sector || 'Not specified'}
-- Net Worth Range: ${interviewResponses.ep_net_worth_range || 'Not specified'}
-- Controversial Involvement: ${interviewResponses.ep_controversial_involvement || 'Not specified'}
+- Profile Level: ${getResponseValue(interviewResponses.ep_public_profile) || 'Not specified'}
+- Media Coverage: ${getResponseValue(interviewResponses.ep_media_coverage) || 'Not specified'}
+- Industry Sector: ${getResponseValue(interviewResponses.ep_industry_sector) || 'Not specified'}
+- Net Worth Range: ${getResponseValue(interviewResponses.ep_net_worth_range) || 'Not specified'}
+- Controversial Involvement: ${getResponseValue(interviewResponses.ep_controversial_involvement) || 'Not specified'}
 `);
 
   // Threat History
   sections.push(`
 ### Threat History
-- Known Threats: ${interviewResponses.ep_known_threats || 'Not specified'}
-- Threat Perception (1-10): ${interviewResponses.ep_threat_perception || 'Not specified'}
-- Current Security Level: ${interviewResponses.ep_current_security_level || 'Not specified'}
+- Known Threats: ${getResponseValue(interviewResponses.ep_known_threats) || 'Not specified'}
+- Threat Perception (1-10): ${getResponseValue(interviewResponses.ep_threat_perception) || 'Not specified'}
+- Current Security Level: ${getResponseValue(interviewResponses.ep_current_security_level) || 'Not specified'}
 `);
 
   // Family Composition
+  const familyMembers = interviewResponses.ep_family_members;
+  const familyMembersValue = Array.isArray(familyMembers) 
+    ? familyMembers.join(', ') 
+    : getResponseValue(familyMembers) || 'Not specified';
+  
   sections.push(`
 ### Family Composition
-- Family Members: ${Array.isArray(interviewResponses.ep_family_members) 
-    ? interviewResponses.ep_family_members.join(', ') 
-    : interviewResponses.ep_family_members || 'Not specified'}
-- Spouse Public Profile: ${interviewResponses.ep_spouse_public_profile || 'N/A'}
-- Children Schedule Predictability: ${interviewResponses.ep_children_schedule || 'N/A'}
+- Family Members: ${familyMembersValue}
+- Spouse Public Profile: ${getResponseValue(interviewResponses.ep_spouse_public_profile) || 'N/A'}
+- Children Schedule Predictability: ${getResponseValue(interviewResponses.ep_children_schedule) || 'N/A'}
 `);
 
   return sections.join('\n');
@@ -343,51 +349,51 @@ function buildEPSecurityPostureContext(context: EPAssessmentContext): string {
   
   const sections: string[] = ['## CURRENT SECURITY POSTURE'];
   
+  // Helper for array fields
+  const getArrayValue = (field: any): string => {
+    if (Array.isArray(field)) return field.join(', ');
+    return getResponseValue(field) || 'Not specified';
+  };
+  
   // Residential Security
   sections.push(`
 ### Residential Security
-- Residence Type: ${interviewResponses.ep_residence_type || 'Not specified'}
-- Visibility: ${interviewResponses.ep_residence_visibility || 'Not specified'}
-- Perimeter Security: ${Array.isArray(interviewResponses.ep_perimeter_security) 
-    ? interviewResponses.ep_perimeter_security.join(', ') 
-    : interviewResponses.ep_perimeter_security || 'Not specified'}
-- Alarm System: ${interviewResponses.ep_alarm_system || 'Not specified'}
-- Safe Room: ${interviewResponses.ep_safe_room || 'Not specified'}
-- CCTV Coverage: ${Array.isArray(interviewResponses.ep_cctv_coverage) 
-    ? interviewResponses.ep_cctv_coverage.join(', ') 
-    : interviewResponses.ep_cctv_coverage || 'Not specified'}
-- Police Response Time: ${interviewResponses.ep_police_response_time || 'Not specified'}
+- Residence Type: ${getResponseValue(interviewResponses.ep_residence_type) || 'Not specified'}
+- Visibility: ${getResponseValue(interviewResponses.ep_residence_visibility) || 'Not specified'}
+- Perimeter Security: ${getArrayValue(interviewResponses.ep_perimeter_security)}
+- Alarm System: ${getResponseValue(interviewResponses.ep_alarm_system) || 'Not specified'}
+- Safe Room: ${getResponseValue(interviewResponses.ep_safe_room) || 'Not specified'}
+- CCTV Coverage: ${getArrayValue(interviewResponses.ep_cctv_coverage)}
+- Police Response Time: ${getResponseValue(interviewResponses.ep_police_response_time) || 'Not specified'}
 `);
 
   // Personal Protection
   sections.push(`
 ### Personal Protection
-- Security Level: ${interviewResponses.ep_current_security_level || 'Not specified'}
-- Daily Routine Predictability: ${interviewResponses.ep_daily_routine_predictability || 'Not specified'}
-- Commute Pattern: ${interviewResponses.ep_commute_pattern || 'Not specified'}
-- Vehicle Type: ${interviewResponses.ep_vehicle_type || 'Not specified'}
-- Vehicle Security Features: ${Array.isArray(interviewResponses.ep_vehicle_security_features) 
-    ? interviewResponses.ep_vehicle_security_features.join(', ') 
-    : interviewResponses.ep_vehicle_security_features || 'Not specified'}
+- Security Level: ${getResponseValue(interviewResponses.ep_current_security_level) || 'Not specified'}
+- Daily Routine Predictability: ${getResponseValue(interviewResponses.ep_daily_routine_predictability) || 'Not specified'}
+- Commute Pattern: ${getResponseValue(interviewResponses.ep_commute_pattern) || 'Not specified'}
+- Vehicle Type: ${getResponseValue(interviewResponses.ep_vehicle_type) || 'Not specified'}
+- Vehicle Security Features: ${getArrayValue(interviewResponses.ep_vehicle_security_features)}
 `);
 
   // Digital Security
   sections.push(`
 ### Digital Security
-- Online Presence Management: ${interviewResponses.ep_online_presence_management || 'Not specified'}
-- Public Records Exposure: ${interviewResponses.ep_public_records_exposure || 'Not specified'}
-- Social Media Activity: ${interviewResponses.ep_social_media_activity || 'Not specified'}
-- OSINT Monitoring: ${interviewResponses.ep_osint_monitoring || 'Not specified'}
-- Communications Security: ${interviewResponses.ep_communications_security || 'Not specified'}
+- Online Presence Management: ${getResponseValue(interviewResponses.ep_online_presence_management) || 'Not specified'}
+- Public Records Exposure: ${getResponseValue(interviewResponses.ep_public_records_exposure) || 'Not specified'}
+- Social Media Activity: ${getResponseValue(interviewResponses.ep_social_media_activity) || 'Not specified'}
+- OSINT Monitoring: ${getResponseValue(interviewResponses.ep_osint_monitoring) || 'Not specified'}
+- Communications Security: ${getResponseValue(interviewResponses.ep_communications_security) || 'Not specified'}
 `);
 
   // Travel Security
   sections.push(`
 ### Travel Security
-- Travel Frequency: ${interviewResponses.ep_travel_frequency || 'Not specified'}
-- International High-Risk Travel: ${interviewResponses.ep_international_high_risk || 'Not specified'}
-- Travel Publicity: ${interviewResponses.ep_travel_publicity || 'Not specified'}
-- Airport Procedures: ${interviewResponses.ep_airport_procedures || 'Not specified'}
+- Travel Frequency: ${getResponseValue(interviewResponses.ep_travel_frequency) || 'Not specified'}
+- International High-Risk Travel: ${getResponseValue(interviewResponses.ep_international_high_risk) || 'Not specified'}
+- Travel Publicity: ${getResponseValue(interviewResponses.ep_travel_publicity) || 'Not specified'}
+- Airport Procedures: ${getResponseValue(interviewResponses.ep_airport_procedures) || 'Not specified'}
 `);
 
   return sections.join('\n');
@@ -399,12 +405,12 @@ function buildEPEmergencyPreparednessContext(context: EPAssessmentContext): stri
   return `## EMERGENCY PREPAREDNESS
 
 ### Emergency Response
-- Emergency Contacts Established: ${interviewResponses.ep_emergency_contacts || 'Not specified'}
-- Family Security Training: ${interviewResponses.ep_family_security_training || 'Not specified'}
-- Duress Codes: ${interviewResponses.ep_duress_codes || 'Not specified'}
-- Evacuation Routes: ${interviewResponses.ep_evacuation_routes || 'Not specified'}
-- Go-Bags Prepared: ${interviewResponses.ep_go_bags || 'Not specified'}
-- Medical Emergency Plan: ${interviewResponses.ep_medical_emergency_plan || 'Not specified'}
+- Emergency Contacts Established: ${getResponseValue(interviewResponses.ep_emergency_contacts) || 'Not specified'}
+- Family Security Training: ${getResponseValue(interviewResponses.ep_family_security_training) || 'Not specified'}
+- Duress Codes: ${getResponseValue(interviewResponses.ep_duress_codes) || 'Not specified'}
+- Evacuation Routes: ${getResponseValue(interviewResponses.ep_evacuation_routes) || 'Not specified'}
+- Go-Bags Prepared: ${getResponseValue(interviewResponses.ep_go_bags) || 'Not specified'}
+- Medical Emergency Plan: ${getResponseValue(interviewResponses.ep_medical_emergency_plan) || 'Not specified'}
 `;
 }
 

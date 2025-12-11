@@ -20,6 +20,48 @@
 
 export type InterviewResponses = Record<string, any>;
 
+/**
+ * Extract string value from interview response - handles both old string format
+ * and new structured format {answer, details, raw, fullResponse}
+ */
+export function getResponseValue(response: any): string | undefined {
+  if (!response) return undefined;
+  if (typeof response === 'string') return response;
+  if (typeof response === 'object') return response.fullResponse || response.answer || undefined;
+  return String(response);
+}
+
+/**
+ * Extract boolean from interview response
+ */
+export function getResponseBool(response: any): boolean | null {
+  if (response === null || response === undefined) return null;
+  if (typeof response === 'boolean') return response;
+  if (typeof response === 'object' && response.raw !== undefined) return response.raw;
+  if (typeof response === 'object' && response.answer) {
+    return response.answer.toLowerCase() === 'yes';
+  }
+  if (typeof response === 'string') return response.toLowerCase() === 'yes';
+  return null;
+}
+
+/**
+ * Check if response matches expected values (handles both formats)
+ */
+function responseMatches(response: any, expectedValues: string[]): boolean {
+  const value = getResponseValue(response);
+  if (!value) return false;
+  const lowerValue = value.toLowerCase();
+  return expectedValues.some(exp => lowerValue === exp.toLowerCase() || lowerValue.includes(exp.toLowerCase()));
+}
+
+/**
+ * Check if response is affirmative (yes, true, active, etc.)
+ */
+function isAffirmative(response: any): boolean {
+  return responseMatches(response, ['yes', 'true', 'active', 'multiple', 'frequent', 'high', 'extensive']);
+}
+
 export interface ValidationResult {
   isComplete: boolean;
   completionPercentage: number;
@@ -391,19 +433,18 @@ function extractHighRiskDestinations(responses: InterviewResponses): string[] {
 
 function extractCurrentMeasures(responses: InterviewResponses): string[] {
   const measures: string[] = [];
-  if (responses.ep_has_security_team === 'yes') measures.push('security_team');
-  if (responses.ep_protection_detail === 'yes') measures.push('protection_detail');
-  if (responses.ep_alarm_system === 'yes') measures.push('alarm_system');
-  if (responses.ep_cctv === 'yes') measures.push('cctv_surveillance');
-  if (responses.ep_access_control === 'yes') measures.push('access_control');
-  if (responses.ep_safe_room === 'yes') measures.push('safe_room');
-  if (responses.ep_armored_vehicle === 'yes') measures.push('armored_vehicle');
-  if (responses.ep_trained_driver === 'yes') measures.push('trained_driver');
-  if (responses.ep_cyber_security === 'yes') measures.push('cyber_security');
-  if (responses.ep_current_security_measures) {
-    const parsed = typeof responses.ep_current_security_measures === 'string'
-      ? responses.ep_current_security_measures.split(',').map((s: string) => s.trim())
-      : Array.isArray(responses.ep_current_security_measures) ? responses.ep_current_security_measures : [];
+  if (getResponseBool(responses.ep_has_security_team) === true) measures.push('security_team');
+  if (getResponseBool(responses.ep_protection_detail) === true) measures.push('protection_detail');
+  if (getResponseBool(responses.ep_alarm_system) === true) measures.push('alarm_system');
+  if (getResponseBool(responses.ep_cctv) === true) measures.push('cctv_surveillance');
+  if (getResponseBool(responses.ep_access_control) === true) measures.push('access_control');
+  if (getResponseBool(responses.ep_safe_room) === true) measures.push('safe_room');
+  if (getResponseBool(responses.ep_armored_vehicle) === true) measures.push('armored_vehicle');
+  if (getResponseBool(responses.ep_trained_driver) === true) measures.push('trained_driver');
+  if (getResponseBool(responses.ep_cyber_security) === true) measures.push('cyber_security');
+  const measuresValue = getResponseValue(responses.ep_current_security_measures);
+  if (measuresValue) {
+    const parsed = measuresValue.split(',').map((s: string) => s.trim());
     measures.push(...parsed);
   }
   return Array.from(new Set(measures));
@@ -411,48 +452,48 @@ function extractCurrentMeasures(responses: InterviewResponses): string[] {
 
 export function extractPrincipalProfile(responses: InterviewResponses): PrincipalProfile {
   return {
-    publicExposureLevel: mapPublicExposure(responses.ep_public_profile_level),
-    mediaPresence: responses.ep_media_coverage || null,
-    industryCategory: responses.ep_industry_sector || null,
-    netWorthRange: responses.ep_net_worth_range || null,
-    publicCompanyRole: responses.ep_public_company_exec === 'yes',
-    philanthropicVisibility: responses.ep_philanthropic_visibility === 'yes' || responses.ep_philanthropic_visibility === 'high',
-    hasKnownThreats: responses.ep_known_threats === 'yes' || responses.ep_known_threats === 'active',
-    threatPerceptionSelfRated: responses.ep_threat_perception ? parseInt(responses.ep_threat_perception) : null,
-    hasActiveAdversary: responses.ep_active_adversary === 'yes',
-    adversaryType: responses.ep_adversary_type || null,
+    publicExposureLevel: mapPublicExposure(getResponseValue(responses.ep_public_profile_level)),
+    mediaPresence: getResponseValue(responses.ep_media_coverage) ?? null,
+    industryCategory: getResponseValue(responses.ep_industry_sector) ?? null,
+    netWorthRange: getResponseValue(responses.ep_net_worth_range) ?? null,
+    publicCompanyRole: getResponseBool(responses.ep_public_company_exec) === true,
+    philanthropicVisibility: getResponseBool(responses.ep_philanthropic_visibility) === true || responseMatches(responses.ep_philanthropic_visibility, ['high']),
+    hasKnownThreats: getResponseBool(responses.ep_known_threats) === true || responseMatches(responses.ep_known_threats, ['active']),
+    threatPerceptionSelfRated: getResponseValue(responses.ep_threat_perception) ? parseInt(getResponseValue(responses.ep_threat_perception)!) : null,
+    hasActiveAdversary: getResponseBool(responses.ep_active_adversary) === true,
+    adversaryType: getResponseValue(responses.ep_adversary_type) ?? null,
     familyComposition: extractFamilyComposition(responses),
-    dependentsAtRisk: responses.ep_dependents_at_risk === 'yes' || responses.ep_minor_children === 'yes',
-    familyPublicExposure: responses.ep_family_public_exposure === 'yes' || responses.ep_family_public_exposure === 'high',
-    travelFrequency: mapTravelFrequency(responses.ep_travel_frequency),
-    internationalTravel: responses.ep_international_travel === 'yes' || responses.ep_international_travel === 'frequent',
+    dependentsAtRisk: getResponseBool(responses.ep_dependents_at_risk) === true || getResponseBool(responses.ep_minor_children) === true,
+    familyPublicExposure: getResponseBool(responses.ep_family_public_exposure) === true || responseMatches(responses.ep_family_public_exposure, ['high']),
+    travelFrequency: mapTravelFrequency(getResponseValue(responses.ep_travel_frequency)),
+    internationalTravel: getResponseBool(responses.ep_international_travel) === true || responseMatches(responses.ep_international_travel, ['frequent']),
     highRiskDestinations: extractHighRiskDestinations(responses),
     currentSecurityMeasures: extractCurrentMeasures(responses),
-    hasProtectionDetail: responses.ep_protection_detail === 'yes' || responses.ep_current_security_level === '24x7',
-    hasSecureResidence: responses.ep_residence_security_level === 'high' || responses.ep_residence_security_level === 'comprehensive',
-    hasSecureTransportation: responses.ep_vehicle_armored === 'yes' || responses.ep_secure_transportation === 'yes',
+    hasProtectionDetail: getResponseBool(responses.ep_protection_detail) === true || responseMatches(responses.ep_current_security_level, ['24x7']),
+    hasSecureResidence: responseMatches(responses.ep_residence_security_level, ['high', 'comprehensive']),
+    hasSecureTransportation: getResponseBool(responses.ep_vehicle_armored) === true || getResponseBool(responses.ep_secure_transportation) === true,
   };
 }
 
 export function buildContextTags(responses: InterviewResponses): ContextTags {
   return {
-    hasActiveThreat: responses.ep_known_threats === 'yes' || responses.ep_known_threats === 'active' || responses.ep_active_adversary === 'yes',
-    hasKnownAdversary: responses.ep_active_adversary === 'yes' || responses.ep_adversary_identified === 'yes',
-    hasPriorIncidents: responses.ep_prior_incidents === 'yes' || responses.ep_prior_incidents === 'multiple',
-    hasOnlineHarassment: responses.ep_online_harassment === 'yes' || responses.ep_cyber_threats === 'yes',
-    hasHighPublicProfile: ['very_high', 'high', 'celebrity', 'extensive'].includes(responses.ep_public_profile_level),
-    hasDigitalExposure: responses.ep_social_media_presence === 'active' || responses.ep_digital_footprint === 'significant',
-    hasPredictablePatterns: responses.ep_daily_routine_predictability === 'predictable' || responses.ep_daily_routine_predictability === 'very_predictable',
-    hasExposedFamily: responses.ep_family_public_exposure === 'yes' || responses.ep_family_public_exposure === 'high',
-    hasInternationalTravel: responses.ep_international_travel === 'yes' || responses.ep_international_travel === 'frequent',
-    hasTravelToHighRiskAreas: responses.ep_international_high_risk === 'yes' || responses.ep_international_high_risk === 'frequently',
-    hasExistingProtection: responses.ep_protection_detail === 'yes' || responses.ep_current_security_level === '24x7',
-    hasSecureResidence: responses.ep_residence_security_level === 'high' || responses.ep_residence_security_level === 'comprehensive',
-    hasSecureTransportation: responses.ep_vehicle_armored === 'yes' || responses.ep_secure_transportation === 'yes',
-    hasIncidentResponsePlan: responses.ep_incident_response_plan === 'yes' || responses.ep_emergency_protocols === 'yes',
-    requiresFamilyProtection: responses.ep_minor_children === 'yes' || responses.ep_dependents_at_risk === 'yes',
-    requiresDigitalProtection: responses.ep_social_media_presence === 'active' || responses.ep_online_harassment === 'yes',
-    requiresTravelSecurity: responses.ep_travel_frequency === 'frequent' || responses.ep_travel_frequency === 'constant' || responses.ep_international_high_risk === 'yes',
+    hasActiveThreat: getResponseBool(responses.ep_known_threats) === true || responseMatches(responses.ep_known_threats, ['active']) || getResponseBool(responses.ep_active_adversary) === true,
+    hasKnownAdversary: getResponseBool(responses.ep_active_adversary) === true || getResponseBool(responses.ep_adversary_identified) === true,
+    hasPriorIncidents: getResponseBool(responses.ep_prior_incidents) === true || responseMatches(responses.ep_prior_incidents, ['multiple']),
+    hasOnlineHarassment: getResponseBool(responses.ep_online_harassment) === true || getResponseBool(responses.ep_cyber_threats) === true,
+    hasHighPublicProfile: responseMatches(responses.ep_public_profile_level, ['very_high', 'high', 'celebrity', 'extensive']),
+    hasDigitalExposure: responseMatches(responses.ep_social_media_presence, ['active']) || responseMatches(responses.ep_digital_footprint, ['significant']),
+    hasPredictablePatterns: responseMatches(responses.ep_daily_routine_predictability, ['predictable', 'very_predictable']),
+    hasExposedFamily: getResponseBool(responses.ep_family_public_exposure) === true || responseMatches(responses.ep_family_public_exposure, ['high']),
+    hasInternationalTravel: getResponseBool(responses.ep_international_travel) === true || responseMatches(responses.ep_international_travel, ['frequent']),
+    hasTravelToHighRiskAreas: getResponseBool(responses.ep_international_high_risk) === true || responseMatches(responses.ep_international_high_risk, ['frequently']),
+    hasExistingProtection: getResponseBool(responses.ep_protection_detail) === true || responseMatches(responses.ep_current_security_level, ['24x7']),
+    hasSecureResidence: responseMatches(responses.ep_residence_security_level, ['high', 'comprehensive']),
+    hasSecureTransportation: getResponseBool(responses.ep_vehicle_armored) === true || getResponseBool(responses.ep_secure_transportation) === true,
+    hasIncidentResponsePlan: getResponseBool(responses.ep_incident_response_plan) === true || getResponseBool(responses.ep_emergency_protocols) === true,
+    requiresFamilyProtection: getResponseBool(responses.ep_minor_children) === true || getResponseBool(responses.ep_dependents_at_risk) === true,
+    requiresDigitalProtection: responseMatches(responses.ep_social_media_presence, ['active']) || getResponseBool(responses.ep_online_harassment) === true,
+    requiresTravelSecurity: responseMatches(responses.ep_travel_frequency, ['frequent', 'constant']) || getResponseBool(responses.ep_international_high_risk) === true,
   };
 }
 
@@ -460,15 +501,16 @@ export function extractRiskSignals(responses: InterviewResponses): RiskSignal[] 
   const signals: RiskSignal[] = [];
   
   for (const mapping of SIGNAL_MAPPINGS) {
-    const answer = responses[mapping.questionId];
-    if (answer && mapping.badAnswers.some(bad => 
-      typeof answer === 'string' && answer.toLowerCase().includes(bad.toLowerCase())
+    const rawAnswer = responses[mapping.questionId];
+    const answerValue = getResponseValue(rawAnswer);
+    if (answerValue && mapping.badAnswers.some(bad => 
+      answerValue.toLowerCase().includes(bad.toLowerCase())
     )) {
       signals.push({
         category: mapping.category,
         signal: mapping.signal,
         sourceQuestionId: mapping.questionId,
-        sourceAnswer: String(answer),
+        sourceAnswer: answerValue,
         severity: mapping.severity,
         affectedThreats: mapping.affectedThreats,
       });
