@@ -276,6 +276,14 @@ Your assessments must be:
 
 6. CONTROL SELECTION: When recommending controls, you MUST use ONLY the exact control names from the AVAILABLE CONTROLS list provided. Never invent control names.
 
+7. MEANINGFUL RATIONALES: All reasoning and rationale fields MUST be specific, actionable statements that:
+   - Reference specific interview findings (e.g., "Principal's daily commute via predictable route at 8:15am")
+   - Explain the cause-effect relationship (e.g., "because no counter-surveillance is in place")
+   - Provide actionable insight (e.g., "recommend varying departure times by 30+ minutes")
+   
+   BAD (generic): "High risk due to public profile"
+   GOOD (specific): "Principal's weekly media appearances at known studio locations create predictable patterns exploitable for ambush; no advance team currently assesses venues"
+
 SCORING GUIDE:
 - Threat Likelihood (T): 1=Highly Unlikely, 3=Possible, 5=Likely, 7=Probable, 10=Almost Certain
 - Vulnerability (V): 1=Fully Protected, 3=Adequate Controls, 5=Some Gaps, 7=Significant Gaps, 10=No Protection
@@ -422,31 +430,31 @@ ${availableControls}
 
 IMPORTANT: For priorityControls, you MUST use ONLY the exact control names from the AVAILABLE CONTROLS list above. Copy the names exactly as shown.
 
-Provide your assessment in the following JSON format:
+Provide your assessment in the following JSON format. ALL reasoning fields must cite specific interview findings - no generic statements.
 {
   "threatLikelihood": {
     "score": <1-10>,
     "label": "<descriptive label>",
-    "evidence": ["<specific finding 1>", "<specific finding 2>"],
-    "reasoning": "<explanation of score>",
+    "evidence": ["<specific interview finding 1>", "<specific interview finding 2>"],
+    "reasoning": "<1-2 sentences citing specific findings and explaining why they affect threat likelihood>",
     "confidence": "<high|medium|low>"
   },
   "vulnerability": {
     "score": <1-10>,
     "label": "<descriptive label>",
-    "controlGaps": ["<gap 1>", "<gap 2>"],
-    "existingControls": ["<control 1>", "<control 2>"],
-    "reasoning": "<explanation>",
+    "controlGaps": ["<specific missing protection>", "<specific missing protection>"],
+    "existingControls": ["<existing measure from interview>", "<existing measure from interview>"],
+    "reasoning": "<1-2 sentences explaining how specific gaps increase vulnerability>",
     "confidence": "<high|medium|low>"
   },
   "impact": {
     "score": <1-10>,
     "label": "<descriptive label>",
-    "personalImpact": "<description>",
-    "familyImpact": "<description>",
-    "financialImpact": "<description>",
-    "reputationalImpact": "<description>",
-    "reasoning": "<explanation>",
+    "personalImpact": "<specific consequence based on principal profile>",
+    "familyImpact": "<specific consequence based on family composition>",
+    "financialImpact": "<consequence based on net worth/industry>",
+    "reputationalImpact": "<consequence based on public exposure level>",
+    "reasoning": "<1-2 sentences explaining impact based on specific profile data>",
     "confidence": "<high|medium|low>"
   },
   "exposureFactor": {
@@ -456,18 +464,18 @@ Provide your assessment in the following JSON format:
     "digitalFootprintContribution": <0.0-1.0>,
     "travelContribution": <0.0-1.0>,
     "wealthContribution": <0.0-1.0>,
-    "reasoning": "<explanation>"
+    "reasoning": "<explain how specific visibility factors affect exposure>"
   },
   "priorityControls": [
     {
       "controlId": "<id>",
-      "controlName": "<name>",
+      "controlName": "<exact name from AVAILABLE CONTROLS>",
       "urgency": "<immediate|short_term|medium_term>",
-      "rationale": "<why this control>",
-      "estimatedCostRange": "<range>"
+      "rationale": "<2-3 sentences: what specific gap this addresses, how it mitigates this threat, why urgency level is appropriate>",
+      "estimatedCostRange": "<range from control list>"
     }
   ],
-  "scenarioDescription": "<2-3 sentence scenario description for reports>"
+  "scenarioDescription": "<2-3 sentence realistic scenario based on principal profile and identified vulnerabilities>"
 }`;
 }
 
@@ -622,6 +630,62 @@ async function assessThreatWithAI(
     if (!content) return null;
     
     const aiResponse = JSON.parse(content);
+    
+    // Validate and ENFORCE rationale quality - replace generic rationales with evidence-based fallbacks
+    const { principalProfile: pp, contextTags: ct } = context.mapperOutput;
+    
+    const enforceRationale = (field: string, text: string, fallbackContext: string, minWords: number = 10): string => {
+      if (!text) return fallbackContext;
+      const wordCount = text.split(/\s+/).length;
+      const hasSpecificTerms = /\b(principal|interview|measure|because|due to|based on|indicates|reveals|profile|exposure|security)\b/i.test(text);
+      const isGeneric = /^(high|low|medium|moderate)\s+(risk|level|profile)/i.test(text.trim());
+      const isValid = wordCount >= minWords && hasSpecificTerms && !isGeneric;
+      if (!isValid) {
+        console.log(`[EP-AI QUALITY] ${threat.id}.${field}: Replacing low-quality rationale (${wordCount} words)`);
+        return fallbackContext;
+      }
+      return text;
+    };
+    
+    // Build context-specific fallback text based on principal profile
+    const profileContext = `Based on principal's ${pp.publicExposureLevel || 'moderate'} public exposure` +
+      (pp.hasProtectionDetail ? '' : ' and lack of protection detail') +
+      (pp.hasSecureResidence ? '' : ', unsecured residence') +
+      (ct.hasDigitalExposure ? ', digital exposure' : '') +
+      (ct.hasPredictablePatterns ? ', predictable patterns' : '');
+    
+    // Enforce quality on key reasoning fields
+    if (aiResponse.threatLikelihood) {
+      aiResponse.threatLikelihood.reasoning = enforceRationale(
+        'threatLikelihood.reasoning',
+        aiResponse.threatLikelihood.reasoning,
+        `${profileContext}. Interview indicates ${aiResponse.threatLikelihood.evidence?.[0] || 'potential targeting factors'} warrant elevated threat assessment.`
+      );
+    }
+    if (aiResponse.vulnerability) {
+      aiResponse.vulnerability.reasoning = enforceRationale(
+        'vulnerability.reasoning', 
+        aiResponse.vulnerability.reasoning,
+        `Control gaps identified: ${aiResponse.vulnerability.controlGaps?.slice(0,2).join(', ') || 'protection measures insufficient'}. ${pp.currentSecurityMeasures.length > 0 ? `Existing measures (${pp.currentSecurityMeasures[0]}) provide partial coverage.` : 'No documented security measures in place.'}`
+      );
+    }
+    if (aiResponse.impact) {
+      aiResponse.impact.reasoning = enforceRationale(
+        'impact.reasoning',
+        aiResponse.impact.reasoning,
+        `Impact assessment based on principal's ${pp.netWorthRange || 'significant'} net worth, ${pp.publicExposureLevel || 'moderate'} public profile, and ${pp.dependentsAtRisk ? 'family members at risk' : 'individual exposure'}.`
+      );
+    }
+    
+    // Enforce quality on control rationales
+    for (const ctrl of aiResponse.priorityControls || []) {
+      ctrl.rationale = enforceRationale(
+        `priorityControls[${ctrl.controlName}].rationale`,
+        ctrl.rationale,
+        `Addresses ${threat.name} vulnerability by providing ${ctrl.controlName.toLowerCase().includes('monitor') ? 'detection and monitoring' : 'protection'} capabilities. Recommended based on identified control gaps and principal's exposure profile. ${ctrl.urgency === 'immediate' ? 'Immediate implementation advised due to current vulnerability level.' : 'Implementation timeline based on risk prioritization.'}`,
+        15
+      );
+    }
     
     // Debug: Log what AI returned for controls
     if (threat.id === 'kidnapping') {
