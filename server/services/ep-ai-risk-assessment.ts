@@ -257,6 +257,8 @@ Your assessments must be:
 
 5. CONSERVATIVE SCORING: When evidence is ambiguous, score toward higher risk. Executive protection errs on the side of caution.
 
+6. CONTROL SELECTION: When recommending controls, you MUST use ONLY the exact control names from the AVAILABLE CONTROLS list provided. Never invent control names.
+
 SCORING GUIDE:
 - Threat Likelihood (T): 1=Highly Unlikely, 3=Possible, 5=Likely, 7=Probable, 10=Almost Certain
 - Vulnerability (V): 1=Fully Protected, 3=Adequate Controls, 5=Some Gaps, 7=Significant Gaps, 10=No Protection
@@ -271,9 +273,73 @@ RISK CLASSIFICATION:
 
 Respond in valid JSON format only.`;
 
+// EP control categories for loading from database
+const EP_CONTROL_CATEGORIES = [
+  'Personal Protection',
+  'Residential Security', 
+  'Travel Security',
+  'Digital/OSINT Countermeasures',
+  'Family Protection',
+  'Emergency Preparedness'
+];
+
+// Cache for EP controls to avoid repeated DB queries
+let cachedEPControls: { id: string; name: string; estimatedCost: string | null; category: string }[] | null = null;
+
+async function loadEPControls(): Promise<typeof cachedEPControls> {
+  if (cachedEPControls) return cachedEPControls;
+  
+  try {
+    const controls = await db.select({
+      id: controlLibrary.id,
+      name: controlLibrary.name,
+      estimatedCost: controlLibrary.estimatedCost,
+      category: controlLibrary.category,
+    }).from(controlLibrary);
+    
+    // Filter to EP categories and deduplicate by name
+    const epControls = controls.filter(c => c.category && EP_CONTROL_CATEGORIES.includes(c.category));
+    const uniqueControls = new Map<string, typeof epControls[0]>();
+    for (const c of epControls) {
+      if (!uniqueControls.has(c.name)) {
+        uniqueControls.set(c.name, c);
+      }
+    }
+    
+    cachedEPControls = Array.from(uniqueControls.values());
+    console.log(`[EP-AI] Loaded ${cachedEPControls.length} unique EP controls from database`);
+    return cachedEPControls;
+  } catch (error) {
+    console.error('[EP-AI] Failed to load EP controls:', error);
+    return [];
+  }
+}
+
+function formatControlsForPrompt(controls: NonNullable<typeof cachedEPControls>): string {
+  if (!controls.length) return '';
+  
+  // Group by category
+  const byCategory = new Map<string, typeof controls>();
+  for (const c of controls) {
+    const cat = c.category || 'Other';
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat)!.push(c);
+  }
+  
+  let result = '\nAVAILABLE CONTROLS (use ONLY these exact names for recommendations):\n';
+  for (const [category, catControls] of Array.from(byCategory.entries())) {
+    result += `\n${category}:\n`;
+    for (const c of catControls) {
+      result += `- ${c.name} (${c.estimatedCost || 'Contact for quote'})\n`;
+    }
+  }
+  return result;
+}
+
 function buildThreatAssessmentPrompt(
   threat: typeof EP_THREATS[0],
-  context: EPAssessmentContext
+  context: EPAssessmentContext,
+  availableControls: string = ''
 ): string {
   const { mapperOutput } = context;
   const { principalProfile, contextTags, riskSignals, validation } = mapperOutput;
@@ -335,6 +401,9 @@ CRIME DATA CONTEXT:
 - Regional Crime Index: ${context.crimeData.regionalCrimeIndex || 'N/A'}
 - Violent Crime Rate: ${context.crimeData.violentCrimeRate || 'N/A'}
 ` : ''}
+${availableControls}
+
+IMPORTANT: For priorityControls, you MUST use ONLY the exact control names from the AVAILABLE CONTROLS list above. Copy the names exactly as shown.
 
 Provide your assessment in the following JSON format:
 {
@@ -507,13 +576,14 @@ function calculateAlgorithmicScore(
 
 async function assessThreatWithAI(
   threat: typeof EP_THREATS[0],
-  context: EPAssessmentContext
+  context: EPAssessmentContext,
+  availableControlsPrompt: string = ''
 ): Promise<EPThreatScore | null> {
   const openai = getOpenAI();
   if (!openai) return null;
   
   try {
-    const prompt = buildThreatAssessmentPrompt(threat, context);
+    const prompt = buildThreatAssessmentPrompt(threat, context, availableControlsPrompt);
     
     const response = await openai.chat.completions.create({
       model: AI_CONFIG.model,
@@ -579,13 +649,18 @@ export async function generateEPDashboard(
   
   console.log(`[EP-AI] Starting threat assessment for ${EP_THREATS.length} threats`);
   
+  // Load EP controls from database for AI to choose from
+  const epControls = await loadEPControls();
+  const availableControlsPrompt = formatControlsForPrompt(epControls || []);
+  console.log(`[EP-AI] Loaded ${epControls?.length || 0} controls for AI recommendations`);
+  
   const threatScores: EPThreatScore[] = [];
   let aiSuccessCount = 0;
   
   // Process threats in parallel for speed (with fallback to algorithmic)
   const threatPromises = EP_THREATS.map(async (threat, index) => {
     console.log(`[EP-AI] Assessing threat ${index + 1}/${EP_THREATS.length}: ${threat.id}`);
-    const aiScore = await assessThreatWithAI(threat, context);
+    const aiScore = await assessThreatWithAI(threat, context, availableControlsPrompt);
     return { threat, aiScore };
   });
   
@@ -656,39 +731,25 @@ export async function generateEPDashboard(
                                 c.urgency === 'short_term' ? 'moderate' as const : 'complex' as const,
     }));
 
-  // Look up costs from control_library for each control
-  const dbControls = await db.select({
-    name: controlLibrary.name,
-    estimatedCost: controlLibrary.estimatedCost,
-  }).from(controlLibrary);
-  
-  // Create a fuzzy lookup map - normalize names for matching
+  // Create cost lookup map from already-loaded EP controls
   const costLookup = new Map<string, string>();
-  for (const dbControl of dbControls) {
-    const normalizedName = dbControl.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    costLookup.set(normalizedName, dbControl.estimatedCost || 'N/A');
-    // Also store the exact name
-    costLookup.set(dbControl.name, dbControl.estimatedCost || 'N/A');
+  if (epControls) {
+    for (const c of epControls) {
+      costLookup.set(c.name, c.estimatedCost || 'N/A');
+      // Also store normalized version for fuzzy matching
+      const normalizedName = c.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      costLookup.set(normalizedName, c.estimatedCost || 'N/A');
+    }
   }
   
-  // Enrich controls with costs from database
+  // Enrich controls with costs (should be exact match since AI uses exact names)
   const prioritizedControls = sortedControls.map(c => {
-    // Try exact match first, then normalized match
+    // Try exact match first (AI should use exact names now)
     let cost = costLookup.get(c.controlName);
     if (!cost) {
+      // Fallback to normalized match
       const normalizedName = c.controlName.toLowerCase().replace(/[^a-z0-9]/g, '');
       cost = costLookup.get(normalizedName);
-    }
-    // Try partial matching if no exact match
-    if (!cost) {
-      const controlNameLower = c.controlName.toLowerCase();
-      for (const entry of Array.from(costLookup.entries())) {
-        const [key, value] = entry;
-        if (key.includes(controlNameLower) || controlNameLower.includes(key.toLowerCase().replace(/[^a-z0-9]/g, ''))) {
-          cost = value;
-          break;
-        }
-      }
     }
     return {
       ...c,
