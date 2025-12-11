@@ -13,7 +13,8 @@ import {
   siteIncidents,
   pointsOfInterest,
   crimeSources,
-  crimeObservations
+  crimeObservations,
+  executiveInterviewResponses
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import type { 
@@ -30,9 +31,13 @@ import type {
   CrimeDataSummary,
   SiteIncidentData,
   POIData,
-  CAPIndexUpload
+  CAPIndexUpload,
+  EPReportData,
+  EPThreatAssessment
 } from "../../types/report-data";
 import type { AssessmentType } from "../../types/report-recipe";
+import { generateEPDashboard, type EPDashboardOutput, type EPThreatScore } from "../ep-ai-risk-assessment";
+import { prepareForAIEngine } from "../ep-interview-mapper-v2";
 
 const TORCHSTONE_DOMAINS = [
   { id: "workplace-violence", name: "Workplace Violence", category: "Personnel" },
@@ -446,6 +451,203 @@ function mapPOIRisk(poiType: string): 'critical' | 'high' | 'medium' | 'low' | '
   return 'neutral';
 }
 
+// ===========================================
+// EP Report Data Assembly
+// Transforms AI assessment output to report format
+// ===========================================
+
+function mapEPThreatScoreToAssessment(score: EPThreatScore): EPThreatAssessment {
+  return {
+    threatId: score.threatId,
+    threatName: score.threatName,
+    category: score.category,
+    threatLikelihood: score.threatLikelihood,
+    vulnerability: score.vulnerability,
+    impact: score.impact,
+    exposureFactor: score.exposureFactor,
+    riskScore: score.riskScore,
+    scenarioDescription: score.scenarioDescription,
+    evidenceTrail: score.evidenceTrail,
+    priorityControls: score.priorityControls
+  };
+}
+
+function generateComponentNarrative(
+  componentType: 'threat' | 'vulnerability' | 'impact' | 'exposure',
+  scores: EPThreatScore[]
+): string {
+  const avgScore = scores.reduce((sum, s) => {
+    switch (componentType) {
+      case 'threat': return sum + s.threatLikelihood.score;
+      case 'vulnerability': return sum + s.vulnerability.score;
+      case 'impact': return sum + s.impact.score;
+      case 'exposure': return sum + s.exposureFactor.score;
+    }
+  }, 0) / scores.length;
+
+  const topReasons = scores
+    .filter(s => {
+      const score = componentType === 'threat' ? s.threatLikelihood.score :
+                    componentType === 'vulnerability' ? s.vulnerability.score :
+                    componentType === 'impact' ? s.impact.score :
+                    s.exposureFactor.score;
+      return score >= 6;
+    })
+    .slice(0, 3)
+    .map(s => {
+      switch (componentType) {
+        case 'threat': return s.threatLikelihood.reasoning;
+        case 'vulnerability': return s.vulnerability.reasoning;
+        case 'impact': return s.impact.reasoning;
+        case 'exposure': return s.exposureFactor.reasoning;
+      }
+    });
+
+  if (topReasons.length === 0) {
+    return `${componentType.charAt(0).toUpperCase() + componentType.slice(1)} factors are within acceptable parameters based on current assessment data.`;
+  }
+
+  return topReasons.join(' ');
+}
+
+async function buildEPReportData(
+  assessmentId: string,
+  assessment: any
+): Promise<EPReportData | undefined> {
+  try {
+    console.log(`[ReportDataAssembler] Building EP report data for assessment ${assessmentId}`);
+    
+    // Fetch interview responses
+    const interviewResponsesList = await db.select()
+      .from(executiveInterviewResponses)
+      .where(eq(executiveInterviewResponses.assessmentId, assessmentId));
+    
+    // Convert to response map
+    const interviewResponses: Record<string, any> = {};
+    for (const resp of interviewResponsesList) {
+      if (resp.yesNoResponse !== null) {
+        interviewResponses[resp.questionId] = resp.yesNoResponse;
+      } else if (resp.textResponse) {
+        try {
+          interviewResponses[resp.questionId] = JSON.parse(resp.textResponse);
+        } catch {
+          interviewResponses[resp.questionId] = resp.textResponse;
+        }
+      }
+    }
+    
+    // Merge epProfile if present
+    const epProfile = (assessment.epProfile as Record<string, any>) || {};
+    const mergedResponses = { ...interviewResponses, ...epProfile };
+    
+    if (Object.keys(mergedResponses).length < 5) {
+      console.log(`[ReportDataAssembler] Insufficient EP data for report (${Object.keys(mergedResponses).length} responses)`);
+      return undefined;
+    }
+    
+    // Prepare mapper output
+    const mapperOutput = prepareForAIEngine(
+      parseInt(assessmentId) || 0,
+      mergedResponses,
+      []
+    );
+    
+    // Generate dashboard output (includes AI assessment)
+    const dashboardOutput: EPDashboardOutput = await generateEPDashboard({
+      assessmentId,
+      mapperOutput
+    });
+    
+    // Transform to report format
+    const threatAssessments: EPThreatAssessment[] = dashboardOutput.threatMatrix.map(mapEPThreatScoreToAssessment);
+    
+    // Calculate component averages
+    const avgThreat = threatAssessments.reduce((sum, t) => sum + t.threatLikelihood.score, 0) / threatAssessments.length;
+    const avgVuln = threatAssessments.reduce((sum, t) => sum + t.vulnerability.score, 0) / threatAssessments.length;
+    const avgImpact = threatAssessments.reduce((sum, t) => sum + t.impact.score, 0) / threatAssessments.length;
+    const avgExposure = threatAssessments.reduce((sum, t) => sum + t.exposureFactor.score, 0) / threatAssessments.length;
+    
+    const epReportData: EPReportData = {
+      overallRiskScore: dashboardOutput.overviewMetrics.overallRiskScore,
+      riskClassification: dashboardOutput.overviewMetrics.riskClassification,
+      exposureFactor: dashboardOutput.overviewMetrics.exposureFactor,
+      aiConfidence: dashboardOutput.aiConfidence,
+      assessmentMode: dashboardOutput.mode,
+      
+      componentSummaries: {
+        threat: {
+          overallScore: Math.round(avgThreat * 10) / 10,
+          narrative: generateComponentNarrative('threat', dashboardOutput.threatMatrix)
+        },
+        vulnerability: {
+          overallScore: Math.round(avgVuln * 10) / 10,
+          narrative: generateComponentNarrative('vulnerability', dashboardOutput.threatMatrix)
+        },
+        impact: {
+          overallScore: Math.round(avgImpact * 10) / 10,
+          narrative: generateComponentNarrative('impact', dashboardOutput.threatMatrix)
+        },
+        exposure: {
+          overallScore: Math.round(avgExposure * 10) / 10,
+          narrative: generateComponentNarrative('exposure', dashboardOutput.threatMatrix)
+        }
+      },
+      
+      threatAssessments,
+      
+      sectionAssessments: mapperOutput.sectionSummaries.map(s => {
+        const keyFindings = s.riskSignals.map(rs => rs.signal);
+        const riskIndicators = s.riskSignals.filter(rs => rs.severity === 'critical_indicator' || rs.severity === 'concern').length;
+        return {
+          sectionId: s.sectionId,
+          sectionName: s.sectionName,
+          completionPercentage: s.completionPercentage,
+          riskIndicators,
+          keyFindings,
+          aiNarrative: keyFindings.length > 0 
+            ? `Assessment of ${s.sectionName} identified ${riskIndicators} risk indicators. ${keyFindings.slice(0, 2).join('. ')}.`
+            : `${s.sectionName} assessment is ${s.completionPercentage}% complete.`
+        };
+      }),
+      
+      prioritizedControls: dashboardOutput.prioritizedControls.map(c => ({
+        controlId: c.controlId,
+        controlName: c.controlName,
+        category: c.category,
+        urgency: c.urgency,
+        addressesThreats: c.addressesThreats,
+        rationale: c.rationale,
+        estimatedCost: c.estimatedCost
+      })),
+      
+      topRiskSignals: dashboardOutput.topRiskSignals.map(s => ({
+        signal: s.signal,
+        severity: s.severity,
+        sourceQuestionId: s.sourceQuestionId,
+        affectedThreats: s.affectedThreats
+      })),
+      
+      dataGaps: dashboardOutput.completionGaps.map(g => ({
+        section: g.section,
+        missingQuestions: g.missingQuestions,
+        impactOnAssessment: g.impactOnAssessment
+      }))
+    };
+    
+    console.log(`[ReportDataAssembler] EP report data built successfully:
+    - Threat Assessments: ${threatAssessments.length}
+    - Risk Score: ${epReportData.overallRiskScore}
+    - Classification: ${epReportData.riskClassification}
+    - AI Confidence: ${epReportData.aiConfidence}
+    - Prioritized Controls: ${epReportData.prioritizedControls.length}`);
+    
+    return epReportData;
+  } catch (error) {
+    console.error('[ReportDataAssembler] Error building EP report data:', error);
+    return undefined;
+  }
+}
+
 function buildRiskContext(
   crimeData: CrimeDataSummary,
   siteIncidents: SiteIncidentData[],
@@ -592,6 +794,12 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
     geographicIntelligence = await fetchGeographicIntelligence(assessment.siteId, assessmentId);
   }
 
+  // Build EP-specific report data if this is an executive protection assessment
+  let epReportData: EPReportData | undefined;
+  if (assessmentType === 'executive-protection') {
+    epReportData = await buildEPReportData(assessmentId, assessment);
+  }
+
   const reportData: ReportDataPackage = {
     assessmentId,
     assessmentType,
@@ -605,7 +813,8 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
     interviewFindings: mappedInterviewFindings,
     recommendations,
     riskScores,
-    geographicIntelligence
+    geographicIntelligence,
+    epReportData
   };
 
   console.log(`[ReportDataAssembler] Data assembled successfully:
@@ -615,7 +824,8 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
   - Site Walk Findings: ${siteWalkFindings.length}
   - Recommendations: ${recommendations.length}
   - Overall Risk Level: ${riskScores.riskLevel}
-  - Geographic Intelligence: ${geographicIntelligence ? 'included' : 'not available'}`);
+  - Geographic Intelligence: ${geographicIntelligence ? 'included' : 'not available'}
+  - EP Report Data: ${epReportData ? `included (${epReportData.threatAssessments.length} threats, ${epReportData.aiConfidence} confidence)` : 'not applicable'}`);
 
   return reportData;
 }

@@ -45,6 +45,13 @@ interface EPDashboardData {
     controlGaps: number;
   };
   
+  componentSummaries?: {
+    threat: { overallScore: number; narrative: string; };
+    vulnerability: { overallScore: number; narrative: string; };
+    impact: { overallScore: number; narrative: string; };
+    exposure: { overallScore: number; narrative: string; };
+  };
+  
   principalSummary?: {
     name: string | null;
     publicExposure: string | null;
@@ -58,12 +65,14 @@ interface EPDashboardData {
     threatId: string;
     threatName: string;
     category: string;
-    threatLikelihood: { score: number; label: string; evidence: string[]; };
-    vulnerability: { score: number; label: string; controlGaps: string[]; existingControls: string[]; };
-    impact: { score: number; label: string; };
-    exposureFactor: { score: number; label: string; };
+    threatLikelihood: { score: number; label: string; evidence: string[]; reasoning?: string; };
+    vulnerability: { score: number; label: string; controlGaps: string[]; existingControls: string[]; reasoning?: string; };
+    impact: { score: number; label: string; reasoning?: string; };
+    exposureFactor: { score: number; label: string; reasoning?: string; };
     riskScore: { raw: number; normalized: number; classification: string; };
     scenarioDescription: string;
+    evidenceTrail?: string[];
+    confidence?: 'high' | 'medium' | 'low';
     priorityControls: { controlId: string; controlName: string; urgency: string; rationale: string; }[];
   }[];
   
@@ -82,6 +91,7 @@ interface EPDashboardData {
     addressesThreats: string[];
     rationale: string;
     implementationDifficulty: string;
+    estimatedCost?: string;
   }[];
   
   completionGaps?: {
@@ -95,6 +105,9 @@ interface EPDashboardData {
     action: string;
     rationale: string;
   }[];
+  
+  aiConfidence?: 'high' | 'medium' | 'low';
+  assessmentMode?: 'ai' | 'hybrid' | 'fallback';
 }
 
 // Helper functions for styling
@@ -343,19 +356,23 @@ export default function ExecutiveDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
+            {/* Overall Risk & AI Confidence */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="md:col-span-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Overall Risk Score</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-4xl font-bold ${getRiskColor(dashboardData.overviewMetrics!.riskClassification)}`}>
+                  <div className="flex items-baseline gap-3">
+                    <span className={`text-5xl font-bold ${getRiskColor(dashboardData.overviewMetrics!.riskClassification)}`}>
                       {dashboardData.overviewMetrics!.overallRiskScore}
                     </span>
-                    <Badge variant={getRiskBadgeVariant(dashboardData.overviewMetrics!.riskClassification)}>
-                      {dashboardData.overviewMetrics!.riskClassification.toUpperCase()}
-                    </Badge>
+                    <div>
+                      <Badge variant={getRiskBadgeVariant(dashboardData.overviewMetrics!.riskClassification)} className="text-sm">
+                        {dashboardData.overviewMetrics!.riskClassification.toUpperCase()}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">T×V×I×E Score</p>
+                    </div>
                   </div>
                   <Progress 
                     value={dashboardData.overviewMetrics!.overallRiskScore} 
@@ -370,38 +387,138 @@ export default function ExecutiveDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-primary">
-                      {dashboardData.overviewMetrics!.exposureFactor.toFixed(1)}x
+                    <span className="text-3xl font-bold text-primary">
+                      {dashboardData.overviewMetrics!.exposureFactor.toFixed(1)}
                     </span>
+                    <span className="text-lg text-muted-foreground">/5</span>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Visibility multiplier
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Public visibility multiplier
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Threat Summary</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">AI Confidence</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Critical</span>
-                      <Badge variant="destructive">{dashboardData.overviewMetrics!.criticalThreats}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">High</span>
-                      <Badge variant="secondary">{dashboardData.overviewMetrics!.highThreats}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Total</span>
-                      <Badge variant="outline">{dashboardData.overviewMetrics!.threatCount}</Badge>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={dashboardData.aiConfidence === 'high' ? 'default' : 'secondary'}>
+                      {(dashboardData.aiConfidence || 'medium').toUpperCase()}
+                    </Badge>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {dashboardData.assessmentMode === 'ai' ? 'Full AI Analysis' : 
+                     dashboardData.assessmentMode === 'hybrid' ? 'Hybrid Analysis' : 'Algorithmic'}
+                  </p>
                 </CardContent>
               </Card>
             </div>
+
+            {/* T×V×I×E Component Cards with AI Narratives */}
+            {dashboardData.componentSummaries && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-l-4 border-l-red-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Target className="h-4 w-4 text-red-500" />
+                      Threat (T)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.threat.overallScore.toFixed(1)}</span>
+                      <span className="text-sm text-muted-foreground">/10</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3">
+                      {dashboardData.componentSummaries.threat.narrative}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-orange-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-500" />
+                      Vulnerability (V)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.vulnerability.overallScore.toFixed(1)}</span>
+                      <span className="text-sm text-muted-foreground">/10</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3">
+                      {dashboardData.componentSummaries.vulnerability.narrative}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-yellow-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-yellow-500" />
+                      Impact (I)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.impact.overallScore.toFixed(1)}</span>
+                      <span className="text-sm text-muted-foreground">/10</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3">
+                      {dashboardData.componentSummaries.impact.narrative}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-500" />
+                      Exposure (E)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.exposure.overallScore.toFixed(1)}</span>
+                      <span className="text-sm text-muted-foreground">/5</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3">
+                      {dashboardData.componentSummaries.exposure.narrative}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Threat Summary */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Threat Scenario Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div className="p-3 rounded-lg bg-red-500/10">
+                    <p className="text-2xl font-bold text-red-500">{dashboardData.overviewMetrics!.criticalThreats}</p>
+                    <p className="text-xs text-muted-foreground">Critical</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-orange-500/10">
+                    <p className="text-2xl font-bold text-orange-500">{dashboardData.overviewMetrics!.highThreats}</p>
+                    <p className="text-xs text-muted-foreground">High</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-yellow-500/10">
+                    <p className="text-2xl font-bold text-yellow-600">{(dashboardData.overviewMetrics!.threatCount - dashboardData.overviewMetrics!.criticalThreats - dashboardData.overviewMetrics!.highThreats)}</p>
+                    <p className="text-xs text-muted-foreground">Medium/Low</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-2xl font-bold">{dashboardData.overviewMetrics!.threatCount}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Principal Summary */}
             {dashboardData.principalSummary && (
@@ -507,40 +624,113 @@ export default function ExecutiveDashboard() {
           {/* Threats Tab */}
           <TabsContent value="threats" className="space-y-4">
             {dashboardData.threatMatrix && dashboardData.threatMatrix.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {dashboardData.threatMatrix.map((threat, i) => (
-                  <Card key={threat.threatId || i}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
+                  <Card key={threat.threatId || i} className="overflow-hidden">
+                    <CardHeader className="pb-3 bg-muted/30">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div>
-                          <CardTitle className="text-base">{threat.threatName}</CardTitle>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            {threat.threatName}
+                            {threat.confidence && (
+                              <Badge variant="outline" className="text-xs">
+                                {threat.confidence} confidence
+                              </Badge>
+                            )}
+                          </CardTitle>
                           <CardDescription>{threat.category}</CardDescription>
                         </div>
-                        <Badge variant={getRiskBadgeVariant(threat.riskScore.classification)}>
-                          Score: {threat.riskScore.normalized}
+                        <Badge variant={getRiskBadgeVariant(threat.riskScore.classification)} className="text-sm">
+                          {threat.riskScore.classification.toUpperCase()} ({threat.riskScore.normalized})
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">{threat.scenarioDescription}</p>
-                      <div className="grid grid-cols-4 gap-2 text-center text-sm">
-                        <div className="p-2 rounded bg-muted">
-                          <p className="font-semibold">{threat.threatLikelihood.score}</p>
-                          <p className="text-xs text-muted-foreground">Threat</p>
+                    <CardContent className="pt-4">
+                      <p className="text-sm text-muted-foreground mb-4">{threat.scenarioDescription}</p>
+                      
+                      {/* T×V×I×E Component Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-red-600">Threat</span>
+                            <span className="text-lg font-bold">{threat.threatLikelihood.score}</span>
+                          </div>
+                          {threat.threatLikelihood.reasoning && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.threatLikelihood.reasoning}</p>
+                          )}
                         </div>
-                        <div className="p-2 rounded bg-muted">
-                          <p className="font-semibold">{threat.vulnerability.score}</p>
-                          <p className="text-xs text-muted-foreground">Vulnerability</p>
+                        <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-orange-600">Vulnerability</span>
+                            <span className="text-lg font-bold">{threat.vulnerability.score}</span>
+                          </div>
+                          {threat.vulnerability.reasoning && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.vulnerability.reasoning}</p>
+                          )}
                         </div>
-                        <div className="p-2 rounded bg-muted">
-                          <p className="font-semibold">{threat.impact.score}</p>
-                          <p className="text-xs text-muted-foreground">Impact</p>
+                        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-yellow-600">Impact</span>
+                            <span className="text-lg font-bold">{threat.impact.score}</span>
+                          </div>
+                          {threat.impact.reasoning && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.impact.reasoning}</p>
+                          )}
                         </div>
-                        <div className="p-2 rounded bg-muted">
-                          <p className="font-semibold">{threat.exposureFactor.score}</p>
-                          <p className="text-xs text-muted-foreground">Exposure</p>
+                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-blue-600">Exposure</span>
+                            <span className="text-lg font-bold">{threat.exposureFactor.score}</span>
+                          </div>
+                          {threat.exposureFactor.reasoning && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.exposureFactor.reasoning}</p>
+                          )}
                         </div>
                       </div>
+                      
+                      {/* Evidence Trail */}
+                      {threat.evidenceTrail && threat.evidenceTrail.length > 0 && (
+                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Evidence Trail
+                          </p>
+                          <ul className="space-y-1">
+                            {threat.evidenceTrail.slice(0, 5).map((evidence, j) => (
+                              <li 
+                                key={`${threat.threatId}-evidence-${j}`} 
+                                data-testid={`text-evidence-${threat.threatId}-${j}`}
+                                className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2"
+                              >
+                                <ChevronRight className="h-3 w-3 mt-0.5 shrink-0" />
+                                {evidence}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {/* Control Gaps */}
+                      {threat.vulnerability.controlGaps && threat.vulnerability.controlGaps.length > 0 && (
+                        <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                          <p className="text-xs font-semibold mb-2 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Control Gaps Identified
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {threat.vulnerability.controlGaps.slice(0, 4).map((gap, j) => (
+                              <Badge 
+                                key={`${threat.threatId}-gap-${j}`} 
+                                data-testid={`badge-control-gap-${threat.threatId}-${j}`}
+                                variant="outline" 
+                                className="text-xs"
+                              >
+                                {gap}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -548,7 +738,7 @@ export default function ExecutiveDashboard() {
             ) : (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  No threat data available
+                  No threat data available. Run AI analysis to generate threat assessments.
                 </CardContent>
               </Card>
             )}
@@ -557,30 +747,64 @@ export default function ExecutiveDashboard() {
           {/* Controls Tab */}
           <TabsContent value="controls" className="space-y-4">
             {dashboardData.prioritizedControls && dashboardData.prioritizedControls.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {dashboardData.prioritizedControls.map((control, i) => (
-                  <Card key={control.controlId || i}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Lock className="h-4 w-4" />
-                            {control.controlName}
-                          </CardTitle>
-                          <CardDescription>{control.category}</CardDescription>
+                  <Card key={control.controlId || i} className="overflow-hidden">
+                    <CardHeader className="pb-3 bg-muted/30">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                            {i + 1}
+                          </div>
+                          <div>
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Lock className="h-4 w-4" />
+                              {control.controlName}
+                            </CardTitle>
+                            <CardDescription>{control.category}</CardDescription>
+                          </div>
                         </div>
-                        <Badge className={getUrgencyColor(control.urgency)}>
-                          {control.urgency}
+                        <Badge 
+                          variant={control.urgency === 'immediate' ? 'destructive' : 
+                                   control.urgency === 'short_term' ? 'secondary' : 'outline'}
+                          className="text-xs"
+                        >
+                          {control.urgency.replace('_', ' ').toUpperCase()}
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-2">{control.rationale}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>Difficulty: {control.implementationDifficulty}</span>
-                        <Separator orientation="vertical" className="h-3" />
-                        <span>Addresses {control.addressesThreats?.length || 0} threats</span>
+                    <CardContent className="pt-4">
+                      <p className="text-sm mb-4">{control.rationale}</p>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-xs text-muted-foreground mb-1">Difficulty</p>
+                          <p className="font-medium">{control.implementationDifficulty}</p>
+                        </div>
+                        {control.estimatedCost && (
+                          <div className="p-2 rounded bg-muted/50">
+                            <p className="text-xs text-muted-foreground mb-1">Est. Cost</p>
+                            <p className="font-medium">{control.estimatedCost}</p>
+                          </div>
+                        )}
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-xs text-muted-foreground mb-1">Threats Addressed</p>
+                          <p className="font-medium">{control.addressesThreats?.length || 0}</p>
+                        </div>
                       </div>
+                      
+                      {control.addressesThreats && control.addressesThreats.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs text-muted-foreground mb-2">Addresses Threats:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {control.addressesThreats.slice(0, 5).map((threat, j) => (
+                              <Badge key={j} variant="outline" className="text-xs">
+                                {threat}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -588,7 +812,7 @@ export default function ExecutiveDashboard() {
             ) : (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  No control recommendations available
+                  No control recommendations available. Run AI analysis to generate recommendations.
                 </CardContent>
               </Card>
             )}

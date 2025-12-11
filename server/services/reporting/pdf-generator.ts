@@ -11,9 +11,11 @@ import { assessments, riskScenarios } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { renderReportHTML } from '../../templates/master-report';
 import { renderExecutiveSummaryHTML } from '../../templates/executive-summary-template';
+import { renderEPReportHTML } from '../../templates/ep-report-template';
 import fs from 'fs/promises';
 import path from 'path';
 import { calculateTemplateMetrics } from './template-metrics';
+import { assembleReportData } from './report-data-assembler';
 import type { GeneratedReportResult } from './report-generator';
 
 /**
@@ -48,33 +50,119 @@ export async function generateAssessmentReport(
       throw new Error('Assessment not found or access denied');
     }
     
-    // 2. Fetch risk scenarios ordered by severity
-    const risks = await db
-      .select()
-      .from(riskScenarios)
-      .where(eq(riskScenarios.assessmentId, assessmentId))
-      .orderBy(desc(riskScenarios.inherentRisk));
+    // 2. Determine assessment type from surveyParadigm
+    const isExecutiveProtection = assessment.surveyParadigm === 'executive' || 
+                                   assessment.surveyParadigm === 'executive-protection';
     
-    // 3. Fetch photo evidence (if table exists)
-    // TODO: Re-enable when photoEvidence table is available
-    const photos: any[] = [];
+    let htmlContent: string;
     
-    // 4. Use AI-generated Executive Summary from assessment record
-    const executiveSummary = assessment.executiveSummary || await fetchExecutiveSummary(assessmentId);
+    // 3. Route to appropriate template based on assessment type
+    if (isExecutiveProtection) {
+      console.log('📋 Using MacQuarrie EP report template...');
+      
+      // Assemble full EP report data package
+      const reportDataPackage = await assembleReportData(assessmentId, userId);
+      
+      if (!reportDataPackage.epReportData) {
+        throw new Error('Executive Protection report data could not be assembled. Please ensure the principal profile and interview questionnaire are complete before generating the report.');
+      }
+      
+      // Comprehensive validation: EP reports require complete AI analysis data
+      const epData = reportDataPackage.epReportData;
+      const validationErrors: string[] = [];
+      
+      // 1. Validate threat domains exist with actual threat assessments
+      if (!epData.threatDomains || epData.threatDomains.length === 0) {
+        validationErrors.push('No threat domains generated');
+      } else {
+        const allThreats = epData.threatDomains.flatMap(d => d.threats || []);
+        const threatsWithData = allThreats.filter(t => t.riskScore && t.riskScore.normalized > 0);
+        
+        if (threatsWithData.length === 0) {
+          validationErrors.push('No threat risk scores calculated');
+        }
+        
+        // Check for narrative content (at least some threats should have reasoning)
+        const threatsWithNarratives = threatsWithData.filter(t => 
+          (t.threatLikelihood?.reasoning && t.threatLikelihood.reasoning.length > 10) ||
+          (t.vulnerability?.reasoning && t.vulnerability.reasoning.length > 10)
+        );
+        if (threatsWithNarratives.length < Math.min(3, threatsWithData.length)) {
+          validationErrors.push('Insufficient AI narrative content for threats');
+        }
+        
+        // Check for evidence trails on high-risk threats
+        const highRiskThreats = threatsWithData.filter(t => t.riskScore.normalized >= 50);
+        const highRiskWithEvidence = highRiskThreats.filter(t => 
+          t.evidenceTrail && t.evidenceTrail.length > 0
+        );
+        if (highRiskThreats.length > 0 && highRiskWithEvidence.length === 0) {
+          validationErrors.push('High-risk threats missing evidence trails');
+        }
+        
+        // Check for priority controls on assessed threats
+        const threatsWithControls = threatsWithData.filter(t => 
+          t.priorityControls && t.priorityControls.length > 0
+        );
+        if (threatsWithData.length > 3 && threatsWithControls.length < 2) {
+          validationErrors.push('Insufficient control recommendations generated');
+        }
+      }
+      
+      // 2. Validate component summaries exist for T×V×I×E breakdown
+      if (!epData.componentSummaries) {
+        validationErrors.push('T×V×I×E component summaries not generated');
+      } else {
+        const requiredComponents = ['threat', 'vulnerability', 'impact', 'exposure'];
+        const missingComponents = requiredComponents.filter(c => 
+          !epData.componentSummaries![c as keyof typeof epData.componentSummaries]
+        );
+        if (missingComponents.length > 0) {
+          validationErrors.push(`Missing component summaries: ${missingComponents.join(', ')}`);
+        }
+      }
+      
+      // 3. Validate principal profile exists
+      if (!epData.principalProfile || !epData.principalProfile.name) {
+        validationErrors.push('Principal profile not configured');
+      }
+      
+      if (validationErrors.length > 0) {
+        console.error('❌ EP Report validation failed:', validationErrors);
+        throw new Error(`Executive Protection report cannot be generated: ${validationErrors.join('; ')}. Please complete the interview questionnaire and run AI analysis from the dashboard.`);
+      }
+      
+      console.log('✅ EP report data validation passed');
+      
+      htmlContent = renderEPReportHTML({
+        reportData: reportDataPackage,
+        assessorName: 'Security Consultant',
+        organizationName: undefined
+      });
+    } else {
+      // Standard facility assessment template
+      console.log('📋 Using standard facility report template...');
+      
+      const risks = await db
+        .select()
+        .from(riskScenarios)
+        .where(eq(riskScenarios.assessmentId, assessmentId))
+        .orderBy(desc(riskScenarios.inherentRisk));
+      
+      const photos: any[] = [];
+      const executiveSummary = assessment.executiveSummary || await fetchExecutiveSummary(assessmentId);
+      const templateMetrics = calculateTemplateMetrics(assessment, risks);
+      
+      htmlContent = await renderReportHTML({
+        assessment,
+        risks,
+        photos,
+        executiveSummary,
+        templateMetrics
+      });
+    }
     
-    // 5. Calculate template-specific metrics
-    const templateMetrics = calculateTemplateMetrics(assessment, risks);
-    
-    // 6. Render HTML report with all data
-    const htmlContent = await renderReportHTML({
-      assessment,
-      risks,
-      photos,
-      executiveSummary,
-      templateMetrics
-    });
-    
-    // 7. Generate PDF using Puppeteer
+    // 4. Generate PDF using Puppeteer
     const pdfPath = await convertHTMLToPDF(htmlContent, assessmentId);
     
     console.log(`✅ PDF report generated successfully: ${pdfPath}`);
@@ -207,7 +295,7 @@ async function convertHTMLToPDF(htmlContent: string, assessmentId: string): Prom
  */
 export async function generateReportPDF(
   report: GeneratedReportResult,
-  templateType: 'executive-summary' | 'comprehensive'
+  templateType: 'executive-summary' | 'comprehensive' | 'executive-protection'
 ): Promise<Buffer> {
   console.log(`📄 Generating PDF using ${templateType} template...`);
   
@@ -216,6 +304,16 @@ export async function generateReportPDF(
   switch (templateType) {
     case 'executive-summary':
       htmlContent = renderExecutiveSummaryHTML(report);
+      break;
+    case 'executive-protection':
+      if (!report.dataSnapshot) {
+        throw new Error('Executive Protection report requires full data package');
+      }
+      htmlContent = renderEPReportHTML({
+        reportData: report.dataSnapshot,
+        assessorName: 'Security Consultant',
+        organizationName: undefined
+      });
       break;
     case 'comprehensive':
       const assessment = {

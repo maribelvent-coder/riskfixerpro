@@ -16,6 +16,7 @@ export interface ReportDataPackage {
   riskScores: RiskScoreData;
   tcorData?: TCORData;
   geographicIntelligence?: GeographicIntelligence;
+  epReportData?: EPReportData;
 }
 
 export interface GeographicIntelligence {
@@ -256,5 +257,145 @@ export interface TCORData {
     category: string;
     amount: number;
     percentage: number;
+  }[];
+}
+
+// ===========================================
+// EXECUTIVE PROTECTION RICH DATA TYPES
+// For MacQuarrie-grade reports with evidence chains
+// ===========================================
+
+export interface EPThreatAssessment {
+  threatId: string;
+  threatName: string;
+  category: string;
+  
+  // T×V×I×E Component Scores with Evidence
+  threatLikelihood: {
+    score: number;
+    label: string;
+    evidence: string[];
+    reasoning: string;
+    confidence: 'high' | 'medium' | 'low';
+  };
+  
+  vulnerability: {
+    score: number;
+    label: string;
+    controlGaps: string[];
+    existingControls: string[];
+    reasoning: string;
+    confidence: 'high' | 'medium' | 'low';
+  };
+  
+  impact: {
+    score: number;
+    label: string;
+    personalImpact: string;
+    familyImpact: string;
+    financialImpact: string;
+    reputationalImpact: string;
+    reasoning: string;
+    confidence: 'high' | 'medium' | 'low';
+  };
+  
+  exposureFactor: {
+    score: number;
+    label: string;
+    publicProfileContribution: number;
+    digitalFootprintContribution: number;
+    travelContribution: number;
+    wealthContribution: number;
+    reasoning: string;
+  };
+  
+  // Overall Risk Score
+  riskScore: {
+    raw: number;
+    normalized: number;
+    classification: 'critical' | 'high' | 'medium' | 'low';
+  };
+  
+  // AI-generated scenario narrative
+  scenarioDescription: string;
+  
+  // Audit trail for report
+  evidenceTrail: string[];
+  
+  // Priority controls with rationale
+  priorityControls: {
+    controlId: string;
+    controlName: string;
+    urgency: 'immediate' | 'short_term' | 'medium_term';
+    rationale: string;
+    estimatedCostRange?: string;
+  }[];
+}
+
+export interface EPReportData {
+  // Overall assessment metrics
+  overallRiskScore: number;
+  riskClassification: 'critical' | 'high' | 'medium' | 'low';
+  exposureFactor: number;
+  aiConfidence: 'high' | 'medium' | 'low' | 'fallback';
+  assessmentMode: 'ai' | 'algorithmic' | 'hybrid';
+  
+  // T×V×I×E Component Summaries (aggregated narratives)
+  componentSummaries: {
+    threat: {
+      overallScore: number;
+      narrative: string;
+    };
+    vulnerability: {
+      overallScore: number;
+      narrative: string;
+    };
+    impact: {
+      overallScore: number;
+      narrative: string;
+    };
+    exposure: {
+      overallScore: number;
+      narrative: string;
+    };
+  };
+  
+  // Full threat assessment matrix
+  threatAssessments: EPThreatAssessment[];
+  
+  // Section-by-section interview findings
+  sectionAssessments: {
+    sectionId: string;
+    sectionName: string;
+    completionPercentage: number;
+    riskIndicators: number;
+    keyFindings: string[];
+    aiNarrative: string;
+  }[];
+  
+  // Prioritized controls across all threats
+  prioritizedControls: {
+    controlId: string;
+    controlName: string;
+    category: string;
+    urgency: 'immediate' | 'short_term' | 'medium_term';
+    addressesThreats: string[];
+    rationale: string;
+    estimatedCost?: string;
+  }[];
+  
+  // Key risk signals from interview
+  topRiskSignals: {
+    signal: string;
+    severity: 'indicator' | 'concern' | 'critical_indicator';
+    sourceQuestionId: string;
+    affectedThreats: string[];
+  }[];
+  
+  // Data gaps affecting assessment
+  dataGaps: {
+    section: string;
+    missingQuestions: string[];
+    impactOnAssessment: string;
   }[];
 }

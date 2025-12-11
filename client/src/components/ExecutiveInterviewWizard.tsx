@@ -140,6 +140,9 @@ export default function ExecutiveInterviewWizard({
           "responses",
         ],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/assessments", assessmentId, "ep-dashboard"],
+      });
     },
     onError: () => {
       toast({

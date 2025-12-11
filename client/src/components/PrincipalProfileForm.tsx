@@ -94,6 +94,7 @@ export default function PrincipalProfileForm({ assessmentId, onComplete }: Princ
       setHasChanges(false);
       queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId] });
       queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "ep-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "ep-dashboard"] });
       onComplete?.();
     },
     onError: () => {
