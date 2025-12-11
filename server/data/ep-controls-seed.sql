@@ -721,4 +721,4 @@ INSERT INTO control_library (
   true
 )
 
-ON CONFLICT (name) DO NOTHING;
+;
