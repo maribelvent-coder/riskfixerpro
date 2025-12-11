@@ -200,7 +200,7 @@ export default function ExecutiveDashboard() {
           <div>
             <h1 className="text-xl md:text-2xl font-semibold">Executive Protection Dashboard</h1>
             <p className="text-sm text-muted-foreground">
-              AI-Powered Risk Assessment using T×V×I×E Framework
+              6-Layer AI Framework: Logic, Math &amp; Standards-Based Analysis
             </p>
           </div>
         </div>
@@ -218,8 +218,8 @@ export default function ExecutiveDashboard() {
             </Button>
           )}
           <Badge variant="outline" className="gap-1.5">
-            <User className="h-3.5 w-3.5" />
-            EP Framework
+            <Shield className="h-3.5 w-3.5" />
+            6-Layer AI
           </Badge>
         </div>
       </div>
@@ -251,37 +251,86 @@ export default function ExecutiveDashboard() {
       {/* Main Content */}
       {isAnalyzing ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin mb-4" />
-            <h3 className="text-lg font-medium mb-2">Analyzing Threats...</h3>
-            <p className="text-muted-foreground">
-              AI is evaluating threat scenarios using the T×V×I×E framework based on your interview responses.
-            </p>
+          <CardContent className="py-8">
+            <div className="flex flex-col items-center text-center mb-6">
+              <Loader2 className="h-10 w-10 text-primary animate-spin mb-3" />
+              <h3 className="text-lg font-medium">Running 6-Layer AI Analysis</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                Processing your interview data through our rigorous framework rooted in logic, math, and industry standards
+              </p>
+            </div>
+            
+            {/* 6-Layer Framework Description */}
+            <div className="max-w-lg mx-auto">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                {[
+                  { num: 1, name: "Data Collection" },
+                  { num: 2, name: "T×V×I×E Formula" },
+                  { num: 3, name: "Industry Standards" },
+                  { num: 4, name: "Threat Intelligence" },
+                  { num: 5, name: "Control Mapping" },
+                  { num: 6, name: "Quantified Scoring" },
+                ].map((item) => (
+                  <div key={item.num} className="flex items-center gap-2 p-2 rounded bg-muted/50">
+                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">
+                      {item.num}
+                    </span>
+                    <span className="truncate">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
       ) : !hasResults ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">Ready for Analysis</h3>
-            <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              {interviewCompletion < 20 
-                ? "Complete the Executive Interview to provide data for AI analysis."
-                : "Run the AI analysis to generate your executive protection risk assessment based on the interview responses."}
-            </p>
-            <Button 
-              onClick={handleRunAnalysis} 
-              disabled={interviewCompletion < 10}
-              data-testid="button-run-analysis"
-            >
-              <Shield className="h-4 w-4 mr-2" />
-              Run AI Analysis
-            </Button>
-            {interviewCompletion < 10 && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Minimum 10% interview completion required
+          <CardContent className="py-8">
+            <div className="text-center mb-6">
+              <Target className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+              <h3 className="text-lg font-medium mb-1">Ready for 6-Layer Analysis</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                {interviewCompletion < 20 
+                  ? "Complete the Executive Interview to provide data for AI analysis."
+                  : "Run the AI to process your data through our rigorous 6-layer framework."}
               </p>
-            )}
+            </div>
+            
+            {/* 6-Layer Preview */}
+            <div className="max-w-lg mx-auto mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                {[
+                  { num: 1, name: "Data Collection" },
+                  { num: 2, name: "Methodology (T×V×I×E)" },
+                  { num: 3, name: "Industry Standards" },
+                  { num: 4, name: "Threat Intelligence" },
+                  { num: 5, name: "Control Mapping" },
+                  { num: 6, name: "Quantified Scoring" },
+                ].map((item) => (
+                  <div key={item.num} className="flex items-center gap-2 p-2 rounded bg-muted/50">
+                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">
+                      {item.num}
+                    </span>
+                    <span className="truncate">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <Button 
+                onClick={handleRunAnalysis} 
+                disabled={interviewCompletion < 10}
+                data-testid="button-run-analysis"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Run 6-Layer AI Analysis
+              </Button>
+              {interviewCompletion < 10 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Minimum 10% interview completion required
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -415,6 +464,44 @@ export default function ExecutiveDashboard() {
                 </CardContent>
               </Card>
             )}
+
+            {/* 6-Layer Methodology Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <ListChecks className="h-4 w-4" />
+                  Assessment Methodology: 6-Layer AI Framework
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground mb-3">
+                  This assessment was processed through our rigorous 6-layer framework:
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  {[
+                    { num: 1, name: "Data Collection", desc: "Interview responses" },
+                    { num: 2, name: "T×V×I×E Formula", desc: "Risk calculation" },
+                    { num: 3, name: "Industry Standards", desc: "ASIS/CPP guidelines" },
+                    { num: 4, name: "Threat Intelligence", desc: "EP threat patterns" },
+                    { num: 5, name: "Control Mapping", desc: "Gap analysis" },
+                    { num: 6, name: "Quantified Output", desc: "Recommendations" },
+                  ].map((layer) => (
+                    <div key={layer.num} className="flex items-start gap-2 p-2 rounded bg-muted/50">
+                      <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0 mt-0.5">
+                        {layer.num}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{layer.name}</p>
+                        <p className="text-muted-foreground truncate">{layer.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  Evidence-based scoring rooted in logic, math, and industry standards
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Threats Tab */}

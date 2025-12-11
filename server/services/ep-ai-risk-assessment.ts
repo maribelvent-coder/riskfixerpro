@@ -1,17 +1,35 @@
 /**
  * RiskFixer Executive Protection AI Risk Assessment Engine
  * 
- * 6-Layer AI Framework Implementation:
- * - Layer 1: Data Mapper (ep-interview-mapper-v2.ts) - prepares structured data
- * - Layer 2: AI Engine (THIS FILE) - performs all scoring calculations
+ * 6-LAYER AI FRAMEWORK IMPLEMENTATION:
  * 
- * Executive Protection uses T×V×I×E formula:
- * - T (Threat Likelihood): 1-10 scale
- * - V (Vulnerability): 1-10 scale  
- * - I (Impact): 1-10 scale
- * - E (Exposure Factor): 1-5 scale (unique to EP)
+ * Layer 1 - DATA COLLECTION
+ *   Interview responses & observations (ep-interview-mapper-v2.ts)
+ *   Principal profile, context tags, risk signals extracted
  * 
- * Risk Score = (T × V × I × E) normalized to 0-100
+ * Layer 2 - METHODOLOGY FRAMEWORK
+ *   Executive Protection T×V×I×E Formula:
+ *   - T (Threat Likelihood): 1-10 scale
+ *   - V (Vulnerability): 1-10 scale  
+ *   - I (Impact): 1-10 scale
+ *   - E (Exposure Factor): 1-5 scale (unique to EP)
+ *   Risk Score = (T × V × I × E) normalized to 0-100
+ * 
+ * Layer 3 - INDUSTRY STANDARDS
+ *   ASIS International guidelines, CPP certification standards,
+ *   EP industry best practices integrated into AI prompts
+ * 
+ * Layer 4 - THREAT INTELLIGENCE
+ *   12 EP-specific threats (kidnapping, stalking, home invasion, etc.)
+ *   Context-aware threat likelihood based on principal profile
+ * 
+ * Layer 5 - CONTROL MAPPING
+ *   Gap analysis comparing existing controls to required protections
+ *   Priority controls mapped to specific threats with rationale
+ * 
+ * Layer 6 - QUANTIFIED SCORING & OUTPUT
+ *   Evidence-based risk scores with confidence levels
+ *   Prioritized recommendations with implementation guidance
  * 
  * DESIGN PHILOSOPHY:
  * - Evidence-based: Every score cites specific interview findings
