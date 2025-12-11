@@ -585,6 +585,11 @@ async function assessThreatWithAI(
   try {
     const prompt = buildThreatAssessmentPrompt(threat, context, availableControlsPrompt);
     
+    // Debug: Log control prompt section
+    if (threat.id === 'kidnapping') {
+      console.log('[EP-AI DEBUG] Control prompt section (first 800 chars):', availableControlsPrompt.substring(0, 800));
+    }
+    
     const response = await openai.chat.completions.create({
       model: AI_CONFIG.model,
       messages: [
@@ -600,6 +605,11 @@ async function assessThreatWithAI(
     if (!content) return null;
     
     const aiResponse = JSON.parse(content);
+    
+    // Debug: Log what AI returned for controls
+    if (threat.id === 'kidnapping') {
+      console.log('[EP-AI DEBUG] AI returned controls:', JSON.stringify(aiResponse.priorityControls?.map((c: any) => c.controlName)));
+    }
     
     const rawScore = aiResponse.threatLikelihood.score * 
                      aiResponse.vulnerability.score * 
