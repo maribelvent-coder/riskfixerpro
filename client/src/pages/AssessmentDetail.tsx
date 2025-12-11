@@ -234,6 +234,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
     enabled: !!assessmentId
   });
 
+  // Fetch site data if assessment has a siteId
+  const { data: siteData } = useQuery<{ id: string; name: string }>({
+    queryKey: ["/api/sites", assessmentData?.siteId],
+    enabled: !!assessmentData?.siteId
+  });
+
   // Update assessment mutation
   const updateAssessmentMutation = useMutation({
     mutationFn: async (updateData: Partial<Assessment>) => {
@@ -693,6 +699,12 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
             
             {/* Meta Row */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:text-xs text-muted-foreground">
+              {siteData?.name && (
+                <div className="flex items-center min-w-0">
+                  <Building2 className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span className="truncate max-w-[120px] sm:max-w-none font-medium text-foreground">{siteData.name}</span>
+                </div>
+              )}
               <div className="flex items-center min-w-0">
                 <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
                 <span className="truncate max-w-[120px] sm:max-w-none">{assessmentData.location}</span>
