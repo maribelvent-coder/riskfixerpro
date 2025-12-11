@@ -5,7 +5,7 @@ import { openaiService } from "./openai-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
 import { db } from "./db";
-import { assessments, riskScenarios, sites } from "@shared/schema";
+import { assessments, riskScenarios, sites, templateQuestions, users } from "@shared/schema";
 import { TenantStorage } from "./tenant-storage";
 import {
   attachTenantContext,
@@ -2066,6 +2066,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching templates:", error);
       res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
+  // Get template questions by template type with optional prefix filter
+  app.get("/api/template-questions/:templateType", async (req, res) => {
+    try {
+      const { templateType } = req.params;
+      const { prefix } = req.query;
+
+      // Normalize template type (handle underscore vs hyphen)
+      const normalizedType = templateType.replace(/_/g, "-");
+
+      // Query template questions directly by template_id
+      const questions = await db
+        .select({
+          id: templateQuestions.id,
+          questionId: templateQuestions.questionId,
+          category: templateQuestions.category,
+          question: templateQuestions.question,
+          type: templateQuestions.type,
+          options: templateQuestions.options,
+          orderIndex: templateQuestions.orderIndex
+        })
+        .from(templateQuestions)
+        .where(eq(templateQuestions.templateId, normalizedType))
+        .orderBy(templateQuestions.orderIndex);
+
+      // Filter by prefix if provided
+      const filteredQuestions = prefix
+        ? questions.filter(q => q.questionId?.startsWith(prefix as string))
+        : questions;
+
+      res.json(filteredQuestions);
+    } catch (error) {
+      console.error("Error fetching template questions:", error);
+      res.status(500).json({ error: "Failed to fetch template questions" });
     }
   });
 
@@ -5738,6 +5774,56 @@ The facility should prioritize addressing critical risks immediately, particular
     },
   );
 
+  // EP Principal Profile Routes - Store/retrieve ep_ profile responses
+  
+  // Get EP principal profile data
+  app.get(
+    "/api/assessments/:id/ep-profile",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const assessment = await storage.getAssessment(id);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+        res.json(assessment.epProfile || {});
+      } catch (error) {
+        console.error("Error fetching EP profile:", error);
+        res.status(500).json({ error: "Failed to fetch EP profile" });
+      }
+    },
+  );
+  
+  // Save EP principal profile data
+  app.put(
+    "/api/assessments/:id/ep-profile",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { profile } = req.body;
+        
+        if (!profile || typeof profile !== 'object') {
+          return res.status(400).json({ error: "Profile data required" });
+        }
+        
+        const updated = await storage.updateAssessment(id, {
+          epProfile: profile as any
+        });
+        
+        if (!updated) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+        
+        res.json({ success: true, profile: updated.epProfile });
+      } catch (error) {
+        console.error("Error saving EP profile:", error);
+        res.status(500).json({ error: "Failed to save EP profile" });
+      }
+    },
+  );
+
   // EP Interview Risk Calculation Routes (using ep-interview-mapper)
   
   // Get EP threats list
@@ -5835,11 +5921,19 @@ The facility should prioritize addressing critical risks immediately, particular
         
         const { interviewResponses, attachments = [] } = validated.data;
         
+        // Fetch epProfile from assessment and merge with interview responses
+        const assessment = await storage.getAssessment(id);
+        const epProfile = (assessment?.epProfile as Record<string, any>) || {};
+        
+        // Merge epProfile into interviewResponses (profile overrides if both exist)
+        const mergedResponses = { ...interviewResponses, ...epProfile };
+        console.log(`[EP-Generate] Merged ${Object.keys(epProfile).length} profile fields with interview responses`);
+        
         // STEP 1: Prepare data using v2 mapper (NO SCORING - data prep only)
         console.log(`[EP-Generate] Preparing interview data for assessment ${assessmentId}`);
         const mapperOutput: EPMapperOutput = prepareEPForAIEngine(
           assessmentId,
-          interviewResponses,
+          mergedResponses,
           attachments
         );
         

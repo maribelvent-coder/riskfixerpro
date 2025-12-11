@@ -31,7 +31,8 @@ import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
 import OfficeDashboard from "@/pages/assessments/OfficeDashboard";
 import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database, UserCheck, Pencil } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database, UserCheck, Pencil, Eye } from "lucide-react";
+import PrincipalProfileForm from "@/components/PrincipalProfileForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -439,12 +440,14 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
         return {
           tabs: [
             { id: "ep-interview", label: "Executive Interview", icon: MessageSquare },
+            { id: "ep-profile", label: "Principal Profile", icon: Eye },
             { id: "ep-physical", label: "Physical Security", icon: Building },
             { id: "executive", label: "EP Dashboard", icon: UserCheck },
             { id: "reports", label: "AI Reports", icon: FileText }
           ],
           phases: [
             { label: "Interview", completed: false },
+            { label: "Profile", completed: false },
             { label: "Physical Security", completed: false },
             { label: "Analysis", completed: false },
             { label: "Reports", completed: false }
@@ -1021,6 +1024,16 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
               </CardHeader>
             </Card>
             <ExecutiveInterviewTabs 
+              assessmentId={assessmentId}
+              onComplete={() => setActiveTab('ep-profile')}
+            />
+          </TabsContent>
+        )}
+
+        {/* EP Principal Profile Tab - Security professional's assessment of principal exposure */}
+        {isEPAssessment && (
+          <TabsContent value="ep-profile" className="space-y-4">
+            <PrincipalProfileForm
               assessmentId={assessmentId}
               onComplete={() => setActiveTab('ep-physical')}
             />
