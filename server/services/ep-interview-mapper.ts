@@ -32,12 +32,12 @@ export interface EPInterviewRiskMapping {
 }
 
 export interface EPCalculatedRiskInputs {
-  threatLikelihood: number;
-  vulnerability: number;
-  impact: number;
-  exposure: number;
-  inherentRisk: number;
-  normalizedRisk: number;
+  threatLikelihood: number;  // 1-10 (EP uses 1-10 scale)
+  vulnerability: number;     // 1-10
+  impact: number;            // 1-10
+  exposure: number;          // 1-5 (EP-specific multiplier)
+  inherentRisk: number;      // T × V × I × E (1-5000 theoretical max)
+  normalizedRisk: number;    // Normalized to 0-100 scale
   riskLevel: 'critical' | 'high' | 'medium' | 'low';
   suggestedControls: string[];
   riskFactorCount: number;
@@ -312,6 +312,9 @@ export const EP_THREAT_CONTROL_MAPPING: Record<string, string[]> = {
 // HELPER FUNCTIONS
 // ============================================================================
 
+/**
+ * Check if a response string matches a risk indicator (case-insensitive partial match)
+ */
 function responseMatchesIndicator(response: any, indicator: string): boolean {
   if (typeof response === 'string') {
     return response.toLowerCase().includes(indicator.toLowerCase());
@@ -324,6 +327,9 @@ function responseMatchesIndicator(response: any, indicator: string): boolean {
   return false;
 }
 
+/**
+ * Check if response equals specific value
+ */
 function responseEquals(response: any, value: string): boolean {
   if (typeof response === 'string') {
     return response === value;
@@ -334,6 +340,9 @@ function responseEquals(response: any, value: string): boolean {
   return false;
 }
 
+/**
+ * Check if multi-select response includes value
+ */
 function responseIncludes(response: any, value: string): boolean {
   if (Array.isArray(response)) {
     return response.includes(value);
@@ -341,6 +350,9 @@ function responseIncludes(response: any, value: string): boolean {
   return false;
 }
 
+/**
+ * Classify risk level based on normalized risk score (0-100)
+ */
 export function classifyRiskLevel(normalizedRisk: number): 'critical' | 'high' | 'medium' | 'low' {
   if (normalizedRisk >= 75) return 'critical';
   if (normalizedRisk >= 50) return 'high';
@@ -348,10 +360,38 @@ export function classifyRiskLevel(normalizedRisk: number): 'critical' | 'high' |
   return 'low';
 }
 
+/**
+ * Convert numeric likelihood score (1-10) to text category
+ */
+function classifyLikelihood(score: number): string {
+  if (score >= 8) return 'Almost Certain';
+  if (score >= 6) return 'Likely';
+  if (score >= 4) return 'Possible';
+  if (score >= 2) return 'Unlikely';
+  return 'Rare';
+}
+
+/**
+ * Convert numeric impact score (1-10) to text category
+ */
+function classifyImpact(score: number): string {
+  if (score >= 8) return 'Catastrophic';
+  if (score >= 6) return 'Major';
+  if (score >= 4) return 'Moderate';
+  if (score >= 2) return 'Minor';
+  return 'Insignificant';
+}
+
+/**
+ * Get the threat definition by ID
+ */
 function getThreatById(threatId: string) {
   return EP_THREATS.find(t => t.id === threatId);
 }
 
+/**
+ * Clamp a value between min and max
+ */
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -360,13 +400,25 @@ function clamp(value: number, min: number, max: number): number {
 // EXPOSURE FACTOR CALCULATION (EP-SPECIFIC)
 // ============================================================================
 
+/**
+ * Calculate Exposure Factor (E) - unique to Executive Protection
+ * 
+ * Exposure combines:
+ * - Public profile level
+ * - Pattern predictability  
+ * - Social media activity
+ * - Media coverage
+ * - Digital footprint
+ * 
+ * Scale: 1.0 - 5.0
+ */
 export function calculateExposureFactor(responses: InterviewResponses): number {
-  if (!responses || typeof responses !== 'object') {
-    return 2.5; // Safe default for missing responses
-  }
-  
-  let exposureScore = 1.0;
+  let exposureScore = 1.0; // Baseline - minimum exposure
 
+  // =========================================================================
+  // PUBLIC PROFILE COMPONENT (up to +2.0)
+  // =========================================================================
+  
   const profileLevel = responses.ep_public_profile_level;
   if (profileLevel === 'very_high') {
     exposureScore += 2.0;
@@ -377,7 +429,12 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
   } else if (profileLevel === 'low') {
     exposureScore += 0.5;
   }
+  // 'private' adds nothing
 
+  // =========================================================================
+  // PATTERN PREDICTABILITY COMPONENT (up to +1.5)
+  // =========================================================================
+  
   const routinePredictability = responses.ep_daily_routine_predictability;
   if (routinePredictability === 'highly_predictable') {
     exposureScore += 1.5;
@@ -386,9 +443,11 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
   } else if (routinePredictability === 'variable') {
     exposureScore += 0.5;
   } else if (routinePredictability === 'randomized') {
-    exposureScore -= 0.3;
+    exposureScore -= 0.3; // Active counter-measure reduces exposure
   }
+  // 'unpredictable' adds nothing
 
+  // Commute pattern amplifier
   const commutePattern = responses.ep_commute_pattern;
   if (commutePattern === 'same_route_same_time') {
     exposureScore += 0.5;
@@ -396,6 +455,10 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
     exposureScore += 0.3;
   }
 
+  // =========================================================================
+  // SOCIAL MEDIA COMPONENT (up to +1.0)
+  // =========================================================================
+  
   const socialMedia = responses.ep_social_media_usage;
   if (socialMedia === 'very_active_public') {
     exposureScore += 1.0;
@@ -404,11 +467,17 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
   } else if (socialMedia === 'moderate_friends_only') {
     exposureScore += 0.3;
   }
+  // 'minimal_private' and 'no_social_media' add nothing
 
+  // Real-time location posting amplifier
   if (responses.ep_social_media_opsec === 'yes') {
     exposureScore += 0.3;
   }
 
+  // =========================================================================
+  // MEDIA COVERAGE COMPONENT (up to +0.5)
+  // =========================================================================
+  
   const mediaCoverage = responses.ep_media_coverage;
   if (mediaCoverage === 'extensive') {
     exposureScore += 0.5;
@@ -418,6 +487,10 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
     exposureScore += 0.1;
   }
 
+  // =========================================================================
+  // DIGITAL FOOTPRINT COMPONENT (up to +0.5)
+  // =========================================================================
+  
   const publicRecords = responses.ep_public_records_exposure || [];
   if (responseIncludes(publicRecords, 'home_address')) {
     exposureScore += 0.3;
@@ -426,6 +499,7 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
     exposureScore += 0.2;
   }
 
+  // Family digital exposure adds to overall exposure
   const familyDigital = responses.ep_family_digital_exposure;
   if (familyDigital === 'high_exposure') {
     exposureScore += 0.3;
@@ -433,6 +507,10 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
     exposureScore += 0.15;
   }
 
+  // =========================================================================
+  // TRAVEL ARRANGEMENTS PUBLICITY (up to +0.3)
+  // =========================================================================
+  
   const travelPublicity = responses.ep_travel_arrangements_publicity;
   if (travelPublicity === 'public_calendar') {
     exposureScore += 0.3;
@@ -440,6 +518,7 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
     exposureScore += 0.2;
   }
 
+  // Cap exposure factor at 5.0
   return clamp(exposureScore, 1.0, 5.0);
 }
 
@@ -447,6 +526,10 @@ export function calculateExposureFactor(responses: InterviewResponses): number {
 // THREAT LIKELIHOOD CALCULATION
 // ============================================================================
 
+/**
+ * Calculate threat likelihood (1-10) based on interview responses
+ * Higher score = more likely to occur
+ */
 export function calculateThreatLikelihood(
   responses: InterviewResponses,
   threatId: string
@@ -454,6 +537,10 @@ export function calculateThreatLikelihood(
   const threat = getThreatById(threatId);
   let likelihood = threat?.baselineThreat || 4;
 
+  // =========================================================================
+  // FACTOR 1: KNOWN THREATS / INCIDENT HISTORY (most important)
+  // =========================================================================
+  
   const knownThreats = responses.ep_known_threats;
   if (knownThreats === 'yes_recent') {
     likelihood += 3;
@@ -463,6 +550,10 @@ export function calculateThreatLikelihood(
     likelihood += 1;
   }
 
+  // =========================================================================
+  // FACTOR 2: NET WORTH (affects financially-motivated threats)
+  // =========================================================================
+  
   const netWorth = responses.ep_net_worth_range;
   const financialThreats = ['kidnapping_abduction', 'extortion_blackmail', 'home_invasion'];
   
@@ -476,6 +567,10 @@ export function calculateThreatLikelihood(
     }
   }
 
+  // =========================================================================
+  // FACTOR 3: PUBLIC PROFILE (affects visibility-related threats)
+  // =========================================================================
+  
   const profileLevel = responses.ep_public_profile_level;
   const visibilityThreats = ['stalking_surveillance', 'doxxing_privacy_breach', 'reputational_attack', 'protest_demonstration_targeting'];
   
@@ -487,6 +582,10 @@ export function calculateThreatLikelihood(
     }
   }
 
+  // =========================================================================
+  // FACTOR 4: CONTROVERSIAL INVOLVEMENT
+  // =========================================================================
+  
   const controversial = responses.ep_controversial_involvement;
   const controversyThreats = ['workplace_violence', 'stalking_surveillance', 'extortion_blackmail', 'protest_demonstration_targeting', 'reputational_attack'];
   
@@ -498,19 +597,30 @@ export function calculateThreatLikelihood(
     }
   }
 
+  // =========================================================================
+  // FACTOR 5: INDUSTRY SECTOR
+  // =========================================================================
+  
   const industry = responses.ep_industry_sector;
+  
+  // Entertainment/Political/Legal = elevated stalking, workplace violence
   if (threatId === 'stalking_surveillance' || threatId === 'workplace_violence') {
     if (industry === 'entertainment' || industry === 'political' || industry === 'legal') {
       likelihood += 1;
     }
   }
   
+  // Finance = elevated extortion, cyber targeting
   if (threatId === 'extortion_blackmail' || threatId === 'cyber_targeting_social_engineering') {
     if (industry === 'finance' || industry === 'technology') {
       likelihood += 1;
     }
   }
 
+  // =========================================================================
+  // FACTOR 6: INTERNATIONAL TRAVEL (affects kidnapping, travel incidents)
+  // =========================================================================
+  
   const intlTravel = responses.ep_international_travel;
   const travelThreats = ['kidnapping_abduction', 'travel_security_incidents'];
   
@@ -522,7 +632,12 @@ export function calculateThreatLikelihood(
     }
   }
 
+  // =========================================================================
+  // FACTOR 7: FAMILY COMPOSITION (affects family targeting)
+  // =========================================================================
+  
   const familyMembers = responses.ep_family_members || [];
+  
   if (threatId === 'family_member_targeting' || threatId === 'kidnapping_abduction') {
     if (responseIncludes(familyMembers, 'children_school_age')) {
       likelihood += 2;
@@ -531,7 +646,12 @@ export function calculateThreatLikelihood(
     }
   }
 
+  // =========================================================================
+  // FACTOR 8: WORKPLACE INCIDENT HISTORY
+  // =========================================================================
+  
   const workplaceHistory = responses.ep_workplace_threat_history;
+  
   if (threatId === 'workplace_violence') {
     if (workplaceHistory === 'yes_recent') {
       likelihood += 3;
@@ -542,17 +662,22 @@ export function calculateThreatLikelihood(
     }
   }
 
-  const socialMediaUsage = responses.ep_social_media_usage;
+  // =========================================================================
+  // FACTOR 9: SOCIAL MEDIA EXPOSURE
+  // =========================================================================
+  
+  const socialMedia = responses.ep_social_media_usage;
   const socialThreats = ['stalking_surveillance', 'doxxing_privacy_breach', 'cyber_targeting_social_engineering'];
   
   if (socialThreats.includes(threatId)) {
-    if (socialMediaUsage === 'very_active_public') {
+    if (socialMedia === 'very_active_public') {
       likelihood += 2;
-    } else if (socialMediaUsage === 'active_public') {
+    } else if (socialMedia === 'active_public') {
       likelihood += 1;
     }
   }
 
+  // Cap at 10
   return clamp(likelihood, 1, 10);
 }
 
@@ -560,28 +685,33 @@ export function calculateThreatLikelihood(
 // VULNERABILITY CALCULATION
 // ============================================================================
 
+/**
+ * Calculate vulnerability score (1-10) based on interview responses
+ * Higher score = more vulnerable
+ */
 export function calculateVulnerability(
   responses: InterviewResponses,
   threatId: string
 ): number {
-  let vulnerability = 5;
+  let vulnerability = 5; // Start at baseline (moderate)
   let riskFactorCount = 0;
 
-  // Security posture (affects all threats)
+  // =========================================================================
+  // SECTION 1: SECURITY POSTURE (affects all threats)
+  // =========================================================================
+  
   const securityLevel = responses.ep_current_security_level;
   if (securityLevel === 'none') {
     riskFactorCount += 3;
   } else if (securityLevel === 'minimal') {
     riskFactorCount += 2;
-  } else if (securityLevel === 'moderate') {
-    riskFactorCount += 1;
   } else if (securityLevel === '24x7_detail') {
     riskFactorCount -= 2;
   } else if (securityLevel === 'comprehensive') {
     riskFactorCount -= 1;
   }
 
-  // Threat perception
+  // Complacency factor
   const threatPerception = responses.ep_threat_perception;
   if (threatPerception === 'not_concerned') {
     riskFactorCount += 2;
@@ -589,28 +719,28 @@ export function calculateVulnerability(
     riskFactorCount += 1;
   }
 
-  // Residential security
-  const residentialThreats = ['home_invasion', 'stalking_surveillance', 'family_member_targeting'];
-  if (residentialThreats.includes(threatId)) {
-    const visibility = responses.ep_residence_visibility;
-    if (visibility === 'highly_visible') {
-      riskFactorCount += 2;
-    } else if (visibility === 'somewhat_visible') {
-      riskFactorCount += 1;
-    } else if (visibility === 'completely_secluded') {
-      riskFactorCount -= 1;
-    }
-
+  // =========================================================================
+  // SECTION 2: RESIDENCE SECURITY (home invasion, family targeting)
+  // =========================================================================
+  
+  const residenceThreats = ['home_invasion', 'family_member_targeting', 'stalking_surveillance'];
+  
+  if (residenceThreats.includes(threatId)) {
+    // Perimeter security
     const perimeter = responses.ep_residence_perimeter_security || [];
     if (responseIncludes(perimeter, 'none')) {
       riskFactorCount += 3;
-    } else if (responseIncludes(perimeter, 'fence_basic') && !responseIncludes(perimeter, 'intrusion_detection')) {
+    } else if (responseIncludes(perimeter, 'fence_basic')) {
       riskFactorCount += 1;
     }
-    if (responseIncludes(perimeter, 'gate_manned') || responseIncludes(perimeter, 'intrusion_detection')) {
+    if (responseIncludes(perimeter, 'gate_manned')) {
+      riskFactorCount -= 2;
+    }
+    if (responseIncludes(perimeter, 'intrusion_detection')) {
       riskFactorCount -= 1;
     }
 
+    // Alarm system
     const alarm = responses.ep_residence_alarm_system;
     if (alarm === 'none') {
       riskFactorCount += 3;
@@ -620,6 +750,7 @@ export function calculateVulnerability(
       riskFactorCount -= 1;
     }
 
+    // Safe room
     const safeRoom = responses.ep_safe_room;
     if (safeRoom === 'no') {
       riskFactorCount += 2;
@@ -627,25 +758,44 @@ export function calculateVulnerability(
       riskFactorCount -= 1;
     }
 
+    // CCTV coverage
     const cctv = responses.ep_residence_cctv || [];
     if (responseIncludes(cctv, 'none')) {
       riskFactorCount += 3;
     } else if (responseIncludes(cctv, 'doorbell_camera') && cctv.length === 1) {
       riskFactorCount += 1;
     }
-    if (responseIncludes(cctv, 'offsite_monitoring') || responseIncludes(cctv, 'analytics')) {
+    if (responseIncludes(cctv, 'offsite_monitoring')) {
       riskFactorCount -= 1;
     }
 
+    // Police response time
     const policeTime = responses.ep_police_response_time;
     if (policeTime === 'over_15_min' || policeTime === 'unknown') {
       riskFactorCount += 2;
+    } else if (policeTime === 'under_5_min') {
+      riskFactorCount -= 1;
+    }
+
+    // Residence visibility
+    const visibility = responses.ep_residence_visibility;
+    if (visibility === 'highly_visible') {
+      riskFactorCount += 2;
+    } else if (visibility === 'somewhat_visible') {
+      riskFactorCount += 1;
+    } else if (visibility === 'completely_secluded') {
+      riskFactorCount -= 1;
     }
   }
 
-  // Pattern predictability
-  const patternThreats = ['ambush_attack', 'kidnapping_abduction', 'stalking_surveillance'];
+  // =========================================================================
+  // SECTION 3: PATTERN PREDICTABILITY (kidnapping, ambush, stalking)
+  // =========================================================================
+  
+  const patternThreats = ['kidnapping_abduction', 'ambush_attack', 'stalking_surveillance'];
+  
   if (patternThreats.includes(threatId)) {
+    // Daily routine predictability
     const routine = responses.ep_daily_routine_predictability;
     if (routine === 'highly_predictable') {
       riskFactorCount += 3;
@@ -657,6 +807,7 @@ export function calculateVulnerability(
       riskFactorCount -= 2;
     }
 
+    // Commute pattern
     const commute = responses.ep_commute_pattern;
     if (commute === 'same_route_same_time') {
       riskFactorCount += 3;
@@ -665,10 +816,32 @@ export function calculateVulnerability(
     } else if (commute === 'driver_service') {
       riskFactorCount -= 1;
     }
+
+    // Frequent locations
+    const frequentLocations = responses.ep_frequent_locations;
+    if (frequentLocations === 'yes_very_regular') {
+      riskFactorCount += 2;
+    } else if (frequentLocations === 'yes_but_varied') {
+      riskFactorCount += 1;
+    }
+
+    // Children's schedule
+    const childSchedule = responses.ep_children_schedule;
+    if (childSchedule === 'highly_predictable') {
+      riskFactorCount += 2;
+    } else if (childSchedule === 'somewhat_predictable') {
+      riskFactorCount += 1;
+    } else if (childSchedule === 'secure_transport') {
+      riskFactorCount -= 1;
+    }
   }
 
-  // Workplace security
+  // =========================================================================
+  // SECTION 4: WORKPLACE SECURITY
+  // =========================================================================
+  
   if (threatId === 'workplace_violence') {
+    // Access control
     const accessControl = responses.ep_workplace_access_control;
     if (accessControl === 'open_public') {
       riskFactorCount += 3;
@@ -678,6 +851,7 @@ export function calculateVulnerability(
       riskFactorCount -= 1;
     }
 
+    // Security staff
     const securityStaff = responses.ep_workplace_security_staff;
     if (securityStaff === 'none') {
       riskFactorCount += 2;
@@ -686,11 +860,26 @@ export function calculateVulnerability(
     } else if (securityStaff === 'executive_protection_available') {
       riskFactorCount -= 1;
     }
+
+    // Emergency procedures
+    const emergencyProc = responses.ep_workplace_emergency_procedures;
+    if (emergencyProc === 'no_procedures') {
+      riskFactorCount += 2;
+    } else if (emergencyProc === 'exists_unfamiliar') {
+      riskFactorCount += 1;
+    } else if (emergencyProc === 'personal_evacuation_plan') {
+      riskFactorCount -= 1;
+    }
   }
 
-  // Travel & transportation
+  // =========================================================================
+  // SECTION 5: TRAVEL & TRANSPORTATION
+  // =========================================================================
+  
   const travelThreats = ['kidnapping_abduction', 'ambush_attack', 'travel_security_incidents'];
+  
   if (travelThreats.includes(threatId)) {
+    // Vehicle type
     const vehicleType = responses.ep_vehicle_type;
     if (vehicleType === 'personal_luxury_conspicuous') {
       riskFactorCount += 2;
@@ -700,6 +889,7 @@ export function calculateVulnerability(
       riskFactorCount -= 1;
     }
 
+    // Vehicle security features
     const vehicleSecurity = responses.ep_vehicle_security_features || [];
     if (responseIncludes(vehicleSecurity, 'none')) {
       riskFactorCount += 2;
@@ -707,11 +897,37 @@ export function calculateVulnerability(
     if (responseIncludes(vehicleSecurity, 'armoring_full')) {
       riskFactorCount -= 2;
     }
+    if (responseIncludes(vehicleSecurity, 'run_flat_tires')) {
+      riskFactorCount -= 1;
+    }
+
+    // Parking location
+    const parking = responses.ep_parking_location;
+    if (parking === 'street_parking_public') {
+      riskFactorCount += 2;
+    } else if (parking === 'open_parking_lot') {
+      riskFactorCount += 1;
+    } else if (parking === 'secure_executive_parking' || parking === 'driver_drops') {
+      riskFactorCount -= 1;
+    }
+
+    // International travel security
+    const intlSecurity = responses.ep_international_security_measures;
+    if (intlSecurity === 'none') {
+      riskFactorCount += 2;
+    } else if (intlSecurity === 'comprehensive') {
+      riskFactorCount -= 1;
+    }
   }
 
-  // Digital threats
+  // =========================================================================
+  // SECTION 6: DIGITAL FOOTPRINT (doxxing, cyber, stalking)
+  // =========================================================================
+  
   const digitalThreats = ['doxxing_privacy_breach', 'cyber_targeting_social_engineering', 'stalking_surveillance'];
+  
   if (digitalThreats.includes(threatId)) {
+    // Online presence management
     const onlineManagement = responses.ep_online_presence_management;
     if (onlineManagement === 'no_management') {
       riskFactorCount += 2;
@@ -721,6 +937,7 @@ export function calculateVulnerability(
       riskFactorCount -= 1;
     }
 
+    // Public records exposure
     const publicRecords = responses.ep_public_records_exposure || [];
     if (responseIncludes(publicRecords, 'home_address')) {
       riskFactorCount += 2;
@@ -728,10 +945,37 @@ export function calculateVulnerability(
     if (responseIncludes(publicRecords, 'family_information')) {
       riskFactorCount += 1;
     }
+
+    // Information vetting
+    const vetting = responses.ep_information_vetting;
+    if (vetting === 'minimal_vetting') {
+      riskFactorCount += 2;
+    }
+
+    // Email/phone security
+    const commSecurity = responses.ep_email_phone_security || [];
+    if (responseIncludes(commSecurity, 'standard_only') && commSecurity.length === 1) {
+      riskFactorCount += 1;
+    }
+    if (responseIncludes(commSecurity, 'encrypted_email')) {
+      riskFactorCount -= 1;
+    }
+
+    // OSINT monitoring
+    const monitoring = responses.ep_google_alerts;
+    if (monitoring === 'no_monitoring') {
+      riskFactorCount += 1;
+    } else if (monitoring === 'professional_monitoring') {
+      riskFactorCount -= 1;
+    }
   }
 
-  // Family security
+  // =========================================================================
+  // SECTION 7: FAMILY SECURITY
+  // =========================================================================
+  
   if (threatId === 'family_member_targeting' || threatId === 'kidnapping_abduction') {
+    // Family security training
     const familyTraining = responses.ep_family_security_awareness;
     if (familyTraining === 'no_training') {
       riskFactorCount += 2;
@@ -739,15 +983,36 @@ export function calculateVulnerability(
       riskFactorCount += 1;
     }
 
+    // School coordination
     const schoolCoord = responses.ep_school_security_coordination;
     if (schoolCoord === 'none') {
       riskFactorCount += 2;
     } else if (schoolCoord === 'basic') {
       riskFactorCount += 1;
     }
+
+    // Staff vetting
+    const staffVetting = responses.ep_nanny_staff_vetting;
+    if (staffVetting === 'none') {
+      riskFactorCount += 2;
+    } else if (staffVetting === 'references_only') {
+      riskFactorCount += 1;
+    }
+
+    // Family digital exposure
+    const familyDigital = responses.ep_family_digital_exposure;
+    if (familyDigital === 'high_exposure') {
+      riskFactorCount += 2;
+    } else if (familyDigital === 'moderate_exposure') {
+      riskFactorCount += 1;
+    }
   }
 
-  // Emergency preparedness
+  // =========================================================================
+  // SECTION 8: EMERGENCY PREPAREDNESS (affects all threats)
+  // =========================================================================
+  
+  // Emergency protocols
   const emergencyContacts = responses.ep_emergency_contacts;
   if (emergencyContacts === 'no_protocols') {
     riskFactorCount += 2;
@@ -755,29 +1020,38 @@ export function calculateVulnerability(
     riskFactorCount += 1;
   }
 
+  // Duress codes
   const duressCode = responses.ep_duress_code;
   if (duressCode === 'no_duress_codes') {
     riskFactorCount += 2;
   }
 
-  // EP uses divisor of 3
+  // Evacuation planning
+  const evacuation = responses.ep_evacuation_routes;
+  if (evacuation === 'no_planning') {
+    riskFactorCount += 2;
+  } else if (evacuation === 'identified_not_practiced') {
+    riskFactorCount += 1;
+  }
+
+  // =========================================================================
+  // CALCULATE FINAL VULNERABILITY SCORE
+  // =========================================================================
+  
+  // EP uses divisor of 3 (more conservative than retail's 2)
   vulnerability = vulnerability + Math.floor(riskFactorCount / 3);
   
   return clamp(vulnerability, 1, 10);
-}
-
-// Alias for compatibility with other frameworks
-export function calculateVulnerabilityFromInterview(
-  responses: InterviewResponses,
-  threatId: string
-): number {
-  return calculateVulnerability(responses, threatId);
 }
 
 // ============================================================================
 // IMPACT CALCULATION
 // ============================================================================
 
+/**
+ * Calculate impact score (1-10) based on interview responses
+ * Higher score = more severe consequences
+ */
 export function calculateImpact(
   responses: InterviewResponses,
   threatId: string
@@ -785,6 +1059,10 @@ export function calculateImpact(
   const threat = getThreatById(threatId);
   let impact = threat?.baselineImpact || 5;
 
+  // =========================================================================
+  // FACTOR 1: FAMILY COMPOSITION (multiplies impact for violence threats)
+  // =========================================================================
+  
   const familyMembers = responses.ep_family_members || [];
   const violenceThreats = ['kidnapping_abduction', 'home_invasion', 'ambush_attack', 'family_member_targeting'];
   
@@ -798,16 +1076,25 @@ export function calculateImpact(
     }
   }
 
+  // =========================================================================
+  // FACTOR 2: NET WORTH (affects financial crime impacts)
+  // =========================================================================
+  
   const netWorth = responses.ep_net_worth_range;
   const financialThreats = ['extortion_blackmail', 'kidnapping_abduction'];
   
   if (financialThreats.includes(threatId)) {
     if (netWorth === 'over_100m') {
-      impact += 1;
+      impact += 1; // Higher stakes
     }
   }
 
+  // =========================================================================
+  // FACTOR 3: PUBLIC PROFILE (affects reputation threats)
+  // =========================================================================
+  
   const profileLevel = responses.ep_public_profile_level;
+  
   if (threatId === 'reputational_attack' || threatId === 'doxxing_privacy_breach') {
     if (profileLevel === 'very_high') {
       impact = Math.max(impact, 8);
@@ -816,7 +1103,13 @@ export function calculateImpact(
     }
   }
 
+  // =========================================================================
+  // FACTOR 4: MEDICAL EMERGENCY PREPAREDNESS (affects impact severity)
+  // =========================================================================
+  
   const medicalPlan = responses.ep_medical_emergency_plan;
+  
+  // Lack of medical planning increases impact of violence
   if (violenceThreats.includes(threatId)) {
     if (medicalPlan === 'no_plan') {
       impact += 1;
@@ -825,7 +1118,23 @@ export function calculateImpact(
     }
   }
 
-  // Threat-specific impact floors
+  // =========================================================================
+  // FACTOR 5: POLICE RESPONSE TIME (affects violence impact)
+  // =========================================================================
+  
+  const policeTime = responses.ep_police_response_time;
+  
+  if (threatId === 'home_invasion') {
+    if (policeTime === 'over_15_min') {
+      impact += 1;
+    }
+  }
+
+  // =========================================================================
+  // THREAT-SPECIFIC IMPACT FLOORS
+  // =========================================================================
+  
+  // Life-threatening events always have high minimum impact
   if (threatId === 'kidnapping_abduction') {
     impact = Math.max(impact, 9);
   }
@@ -843,28 +1152,31 @@ export function calculateImpact(
 // COMPLETE RISK CALCULATION (T×V×I×E)
 // ============================================================================
 
+/**
+ * Calculate complete risk for a specific threat using T×V×I×E formula
+ */
 export function calculateThreatRisk(
   responses: InterviewResponses,
   threatId: string
 ): EPCalculatedRiskInputs {
-  // Validate inputs
-  if (!responses || typeof responses !== 'object') {
-    responses = {};
-  }
-  
+  // Calculate each component
   const T = calculateThreatLikelihood(responses, threatId);
   const V = calculateVulnerability(responses, threatId);
   const I = calculateImpact(responses, threatId);
   const E = calculateExposureFactor(responses);
 
-  // T×V×I×E formula with safe clamping
-  // Max theoretical: 10 × 10 × 10 × 5 = 5000
-  const inherentRisk = clamp(T * V * I * E, 0, 5000);
-  
-  // Normalize to 0-100 scale (5000 -> 100)
-  const normalizedRisk = clamp((inherentRisk / 5000) * 100, 0, 100);
-  
+  // Calculate inherent risk using EP formula
+  // T×V×I×E = (1-10) × (1-10) × (1-10) × (1-5) = theoretical max 5000
+  const inherentRisk = T * V * I * E;
+
+  // Normalize to 0-100 scale
+  // Using 5000 as theoretical max, but realistic max is lower
+  const normalizedRisk = Math.min(100, (inherentRisk / 2500) * 100);
+
+  // Classify risk level
   const riskLevel = classifyRiskLevel(normalizedRisk);
+
+  // Get suggested controls
   const suggestedControls = EP_THREAT_CONTROL_MAPPING[threatId] || [];
 
   return {
@@ -876,14 +1188,203 @@ export function calculateThreatRisk(
     normalizedRisk: Math.round(normalizedRisk * 10) / 10,
     riskLevel,
     suggestedControls,
-    riskFactorCount: 0,
+    riskFactorCount: 0, // Will be tracked separately
   };
 }
 
 // ============================================================================
-// RISK SCENARIO GENERATION
+// RISK FACTOR COUNTING
 // ============================================================================
 
+/**
+ * Count total risk factors from interview responses
+ * Returns breakdown by section and total count
+ */
+export function countRiskFactors(responses: InterviewResponses): {
+  total: number;
+  bySection: Record<string, number>;
+} {
+  let total = 0;
+  const bySection: Record<string, number> = {
+    profile: 0,
+    residence: 0,
+    routines: 0,
+    workplace: 0,
+    travel: 0,
+    digital: 0,
+    family: 0,
+    emergency: 0,
+  };
+
+  // =========================================================================
+  // SECTION 1: EXECUTIVE PROFILE
+  // =========================================================================
+  
+  if (responses.ep_public_profile_level === 'very_high') { bySection.profile += 3; }
+  else if (responses.ep_public_profile_level === 'high') { bySection.profile += 2; }
+  
+  if (responses.ep_net_worth_range === 'over_100m') { bySection.profile += 2; }
+  else if (responses.ep_net_worth_range === '50m_to_100m') { bySection.profile += 1; }
+  
+  if (responses.ep_known_threats === 'yes_recent') { bySection.profile += 3; }
+  else if (responses.ep_known_threats === 'yes_past') { bySection.profile += 2; }
+  else if (responses.ep_known_threats === 'no_but_concerned') { bySection.profile += 1; }
+  
+  if (responses.ep_current_security_level === 'none') { bySection.profile += 3; }
+  else if (responses.ep_current_security_level === 'minimal') { bySection.profile += 2; }
+  
+  if (responses.ep_controversial_involvement === 'yes_high_profile') { bySection.profile += 2; }
+  else if (responses.ep_controversial_involvement === 'yes_moderate') { bySection.profile += 1; }
+
+  const familyMembers = responses.ep_family_members || [];
+  if (responseIncludes(familyMembers, 'children_school_age')) { bySection.profile += 2; }
+
+  // =========================================================================
+  // SECTION 2: RESIDENCE SECURITY
+  // =========================================================================
+  
+  if (responses.ep_residence_visibility === 'highly_visible') { bySection.residence += 2; }
+  else if (responses.ep_residence_visibility === 'somewhat_visible') { bySection.residence += 1; }
+  
+  const perimeter = responses.ep_residence_perimeter_security || [];
+  if (responseIncludes(perimeter, 'none')) { bySection.residence += 3; }
+  else if (responseIncludes(perimeter, 'fence_basic') && !responseIncludes(perimeter, 'intrusion_detection')) { bySection.residence += 1; }
+  
+  if (responses.ep_residence_alarm_system === 'none') { bySection.residence += 3; }
+  else if (responses.ep_residence_alarm_system === 'basic_unmonitored') { bySection.residence += 2; }
+  
+  if (responses.ep_safe_room === 'no') { bySection.residence += 2; }
+  
+  const cctv = responses.ep_residence_cctv || [];
+  if (responseIncludes(cctv, 'none')) { bySection.residence += 3; }
+  else if (responseIncludes(cctv, 'doorbell_camera') && cctv.length === 1) { bySection.residence += 1; }
+  
+  if (responses.ep_police_response_time === 'over_15_min' || responses.ep_police_response_time === 'unknown') { bySection.residence += 2; }
+
+  // =========================================================================
+  // SECTION 3: DAILY ROUTINES
+  // =========================================================================
+  
+  if (responses.ep_daily_routine_predictability === 'highly_predictable') { bySection.routines += 3; }
+  else if (responses.ep_daily_routine_predictability === 'somewhat_predictable') { bySection.routines += 2; }
+  
+  if (responses.ep_commute_pattern === 'same_route_same_time') { bySection.routines += 3; }
+  else if (responses.ep_commute_pattern === 'same_route_varied_time') { bySection.routines += 2; }
+  
+  if (responses.ep_parking_location === 'street_parking_public') { bySection.routines += 2; }
+  else if (responses.ep_parking_location === 'open_parking_lot') { bySection.routines += 1; }
+  
+  if (responses.ep_frequent_locations === 'yes_very_regular') { bySection.routines += 2; }
+  
+  if (responses.ep_social_media_usage === 'very_active_public') { bySection.routines += 3; }
+  else if (responses.ep_social_media_usage === 'active_public') { bySection.routines += 2; }
+  
+  if (responses.ep_children_schedule === 'highly_predictable') { bySection.routines += 3; }
+  else if (responses.ep_children_schedule === 'somewhat_predictable') { bySection.routines += 2; }
+
+  // =========================================================================
+  // SECTION 4: WORKPLACE SECURITY
+  // =========================================================================
+  
+  if (responses.ep_workplace_access_control === 'open_public') { bySection.workplace += 3; }
+  else if (responses.ep_workplace_access_control === 'receptionist_only') { bySection.workplace += 2; }
+  
+  if (responses.ep_workplace_threat_history === 'yes_recent') { bySection.workplace += 2; }
+  else if (responses.ep_workplace_threat_history === 'yes_past') { bySection.workplace += 1; }
+  
+  if (responses.ep_workplace_security_staff === 'none') { bySection.workplace += 2; }
+  else if (responses.ep_workplace_security_staff === 'contracted_limited') { bySection.workplace += 1; }
+  
+  if (responses.ep_workplace_emergency_procedures === 'no_procedures') { bySection.workplace += 2; }
+  else if (responses.ep_workplace_emergency_procedures === 'exists_unfamiliar') { bySection.workplace += 1; }
+
+  // =========================================================================
+  // SECTION 5: TRAVEL & TRANSPORTATION
+  // =========================================================================
+  
+  if (responses.ep_travel_frequency === 'very_frequent') { bySection.travel += 1; }
+  
+  if (responses.ep_international_travel === 'yes_frequently') { bySection.travel += 3; }
+  else if (responses.ep_international_travel === 'yes_occasionally') { bySection.travel += 2; }
+  
+  if (responses.ep_vehicle_type === 'personal_luxury_conspicuous') { bySection.travel += 1; }
+  
+  const vehicleSecurity = responses.ep_vehicle_security_features || [];
+  if (responseIncludes(vehicleSecurity, 'none')) { bySection.travel += 2; }
+  
+  if (responses.ep_travel_arrangements_publicity === 'public_calendar') { bySection.travel += 3; }
+  else if (responses.ep_travel_arrangements_publicity === 'widely_shared') { bySection.travel += 2; }
+
+  // =========================================================================
+  // SECTION 6: DIGITAL FOOTPRINT
+  // =========================================================================
+  
+  const publicRecords = responses.ep_public_records_exposure || [];
+  if (responseIncludes(publicRecords, 'home_address')) { bySection.digital += 2; }
+  if (responseIncludes(publicRecords, 'family_information')) { bySection.digital += 2; }
+  if (responseIncludes(publicRecords, 'net_worth_estimates')) { bySection.digital += 1; }
+  
+  if (responses.ep_media_coverage === 'extensive') { bySection.digital += 2; }
+  else if (responses.ep_media_coverage === 'frequent') { bySection.digital += 1; }
+  
+  if (responses.ep_online_presence_management === 'no_management') { bySection.digital += 2; }
+  else if (responses.ep_online_presence_management === 'basic_privacy_settings') { bySection.digital += 1; }
+  
+  if (responses.ep_family_digital_exposure === 'high_exposure') { bySection.digital += 2; }
+  else if (responses.ep_family_digital_exposure === 'moderate_exposure') { bySection.digital += 1; }
+  
+  if (responses.ep_google_alerts === 'no_monitoring') { bySection.digital += 1; }
+  
+  if (responses.ep_information_vetting === 'minimal_vetting') { bySection.digital += 2; }
+
+  // =========================================================================
+  // SECTION 7: FAMILY SECURITY
+  // =========================================================================
+  
+  if (responses.ep_family_security_awareness === 'no_training') { bySection.family += 2; }
+  else if (responses.ep_family_security_awareness === 'informal_discussions') { bySection.family += 1; }
+  
+  if (responses.ep_school_security_coordination === 'none') { bySection.family += 2; }
+  else if (responses.ep_school_security_coordination === 'basic') { bySection.family += 1; }
+  
+  if (responses.ep_nanny_staff_vetting === 'none') { bySection.family += 2; }
+  else if (responses.ep_nanny_staff_vetting === 'references_only') { bySection.family += 1; }
+  
+  if (responses.ep_family_travel_protocol === 'none') { bySection.family += 2; }
+  else if (responses.ep_family_travel_protocol === 'minimal') { bySection.family += 1; }
+
+  // =========================================================================
+  // SECTION 8: EMERGENCY PREPAREDNESS
+  // =========================================================================
+  
+  if (responses.ep_emergency_contacts === 'no_protocols') { bySection.emergency += 2; }
+  else if (responses.ep_emergency_contacts === 'basic_contacts') { bySection.emergency += 1; }
+  
+  if (responses.ep_family_emergency_training === 'no_training') { bySection.emergency += 2; }
+  else if (responses.ep_family_emergency_training === 'basic_discussion') { bySection.emergency += 1; }
+  
+  if (responses.ep_duress_code === 'no_duress_codes') { bySection.emergency += 2; }
+  
+  if (responses.ep_evacuation_routes === 'no_planning') { bySection.emergency += 2; }
+  else if (responses.ep_evacuation_routes === 'identified_not_practiced') { bySection.emergency += 1; }
+  
+  if (responses.ep_go_bag_prepared === 'no_preparation') { bySection.emergency += 1; }
+  
+  if (responses.ep_medical_emergency_plan === 'no_plan') { bySection.emergency += 1; }
+
+  // Calculate total
+  total = Object.values(bySection).reduce((sum, val) => sum + val, 0);
+
+  return { total, bySection };
+}
+
+// ============================================================================
+// MAIN RISK GENERATION FUNCTION
+// ============================================================================
+
+/**
+ * Generate all risk scenarios for an EP assessment
+ */
 export async function generateEPRiskScenarios(
   assessmentId: number,
   interviewResponses: InterviewResponses
@@ -896,15 +1397,57 @@ export async function generateEPRiskScenarios(
     mediumRisks: 0,
     lowRisks: 0,
     riskScenarioIds: [],
-    overallExposure: calculateExposureFactor(interviewResponses),
+    overallExposure: 0,
   };
 
   try {
-    for (const threatDef of EP_THREATS) {
-      const riskInputs = calculateThreatRisk(interviewResponses, threatDef.id);
-      
+    // Calculate overall exposure factor
+    result.overallExposure = calculateExposureFactor(interviewResponses);
+
+    // Process each threat
+    for (const threat of EP_THREATS) {
+      const riskInputs = calculateThreatRisk(interviewResponses, threat.id);
+
+      // Generate scenario description
+      const scenarioDescription = generateScenarioDescription(
+        threat,
+        riskInputs,
+        interviewResponses
+      );
+
+      // Look up threat ID in database
+      const threatRecord = await db.query.threatLibrary.findFirst({
+        where: eq(threatLibrary.name, threat.name),
+      });
+
+      if (!threatRecord) {
+        console.warn(`Threat not found in database: ${threat.name}`);
+        continue;
+      }
+
+      // Insert risk scenario - map EP fields to schema columns
+      const [newScenario] = await db.insert(riskScenarios).values({
+        assessmentId: String(assessmentId),
+        threatLibraryId: threatRecord.id,
+        scenario: scenarioDescription,
+        asset: 'Principal', // EP assessments are person-centric
+        threatType: threat.category,
+        threatDescription: threat.name,
+        likelihood: classifyLikelihood(riskInputs.threatLikelihood),
+        impact: classifyImpact(riskInputs.impact),
+        riskLevel: riskInputs.riskLevel,
+        likelihoodScore: riskInputs.threatLikelihood,
+        impactScore: riskInputs.impact,
+        inherentRisk: riskInputs.normalizedRisk,
+        residualRisk: riskInputs.normalizedRisk * 0.8, // Placeholder
+        controlEffectiveness: 20, // Placeholder
+        exposure: String(riskInputs.exposure),
+      }).returning();
+
+      result.riskScenarioIds.push(Number(newScenario.id) || 0);
       result.generatedScenarios++;
-      
+
+      // Track risk levels
       switch (riskInputs.riskLevel) {
         case 'critical': result.criticalRisks++; break;
         case 'high': result.highRisks++; break;
@@ -923,12 +1466,133 @@ export async function generateEPRiskScenarios(
 }
 
 // ============================================================================
-// CONTROL RECOMMENDATIONS
+// SCENARIO DESCRIPTION GENERATION
 // ============================================================================
 
-export function generateControlRecommendations(
-  responses: InterviewResponses,
-  threatId: string
-): string[] {
-  return EP_THREAT_CONTROL_MAPPING[threatId] || [];
+/**
+ * Generate human-readable scenario description
+ */
+function generateScenarioDescription(
+  threat: typeof EP_THREATS[number],
+  riskInputs: EPCalculatedRiskInputs,
+  responses: InterviewResponses
+): string {
+  const { threatLikelihood, vulnerability, impact, exposure, riskLevel } = riskInputs;
+
+  let description = `${threat.name}: `;
+
+  // Add threat likelihood context
+  if (threatLikelihood >= 7) {
+    description += 'High probability threat based on profile factors. ';
+  } else if (threatLikelihood >= 5) {
+    description += 'Moderate probability requiring attention. ';
+  } else {
+    description += 'Lower probability but significant impact potential. ';
+  }
+
+  // Add vulnerability context
+  if (vulnerability >= 7) {
+    description += 'Significant security gaps identified. ';
+  } else if (vulnerability >= 5) {
+    description += 'Some protective measures in place but improvements needed. ';
+  } else {
+    description += 'Good security posture with minor enhancements recommended. ';
+  }
+
+  // Add exposure context
+  if (exposure >= 4) {
+    description += 'High exposure due to public profile and predictable patterns. ';
+  } else if (exposure >= 2.5) {
+    description += 'Moderate exposure level. ';
+  } else {
+    description += 'Lower exposure profile. ';
+  }
+
+  // Add threat-specific context
+  description += getTheThreatSpecificContext(threat.id, responses);
+
+  return description;
 }
+
+/**
+ * Get threat-specific contextual notes
+ */
+function getTheThreatSpecificContext(
+  threatId: string,
+  responses: InterviewResponses
+): string {
+  switch (threatId) {
+    case 'kidnapping_abduction':
+      if (responses.ep_international_travel === 'yes_frequently') {
+        return 'Elevated risk due to frequent high-risk international travel. ';
+      }
+      if (responses.ep_net_worth_range === 'over_100m') {
+        return 'Net worth significantly elevates attractiveness to threat actors. ';
+      }
+      return '';
+
+    case 'stalking_surveillance':
+      if (responses.ep_public_profile_level === 'very_high') {
+        return 'High public profile attracts unwanted attention. ';
+      }
+      if (responses.ep_social_media_usage === 'very_active_public') {
+        return 'Active public social media presence enables tracking. ';
+      }
+      return '';
+
+    case 'home_invasion':
+      if (responses.ep_residence_perimeter_security?.includes('none')) {
+        return 'Lack of perimeter security creates significant vulnerability. ';
+      }
+      if (responses.ep_safe_room === 'no') {
+        return 'Absence of safe room limits protection options. ';
+      }
+      return '';
+
+    case 'ambush_attack':
+      if (responses.ep_commute_pattern === 'same_route_same_time') {
+        return 'Fixed commute pattern enables surveillance and planning. ';
+      }
+      if (responses.ep_daily_routine_predictability === 'highly_predictable') {
+        return 'Highly predictable schedule creates targeting opportunity. ';
+      }
+      return '';
+
+    case 'family_member_targeting':
+      if (responses.ep_family_members?.includes('children_school_age')) {
+        return 'School-age children create high-value soft targets. ';
+      }
+      if (responses.ep_children_schedule === 'highly_predictable') {
+        return 'Predictable children schedules increase vulnerability. ';
+      }
+      return '';
+
+    case 'workplace_violence':
+      if (responses.ep_workplace_access_control === 'open_public') {
+        return 'Open access workplace significantly elevates risk. ';
+      }
+      if (responses.ep_workplace_threat_history === 'yes_recent') {
+        return 'Recent workplace threats indicate active risk. ';
+      }
+      return '';
+
+    default:
+      return '';
+  }
+}
+
+// ============================================================================
+// EXPORT UTILITY FUNCTIONS
+// ============================================================================
+
+export {
+  responseMatchesIndicator,
+  responseEquals,
+  responseIncludes,
+  getThreatById,
+  clamp,
+};
+
+// ============================================================================
+// END OF EXECUTIVE PROTECTION INTERVIEW RISK MAPPER
+// ============================================================================

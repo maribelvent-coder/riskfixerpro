@@ -63,6 +63,20 @@ An Executive Protection Database Schema includes executive profiles, interviews,
 - Control recommendations mapping: Each threat maps to recommended controls from control_library
 - API routes: `/api/assessments/:id/ep-interview/threats`, `/api/assessments/:id/ep-interview/calculate-risk`, `/api/assessments/:id/ep-interview/calculate-all-risks`, `/api/assessments/:id/ep-interview/control-recommendations`, `/api/assessments/:id/ep-interview/generate-scenarios`
 
+**Executive Protection AI Risk Assessment (December 2025):** GPT-4o powered risk assessment with algorithmic fallback:
+- `server/services/ai/ep-ai-risk-assessment.ts`: AI-enhanced threat assessment using OpenAI GPT-4o
+- Evidence-based scoring: Every AI score cites specific interview findings
+- Methodology-compliant: ASIS GDL-RA standard with EP extensions
+- Conservative approach: Scores toward higher risk when ambiguous
+- Algorithmic fallback: Uses deterministic calculations if AI fails
+- Narrative summary generation: Professional executive summaries for reports
+
+**Executive Protection Controls Library (December 2025):** 48 EP-specific security controls:
+- `server/data/ep-controls-seed.sql`: SQL seed file for control_library table
+- 6 categories: Personal Protection (10), Residential Security (8), Digital/OSINT Countermeasures (8), Travel Security (8), Family Protection (8), Emergency Preparedness (6)
+- Each control includes: name, description, category, control type, estimated cost, reduction percentage, implementation notes, ASIS reference
+- Controls integrate with EP threat-control mapping for recommendations
+
 ### Feature Specifications
 Core entities managed by the platform include Assessments, Sites/Locations, Assets, Risk Scenarios, Vulnerabilities, Controls, Treatment Plans, Survey Questions, Risk Insights, Reports, Users, Organizations, Threats, Security Controls, Facility Zones, Points of Interest, Crime Data, Site Incidents, and Executive Protection specific entities. The question-control architecture links template questions to control library entries, enabling the risk calculation engine to map survey responses to control effectiveness ratings. The platform supports CRUD operations for physical sites with integrated geocoding, generates reports in multiple formats, and offers Free, Pro, and Enterprise account tiers.
 
