@@ -45,6 +45,9 @@
 
 import OpenAI from 'openai';
 import type { EPMapperOutput, RiskSignal, ContextTags, PrincipalProfile } from './ep-interview-mapper-v2';
+import { db } from '../db';
+import { controlLibrary } from '@shared/schema';
+import { ilike, or } from 'drizzle-orm';
 
 let openaiClient: OpenAI | null = null;
 
@@ -637,7 +640,7 @@ export async function generateEPDashboard(
     }
   }
   
-  const prioritizedControls = Array.from(controlMap.values())
+  const sortedControls = Array.from(controlMap.values())
     .sort((a, b) => {
       const urgencyOrder = { immediate: 0, short_term: 1, medium_term: 2 };
       if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
@@ -652,6 +655,46 @@ export async function generateEPDashboard(
       implementationDifficulty: c.urgency === 'immediate' ? 'easy' as const : 
                                 c.urgency === 'short_term' ? 'moderate' as const : 'complex' as const,
     }));
+
+  // Look up costs from control_library for each control
+  const dbControls = await db.select({
+    name: controlLibrary.name,
+    estimatedCost: controlLibrary.estimatedCost,
+  }).from(controlLibrary);
+  
+  // Create a fuzzy lookup map - normalize names for matching
+  const costLookup = new Map<string, string>();
+  for (const dbControl of dbControls) {
+    const normalizedName = dbControl.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    costLookup.set(normalizedName, dbControl.estimatedCost || 'N/A');
+    // Also store the exact name
+    costLookup.set(dbControl.name, dbControl.estimatedCost || 'N/A');
+  }
+  
+  // Enrich controls with costs from database
+  const prioritizedControls = sortedControls.map(c => {
+    // Try exact match first, then normalized match
+    let cost = costLookup.get(c.controlName);
+    if (!cost) {
+      const normalizedName = c.controlName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      cost = costLookup.get(normalizedName);
+    }
+    // Try partial matching if no exact match
+    if (!cost) {
+      const controlNameLower = c.controlName.toLowerCase();
+      for (const entry of Array.from(costLookup.entries())) {
+        const [key, value] = entry;
+        if (key.includes(controlNameLower) || controlNameLower.includes(key.toLowerCase().replace(/[^a-z0-9]/g, ''))) {
+          cost = value;
+          break;
+        }
+      }
+    }
+    return {
+      ...c,
+      estimatedCost: cost || 'Contact for quote',
+    };
+  });
   
   const completionGaps = sectionSummaries
     .filter(s => s.completionPercentage < 80)
