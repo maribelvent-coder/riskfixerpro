@@ -810,6 +810,10 @@ export default function ExecutiveDashboard() {
 
               {/* Scenario Detail */}
               <div className="lg:col-span-2">
+                {/* Debug indicator */}
+                <div className="mb-4 p-4 bg-yellow-500 text-black font-bold">
+                  DEBUG: selectedScenario = {selectedScenario ? selectedScenario.threatId : 'null'}
+                </div>
                 {selectedScenario ? (
                   <Card>
                     <CardHeader className="pb-3">
