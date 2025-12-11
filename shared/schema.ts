@@ -225,6 +225,7 @@ export const executiveInterviewQuestions = pgTable("executive_interview_question
   question: text("question").notNull(),
   responseType: text("response_type").notNull().default("text"),
   orderIndex: integer("order_index").notNull(),
+  riskDirection: text("risk_direction").default("positive"), // "positive" = No is bad (YES_GOOD), "negative" = Yes is bad (YES_BAD)
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
