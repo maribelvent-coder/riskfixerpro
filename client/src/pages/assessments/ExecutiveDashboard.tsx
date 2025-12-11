@@ -334,8 +334,15 @@ export default function ExecutiveDashboard() {
       return acc;
     }, [] as NonNullable<EPDashboardData['threatMatrix']>[0]['priorityControls']);
 
-  const immediateControls = allRecommendations.filter(c => c.urgency?.toLowerCase() === 'immediate');
-  const totalInvestment = allRecommendations.reduce((sum, c) => sum + (c.estimatedCost || 0), 0);
+  // Use prioritizedControls (has DB costs) for immediate actions, fallback to allRecommendations
+  const prioritizedControlsList = dashboardData?.prioritizedControls || [];
+  const immediateControls = prioritizedControlsList.length > 0
+    ? prioritizedControlsList.filter(c => c.urgency?.toLowerCase() === 'immediate')
+    : allRecommendations.filter(c => c.urgency?.toLowerCase() === 'immediate');
+  const totalInvestment = prioritizedControlsList.reduce((sum, c) => {
+    const cost = typeof c.estimatedCost === 'number' ? c.estimatedCost : 0;
+    return sum + cost;
+  }, 0);
 
   return (
     <div className="space-y-6">
