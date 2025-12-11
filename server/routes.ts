@@ -6105,10 +6105,15 @@ The facility should prioritize addressing critical risks immediately, particular
           });
         }
         
+        console.log(`[EP-Dashboard] Starting assessment for ${id}, ${answeredCount}/${totalQuestions} questions answered`);
+        console.log(`[EP-Dashboard] Interview responses:`, Object.keys(interviewResponses).length, 'keys');
+        
         // Import the EP AI assessment engine
         const { getEPDashboardData } = await import('./services/ep-ai-risk-assessment');
         
+        console.log(`[EP-Dashboard] Calling getEPDashboardData...`);
         const dashboardData = await getEPDashboardData(id, interviewResponses, []);
+        console.log(`[EP-Dashboard] Result:`, dashboardData ? 'success' : 'null');
         
         if (!dashboardData) {
           return res.status(500).json({ error: 'Failed to generate dashboard data' });

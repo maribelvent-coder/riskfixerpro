@@ -574,11 +574,21 @@ export async function generateEPDashboard(
   const { mapperOutput } = context;
   const { principalProfile, contextTags, riskSignals, validation, sectionSummaries } = mapperOutput;
   
+  console.log(`[EP-AI] Starting threat assessment for ${EP_THREATS.length} threats`);
+  
   const threatScores: EPThreatScore[] = [];
   let aiSuccessCount = 0;
   
-  for (const threat of EP_THREATS) {
+  // Process threats in parallel for speed (with fallback to algorithmic)
+  const threatPromises = EP_THREATS.map(async (threat, index) => {
+    console.log(`[EP-AI] Assessing threat ${index + 1}/${EP_THREATS.length}: ${threat.id}`);
     const aiScore = await assessThreatWithAI(threat, context);
+    return { threat, aiScore };
+  });
+  
+  const results = await Promise.all(threatPromises);
+  
+  for (const { threat, aiScore } of results) {
     if (aiScore) {
       threatScores.push(aiScore);
       aiSuccessCount++;
@@ -586,6 +596,8 @@ export async function generateEPDashboard(
       threatScores.push(calculateAlgorithmicScore(threat, context));
     }
   }
+  
+  console.log(`[EP-AI] Threat assessment complete: ${aiSuccessCount}/${EP_THREATS.length} AI successes, elapsed: ${Date.now() - startTime}ms`);
   
   const mode: 'ai' | 'algorithmic' | 'hybrid' = 
     aiSuccessCount === EP_THREATS.length ? 'ai' :
@@ -741,22 +753,28 @@ export async function getEPDashboardData(
   attachments: any[] = []
 ): Promise<EPDashboardOutput | null> {
   try {
+    console.log('[EP-AI] Loading ep-interview-mapper-v2...');
     const { prepareForAIEngine } = await import('./ep-interview-mapper-v2');
+    console.log('[EP-AI] Preparing for AI engine...');
     const mapperOutput = prepareForAIEngine(
       parseInt(assessmentId) || 0,
       interviewResponses,
       attachments
     );
+    console.log('[EP-AI] Mapper output ready, creating context...');
     
     const context: EPAssessmentContext = {
       assessmentId,
       mapperOutput,
     };
     
-    return await generateEPDashboard(context);
+    console.log('[EP-AI] Calling generateEPDashboard...');
+    const result = await generateEPDashboard(context);
+    console.log('[EP-AI] Dashboard generation complete');
+    return result;
     
   } catch (error) {
-    console.error('Error generating EP dashboard:', error);
+    console.error('[EP-AI] Error generating EP dashboard:', error);
     return null;
   }
 }
