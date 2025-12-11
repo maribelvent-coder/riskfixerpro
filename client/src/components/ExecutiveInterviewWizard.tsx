@@ -253,10 +253,14 @@ export default function ExecutiveInterviewWizard({
   const progressPercent =
     totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
 
-  // Stats for sidebar
+  // Stats for sidebar - respect polarity
   const issuesCount =
     questions?.filter((q) => {
       const response = localResponses[q.id];
+      // For negative polarity: Yes is an issue. For positive polarity: No is an issue.
+      if (q.riskDirection === 'negative') {
+        return response?.yesNoResponse === true;
+      }
       return response?.yesNoResponse === false;
     }).length || 0;
 
@@ -564,7 +568,11 @@ export default function ExecutiveInterviewWizard({
                 <div className="space-y-3">
                   {getSubgroupQuestions(activeCategory, subgroup).map((q) => {
                     const response = localResponses[q.id] || {};
-                    const hasIssue = response.yesNoResponse === false;
+                    // For negative polarity (YES_BAD): Yes answer indicates an issue
+                    // For positive polarity (YES_GOOD): No answer indicates an issue
+                    const hasIssue = q.riskDirection === 'negative' 
+                      ? response.yesNoResponse === true  
+                      : response.yesNoResponse === false;
                     const hasNotes =
                       response.textResponse &&
                       response.textResponse.length > 0;
@@ -807,7 +815,10 @@ export default function ExecutiveInterviewWizard({
 
       {/* Focus Mode Overlay */}
       {viewMode === "focus" && focusQuestion && (() => {
-        const focusHasIssue = localResponses[focusQuestion.id]?.yesNoResponse === false;
+        // Respect polarity in focus mode too
+        const focusHasIssue = focusQuestion.riskDirection === 'negative'
+          ? localResponses[focusQuestion.id]?.yesNoResponse === true
+          : localResponses[focusQuestion.id]?.yesNoResponse === false;
         
         return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 flex items-center justify-center p-4 sm:p-6">
