@@ -226,6 +226,23 @@ export interface EPDashboardOutput {
     action: string;
     rationale: string;
   }[];
+  
+  sectionAssessments?: {
+    sectionId: string;
+    sectionName: string;
+    riskIndicators: number;
+    totalQuestions: number;
+    keyFindings: string[];
+    aiNarrative: string;
+  }[];
+  
+  controlStatus?: {
+    category: string;
+    implemented: number;
+    inProgress: number;
+    recommended: number;
+    total: number;
+  }[];
 }
 
 const EP_SYSTEM_PROMPT = `You are a CPP-certified (Certified Protection Professional) executive protection specialist conducting a formal threat assessment for a high-net-worth individual or public figure. Your role is to assess personal security threats using the T×V×I×E framework unique to executive protection.
@@ -858,6 +875,67 @@ export async function generateEPDashboard(
     prioritizedControls,
     completionGaps,
     nextSteps,
+    
+    // Section assessments from interview sections
+    sectionAssessments: sectionSummaries.map(s => ({
+      sectionId: s.sectionId,
+      sectionName: s.sectionName,
+      riskIndicators: s.riskSignals.length,
+      totalQuestions: s.questionCount,
+      keyFindings: s.riskSignals.slice(0, 3).map(sig => sig.signal),
+      aiNarrative: s.completionPercentage >= 80 
+        ? `${s.sectionName} assessment complete with ${s.riskSignals.length} risk indicator(s) identified.`
+        : `${s.sectionName} is ${s.completionPercentage}% complete. Additional data may improve assessment.`,
+    })),
+    
+    // Control implementation status by category - use DB controls as the full pool
+    controlStatus: EP_CONTROL_CATEGORIES.map(category => {
+      // Normalize to significant words (3+ chars)
+      const getWords = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+      
+      // Build word sets for EACH individual measure (not pooled)
+      const existingMeasureWords = principalProfile.currentSecurityMeasures.map(m => new Set(getWords(m)));
+      
+      // Get controls from DB for this category
+      const categoryDbControls = epControls?.filter(ec => ec.category === category) || [];
+      
+      // Count implemented: controls where a SINGLE measure satisfies word match threshold
+      const implementedControls = new Set<string>();
+      for (const dbControl of categoryDbControls) {
+        const controlWords = getWords(dbControl.name);
+        // Check each individual measure - require match from ONE measure only
+        for (const measureWords of existingMeasureWords) {
+          const matchCount = controlWords.filter(w => measureWords.has(w)).length;
+          // Require 2+ matching words from the SAME measure (stricter matching)
+          if (matchCount >= 2 || (controlWords.length === 1 && matchCount === 1)) {
+            implementedControls.add(dbControl.name);
+            break; // Found a match, move to next control
+          }
+        }
+      }
+      
+      // Get unique recommended controls from ALL threat scenarios (not yet implemented)
+      const recommendedControls = new Set<string>();
+      for (const threat of threatScores) {
+        for (const ctrl of threat.priorityControls) {
+          const controlInfo = epControls?.find(ec => ec.name === ctrl.controlName);
+          if (controlInfo?.category === category && !implementedControls.has(ctrl.controlName)) {
+            recommendedControls.add(ctrl.controlName);
+          }
+        }
+      }
+      
+      // Total = implemented + recommended (disjoint sets)
+      const relevantTotal = implementedControls.size + recommendedControls.size;
+      
+      return {
+        category,
+        implemented: implementedControls.size,
+        inProgress: 0, // Future: track in-progress controls separately
+        recommended: recommendedControls.size,
+        total: relevantTotal,
+      };
+    }).filter(cs => cs.total > 0)
   };
 }
 
