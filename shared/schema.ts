@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real, uniqueIndex, decimal } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -289,6 +289,7 @@ export const riskScenarios = pgTable("risk_scenarios", {
   inherentRisk: real("inherent_risk"),
   controlEffectiveness: real("control_effectiveness"),
   residualRisk: real("residual_risk"),
+  exposure: decimal("exposure", { precision: 3, scale: 1 }).default("1.0"),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
