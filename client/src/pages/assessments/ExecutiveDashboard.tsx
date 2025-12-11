@@ -27,6 +27,22 @@ import {
   Info
 } from "lucide-react";
 
+interface EvidenceChainItem {
+  source: 'interview' | 'cap_index' | 'osint' | 'site_observation' | 'threat_intel';
+  questionId?: string;
+  finding: string;
+  weight: 'critical' | 'significant' | 'moderate' | 'minor';
+}
+
+interface SectionAssessment {
+  sectionId: string;
+  sectionName: string;
+  riskIndicators: number;
+  totalQuestions: number;
+  keyFindings: string[];
+  aiNarrative: string;
+}
+
 interface EPDashboardData {
   cached: boolean;
   interviewCompletion: number;
@@ -61,6 +77,8 @@ interface EPDashboardData {
     currentProtectionLevel: string;
   };
   
+  sectionAssessments?: SectionAssessment[];
+  
   threatMatrix?: {
     threatId: string;
     threatName: string;
@@ -71,9 +89,17 @@ interface EPDashboardData {
     exposureFactor: { score: number; label: string; reasoning?: string; };
     riskScore: { raw: number; normalized: number; classification: string; };
     scenarioDescription: string;
-    evidenceTrail?: string[];
+    evidenceTrail?: string[] | EvidenceChainItem[];
     confidence?: 'high' | 'medium' | 'low';
-    priorityControls: { controlId: string; controlName: string; urgency: string; rationale: string; }[];
+    confidenceReasoning?: string;
+    priorityControls: { 
+      controlId: string; 
+      controlName: string; 
+      urgency: string; 
+      rationale: string;
+      estimatedCost?: number;
+      effectivenessRating?: number;
+    }[];
   }[];
   
   topRiskSignals?: {
@@ -91,7 +117,8 @@ interface EPDashboardData {
     addressesThreats: string[];
     rationale: string;
     implementationDifficulty: string;
-    estimatedCost?: string;
+    estimatedCost?: string | number;
+    effectivenessRating?: number;
   }[];
   
   completionGaps?: {
@@ -108,6 +135,7 @@ interface EPDashboardData {
   
   aiConfidence?: 'high' | 'medium' | 'low';
   assessmentMode?: 'ai' | 'hybrid' | 'fallback';
+  confidenceFactors?: string[];
 }
 
 // Helper functions for styling
@@ -139,6 +167,36 @@ const getUrgencyColor = (urgency: string) => {
     case 'low': return 'text-green-600';
     default: return 'text-muted-foreground';
   }
+};
+
+const getEvidenceWeightColor = (weight: string) => {
+  switch (weight) {
+    case 'critical': return 'bg-red-500/20 text-red-600 border-red-500/30';
+    case 'significant': return 'bg-orange-500/20 text-orange-600 border-orange-500/30';
+    case 'moderate': return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30';
+    case 'minor': return 'bg-gray-500/20 text-gray-600 border-gray-500/30';
+    default: return 'bg-muted text-muted-foreground';
+  }
+};
+
+const getSourceLabel = (source: string) => {
+  switch (source) {
+    case 'interview': return 'Interview';
+    case 'cap_index': return 'CAP Index';
+    case 'osint': return 'OSINT';
+    case 'site_observation': return 'Site Survey';
+    case 'threat_intel': return 'Threat Intel';
+    default: return source;
+  }
+};
+
+const formatCurrency = (amount: number | string | undefined) => {
+  if (!amount) return 'N/A';
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return 'N/A';
+  if (num >= 1000000) return `$${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `$${(num / 1000).toFixed(0)}K`;
+  return `$${num.toLocaleString()}`;
 };
 
 export default function ExecutiveDashboard() {
@@ -556,6 +614,55 @@ export default function ExecutiveDashboard() {
               </Card>
             )}
 
+            {/* Section Assessments (7 EP Sections with AI Narratives) */}
+            {dashboardData.sectionAssessments && dashboardData.sectionAssessments.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardCheck className="h-5 w-5" />
+                    Section Assessments
+                  </CardTitle>
+                  <CardDescription>AI analysis of each interview section with risk indicators</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {dashboardData.sectionAssessments.map((section) => (
+                      <div 
+                        key={section.sectionId} 
+                        data-testid={`section-assessment-${section.sectionId}`}
+                        className="p-4 rounded-lg bg-muted/30 border border-muted"
+                      >
+                        <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
+                          <span className="font-medium text-sm">{section.sectionName}</span>
+                          <span className={`text-xs font-medium px-2 py-1 rounded ${
+                            section.riskIndicators > 3 ? 'bg-red-500/20 text-red-600' : 
+                            section.riskIndicators > 2 ? 'bg-yellow-500/20 text-yellow-600' : 
+                            'bg-green-500/20 text-green-600'
+                          }`}>
+                            {section.riskIndicators}/{section.totalQuestions} risk indicators
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-3">{section.aiNarrative}</p>
+                        {section.keyFindings && section.keyFindings.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {section.keyFindings.slice(0, 4).map((finding, j) => (
+                              <Badge 
+                                key={`${section.sectionId}-finding-${j}`}
+                                variant="outline" 
+                                className="text-xs"
+                              >
+                                {finding}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Top Risk Signals */}
             {dashboardData.topRiskSignals && dashboardData.topRiskSignals.length > 0 && (
               <Card>
@@ -568,7 +675,7 @@ export default function ExecutiveDashboard() {
                 <CardContent>
                   <div className="space-y-3">
                     {dashboardData.topRiskSignals.slice(0, 5).map((signal, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                      <div key={`signal-${signal.sourceQuestionId}-${i}`} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                         <AlertCircle className={`h-5 w-5 mt-0.5 ${getUrgencyColor(signal.severity)}`} />
                         <div>
                           <p className="font-medium">{signal.signal}</p>
@@ -688,24 +795,66 @@ export default function ExecutiveDashboard() {
                         </div>
                       </div>
                       
-                      {/* Evidence Trail */}
+                      {/* Confidence Reasoning */}
+                      {threat.confidenceReasoning && (
+                        <div className="mb-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                          <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1 flex items-center gap-1">
+                            <Info className="h-3 w-3" />
+                            Confidence Assessment
+                          </p>
+                          <p className="text-xs text-blue-700 dark:text-blue-300">{threat.confidenceReasoning}</p>
+                        </div>
+                      )}
+                      
+                      {/* Evidence Trail - Supports both string arrays and structured objects */}
                       {threat.evidenceTrail && threat.evidenceTrail.length > 0 && (
                         <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                           <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-1">
                             <FileText className="h-3 w-3" />
                             Evidence Trail
                           </p>
-                          <ul className="space-y-1">
-                            {threat.evidenceTrail.slice(0, 5).map((evidence, j) => (
-                              <li 
-                                key={`${threat.threatId}-evidence-${j}`} 
-                                data-testid={`text-evidence-${threat.threatId}-${j}`}
-                                className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2"
-                              >
-                                <ChevronRight className="h-3 w-3 mt-0.5 shrink-0" />
-                                {evidence}
-                              </li>
-                            ))}
+                          <ul className="space-y-2">
+                            {threat.evidenceTrail.slice(0, 6).map((evidence, j) => {
+                              const isStructured = typeof evidence === 'object' && evidence !== null;
+                              const evidenceItem = evidence as EvidenceChainItem;
+                              
+                              if (isStructured) {
+                                return (
+                                  <li 
+                                    key={`${threat.threatId}-evidence-${j}`} 
+                                    data-testid={`text-evidence-${threat.threatId}-${j}`}
+                                    className="text-xs flex items-start gap-2 p-2 rounded bg-amber-100/50 dark:bg-amber-900/30"
+                                  >
+                                    <div className="flex flex-col gap-1 flex-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <Badge 
+                                          variant="outline" 
+                                          className={`text-[10px] py-0 ${getEvidenceWeightColor(evidenceItem.weight)}`}
+                                        >
+                                          {evidenceItem.weight}
+                                        </Badge>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          Source: {getSourceLabel(evidenceItem.source)}
+                                          {evidenceItem.questionId && ` (${evidenceItem.questionId})`}
+                                        </span>
+                                      </div>
+                                      <span className="text-amber-700 dark:text-amber-300">{evidenceItem.finding}</span>
+                                    </div>
+                                  </li>
+                                );
+                              }
+                              
+                              return (
+                                <li 
+                                  key={`${threat.threatId}-evidence-${j}`} 
+                                  data-testid={`text-evidence-${threat.threatId}-${j}`}
+                                  className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2"
+                                >
+                                  <ChevronRight className="h-3 w-3 mt-0.5 shrink-0" />
+                                  {evidence as string}
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
                       )}
@@ -776,15 +925,22 @@ export default function ExecutiveDashboard() {
                     <CardContent className="pt-4">
                       <p className="text-sm mb-4">{control.rationale}</p>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div className="p-2 rounded bg-muted/50">
                           <p className="text-xs text-muted-foreground mb-1">Difficulty</p>
                           <p className="font-medium">{control.implementationDifficulty}</p>
                         </div>
-                        {control.estimatedCost && (
-                          <div className="p-2 rounded bg-muted/50">
-                            <p className="text-xs text-muted-foreground mb-1">Est. Cost</p>
-                            <p className="font-medium">{control.estimatedCost}</p>
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-xs text-muted-foreground mb-1">Est. Cost</p>
+                          <p className="font-medium">{formatCurrency(control.estimatedCost)}</p>
+                        </div>
+                        {control.effectivenessRating && (
+                          <div className="p-2 rounded bg-green-500/10 border border-green-500/20">
+                            <p className="text-xs text-muted-foreground mb-1">Effectiveness</p>
+                            <div className="flex items-center gap-2">
+                              <Progress value={control.effectivenessRating} className="h-2 flex-1" />
+                              <span className="font-medium text-green-600">{control.effectivenessRating}%</span>
+                            </div>
                           </div>
                         )}
                         <div className="p-2 rounded bg-muted/50">
@@ -797,9 +953,9 @@ export default function ExecutiveDashboard() {
                         <div className="mt-3 pt-3 border-t">
                           <p className="text-xs text-muted-foreground mb-2">Addresses Threats:</p>
                           <div className="flex flex-wrap gap-1">
-                            {control.addressesThreats.slice(0, 5).map((threat, j) => (
-                              <Badge key={j} variant="outline" className="text-xs">
-                                {threat}
+                            {control.addressesThreats.slice(0, 5).map((threatName, j) => (
+                              <Badge key={`${control.controlId}-threat-${j}`} variant="outline" className="text-xs">
+                                {threatName}
                               </Badge>
                             ))}
                           </div>
