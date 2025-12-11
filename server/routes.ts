@@ -6065,7 +6065,18 @@ The facility should prioritize addressing critical risks immediately, particular
         // Convert DB responses to key-value object for mapper
         const interviewResponses: Record<string, any> = {};
         for (const r of dbResponses) {
-          interviewResponses[r.questionId] = r.response;
+          // Combine boolean answer with narrative details
+          const answer = r.yesNoResponse !== null ? (r.yesNoResponse ? 'Yes' : 'No') : 'Not answered';
+          const narrative = r.textResponse || '';
+          
+          // Include both - the narrative contains critical threat context
+          interviewResponses[r.questionId] = {
+            answer: answer,
+            details: narrative,
+            raw: r.yesNoResponse,
+            // Also provide combined text for AI consumption
+            fullResponse: narrative ? `${answer}. ${narrative}` : answer
+          };
         }
         // Also include survey question responses
         for (const q of surveyQuestions) {
