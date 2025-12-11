@@ -5,7 +5,7 @@ import { openaiService } from "./openai-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
 import { db } from "./db";
-import { assessments, riskScenarios, sites, templateQuestions, users } from "@shared/schema";
+import { assessments, riskScenarios, sites, templateQuestions, users, executiveInterviewQuestions } from "@shared/schema";
 import { TenantStorage } from "./tenant-storage";
 import {
   attachTenantContext,
@@ -6062,21 +6062,75 @@ The facility should prioritize addressing critical risks immediately, particular
         const dbResponses = await storage.getExecutiveInterviewResponses(id);
         const surveyQuestions = await storage.getAssessmentQuestions(id);
         
-        // Convert DB responses to key-value object for mapper
+        // Load executive interview questions to map UUIDs to semantic keys
+        const epQuestions = await db.select().from(schema.executiveInterviewQuestions);
+        
+        // Create mapping from (category, question_number) → semantic key
+        // This bridges the gap between UUID-keyed DB data and semantic-keyed mapper expectations
+        const QUESTION_SEMANTIC_MAP: Record<string, Record<number, string>> = {
+          'Incident History & Threats': {
+            1: 'ep_known_threats',
+            2: 'ep_adversary_type',
+            3: 'ep_threat_training',
+            4: 'ep_threat_handling',
+          },
+          'Executive Protection': {
+            5: 'ep_protection_detail',
+            6: 'ep_current_security_level',
+            7: 'ep_protection_feelings',
+          },
+          'Public Profile': {
+            8: 'ep_public_speaking',
+            9: 'ep_prior_incidents',
+          },
+          'Routine & Patterns': {
+            10: 'ep_daily_routine_predictability',
+            11: 'ep_regular_patterns',
+          },
+          'Residential Security': {
+            12: 'ep_residence_security_level',
+            13: 'ep_family_security_training',
+            14: 'ep_domestic_staff',
+          },
+          'Family': {
+            15: 'ep_family_public_exposure',
+            16: 'ep_minor_children',
+            17: 'ep_children_schedule',
+          },
+        };
+        
+        // Build UUID → semantic key lookup from actual questions
+        const uuidToSemanticKey: Record<string, string> = {};
+        for (const q of epQuestions) {
+          const categoryMap = QUESTION_SEMANTIC_MAP[q.category];
+          if (categoryMap && q.questionNumber && categoryMap[q.questionNumber]) {
+            uuidToSemanticKey[q.id] = categoryMap[q.questionNumber];
+          }
+        }
+        
+        // Convert DB responses to key-value object for mapper using semantic keys
         const interviewResponses: Record<string, any> = {};
         for (const r of dbResponses) {
           // Combine boolean answer with narrative details
           const answer = r.yesNoResponse !== null ? (r.yesNoResponse ? 'Yes' : 'No') : 'Not answered';
           const narrative = r.textResponse || '';
           
-          // Include both - the narrative contains critical threat context
-          interviewResponses[r.questionId] = {
+          // Build the response object with all data
+          const responseObj = {
             answer: answer,
             details: narrative,
             raw: r.yesNoResponse,
             // Also provide combined text for AI consumption
             fullResponse: narrative ? `${answer}. ${narrative}` : answer
           };
+          
+          // Use semantic key if available, otherwise use UUID
+          const semanticKey = uuidToSemanticKey[r.questionId];
+          if (semanticKey) {
+            interviewResponses[semanticKey] = responseObj;
+          }
+          // Always also store by UUID for direct access
+          interviewResponses[r.questionId] = responseObj;
         }
         // Also include survey question responses
         for (const q of surveyQuestions) {
@@ -6084,6 +6138,9 @@ The facility should prioritize addressing critical risks immediately, particular
             interviewResponses[q.questionId] = q.response;
           }
         }
+        
+        console.log(`[EP-Dashboard] Mapped ${Object.keys(uuidToSemanticKey).length} questions to semantic keys`);
+        console.log(`[EP-Dashboard] Semantic keys present:`, Object.keys(interviewResponses).filter(k => k.startsWith('ep_')));
         
         // Calculate interview completion percentage
         const totalQuestions = 43; // EP Interview has 43 questions
