@@ -166,6 +166,12 @@ export interface EPThreatScore {
     urgency: 'immediate' | 'short_term' | 'medium_term';
     rationale: string;
     estimatedCostRange?: string;
+    justification?: {
+      threat: string;
+      vulnerability: string;
+      mitigation: string;
+      roi: string;
+    };
   }[];
   
   scenarioDescription: string;
@@ -213,6 +219,12 @@ export interface EPDashboardOutput {
     rationale: string;
     estimatedCost?: string;
     implementationDifficulty: 'easy' | 'moderate' | 'complex';
+    justification?: {
+      threat: string;
+      vulnerability: string;
+      mitigation: string;
+      roi: string;
+    };
   }[];
   
   completionGaps: {
@@ -471,8 +483,14 @@ Provide your assessment in the following JSON format. ALL reasoning fields must 
       "controlId": "<id>",
       "controlName": "<exact name from AVAILABLE CONTROLS>",
       "urgency": "<immediate|short_term|medium_term>",
-      "rationale": "<2-3 sentences: what specific gap this addresses, how it mitigates this threat, why urgency level is appropriate>",
-      "estimatedCostRange": "<range from control list>"
+      "rationale": "<brief summary of control purpose>",
+      "estimatedCostRange": "<range from control list>",
+      "justification": {
+        "threat": "<specific threat from interview findings - e.g., 'Active stalker with 200+ contact attempts documented'>",
+        "vulnerability": "<specific protection gap - e.g., 'Zero personal protection; Principal arrives alone at 7:40am daily via predictable route'>",
+        "mitigation": "<what control provides - e.g., 'Provides trained close protection, counter-surveillance, and immediate threat response capability'>",
+        "roi": "<risk reduction outcome - e.g., 'Reduces kidnapping/assault risk from HIGH (68) to LOW (15); estimated loss prevention $2M+'>"
+      }
     }
   ],
   "scenarioDescription": "<2-3 sentence realistic scenario based on principal profile and identified vulnerabilities>"

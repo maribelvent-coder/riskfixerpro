@@ -109,6 +109,12 @@ interface EPDashboardData {
       estimatedCost?: number;
       effectivenessRating?: number;
       category?: string;
+      justification?: {
+        threat: string;
+        vulnerability: string;
+        mitigation: string;
+        roi: string;
+      };
     }[];
   }[];
   
@@ -129,6 +135,12 @@ interface EPDashboardData {
     implementationDifficulty: string;
     estimatedCost?: string | number;
     effectivenessRating?: number;
+    justification?: {
+      threat: string;
+      vulnerability: string;
+      mitigation: string;
+      roi: string;
+    };
   }[];
   
   controlStatus?: {
@@ -1023,10 +1035,10 @@ export default function ExecutiveDashboard() {
                 <CardContent>
                   <div className="space-y-3">
                     {(dashboardData?.prioritizedControls || allRecommendations).map((control, idx) => (
-                      <div key={idx} className="flex items-start justify-between p-4 bg-muted/30 rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm">{control.controlName}</span>
+                      <div key={idx} className="p-4 bg-muted/30 rounded-lg">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{control.controlName}</span>
                             <Badge variant={control.urgency === 'immediate' ? 'destructive' : control.urgency === 'high' ? 'default' : 'secondary'} className="text-xs">
                               {control.urgency}
                             </Badge>
@@ -1034,24 +1046,44 @@ export default function ExecutiveDashboard() {
                               <Badge variant="outline" className="text-xs">{control.category}</Badge>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground">{control.rationale}</p>
-                          {'addressesThreats' in control && control.addressesThreats && control.addressesThreats.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {control.addressesThreats.map((threat, tIdx) => (
-                                <Badge key={tIdx} variant="outline" className="text-xs">{threat}</Badge>
-                              ))}
+                          <div className="text-right ml-4">
+                            <div className="text-sm font-bold">{formatCurrency(control.estimatedCost)}</div>
+                            {'implementationDifficulty' in control && control.implementationDifficulty && (
+                              <div className="text-xs text-muted-foreground">{control.implementationDifficulty}</div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {'justification' in control && control.justification ? (
+                          <div className="space-y-2 text-sm">
+                            <div className="flex gap-2">
+                              <span className="font-semibold text-red-400 shrink-0 w-28">THREAT:</span>
+                              <span className="text-muted-foreground">{control.justification.threat}</span>
                             </div>
-                          )}
-                        </div>
-                        <div className="text-right ml-4">
-                          <div className="text-sm font-medium">{formatCurrency(control.estimatedCost)}</div>
-                          {control.effectivenessRating && (
-                            <div className="text-xs text-muted-foreground">{control.effectivenessRating}% effective</div>
-                          )}
-                          {'implementationDifficulty' in control && control.implementationDifficulty && (
-                            <div className="text-xs text-muted-foreground mt-1">{control.implementationDifficulty}</div>
-                          )}
-                        </div>
+                            <div className="flex gap-2">
+                              <span className="font-semibold text-orange-400 shrink-0 w-28">VULNERABILITY:</span>
+                              <span className="text-muted-foreground">{control.justification.vulnerability}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="font-semibold text-blue-400 shrink-0 w-28">MITIGATION:</span>
+                              <span className="text-muted-foreground">{control.justification.mitigation}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="font-semibold text-green-400 shrink-0 w-28">ROI:</span>
+                              <span className="text-muted-foreground">{control.justification.roi}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">{control.rationale}</p>
+                        )}
+                        
+                        {control.effectivenessRating && (
+                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-muted">
+                            <span className="text-xs text-muted-foreground">Effectiveness:</span>
+                            <ProgressBar value={control.effectivenessRating} color="green" />
+                            <span className="text-xs">{control.effectivenessRating}%</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {(!dashboardData?.prioritizedControls || dashboardData.prioritizedControls.length === 0) && allRecommendations.length === 0 && (
