@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -12,19 +11,24 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, 
   AlertTriangle, 
-  CheckCircle2,
   Loader2,
   User,
   Target,
-  ListChecks,
   TrendingUp,
-  AlertCircle,
   FileText,
   Lock,
   RefreshCw,
   ClipboardCheck,
   ChevronRight,
-  Info
+  Info,
+  Activity,
+  Briefcase,
+  Scale,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ExternalLink,
+  Eye
 } from "lucide-react";
 
 interface EvidenceChainItem {
@@ -75,6 +79,11 @@ interface EPDashboardData {
     familyExposure: string | null;
     digitalRisk: string | null;
     currentProtectionLevel: string;
+    title?: string | null;
+    assessorName?: string | null;
+    assessmentDate?: string | null;
+    executiveSummary?: string;
+    keyFindings?: string[];
   };
   
   sectionAssessments?: SectionAssessment[];
@@ -99,6 +108,7 @@ interface EPDashboardData {
       rationale: string;
       estimatedCost?: number;
       effectivenessRating?: number;
+      category?: string;
     }[];
   }[];
   
@@ -121,6 +131,14 @@ interface EPDashboardData {
     effectivenessRating?: number;
   }[];
   
+  controlStatus?: {
+    category: string;
+    implemented: number;
+    inProgress: number;
+    recommended: number;
+    total: number;
+  }[];
+  
   completionGaps?: {
     section: string;
     missingQuestions: string[];
@@ -138,43 +156,77 @@ interface EPDashboardData {
   confidenceFactors?: string[];
 }
 
-// Helper functions for styling
-const getRiskColor = (classification: string) => {
-  switch (classification) {
-    case 'critical': return 'text-red-600';
-    case 'high': return 'text-orange-500';
-    case 'medium': return 'text-yellow-500';
-    case 'low': return 'text-green-500';
-    default: return 'text-muted-foreground';
-  }
+const StatusBadge = ({ level, size = 'normal' }: { level: string; size?: 'normal' | 'large' }) => {
+  const config: Record<string, { bg: string; text: string; label: string }> = {
+    critical: { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Critical' },
+    high: { bg: 'bg-red-500/20', text: 'text-red-400', label: 'High' },
+    elevated: { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'Elevated' },
+    medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Medium' },
+    moderate: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Moderate' },
+    low: { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Low' },
+  };
+  const c = config[level] || config.moderate;
+  const sizeClass = size === 'large' ? 'px-4 py-2 text-sm' : 'px-2 py-1 text-xs';
+  return <span className={`${sizeClass} rounded font-medium ${c.bg} ${c.text}`}>{c.label}</span>;
 };
 
-const getRiskBadgeVariant = (classification: string): "default" | "secondary" | "destructive" | "outline" => {
-  switch (classification) {
-    case 'critical': return 'destructive';
-    case 'high': return 'destructive';
-    case 'medium': return 'secondary';
-    case 'low': return 'outline';
-    default: return 'secondary';
-  }
+const ConfidenceBadge = ({ confidence }: { confidence: 'high' | 'medium' | 'low' }) => {
+  const config = {
+    high: { bg: 'bg-green-500/20', text: 'text-green-400', icon: CheckCircle2 },
+    medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', icon: Clock },
+    low: { bg: 'bg-red-500/20', text: 'text-red-400', icon: XCircle },
+  };
+  const c = config[confidence] || config.medium;
+  const Icon = c.icon;
+  return (
+    <span className={`px-3 py-1.5 rounded text-xs font-medium ${c.bg} ${c.text} flex items-center gap-1.5`}>
+      <Icon className="w-3.5 h-3.5" />
+      {confidence} confidence
+    </span>
+  );
 };
 
-const getUrgencyColor = (urgency: string) => {
-  switch (urgency?.toLowerCase()) {
-    case 'immediate': return 'text-red-600';
-    case 'high': return 'text-orange-500';
-    case 'medium': return 'text-yellow-600';
-    case 'low': return 'text-green-600';
-    default: return 'text-muted-foreground';
-  }
+const ScoreGauge = ({ label, score, maxScore = 5, color }: { label: string; score: number; maxScore?: number; color: string }) => {
+  const percentage = (score / maxScore) * 100;
+  return (
+    <div className="text-center">
+      <div className="text-xs text-muted-foreground mb-1">{label}</div>
+      <div className="relative w-16 h-16 mx-auto">
+        <svg className="w-16 h-16 transform -rotate-90">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="none" className="text-muted/30" />
+          <circle 
+            cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="none" 
+            className={color}
+            strokeDasharray={`${percentage * 1.76} 176`}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-lg font-bold">{score.toFixed(1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProgressBar = ({ value, max = 100, color = 'blue' }: { value: number; max?: number; color?: string }) => {
+  const percentage = Math.min((value / max) * 100, 100);
+  const colors: Record<string, string> = {
+    blue: 'bg-blue-500', green: 'bg-green-500', yellow: 'bg-yellow-500', red: 'bg-red-500', orange: 'bg-orange-500'
+  };
+  return (
+    <div className="w-full bg-muted rounded-full h-2">
+      <div className={`h-2 rounded-full transition-all ${colors[color] || colors.blue}`} style={{ width: `${percentage}%` }} />
+    </div>
+  );
 };
 
 const getEvidenceWeightColor = (weight: string) => {
   switch (weight) {
-    case 'critical': return 'bg-red-500/20 text-red-600 border-red-500/30';
-    case 'significant': return 'bg-orange-500/20 text-orange-600 border-orange-500/30';
-    case 'moderate': return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30';
-    case 'minor': return 'bg-gray-500/20 text-gray-600 border-gray-500/30';
+    case 'critical': return 'bg-red-500/20 text-red-500 border-red-500/30';
+    case 'significant': return 'bg-orange-500/20 text-orange-500 border-orange-500/30';
+    case 'moderate': return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30';
+    case 'minor': return 'bg-muted text-muted-foreground border-muted';
     default: return 'bg-muted text-muted-foreground';
   }
 };
@@ -199,19 +251,21 @@ const formatCurrency = (amount: number | string | undefined) => {
   return `$${num.toLocaleString()}`;
 };
 
+type ThreatScenario = NonNullable<EPDashboardData['threatMatrix']>[number];
+
 export default function ExecutiveDashboard() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<'overview' | 'scenarios' | 'controls' | 'evidence'>('overview');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedScenario, setSelectedScenario] = useState<ThreatScenario | null>(null);
+  const [showReportMenu, setShowReportMenu] = useState(false);
 
-  // Fetch cached dashboard data including interview completion status
   const { data: dashboardData, isLoading, refetch } = useQuery<EPDashboardData>({
     queryKey: ['/api/assessments', id, 'ep-dashboard'],
     enabled: !!id,
   });
 
-  // Mutation to trigger AI analysis
   const analyzeMutation = useMutation({
     mutationFn: async (forceRefresh: boolean = false) => {
       setIsAnalyzing(true);
@@ -230,22 +284,16 @@ export default function ExecutiveDashboard() {
     },
     onError: (error: any) => {
       setIsAnalyzing(false);
-      const errorData = error?.response?.data || error;
       toast({
         title: 'Analysis Failed',
-        description: errorData?.message || error.message || 'Failed to generate risk assessment',
+        description: error?.message || 'Failed to generate risk assessment',
         variant: 'destructive',
       });
     },
   });
 
-  const handleRunAnalysis = () => {
-    analyzeMutation.mutate(false);
-  };
-
-  const handleForceRefresh = () => {
-    analyzeMutation.mutate(true);
-  };
+  const handleRunAnalysis = () => analyzeMutation.mutate(false);
+  const handleForceRefresh = () => analyzeMutation.mutate(true);
 
   if (isLoading) {
     return (
@@ -260,20 +308,37 @@ export default function ExecutiveDashboard() {
   const answeredQuestions = dashboardData?.answeredQuestions || 0;
   const totalQuestions = dashboardData?.totalQuestions || 43;
 
+  const controlStatus = dashboardData?.controlStatus || [];
+  const totalControls = controlStatus.reduce((sum, c) => sum + c.total, 0);
+  const implementedControls = controlStatus.reduce((sum, c) => sum + c.implemented, 0);
+  const inProgressControls = controlStatus.reduce((sum, c) => sum + c.inProgress, 0);
+  const completionPercentage = totalControls > 0 ? Math.round((implementedControls / totalControls) * 100) : 0;
+
+  const allRecommendations = (dashboardData?.threatMatrix || [])
+    .flatMap(s => s.priorityControls || [])
+    .reduce((acc, control) => {
+      if (!acc.find(c => c.controlId === control.controlId)) {
+        acc.push(control);
+      }
+      return acc;
+    }, [] as NonNullable<EPDashboardData['threatMatrix']>[0]['priorityControls']);
+
+  const immediateControls = allRecommendations.filter(c => c.urgency?.toLowerCase() === 'immediate');
+  const totalInvestment = allRecommendations.reduce((sum, c) => sum + (c.estimatedCost || 0), 0);
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-6">
+      {/* Confidential Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Shield className="h-5 w-5 text-primary" />
+          <div className="flex items-center bg-red-500/20 text-red-400 px-3 py-1.5 rounded text-sm font-medium">
+            <Lock className="w-4 h-4 mr-2" />
+            Executive Protection — Confidential
           </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-semibold">Executive Protection Dashboard</h1>
-            <p className="text-sm text-muted-foreground">
-              6-Layer AI Framework: Logic, Math &amp; Standards-Based Analysis
-            </p>
-          </div>
+          <Badge variant="outline" className="gap-1.5">
+            <Shield className="h-3.5 w-3.5" />
+            6-Layer AI Engine
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           {hasResults && (
@@ -285,13 +350,58 @@ export default function ExecutiveDashboard() {
               data-testid="button-refresh-analysis"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              Re-Analyze
+              Reassess
             </Button>
           )}
-          <Badge variant="outline" className="gap-1.5">
-            <Shield className="h-3.5 w-3.5" />
-            6-Layer AI
-          </Badge>
+          {hasResults && (
+            <div className="relative">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowReportMenu(!showReportMenu)}
+                data-testid="button-generate-report"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Generate Report
+                <ChevronRight className={`h-4 w-4 ml-1 transition-transform ${showReportMenu ? 'rotate-90' : ''}`} />
+              </Button>
+              {showReportMenu && (
+                <Card className="absolute right-0 mt-2 w-72 z-50 shadow-xl">
+                  <CardContent className="p-2">
+                    <div className="text-xs text-muted-foreground px-2 py-1">Select Report Type</div>
+                    <Separator className="my-1" />
+                    <button className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3">
+                      <div className="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Executive Summary</div>
+                        <div className="text-muted-foreground text-xs">3-4 pages for C-Suite</div>
+                      </div>
+                    </button>
+                    <button className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3">
+                      <div className="w-8 h-8 rounded bg-purple-500/20 flex items-center justify-center shrink-0">
+                        <Briefcase className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Full Assessment Report</div>
+                        <div className="text-muted-foreground text-xs">15-20 pages with T×V×I×E</div>
+                      </div>
+                    </button>
+                    <button className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3">
+                      <div className="w-8 h-8 rounded bg-green-500/20 flex items-center justify-center shrink-0">
+                        <Scale className="w-4 h-4 text-green-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Technical Gap Analysis</div>
+                        <div className="text-muted-foreground text-xs">Specs, costs, timelines</div>
+                      </div>
+                    </button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -327,11 +437,9 @@ export default function ExecutiveDashboard() {
               <Loader2 className="h-10 w-10 text-primary animate-spin mb-3" />
               <h3 className="text-lg font-medium">Running 6-Layer AI Analysis</h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                Processing your interview data through our rigorous framework rooted in logic, math, and industry standards
+                Processing through our rigorous framework: Logic, Math & Industry Standards
               </p>
             </div>
-            
-            {/* 6-Layer Framework Description */}
             <div className="max-w-lg mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                 {[
@@ -365,8 +473,6 @@ export default function ExecutiveDashboard() {
                   : "Run the AI to process your data through our rigorous 6-layer framework."}
               </p>
             </div>
-            
-            {/* 6-Layer Preview */}
             <div className="max-w-lg mx-auto mb-6">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                 {[
@@ -386,7 +492,6 @@ export default function ExecutiveDashboard() {
                 ))}
               </div>
             </div>
-            
             <div className="text-center">
               <Button 
                 onClick={handleRunAnalysis} 
@@ -405,575 +510,643 @@ export default function ExecutiveDashboard() {
           </CardContent>
         </Card>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-            <TabsTrigger value="threats" data-testid="tab-threats">Risk Matrix</TabsTrigger>
-            <TabsTrigger value="controls" data-testid="tab-controls">Controls</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4">
-            {/* Overall Risk & AI Confidence */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="md:col-span-2">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Overall Risk Score</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-baseline gap-3">
-                    <span className={`text-5xl font-bold ${getRiskColor(dashboardData.overviewMetrics!.riskClassification)}`}>
-                      {dashboardData.overviewMetrics!.overallRiskScore}
-                    </span>
-                    <div>
-                      <Badge variant={getRiskBadgeVariant(dashboardData.overviewMetrics!.riskClassification)} className="text-sm">
-                        {dashboardData.overviewMetrics!.riskClassification.toUpperCase()}
-                      </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">T×V×I×E Score</p>
-                    </div>
-                  </div>
-                  <Progress 
-                    value={dashboardData.overviewMetrics!.overallRiskScore} 
-                    className="mt-3 h-2"
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Exposure Factor</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-primary">
-                      {dashboardData.overviewMetrics!.exposureFactor.toFixed(1)}
-                    </span>
-                    <span className="text-lg text-muted-foreground">/5</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Public visibility multiplier
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">AI Confidence</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={dashboardData.aiConfidence === 'high' ? 'default' : 'secondary'}>
-                      {(dashboardData.aiConfidence || 'medium').toUpperCase()}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {dashboardData.assessmentMode === 'ai' ? 'Full AI Analysis' : 
-                     dashboardData.assessmentMode === 'hybrid' ? 'Hybrid Analysis' : 'Algorithmic'}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* T×V×I×E Component Cards with AI Narratives */}
-            {dashboardData.componentSummaries && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-l-4 border-l-red-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Target className="h-4 w-4 text-red-500" />
-                      Threat (T)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.threat.overallScore.toFixed(1)}</span>
-                      <span className="text-sm text-muted-foreground">/10</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3">
-                      {dashboardData.componentSummaries.threat.narrative}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-orange-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-orange-500" />
-                      Vulnerability (V)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.vulnerability.overallScore.toFixed(1)}</span>
-                      <span className="text-sm text-muted-foreground">/10</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3">
-                      {dashboardData.componentSummaries.vulnerability.narrative}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-yellow-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-yellow-500" />
-                      Impact (I)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.impact.overallScore.toFixed(1)}</span>
-                      <span className="text-sm text-muted-foreground">/10</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3">
-                      {dashboardData.componentSummaries.impact.narrative}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-blue-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <User className="h-4 w-4 text-blue-500" />
-                      Exposure (E)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-2xl font-bold">{dashboardData.componentSummaries.exposure.overallScore.toFixed(1)}</span>
-                      <span className="text-sm text-muted-foreground">/5</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3">
-                      {dashboardData.componentSummaries.exposure.narrative}
-                    </p>
-                  </CardContent>
-                </Card>
+        <>
+          {/* Principal Header */}
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-orange-500/20">
+                <User className="w-8 h-8 text-orange-400" />
               </div>
-            )}
+              <div>
+                <h1 className="text-2xl font-bold">{dashboardData?.principalSummary?.name || 'Principal'}</h1>
+                <div className="text-muted-foreground">{dashboardData?.principalSummary?.title || 'Executive'}</div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  {dashboardData?.principalSummary?.assessmentDate && `Assessed: ${dashboardData.principalSummary.assessmentDate}`}
+                  {dashboardData?.principalSummary?.assessorName && ` by ${dashboardData.principalSummary.assessorName}`}
+                </div>
+              </div>
+            </div>
+            <ConfidenceBadge confidence={dashboardData?.aiConfidence || 'medium'} />
+          </div>
 
-            {/* Threat Summary */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Threat Scenario Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div className="p-3 rounded-lg bg-red-500/10">
-                    <p className="text-2xl font-bold text-red-500">{dashboardData.overviewMetrics!.criticalThreats}</p>
-                    <p className="text-xs text-muted-foreground">Critical</p>
+          {/* Overall Risk Card */}
+          <Card className="bg-gradient-to-r from-card to-muted/30">
+            <CardContent className="py-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Risk Score */}
+                <div className="lg:col-span-3 lg:border-r border-border lg:pr-6">
+                  <div className="text-muted-foreground text-sm mb-2">Overall Risk Score</div>
+                  <div className="flex items-end gap-3">
+                    <span className="text-5xl font-bold">{dashboardData?.overviewMetrics?.overallRiskScore || 0}</span>
+                    <span className="text-xl text-muted-foreground mb-2">/100</span>
                   </div>
-                  <div className="p-3 rounded-lg bg-orange-500/10">
-                    <p className="text-2xl font-bold text-orange-500">{dashboardData.overviewMetrics!.highThreats}</p>
-                    <p className="text-xs text-muted-foreground">High</p>
+                  <div className="mt-3">
+                    <StatusBadge level={dashboardData?.overviewMetrics?.riskClassification || 'medium'} size="large" />
                   </div>
-                  <div className="p-3 rounded-lg bg-yellow-500/10">
-                    <p className="text-2xl font-bold text-yellow-600">{(dashboardData.overviewMetrics!.threatCount - dashboardData.overviewMetrics!.criticalThreats - dashboardData.overviewMetrics!.highThreats)}</p>
-                    <p className="text-xs text-muted-foreground">Medium/Low</p>
+                  {dashboardData?.componentSummaries && (
+                    <div className="mt-4 text-xs text-muted-foreground">
+                      T×V×I×E = {dashboardData.componentSummaries.threat.overallScore.toFixed(0)}×
+                      {dashboardData.componentSummaries.vulnerability.overallScore.toFixed(0)}×
+                      {dashboardData.componentSummaries.impact.overallScore.toFixed(0)}×
+                      {dashboardData.componentSummaries.exposure.overallScore.toFixed(0)}
+                    </div>
+                  )}
+                </div>
+                
+                {/* T×V×I×E Gauges */}
+                {dashboardData?.componentSummaries && (
+                  <div className="lg:col-span-4 flex items-center justify-around flex-wrap gap-4">
+                    <ScoreGauge label="Threat" score={dashboardData.componentSummaries.threat.overallScore} maxScore={10} color="text-red-500" />
+                    <ScoreGauge label="Vulnerability" score={dashboardData.componentSummaries.vulnerability.overallScore} maxScore={10} color="text-purple-500" />
+                    <ScoreGauge label="Impact" score={dashboardData.componentSummaries.impact.overallScore} maxScore={10} color="text-pink-500" />
+                    <ScoreGauge label="Exposure" score={dashboardData.componentSummaries.exposure.overallScore} maxScore={5} color="text-orange-500" />
                   </div>
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-2xl font-bold">{dashboardData.overviewMetrics!.threatCount}</p>
-                    <p className="text-xs text-muted-foreground">Total</p>
+                )}
+                
+                {/* Key Stats */}
+                <div className="lg:col-span-5 grid grid-cols-3 gap-4">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-muted-foreground text-xs mb-1">Scenarios Analyzed</div>
+                    <div className="text-2xl font-bold">{dashboardData?.threatMatrix?.length || 0}</div>
+                    <div className="text-xs text-red-400">
+                      {dashboardData?.overviewMetrics?.criticalThreats || 0} critical
+                    </div>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-muted-foreground text-xs mb-1">Controls Status</div>
+                    <div className="text-2xl font-bold">{completionPercentage}%</div>
+                    <ProgressBar value={completionPercentage} color="blue" />
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-muted-foreground text-xs mb-1">Immediate Actions</div>
+                    <div className="text-2xl font-bold text-orange-400">{immediateControls.length}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatCurrency(totalInvestment)} total
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Principal Summary */}
-            {dashboardData.principalSummary && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Principal Profile Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {/* AI Assessment Summary */}
+          <Card>
+            <CardContent className="py-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Activity className="w-5 h-5 text-blue-400" />
+                <h3 className="text-lg font-semibold">AI Assessment Summary</h3>
+                <Badge variant="secondary" className="text-xs">Generated by 6-Layer AI Engine</Badge>
+              </div>
+              <p className="text-muted-foreground leading-relaxed text-sm">
+                {dashboardData?.principalSummary?.executiveSummary || 
+                  `Risk assessment completed with ${dashboardData?.threatMatrix?.length || 0} threat scenarios analyzed. 
+                   Overall risk classification: ${dashboardData?.overviewMetrics?.riskClassification?.toUpperCase() || 'UNKNOWN'}. 
+                   Current protection level: ${dashboardData?.principalSummary?.currentProtectionLevel || 'Unknown'}.`}
+              </p>
+              {(dashboardData?.principalSummary?.keyFindings?.length || dashboardData?.confidenceFactors?.length) && (
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dashboardData?.principalSummary?.keyFindings && dashboardData.principalSummary.keyFindings.length > 0 && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Public Exposure</p>
-                      <p className="font-medium">{dashboardData.principalSummary.publicExposure || 'Not assessed'}</p>
+                      <div className="text-xs text-muted-foreground mb-2">Key Findings</div>
+                      <ul className="space-y-1">
+                        {dashboardData.principalSummary.keyFindings.slice(0, 4).map((finding, i) => (
+                          <li key={i} className="text-sm flex items-start gap-2">
+                            <AlertTriangle className="w-3 h-3 text-orange-400 mt-1 shrink-0" />
+                            <span>{finding}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
+                  )}
+                  {dashboardData?.confidenceFactors && dashboardData.confidenceFactors.length > 0 && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Travel Risk</p>
-                      <p className="font-medium">{dashboardData.principalSummary.travelRisk || 'Not assessed'}</p>
+                      <div className="text-xs text-muted-foreground mb-2">Confidence Factors</div>
+                      <ul className="space-y-1">
+                        {dashboardData.confidenceFactors.slice(0, 4).map((factor, i) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <Info className="w-3 h-3 mt-1 shrink-0" />
+                            <span>{factor}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Family Exposure</p>
-                      <p className="font-medium">{dashboardData.principalSummary.familyExposure || 'Not assessed'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Digital Risk</p>
-                      <p className="font-medium">{dashboardData.principalSummary.digitalRisk || 'Not assessed'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Current Protection</p>
-                      <p className="font-medium">{dashboardData.principalSummary.currentProtectionLevel || 'Not assessed'}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Section Assessments (7 EP Sections with AI Narratives) */}
-            {dashboardData.sectionAssessments && dashboardData.sectionAssessments.length > 0 && (
+          {/* Tabs */}
+          <div className="border-b border-border">
+            <div className="flex gap-6">
+              {(['overview', 'scenarios', 'controls', 'evidence'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors capitalize ${
+                    activeTab === tab 
+                      ? 'border-primary text-primary' 
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                  data-testid={`tab-${tab}`}
+                >
+                  {tab === 'evidence' ? 'Evidence Trail' : tab}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Section Assessments */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ClipboardCheck className="h-5 w-5" />
-                    Section Assessments
-                  </CardTitle>
-                  <CardDescription>AI analysis of each interview section with risk indicators</CardDescription>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Section Assessments</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {dashboardData.sectionAssessments.map((section) => (
-                      <div 
-                        key={section.sectionId} 
-                        data-testid={`section-assessment-${section.sectionId}`}
-                        className="p-4 rounded-lg bg-muted/30 border border-muted"
-                      >
-                        <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
-                          <span className="font-medium text-sm">{section.sectionName}</span>
-                          <span className={`text-xs font-medium px-2 py-1 rounded ${
-                            section.riskIndicators > 3 ? 'bg-red-500/20 text-red-600' : 
-                            section.riskIndicators > 2 ? 'bg-yellow-500/20 text-yellow-600' : 
-                            'bg-green-500/20 text-green-600'
-                          }`}>
-                            {section.riskIndicators}/{section.totalQuestions} risk indicators
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-3">{section.aiNarrative}</p>
-                        {section.keyFindings && section.keyFindings.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {section.keyFindings.slice(0, 4).map((finding, j) => (
-                              <Badge 
-                                key={`${section.sectionId}-finding-${j}`}
-                                variant="outline" 
-                                className="text-xs"
-                              >
-                                {finding}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                <CardContent className="space-y-3">
+                  {(dashboardData?.sectionAssessments || []).map(section => (
+                    <div key={section.sectionId} className="bg-muted/50 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-sm">{section.sectionName}</span>
+                        <span className={`text-sm ${section.riskIndicators > 3 ? 'text-red-400' : section.riskIndicators > 2 ? 'text-yellow-400' : 'text-green-400'}`}>
+                          {section.riskIndicators}/{section.totalQuestions} risk indicators
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-xs text-muted-foreground">{section.aiNarrative}</p>
+                    </div>
+                  ))}
+                  {(!dashboardData?.sectionAssessments || dashboardData.sectionAssessments.length === 0) && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No section assessments available</p>
+                  )}
                 </CardContent>
               </Card>
-            )}
 
-            {/* Top Risk Signals */}
-            {dashboardData.topRiskSignals && dashboardData.topRiskSignals.length > 0 && (
+              {/* Control Implementation by Category */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Top Risk Signals
-                  </CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Control Implementation by Category</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {dashboardData.topRiskSignals.slice(0, 5).map((signal, i) => (
-                      <div key={`signal-${signal.sourceQuestionId}-${i}`} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                        <AlertCircle className={`h-5 w-5 mt-0.5 ${getUrgencyColor(signal.severity)}`} />
-                        <div>
-                          <p className="font-medium">{signal.signal}</p>
-                          <p className="text-sm text-muted-foreground">{signal.category}</p>
-                        </div>
-                        <Badge variant="outline" className="ml-auto">{signal.severity}</Badge>
+                <CardContent className="space-y-4">
+                  {controlStatus.map(category => (
+                    <div key={category.category}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm">{category.category}</span>
+                        <span className="text-xs text-muted-foreground">{category.implemented}/{category.total}</span>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 6-Layer Methodology Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                  <ListChecks className="h-4 w-4" />
-                  Assessment Methodology: 6-Layer AI Framework
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground mb-3">
-                  This assessment was processed through our rigorous 6-layer framework:
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                  {[
-                    { num: 1, name: "Data Collection", desc: "Interview responses" },
-                    { num: 2, name: "T×V×I×E Formula", desc: "Risk calculation" },
-                    { num: 3, name: "Industry Standards", desc: "ASIS/CPP guidelines" },
-                    { num: 4, name: "Threat Intelligence", desc: "EP threat patterns" },
-                    { num: 5, name: "Control Mapping", desc: "Gap analysis" },
-                    { num: 6, name: "Quantified Output", desc: "Recommendations" },
-                  ].map((layer) => (
-                    <div key={layer.num} className="flex items-start gap-2 p-2 rounded bg-muted/50">
-                      <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0 mt-0.5">
-                        {layer.num}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{layer.name}</p>
-                        <p className="text-muted-foreground truncate">{layer.desc}</p>
+                      <div className="flex gap-1 h-2">
+                        <div className="bg-green-500 rounded" style={{ width: `${(category.implemented/Math.max(category.total,1))*100}%` }} />
+                        <div className="bg-blue-500 rounded" style={{ width: `${(category.inProgress/Math.max(category.total,1))*100}%` }} />
+                        <div className="bg-muted rounded" style={{ width: `${(category.recommended/Math.max(category.total,1))*100}%` }} />
+                      </div>
+                      <div className="flex gap-4 mt-1 text-xs">
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-green-500 rounded" /> Implemented: {category.implemented}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-blue-500 rounded" /> In Progress: {category.inProgress}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-muted rounded" /> Recommended: {category.recommended}
+                        </span>
                       </div>
                     </div>
                   ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-3 text-center">
-                  Evidence-based scoring rooted in logic, math, and industry standards
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  {controlStatus.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No control status data available</p>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Threats Tab */}
-          <TabsContent value="threats" className="space-y-4">
-            {dashboardData.threatMatrix && dashboardData.threatMatrix.length > 0 ? (
-              <div className="space-y-4">
-                {dashboardData.threatMatrix.map((threat, i) => (
-                  <Card key={threat.threatId || i} className="overflow-hidden">
-                    <CardHeader className="pb-3 bg-muted/30">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            {threat.threatName}
-                            {threat.confidence && (
-                              <Badge variant="outline" className="text-xs">
-                                {threat.confidence} confidence
-                              </Badge>
-                            )}
-                          </CardTitle>
-                          <CardDescription>{threat.category}</CardDescription>
+              {/* T×V×I×E Component Narratives */}
+              {dashboardData?.componentSummaries && (
+                <Card className="lg:col-span-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">T×V×I×E Component Analysis</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-lg border-l-4 border-l-red-500 bg-muted/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="h-4 w-4 text-red-500" />
+                          <span className="font-medium">Threat (T): {dashboardData.componentSummaries.threat.overallScore.toFixed(1)}/10</span>
                         </div>
-                        <Badge variant={getRiskBadgeVariant(threat.riskScore.classification)} className="text-sm">
-                          {threat.riskScore.classification.toUpperCase()} ({threat.riskScore.normalized})
-                        </Badge>
+                        <p className="text-xs text-muted-foreground">{dashboardData.componentSummaries.threat.narrative}</p>
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-muted-foreground mb-4">{threat.scenarioDescription}</p>
-                      
-                      {/* T×V×I×E Component Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-red-600">Threat</span>
-                            <span className="text-lg font-bold">{threat.threatLikelihood.score}</span>
-                          </div>
-                          {threat.threatLikelihood.reasoning && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.threatLikelihood.reasoning}</p>
-                          )}
+                      <div className="p-4 rounded-lg border-l-4 border-l-purple-500 bg-muted/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="h-4 w-4 text-purple-500" />
+                          <span className="font-medium">Vulnerability (V): {dashboardData.componentSummaries.vulnerability.overallScore.toFixed(1)}/10</span>
                         </div>
-                        <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-orange-600">Vulnerability</span>
-                            <span className="text-lg font-bold">{threat.vulnerability.score}</span>
-                          </div>
-                          {threat.vulnerability.reasoning && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.vulnerability.reasoning}</p>
-                          )}
-                        </div>
-                        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-yellow-600">Impact</span>
-                            <span className="text-lg font-bold">{threat.impact.score}</span>
-                          </div>
-                          {threat.impact.reasoning && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.impact.reasoning}</p>
-                          )}
-                        </div>
-                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-blue-600">Exposure</span>
-                            <span className="text-lg font-bold">{threat.exposureFactor.score}</span>
-                          </div>
-                          {threat.exposureFactor.reasoning && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{threat.exposureFactor.reasoning}</p>
-                          )}
-                        </div>
+                        <p className="text-xs text-muted-foreground">{dashboardData.componentSummaries.vulnerability.narrative}</p>
                       </div>
-                      
-                      {/* Confidence Reasoning */}
-                      {threat.confidenceReasoning && (
-                        <div className="mb-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                          <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1 flex items-center gap-1">
-                            <Info className="h-3 w-3" />
-                            Confidence Assessment
-                          </p>
-                          <p className="text-xs text-blue-700 dark:text-blue-300">{threat.confidenceReasoning}</p>
+                      <div className="p-4 rounded-lg border-l-4 border-l-pink-500 bg-muted/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className="h-4 w-4 text-pink-500" />
+                          <span className="font-medium">Impact (I): {dashboardData.componentSummaries.impact.overallScore.toFixed(1)}/10</span>
                         </div>
-                      )}
-                      
-                      {/* Evidence Trail - Supports both string arrays and structured objects */}
-                      {threat.evidenceTrail && threat.evidenceTrail.length > 0 && (
-                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
-                            Evidence Trail
-                          </p>
-                          <ul className="space-y-2">
-                            {threat.evidenceTrail.slice(0, 6).map((evidence, j) => {
-                              const isStructured = typeof evidence === 'object' && evidence !== null;
-                              const evidenceItem = evidence as EvidenceChainItem;
-                              
-                              if (isStructured) {
-                                return (
-                                  <li 
-                                    key={`${threat.threatId}-evidence-${j}`} 
-                                    data-testid={`text-evidence-${threat.threatId}-${j}`}
-                                    className="text-xs flex items-start gap-2 p-2 rounded bg-amber-100/50 dark:bg-amber-900/30"
-                                  >
-                                    <div className="flex flex-col gap-1 flex-1">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <Badge 
-                                          variant="outline" 
-                                          className={`text-[10px] py-0 ${getEvidenceWeightColor(evidenceItem.weight)}`}
-                                        >
-                                          {evidenceItem.weight}
-                                        </Badge>
-                                        <span className="text-[10px] text-muted-foreground">
-                                          Source: {getSourceLabel(evidenceItem.source)}
-                                          {evidenceItem.questionId && ` (${evidenceItem.questionId})`}
-                                        </span>
-                                      </div>
-                                      <span className="text-amber-700 dark:text-amber-300">{evidenceItem.finding}</span>
-                                    </div>
-                                  </li>
-                                );
-                              }
-                              
-                              return (
-                                <li 
-                                  key={`${threat.threatId}-evidence-${j}`} 
-                                  data-testid={`text-evidence-${threat.threatId}-${j}`}
-                                  className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2"
-                                >
-                                  <ChevronRight className="h-3 w-3 mt-0.5 shrink-0" />
-                                  {evidence as string}
-                                </li>
-                              );
-                            })}
-                          </ul>
+                        <p className="text-xs text-muted-foreground">{dashboardData.componentSummaries.impact.narrative}</p>
+                      </div>
+                      <div className="p-4 rounded-lg border-l-4 border-l-orange-500 bg-muted/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="h-4 w-4 text-orange-500" />
+                          <span className="font-medium">Exposure (E): {dashboardData.componentSummaries.exposure.overallScore.toFixed(1)}/5</span>
                         </div>
-                      )}
-                      
-                      {/* Control Gaps */}
-                      {threat.vulnerability.controlGaps && threat.vulnerability.controlGaps.length > 0 && (
-                        <div className="mt-3 p-3 rounded-lg bg-muted/50">
-                          <p className="text-xs font-semibold mb-2 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            Control Gaps Identified
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {threat.vulnerability.controlGaps.slice(0, 4).map((gap, j) => (
-                              <Badge 
-                                key={`${threat.threatId}-gap-${j}`} 
-                                data-testid={`badge-control-gap-${threat.threatId}-${j}`}
-                                variant="outline" 
-                                className="text-xs"
-                              >
-                                {gap}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        <p className="text-xs text-muted-foreground">{dashboardData.componentSummaries.exposure.narrative}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'scenarios' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Scenario List */}
+              <div className="lg:col-span-1 space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground">Threat Scenarios ({dashboardData?.threatMatrix?.length || 0})</h3>
+                {(dashboardData?.threatMatrix || []).map(scenario => (
+                  <Card 
+                    key={scenario.threatId}
+                    className={`cursor-pointer transition-colors ${selectedScenario?.threatId === scenario.threatId ? 'ring-2 ring-primary' : 'hover:bg-muted/50'}`}
+                    onClick={() => setSelectedScenario(scenario)}
+                    data-testid={`scenario-card-${scenario.threatId}`}
+                  >
+                    <CardContent className="py-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="font-medium text-sm">{scenario.threatName}</span>
+                        <StatusBadge level={scenario.riskScore.classification} />
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Score: {scenario.riskScore.normalized}</span>
+                        {scenario.confidence && (
+                          <span className="flex items-center gap-1">
+                            {scenario.confidence === 'high' ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : 
+                             scenario.confidence === 'medium' ? <Clock className="w-3 h-3 text-yellow-400" /> : 
+                             <XCircle className="w-3 h-3 text-red-400" />}
+                            {scenario.confidence}
+                          </span>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
+                {(!dashboardData?.threatMatrix || dashboardData.threatMatrix.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-8">No threat scenarios generated yet</p>
+                )}
               </div>
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No threat data available. Run AI analysis to generate threat assessments.
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
 
-          {/* Controls Tab */}
-          <TabsContent value="controls" className="space-y-4">
-            {dashboardData.prioritizedControls && dashboardData.prioritizedControls.length > 0 ? (
-              <div className="space-y-4">
-                {dashboardData.prioritizedControls.map((control, i) => (
-                  <Card key={control.controlId || i} className="overflow-hidden">
-                    <CardHeader className="pb-3 bg-muted/30">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                            {i + 1}
-                          </div>
-                          <div>
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <Lock className="h-4 w-4" />
-                              {control.controlName}
-                            </CardTitle>
-                            <CardDescription>{control.category}</CardDescription>
-                          </div>
+              {/* Scenario Detail */}
+              <div className="lg:col-span-2">
+                {selectedScenario ? (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{selectedScenario.threatName}</CardTitle>
+                          <p className="text-sm text-muted-foreground mt-1">{selectedScenario.category}</p>
                         </div>
-                        <Badge 
-                          variant={control.urgency === 'immediate' ? 'destructive' : 
-                                   control.urgency === 'short_term' ? 'secondary' : 'outline'}
-                          className="text-xs"
-                        >
-                          {control.urgency.replace('_', ' ').toUpperCase()}
-                        </Badge>
+                        <div className="text-right">
+                          <div className="text-3xl font-bold">{selectedScenario.riskScore.normalized}</div>
+                          <StatusBadge level={selectedScenario.riskScore.classification} size="large" />
+                        </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                      <p className="text-sm mb-4">{control.rationale}</p>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div className="p-2 rounded bg-muted/50">
-                          <p className="text-xs text-muted-foreground mb-1">Difficulty</p>
-                          <p className="font-medium">{control.implementationDifficulty}</p>
+                    <CardContent className="space-y-6">
+                      {/* Scenario Description */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Scenario Description</h4>
+                        <p className="text-sm text-muted-foreground">{selectedScenario.scenarioDescription}</p>
+                      </div>
+
+                      {/* T×V×I×E Breakdown */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">T×V×I×E Analysis</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="text-center p-3 bg-red-500/10 rounded-lg">
+                            <div className="text-2xl font-bold text-red-400">{selectedScenario.threatLikelihood.score}</div>
+                            <div className="text-xs text-muted-foreground">Threat</div>
+                            <p className="text-xs mt-1 text-red-300">{selectedScenario.threatLikelihood.label}</p>
+                          </div>
+                          <div className="text-center p-3 bg-purple-500/10 rounded-lg">
+                            <div className="text-2xl font-bold text-purple-400">{selectedScenario.vulnerability.score}</div>
+                            <div className="text-xs text-muted-foreground">Vulnerability</div>
+                            <p className="text-xs mt-1 text-purple-300">{selectedScenario.vulnerability.label}</p>
+                          </div>
+                          <div className="text-center p-3 bg-pink-500/10 rounded-lg">
+                            <div className="text-2xl font-bold text-pink-400">{selectedScenario.impact.score}</div>
+                            <div className="text-xs text-muted-foreground">Impact</div>
+                            <p className="text-xs mt-1 text-pink-300">{selectedScenario.impact.label}</p>
+                          </div>
+                          <div className="text-center p-3 bg-orange-500/10 rounded-lg">
+                            <div className="text-2xl font-bold text-orange-400">{selectedScenario.exposureFactor.score}</div>
+                            <div className="text-xs text-muted-foreground">Exposure</div>
+                            <p className="text-xs mt-1 text-orange-300">{selectedScenario.exposureFactor.label}</p>
+                          </div>
                         </div>
-                        <div className="p-2 rounded bg-muted/50">
-                          <p className="text-xs text-muted-foreground mb-1">Est. Cost</p>
-                          <p className="font-medium">{formatCurrency(control.estimatedCost)}</p>
-                        </div>
-                        {control.effectivenessRating && (
-                          <div className="p-2 rounded bg-green-500/10 border border-green-500/20">
-                            <p className="text-xs text-muted-foreground mb-1">Effectiveness</p>
-                            <div className="flex items-center gap-2">
-                              <Progress value={control.effectivenessRating} className="h-2 flex-1" />
-                              <span className="font-medium text-green-600">{control.effectivenessRating}%</span>
-                            </div>
+                      </div>
+
+                      {/* AI Reasoning */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedScenario.threatLikelihood.reasoning && (
+                          <div className="p-3 bg-muted/30 rounded-lg">
+                            <h5 className="text-xs font-medium text-red-400 mb-1">Threat Reasoning</h5>
+                            <p className="text-xs text-muted-foreground">{selectedScenario.threatLikelihood.reasoning}</p>
                           </div>
                         )}
-                        <div className="p-2 rounded bg-muted/50">
-                          <p className="text-xs text-muted-foreground mb-1">Threats Addressed</p>
-                          <p className="font-medium">{control.addressesThreats?.length || 0}</p>
-                        </div>
+                        {selectedScenario.vulnerability.reasoning && (
+                          <div className="p-3 bg-muted/30 rounded-lg">
+                            <h5 className="text-xs font-medium text-purple-400 mb-1">Vulnerability Reasoning</h5>
+                            <p className="text-xs text-muted-foreground">{selectedScenario.vulnerability.reasoning}</p>
+                          </div>
+                        )}
                       </div>
-                      
-                      {control.addressesThreats && control.addressesThreats.length > 0 && (
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-xs text-muted-foreground mb-2">Addresses Threats:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {control.addressesThreats.slice(0, 5).map((threatName, j) => (
-                              <Badge key={`${control.controlId}-threat-${j}`} variant="outline" className="text-xs">
-                                {threatName}
-                              </Badge>
+
+                      {/* Recommended Controls */}
+                      {selectedScenario.priorityControls && selectedScenario.priorityControls.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-3">Recommended Controls</h4>
+                          <div className="space-y-2">
+                            {selectedScenario.priorityControls.map((control, idx) => (
+                              <div key={idx} className="flex items-start justify-between p-3 bg-muted/30 rounded-lg">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-sm">{control.controlName}</span>
+                                    <Badge variant={control.urgency === 'immediate' ? 'destructive' : 'secondary'} className="text-xs">
+                                      {control.urgency}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">{control.rationale}</p>
+                                </div>
+                                <div className="text-right ml-4">
+                                  {control.estimatedCost && (
+                                    <div className="text-sm font-medium">{formatCurrency(control.estimatedCost)}</div>
+                                  )}
+                                  {control.effectivenessRating && (
+                                    <div className="text-xs text-muted-foreground">{control.effectivenessRating}% effective</div>
+                                  )}
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>
                       )}
+
+                      {/* Evidence Chain */}
+                      {selectedScenario.evidenceTrail && selectedScenario.evidenceTrail.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-3">Evidence Chain</h4>
+                          <div className="space-y-2">
+                            {(selectedScenario.evidenceTrail as (string | EvidenceChainItem)[]).map((evidence, idx) => {
+                              if (typeof evidence === 'string') {
+                                return (
+                                  <div key={idx} className="flex items-start gap-2 text-xs">
+                                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full mt-1.5 shrink-0" />
+                                    <span className="text-muted-foreground">{evidence}</span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={idx} className="flex items-start gap-3 p-2 bg-muted/20 rounded">
+                                  <Badge variant="outline" className={`text-xs shrink-0 ${getEvidenceWeightColor(evidence.weight)}`}>
+                                    {evidence.weight}
+                                  </Badge>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 text-xs">
+                                      <Badge variant="secondary" className="text-xs">{getSourceLabel(evidence.source)}</Badge>
+                                      {evidence.questionId && <span className="text-muted-foreground">({evidence.questionId})</span>}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">{evidence.finding}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Confidence */}
+                      {selectedScenario.confidenceReasoning && (
+                        <div className="p-3 bg-muted/20 rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Info className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-xs font-medium">Confidence: {selectedScenario.confidence}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{selectedScenario.confidenceReasoning}</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  <Card className="h-full">
+                    <CardContent className="flex items-center justify-center h-64">
+                      <div className="text-center">
+                        <Eye className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-muted-foreground">Select a scenario to view details</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-            ) : (
+            </div>
+          )}
+
+          {activeTab === 'controls' && (
+            <div className="space-y-6">
+              {/* Immediate Actions */}
               <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No control recommendations available. Run AI analysis to generate recommendations.
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-orange-400" />
+                      Immediate Actions Required
+                    </CardTitle>
+                    <Badge variant="destructive">{immediateControls.length} items</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {immediateControls.slice(0, 6).map((control, idx) => (
+                      <div key={idx} className="p-4 border border-orange-500/30 bg-orange-500/5 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="font-medium text-sm">{control.controlName}</span>
+                          <span className="text-sm font-bold">{formatCurrency(control.estimatedCost)}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{control.rationale}</p>
+                        {control.effectivenessRating && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Effectiveness:</span>
+                            <ProgressBar value={control.effectivenessRating} color="green" />
+                            <span className="text-xs">{control.effectivenessRating}%</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+
+              {/* All Prioritized Controls */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">All Prioritized Controls</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {(dashboardData?.prioritizedControls || allRecommendations).map((control, idx) => (
+                      <div key={idx} className="flex items-start justify-between p-4 bg-muted/30 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">{control.controlName}</span>
+                            <Badge variant={control.urgency === 'immediate' ? 'destructive' : control.urgency === 'high' ? 'default' : 'secondary'} className="text-xs">
+                              {control.urgency}
+                            </Badge>
+                            {'category' in control && control.category && (
+                              <Badge variant="outline" className="text-xs">{control.category}</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{control.rationale}</p>
+                          {'addressesThreats' in control && control.addressesThreats && control.addressesThreats.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {control.addressesThreats.map((threat, tIdx) => (
+                                <Badge key={tIdx} variant="outline" className="text-xs">{threat}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-sm font-medium">{formatCurrency(control.estimatedCost)}</div>
+                          {control.effectivenessRating && (
+                            <div className="text-xs text-muted-foreground">{control.effectivenessRating}% effective</div>
+                          )}
+                          {'implementationDifficulty' in control && control.implementationDifficulty && (
+                            <div className="text-xs text-muted-foreground mt-1">{control.implementationDifficulty}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {(!dashboardData?.prioritizedControls || dashboardData.prioritizedControls.length === 0) && allRecommendations.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-8">No control recommendations available</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Investment Summary */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Investment Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-primary">{formatCurrency(totalInvestment)}</div>
+                      <div className="text-xs text-muted-foreground">Total Investment</div>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-orange-400">{immediateControls.length}</div>
+                      <div className="text-xs text-muted-foreground">Immediate Priority</div>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg text-center">
+                      <div className="text-2xl font-bold">{allRecommendations.length}</div>
+                      <div className="text-xs text-muted-foreground">Total Controls</div>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-green-400">{completionPercentage}%</div>
+                      <div className="text-xs text-muted-foreground">Currently Implemented</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === 'evidence' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Complete Evidence Trail</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Full audit trail of all data sources and findings used in the AI risk assessment
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {/* Evidence by Scenario */}
+                  <div className="space-y-6">
+                    {(dashboardData?.threatMatrix || []).map(scenario => {
+                      const evidenceItems = scenario.evidenceTrail || [];
+                      if (evidenceItems.length === 0) return null;
+                      
+                      return (
+                        <div key={scenario.threatId} className="border-l-2 border-muted pl-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="font-medium text-sm">{scenario.threatName}</h4>
+                            <StatusBadge level={scenario.riskScore.classification} />
+                            <span className="text-xs text-muted-foreground">
+                              ({evidenceItems.length} evidence items)
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {(evidenceItems as (string | EvidenceChainItem)[]).map((evidence, idx) => {
+                              if (typeof evidence === 'string') {
+                                return (
+                                  <div key={idx} className="flex items-start gap-3 p-2 bg-muted/20 rounded text-sm">
+                                    <span className="text-muted-foreground">{evidence}</span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={idx} className="flex items-start gap-3 p-3 bg-muted/20 rounded">
+                                  <Badge variant="outline" className={`text-xs shrink-0 ${getEvidenceWeightColor(evidence.weight)}`}>
+                                    {evidence.weight}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs shrink-0">
+                                    {getSourceLabel(evidence.source)}
+                                  </Badge>
+                                  <div className="flex-1">
+                                    <p className="text-sm">{evidence.finding}</p>
+                                    {evidence.questionId && (
+                                      <p className="text-xs text-muted-foreground mt-1">Source: {evidence.questionId}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Confidence Factors */}
+                  {dashboardData?.confidenceFactors && dashboardData.confidenceFactors.length > 0 && (
+                    <div className="mt-8 p-4 bg-muted/30 rounded-lg">
+                      <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        Assessment Confidence Factors
+                      </h4>
+                      <ul className="space-y-2">
+                        {dashboardData.confidenceFactors.map((factor, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
+                            {factor}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {(!dashboardData?.threatMatrix || dashboardData.threatMatrix.length === 0) && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No evidence trail available. Run AI analysis to generate evidence-based assessments.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
