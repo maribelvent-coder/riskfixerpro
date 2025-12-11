@@ -339,9 +339,19 @@ export default function ExecutiveDashboard() {
   const immediateControls = prioritizedControlsList.length > 0
     ? prioritizedControlsList.filter(c => c.urgency?.toLowerCase() === 'immediate')
     : allRecommendations.filter(c => c.urgency?.toLowerCase() === 'immediate');
+  
+  // Parse cost strings like "$750,000/year" to extract numeric values
+  const parseCostToNumber = (cost: string | number | undefined): number => {
+    if (typeof cost === 'number') return cost;
+    if (!cost) return 0;
+    // Remove commas and extract first numeric sequence (e.g., "$750,000/year" -> 750000)
+    const cleaned = cost.replace(/,/g, '');
+    const match = cleaned.match(/[\d.]+/);
+    return match ? parseFloat(match[0]) : 0;
+  };
+  
   const totalInvestment = prioritizedControlsList.reduce((sum, c) => {
-    const cost = typeof c.estimatedCost === 'number' ? c.estimatedCost : 0;
-    return sum + cost;
+    return sum + parseCostToNumber(c.estimatedCost);
   }, 0);
 
   return (
