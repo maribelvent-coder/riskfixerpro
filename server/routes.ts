@@ -6063,7 +6063,7 @@ The facility should prioritize addressing critical risks immediately, particular
         const surveyQuestions = await storage.getAssessmentQuestions(id);
         
         // Load executive interview questions to map UUIDs to semantic keys
-        const epQuestions = await db.select().from(schema.executiveInterviewQuestions);
+        const epQuestions = await db.select().from(executiveInterviewQuestions);
         
         // Create mapping from (category, question_number) → semantic key
         // This bridges the gap between UUID-keyed DB data and semantic-keyed mapper expectations
