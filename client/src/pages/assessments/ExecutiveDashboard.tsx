@@ -244,11 +244,22 @@ const getSourceLabel = (source: string) => {
 
 const formatCurrency = (amount: number | string | undefined) => {
   if (!amount) return 'N/A';
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  if (isNaN(num)) return 'N/A';
-  if (num >= 1000000) return `$${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `$${(num / 1000).toFixed(0)}K`;
-  return `$${num.toLocaleString()}`;
+  // If already formatted string with $ or /year, return as-is
+  if (typeof amount === 'string') {
+    if (amount.includes('$') || amount.includes('/year') || amount.includes('/month')) {
+      return amount;
+    }
+    // Try to parse numeric string
+    const num = parseFloat(amount.replace(/[^0-9.-]/g, ''));
+    if (isNaN(num)) return amount; // Return original if can't parse
+    if (num >= 1000000) return `$${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `$${(num / 1000).toFixed(0)}K`;
+    return `$${num.toLocaleString()}`;
+  }
+  // Number input
+  if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
+  if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
+  return `$${amount.toLocaleString()}`;
 };
 
 type ThreatScenario = NonNullable<EPDashboardData['threatMatrix']>[number];
