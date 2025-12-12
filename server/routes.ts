@@ -5601,73 +5601,140 @@ The facility should prioritize addressing critical risks immediately, particular
           site = await storage.getSite(assessment.siteId);
         }
 
-        // Get all facility survey questions with responses
-        const surveyQuestions = await storage.getFacilitySurveyQuestions(id);
-
-        // Get executive interview responses if applicable
-        let executiveResponses: any[] = [];
-        if (assessment.templateId === 'executive-protection') {
-          try {
-            executiveResponses = await storage.getExecutiveInterviewResponses(id);
-          } catch (e) {
-            console.log("No executive interview responses found");
-          }
-        }
-
-        // Organize questions by category and convert evidence to base64
         const objectStorageService = new ObjectStorageService();
         const categorizedQuestions: Record<string, any[]> = {};
-        
-        for (const q of surveyQuestions) {
-          const category = q.category || 'Uncategorized';
-          if (!categorizedQuestions[category]) {
-            categorizedQuestions[category] = [];
+        let totalQuestions = 0;
+        let answeredQuestions = 0;
+        let executiveResponses: any[] = [];
+
+        // For Executive Protection assessments, use interview questions/responses
+        if (assessment.templateId === 'executive-protection') {
+          try {
+            // Fetch all EP interview questions
+            const epQuestions = await storage.getAllExecutiveInterviewQuestions();
+            // Fetch responses for this assessment
+            executiveResponses = await storage.getExecutiveInterviewResponses(id);
+            
+            // Create a map of questionId -> response for quick lookup
+            const responseMap = new Map<string, any>();
+            for (const resp of executiveResponses) {
+              responseMap.set(resp.questionId, resp);
+            }
+            
+            totalQuestions = epQuestions.length;
+            
+            // Organize EP questions by category - only include answered questions (matching facility survey behavior)
+            for (const q of epQuestions) {
+              const response = responseMap.get(q.id);
+              const hasResponse = response && (
+                response.yesNoResponse !== null || 
+                (response.textResponse && response.textResponse.trim() !== '')
+              );
+              
+              // Skip unanswered questions to match facility survey export behavior
+              if (!hasResponse) {
+                continue;
+              }
+              
+              answeredQuestions++;
+              
+              const category = q.category || 'Uncategorized';
+              if (!categorizedQuestions[category]) {
+                categorizedQuestions[category] = [];
+              }
+              
+              // Format response to match facility survey schema for parity
+              // Case 1: yesNoResponse present -> response = "Yes"/"No", notes = textResponse (supplemental)
+              // Case 2: text-only (no yes/no) -> response = textResponse, notes = null
+              let responseValue: string | null = null;
+              let notesValue: string | null = null;
+              
+              if (response.yesNoResponse !== null) {
+                // Has yes/no answer
+                responseValue = response.yesNoResponse ? 'Yes' : 'No';
+                // Text response is supplemental notes
+                notesValue = response.textResponse?.trim() || null;
+              } else if (response.textResponse && response.textResponse.trim()) {
+                // Text-only response (no yes/no)
+                responseValue = response.textResponse.trim();
+                notesValue = null; // No supplemental notes for text-only
+              }
+              
+              categorizedQuestions[category].push({
+                id: q.id,
+                templateId: 'executive-protection',
+                subcategory: null,
+                question: q.question,
+                type: q.responseType,
+                response: responseValue,
+                notes: notesValue,
+                evidence: [],
+                standard: null,
+                // EP-specific metadata
+                questionNumber: q.questionNumber,
+                riskDirection: q.riskDirection,
+              });
+            }
+          } catch (e) {
+            console.log("Error fetching EP interview data:", e);
           }
+        } else {
+          // For non-EP assessments, use facility survey questions
+          const surveyQuestions = await storage.getFacilitySurveyQuestions(id);
+          totalQuestions = surveyQuestions.length;
+          answeredQuestions = surveyQuestions.filter(q => q.response !== null && q.response !== undefined && q.response !== '').length;
           
-          // Convert evidence paths to base64 data URLs
-          const evidenceWithBase64: string[] = [];
-          if (q.evidence && Array.isArray(q.evidence)) {
-            for (const evidencePath of q.evidence) {
-              if (evidencePath && typeof evidencePath === 'string') {
-                try {
-                  const file = await objectStorageService.getEvidenceFile(evidencePath);
-                  const [metadata] = await file.getMetadata();
-                  const contentType = metadata.contentType || 'image/jpeg';
-                  
-                  // Download file content as buffer
-                  const chunks: Buffer[] = [];
-                  const stream = file.createReadStream();
-                  
-                  await new Promise<void>((resolve, reject) => {
-                    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-                    stream.on('end', () => resolve());
-                    stream.on('error', reject);
-                  });
-                  
-                  const buffer = Buffer.concat(chunks);
-                  const base64 = buffer.toString('base64');
-                  const dataUrl = `data:${contentType};base64,${base64}`;
-                  evidenceWithBase64.push(dataUrl);
-                } catch (error) {
-                  console.error(`Failed to load image ${evidencePath}:`, error);
-                  // Keep original path as fallback
-                  evidenceWithBase64.push(evidencePath);
+          for (const q of surveyQuestions) {
+            const category = q.category || 'Uncategorized';
+            if (!categorizedQuestions[category]) {
+              categorizedQuestions[category] = [];
+            }
+            
+            // Convert evidence paths to base64 data URLs
+            const evidenceWithBase64: string[] = [];
+            if (q.evidence && Array.isArray(q.evidence)) {
+              for (const evidencePath of q.evidence) {
+                if (evidencePath && typeof evidencePath === 'string') {
+                  try {
+                    const file = await objectStorageService.getEvidenceFile(evidencePath);
+                    const [metadata] = await file.getMetadata();
+                    const contentType = metadata.contentType || 'image/jpeg';
+                    
+                    // Download file content as buffer
+                    const chunks: Buffer[] = [];
+                    const stream = file.createReadStream();
+                    
+                    await new Promise<void>((resolve, reject) => {
+                      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                      stream.on('end', () => resolve());
+                      stream.on('error', reject);
+                    });
+                    
+                    const buffer = Buffer.concat(chunks);
+                    const base64 = buffer.toString('base64');
+                    const dataUrl = `data:${contentType};base64,${base64}`;
+                    evidenceWithBase64.push(dataUrl);
+                  } catch (error) {
+                    console.error(`Failed to load image ${evidencePath}:`, error);
+                    // Keep original path as fallback
+                    evidenceWithBase64.push(evidencePath);
+                  }
                 }
               }
             }
+            
+            categorizedQuestions[category].push({
+              id: q.id,
+              templateId: q.templateId,
+              subcategory: q.subcategory,
+              question: q.question,
+              type: q.type,
+              response: q.response,
+              notes: q.notes,
+              evidence: evidenceWithBase64,
+              standard: q.standard,
+            });
           }
-          
-          categorizedQuestions[category].push({
-            id: q.id,
-            templateId: q.templateId,
-            subcategory: q.subcategory,
-            question: q.question,
-            type: q.type,
-            response: q.response,
-            notes: q.notes,
-            evidence: evidenceWithBase64,
-            standard: q.standard,
-          });
         }
 
         // Build export data structure
@@ -5689,8 +5756,8 @@ The facility should prioritize addressing critical risks immediately, particular
             zip: site.zip,
           } : null,
           surveyData: {
-            totalQuestions: surveyQuestions.length,
-            answeredQuestions: surveyQuestions.filter(q => q.response !== null && q.response !== undefined && q.response !== '').length,
+            totalQuestions,
+            answeredQuestions,
             categories: categorizedQuestions,
           },
           executiveInterviewResponses: executiveResponses.length > 0 ? executiveResponses : undefined,
