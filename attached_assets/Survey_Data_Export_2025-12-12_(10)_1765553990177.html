@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Survey Data Export - Assessment</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+    .header { background: #1a1a2e; color: white; padding: 24px; border-radius: 8px; margin-bottom: 24px; }
+    .header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    .header .meta { opacity: 0.8; font-size: 14px; }
+    .site-info { background: white; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #4f46e5; }
+    .category { background: white; border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .category-header { background: #4f46e5; color: white; padding: 12px 16px; font-weight: 600; }
+    .question { border-bottom: 1px solid #e5e5e5; padding: 16px; }
+    .question:last-child { border-bottom: none; }
+    .question-text { font-weight: 500; margin-bottom: 8px; }
+    .response { background: #f0f9ff; padding: 12px; border-radius: 4px; margin-top: 8px; }
+    .notes { background: #fef3c7; padding: 12px; border-radius: 4px; margin-top: 8px; font-style: italic; }
+    .evidence { margin-top: 12px; }
+    .evidence img { max-width: 300px; border-radius: 4px; margin: 4px; }
+    .evidence-link { color: #4f46e5; text-decoration: none; display: inline-block; margin: 4px; }
+    .stats { display: flex; gap: 16px; margin-top: 16px; }
+    .stat { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 4px; }
+    .subcategory { color: #666; font-size: 12px; margin-bottom: 4px; }
+    .standard { font-size: 11px; color: #888; margin-top: 4px; }
+    pre { background: #f8f8f8; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+    .text-muted { color: #999; }
+    .json-export { background: white; padding: 16px; border-radius: 8px; margin-top: 24px; }
+    .json-export summary { cursor: pointer; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Survey Data Export</h1>
+    <div class="meta">
+      Template: executive-protection | 
+      Status: in_progress | 
+      Exported: 12/12/2025, 10:39:40 AM
+    </div>
+    <div class="stats">
+      <div class="stat">Total Questions: 34</div>
+      <div class="stat">Answered: 33</div>
+      <div class="stat">Completion: 97%</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Incident History &amp; Threats (4 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Have you personally received many irate calls, e-mails, letters, etc., (customers, employees, investors, etc.)? Do you screen or answer your own calls and emails? If so, please state the nature of this communication.</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Yes, I have received numerous threatening communications. Multiple death threats via email from a terminated CFO (Marcus Reynolds) who blamed me for his indictment. He has publicly vowed revenge and is active on dark web forums discussing me. Also received anonymous letters at home with disturbingly specific details about my family&#039;s daily schedule. Two instances of being followed by unknown vehicles (silver sedan, reported to police). Threatening voicemails on personal cell phone from blocked numbers. I screen calls through my EA but emails come directly to me.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">What is the source and nature of the complaints? Any internal complaints from employees?</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Sources: (1) Former CFO Marcus Reynolds - terminated for embezzlement, made public statements threatening &quot;consequences.&quot; (2) Obsessed individual who calls herself &quot;Jennifer&quot; - has sent over 200 letters, attempted physical contact at 3 public events. (3) Disgruntled investor group from failed acquisition - threatening class action and have made veiled threats. (4) Anonymous online persona tracking and posting my movements on social media. Internal: Several layoff-related complaints including one employee who stated I would &quot;regret&quot; the decision.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Have you received any training on how to handle an irate or unusual call, etc.? If not, how have you handled these types of calls?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No formal training received. I have never been trained on threat response protocols or how to handle threatening communications. I typically try to de-escalate or end calls quickly, but I&#039;m not confident I&#039;m handling these correctly.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">If no training, how do you handle these kinds of calls, e-mails, or other correspondence?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> I usually try to remain calm and end the call as quickly as possible. Sometimes I engage trying to understand what the person wants. I don&#039;t have a protocol for documenting these incidents or reporting them consistently. My EA keeps some notes but there&#039;s no formal logging system. Some threatening emails have been deleted rather than preserved for evidence.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Executive Protection (3 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Do you receive any type of security close protection? If so, under what condition?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No close protection. I currently have no personal security detail, no executive protection services, and no security driver. I travel alone to all appointments, drive myself to and from work daily, and attend public events without security escort. My wife has expressed serious concerns about this given the threats we&#039;ve received.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">If protection is provided, is it only during work-related hours or does it include personal time (overnight, weekends, holidays, vacations)?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> N/A - No protection is currently provided at any time. I am completely unprotected during work hours, personal time, overnight, weekends, holidays, and vacations. Even during high-profile events or international travel, I have no security support.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">What are your feelings and thoughts about the protection you are currently receiving? Any changes you recommend?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> Very concerned about the lack of protection. Given the active threats from the former CFO, the persistent stalker, and the online tracking, I am increasingly worried for both my safety and my family&#039;s safety. My wife has had panic attacks about security. I realize I need professional protection but haven&#039;t known where to start.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Public Profile (2 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Do you notify anyone in Corporate Security if a public speaking engagement is scheduled?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No, I don&#039;t notify anyone about public appearances. I regularly appear at industry conferences, shareholder meetings, media interviews, and charity events without informing any security personnel. My schedule for public events is often posted on the company website and shared on social media in advance.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Have you felt the need for close protection at any public events? Please explain.</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Yes, absolutely. At 3 events in the past year, the obsessed individual &quot;Jennifer&quot; appeared and tried to approach me. At a charity gala, she got within arm&#039;s length before security intervened. At a recent shareholder meeting, there were protesters specifically targeting me with signs showing my home address. During a TV interview, someone called in a threat that required police response. I feel very exposed at all public events.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Routines &amp; Predictability (2 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Do you have predictable routines or appointments? (e.g., Workouts in the morning)</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Highly predictable. Every weekday: Leave home 7:15am, same route to office, arrive 7:40am, same parking spot P1-Executive. Monday/Wednesday/Friday: 6am workout at Equinox on 63rd Street, same time, same locker. Every Saturday: 9am tennis at Greenwich Country Club. Every Sunday: 11am brunch at The Smith, same table. These patterns have been consistent for over 3 years with minimal variation.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Do you frequent any specific restaurants, clubs, or other venues during the work week, or during your personal time?</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Yes, very regular patterns. Every Wednesday dinner at Nobu, 7:30pm, always the same corner table. Friday happy hour at Capital Grille with colleagues. Saturdays at Greenwich Country Club for golf/tennis. Sunday services at First Presbyterian, same pew. Monthly board dinners at The Yale Club, same private room. All staff at these locations know me by name.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Residences (3 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">What type of security, if any, do you have in place at your residences?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> Minimal security. Primary residence: Basic ADT alarm system (door/window sensors only), Ring video doorbell, 2 outdoor cameras with poor coverage. No 24/7 monitoring, no panic buttons, no safe room. 4-foot decorative wrought iron fence that could be easily climbed. Gate code hasn&#039;t been changed in 2 years and was shared with contractors. No security personnel. Vacation home in Aspen: Even less security, just basic locks.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">If you have security, are you familiar and comfortable with all aspects? Spouse? Family members?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No. I&#039;m not confident in our security setup. My wife doesn&#039;t know how to properly arm the system. Children (12 and 15) sometimes forget to set the alarm. We had a suspicious person photographed on our property line in February 2024 and a threatening package delivered in April. Ring camera captured a trespasser at 2am in June. We don&#039;t feel safe but don&#039;t know what to improve first.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Do you employ domestic staff? If so, please explain. What type, if any, vetting processes were used prior to their hire. Do you employ any type of persistent screening of these individuals?</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Yes. Full-time housekeeper (5 years), part-time nanny (3 years), gardener (weekly), and pool service (bi-weekly). Only basic reference checks were done - no background investigations, no social media vetting, no credit checks. No NDAs or confidentiality agreements. All staff know our family schedule, security codes, children&#039;s school schedules, and travel plans. We haven&#039;t conducted any ongoing screening.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Family (3 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Has your family received any type of disturbing communication? If so, please explain.</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Yes. My wife received threatening DMs on Instagram referencing my business decisions - &quot;Your husband will pay for what he did.&quot; Both children (12 and 15) have been photographed at school by unknown individuals on at least 2 occasions - school security intervened but couldn&#039;t identify the photographers. My elderly mother was approached by someone claiming to be a reporter asking about my whereabouts and schedule. She gave information before realizing it was suspicious.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Are there any health issues with family members that require special attention and planning? If so, please describe.</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Yes. My wife has developed anxiety disorder partly due to the ongoing security concerns - she sometimes has panic attacks. Our 12-year-old has asthma and requires access to inhalers. My 82-year-old mother lives alone and has mobility issues - she would be unable to evacuate quickly in an emergency and doesn&#039;t understand the severity of our security situation.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Please describe routine(s) for any school-aged children (i.e., pick up and drop off; activities, day care, etc.)</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Very predictable patterns. Both children attend Rye Country Day School. Drop-off: 7:45am by wife or nanny, same entrance. Pickup: 3:30pm. Son has soccer practice Tuesday/Thursday 4-6pm at Rye Recreation. Daughter has piano Wednesday 4pm at teacher&#039;s home studio. Both attend Sunday school 9am. Summer camp schedules are posted on family social media. Nanny handles most transportation in her personal vehicle.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Office Security (7 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">What, if any, concerns do you have about safety and security in your office building and the Executive area?</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Several concerns. The building has lobby security but a disgruntled former employee (who made threats) was able to access my floor before being stopped. Visitor logs are inconsistent. The executive floor doesn&#039;t have separate access control. Contractors and cleaning staff have unsupervised access to my office area. Window to my office is visible from adjacent building with direct sightline.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Is your office locked at night? Desk?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No. My office door doesn&#039;t have a lock. The executive floor is theoretically badge-access but cleaning staff have unsupervised access. My desk drawers have simple locks but sensitive documents are often left out. Computer is password protected but often left logged in when I step out.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Do you typically arrive before or after your EA?</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> I arrive before my EA. I typically arrive at 7:40am and my EA arrives at 8:30am. For almost an hour each morning, I&#039;m alone on the executive floor (building security is in lobby only). Similarly, I often stay late after EA leaves. No one is screening visitors or monitoring my area during these times.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">What kind of office access does the cleaning staff have to your office and area? Do you know if the cleaning staff is escorted by Security when in or around your office? Do you see Security staff in and around your office area?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> Cleaning staff has full access to my office and the entire executive floor. They are not escorted by security. They clean between 7-10pm when many executives are still working. I don&#039;t know if they&#039;ve been vetted. I rarely see security staff on my floor - they&#039;re primarily stationed in the lobby.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">If you leave late at night or arrive very early in the morning, do you feel comfortable in and around the building (including the parking lots)?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No. The parking garage is minimally lit and I have to walk a considerable distance to reach the building entrance. There&#039;s no security escort service. When I leave late, the garage is nearly empty. I&#039;ve noticed unfamiliar vehicles parked near my space on multiple occasions. One time found a note on my windshield that made me uncomfortable.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Do you participate in emergency evacuation drills and know your primary and secondary exits?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> Rarely. I usually skip fire drills due to meetings. I know there&#039;s a stairwell near my office but I&#039;m not certain of the complete evacuation route. I don&#039;t know where the secondary exit leads. The assembly point is in a public plaza with no controlled access.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Do you have a panic button at your desk?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No panic button. No duress system. My only option would be to call 911 on my cell phone. There&#039;s no direct line to building security from my desk. No intercom system, no emergency buzzer.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Mail &amp; Package Security (1 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Do you know what to do if you receive a letter, package that looks unusual, or if its contents look suspicious?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No training received. In April 2024, we received a suspicious package at home - no return address, unusual weight, hand-delivered. We weren&#039;t sure what to do. My wife opened it (shouldn&#039;t have) - it contained a threatening letter with photos of our children at school. We called police after the fact. At office, mail goes through mailroom but I don&#039;t know their screening protocols.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Ground Transportation (3 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Do you utilize a driving service or security drivers? If so, under what circumstances?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No. I drive myself in my personal vehicle (Tesla Model S, license plate publicly visible in magazine photos). I use the same route to work every day. No security driver, no counter-surveillance training. I park in an assigned executive spot that could be easily observed. I have no evasive driving skills and the Tesla is not armored.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Do you feel comfortable with your outside car service companies or service?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> When I use car services (rarely), I typically use Uber Black. No advance vetting of drivers, no pre-arranged secure services. I&#039;ve shared my home address with random Uber drivers. For business travel, I sometimes use corporate car service but they don&#039;t provide security-trained drivers.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Do you utilize car services when traveling internationally? Please describe.</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> Sometimes use hotel-arranged cars internationally but no security drivers. Have traveled to high-risk areas (parts of Latin America, Southeast Asia) using standard local transportation. No advance coordination with security firms, no secure vehicle provisions, no contingency plans. Often rely on local Uber equivalents.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Itinerary Management (1 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Who has access to your daily calendar? Do you make your own appointments or does your EA? Please describe.</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Many people have access. My executive assistant manages my calendar and has full access. Calendar is synced to my phone which family members can sometimes see. My EA&#039;s assistant also has read access for scheduling. Meeting details including locations are visible. Some calendar items including dinner reservations sync to my wife&#039;s calendar. No one from security reviews my schedule.</div>
+    </div>
+  </div>
+  <div class="category">
+    <div class="category-header">EP Interview: Travel Security (4 questions)</div>
+    <div class="question">
+      
+      <div class="question-text">Do you make your own travel arrangements? Business and personal?</div>
+      <div class="response"><strong>Response:</strong> Yes</div>
+      <div class="notes"><strong>Notes:</strong> Mix of EA and myself. My EA books business travel but I often book personal travel directly using my personal credit card. No security review of destinations. I&#039;ve booked hotels in high-risk countries without consulting anyone. My frequent flyer status and hotel preferences are publicly known from interviews. I sometimes post travel photos in real-time on social media.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Who helps you with any needed security on trips?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> No one. I have no security support for travel. I travel internationally alone including to higher-risk destinations. No advance security assessments, no secure transportation arranged, no emergency extraction plans. For a recent trip to Brazil, I used regular taxis from the airport. No one from corporate security was informed of my travel.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">If security is provided, do you have good contact with the security team throughout the trip?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> N/A - No security team is ever provided. I travel completely without protection support. No one tracks my movements, no check-in protocols, no emergency contacts established for travel. If something happened, my family wouldn&#039;t know until I failed to arrive home or missed scheduled calls.</div>
+    </div>
+    <div class="question">
+      
+      <div class="question-text">Are you pleased with the level and quality of security you have received while traveling?</div>
+      <div class="response"><strong>Response:</strong> No</div>
+      <div class="notes"><strong>Notes:</strong> Very concerned about it. Given the active threats against me, I feel very exposed when traveling. I&#039;ve had concerning incidents including being followed from an airport, aggressive paparazzi in London, and finding someone had photographed my hotel room door (photo posted online). I need professional travel security but don&#039;t have it.</div>
+    </div>
+  </div>
+  <details class="json-export">
+    <summary>View Raw JSON Data</summary>
+    <pre>{
+  &quot;exportedAt&quot;: &quot;2025-12-12T15:39:40.273Z&quot;,
+  &quot;assessment&quot;: {
+    &quot;id&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+    &quot;templateId&quot;: &quot;executive-protection&quot;,
+    &quot;status&quot;: &quot;in_progress&quot;,
+    &quot;createdAt&quot;: &quot;2025-12-11T01:53:25.698Z&quot;,
+    &quot;updatedAt&quot;: &quot;2025-12-12T15:34:10.800Z&quot;
+  },
+  &quot;site&quot;: null,
+  &quot;surveyData&quot;: {
+    &quot;totalQuestions&quot;: 34,
+    &quot;answeredQuestions&quot;: 33,
+    &quot;categories&quot;: {
+      &quot;EP Interview: Incident History &amp; Threats&quot;: [
+        {
+          &quot;id&quot;: &quot;e9e8ce30-e909-4d99-a6a4-07484f504ad9&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Have you personally received many irate calls, e-mails, letters, etc., (customers, employees, investors, etc.)? Do you screen or answer your own calls and emails? If so, please state the nature of this communication.&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Yes, I have received numerous threatening communications. Multiple death threats via email from a terminated CFO (Marcus Reynolds) who blamed me for his indictment. He has publicly vowed revenge and is active on dark web forums discussing me. Also received anonymous letters at home with disturbingly specific details about my family&#039;s daily schedule. Two instances of being followed by unknown vehicles (silver sedan, reported to police). Threatening voicemails on personal cell phone from blocked numbers. I screen calls through my EA but emails come directly to me.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 1,
+          &quot;riskDirection&quot;: &quot;negative&quot;
+        },
+        {
+          &quot;id&quot;: &quot;7ef6d860-cdc4-4bd0-addf-14b372d6fc9c&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;What is the source and nature of the complaints? Any internal complaints from employees?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Sources: (1) Former CFO Marcus Reynolds - terminated for embezzlement, made public statements threatening \&quot;consequences.\&quot; (2) Obsessed individual who calls herself \&quot;Jennifer\&quot; - has sent over 200 letters, attempted physical contact at 3 public events. (3) Disgruntled investor group from failed acquisition - threatening class action and have made veiled threats. (4) Anonymous online persona tracking and posting my movements on social media. Internal: Several layoff-related complaints including one employee who stated I would \&quot;regret\&quot; the decision.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 2,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;7032367e-87aa-4796-a260-82e393fb8c2b&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Have you received any training on how to handle an irate or unusual call, etc.? If not, how have you handled these types of calls?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No formal training received. I have never been trained on threat response protocols or how to handle threatening communications. I typically try to de-escalate or end calls quickly, but I&#039;m not confident I&#039;m handling these correctly.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 3,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;b0585ae7-f84a-436c-83d4-829a2fc4915f&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;If no training, how do you handle these kinds of calls, e-mails, or other correspondence?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;I usually try to remain calm and end the call as quickly as possible. Sometimes I engage trying to understand what the person wants. I don&#039;t have a protocol for documenting these incidents or reporting them consistently. My EA keeps some notes but there&#039;s no formal logging system. Some threatening emails have been deleted rather than preserved for evidence.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 4,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Executive Protection&quot;: [
+        {
+          &quot;id&quot;: &quot;4b90786f-d04a-44d1-ba26-9a58406cbf42&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you receive any type of security close protection? If so, under what condition?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No close protection. I currently have no personal security detail, no executive protection services, and no security driver. I travel alone to all appointments, drive myself to and from work daily, and attend public events without security escort. My wife has expressed serious concerns about this given the threats we&#039;ve received.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 5,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;9c184bb3-ac86-478c-9cdd-950109d4dc3c&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;If protection is provided, is it only during work-related hours or does it include personal time (overnight, weekends, holidays, vacations)?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;N/A - No protection is currently provided at any time. I am completely unprotected during work hours, personal time, overnight, weekends, holidays, and vacations. Even during high-profile events or international travel, I have no security support.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 6,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;ef46f833-3169-4ed9-b063-d00bd33f540a&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;What are your feelings and thoughts about the protection you are currently receiving? Any changes you recommend?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;Very concerned about the lack of protection. Given the active threats from the former CFO, the persistent stalker, and the online tracking, I am increasingly worried for both my safety and my family&#039;s safety. My wife has had panic attacks about security. I realize I need professional protection but haven&#039;t known where to start.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 7,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Public Profile&quot;: [
+        {
+          &quot;id&quot;: &quot;e48b174b-c2b2-431d-a87c-3469190a4155&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you notify anyone in Corporate Security if a public speaking engagement is scheduled?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No, I don&#039;t notify anyone about public appearances. I regularly appear at industry conferences, shareholder meetings, media interviews, and charity events without informing any security personnel. My schedule for public events is often posted on the company website and shared on social media in advance.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 8,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;bc28f2d8-3d9d-43ee-88cb-9a02da4358be&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Have you felt the need for close protection at any public events? Please explain.&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Yes, absolutely. At 3 events in the past year, the obsessed individual \&quot;Jennifer\&quot; appeared and tried to approach me. At a charity gala, she got within arm&#039;s length before security intervened. At a recent shareholder meeting, there were protesters specifically targeting me with signs showing my home address. During a TV interview, someone called in a threat that required police response. I feel very exposed at all public events.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 9,
+          &quot;riskDirection&quot;: &quot;negative&quot;
+        }
+      ],
+      &quot;EP Interview: Routines &amp; Predictability&quot;: [
+        {
+          &quot;id&quot;: &quot;b469aa65-8936-4482-a0f6-83d03e2daaa4&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you have predictable routines or appointments? (e.g., Workouts in the morning)&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Highly predictable. Every weekday: Leave home 7:15am, same route to office, arrive 7:40am, same parking spot P1-Executive. Monday/Wednesday/Friday: 6am workout at Equinox on 63rd Street, same time, same locker. Every Saturday: 9am tennis at Greenwich Country Club. Every Sunday: 11am brunch at The Smith, same table. These patterns have been consistent for over 3 years with minimal variation.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 10,
+          &quot;riskDirection&quot;: &quot;negative&quot;
+        },
+        {
+          &quot;id&quot;: &quot;690aee5c-cf6f-4a52-8ca0-e6b88d02633a&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you frequent any specific restaurants, clubs, or other venues during the work week, or during your personal time?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Yes, very regular patterns. Every Wednesday dinner at Nobu, 7:30pm, always the same corner table. Friday happy hour at Capital Grille with colleagues. Saturdays at Greenwich Country Club for golf/tennis. Sunday services at First Presbyterian, same pew. Monthly board dinners at The Yale Club, same private room. All staff at these locations know me by name.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 11,
+          &quot;riskDirection&quot;: &quot;negative&quot;
+        }
+      ],
+      &quot;EP Interview: Residences&quot;: [
+        {
+          &quot;id&quot;: &quot;0fe254f3-8158-4817-abbf-1052ebcdac92&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;What type of security, if any, do you have in place at your residences?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;Minimal security. Primary residence: Basic ADT alarm system (door/window sensors only), Ring video doorbell, 2 outdoor cameras with poor coverage. No 24/7 monitoring, no panic buttons, no safe room. 4-foot decorative wrought iron fence that could be easily climbed. Gate code hasn&#039;t been changed in 2 years and was shared with contractors. No security personnel. Vacation home in Aspen: Even less security, just basic locks.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 12,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;651227a0-ab1a-4a87-9705-ca11799a1cc7&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;If you have security, are you familiar and comfortable with all aspects? Spouse? Family members?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No. I&#039;m not confident in our security setup. My wife doesn&#039;t know how to properly arm the system. Children (12 and 15) sometimes forget to set the alarm. We had a suspicious person photographed on our property line in February 2024 and a threatening package delivered in April. Ring camera captured a trespasser at 2am in June. We don&#039;t feel safe but don&#039;t know what to improve first.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 13,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;db1c1587-b2f3-420c-9158-d806d135c108&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you employ domestic staff? If so, please explain. What type, if any, vetting processes were used prior to their hire. Do you employ any type of persistent screening of these individuals?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Yes. Full-time housekeeper (5 years), part-time nanny (3 years), gardener (weekly), and pool service (bi-weekly). Only basic reference checks were done - no background investigations, no social media vetting, no credit checks. No NDAs or confidentiality agreements. All staff know our family schedule, security codes, children&#039;s school schedules, and travel plans. We haven&#039;t conducted any ongoing screening.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 14,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Family&quot;: [
+        {
+          &quot;id&quot;: &quot;12323a48-6a53-42b1-931a-2a9c41c481bd&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Has your family received any type of disturbing communication? If so, please explain.&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Yes. My wife received threatening DMs on Instagram referencing my business decisions - \&quot;Your husband will pay for what he did.\&quot; Both children (12 and 15) have been photographed at school by unknown individuals on at least 2 occasions - school security intervened but couldn&#039;t identify the photographers. My elderly mother was approached by someone claiming to be a reporter asking about my whereabouts and schedule. She gave information before realizing it was suspicious.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 15,
+          &quot;riskDirection&quot;: &quot;negative&quot;
+        },
+        {
+          &quot;id&quot;: &quot;a45e7e56-140a-466e-afa2-a7f539be7962&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Are there any health issues with family members that require special attention and planning? If so, please describe.&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Yes. My wife has developed anxiety disorder partly due to the ongoing security concerns - she sometimes has panic attacks. Our 12-year-old has asthma and requires access to inhalers. My 82-year-old mother lives alone and has mobility issues - she would be unable to evacuate quickly in an emergency and doesn&#039;t understand the severity of our security situation.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 16,
+          &quot;riskDirection&quot;: &quot;negative&quot;
+        },
+        {
+          &quot;id&quot;: &quot;fb95f476-314c-4b00-a6e7-bc10ad2b2088&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Please describe routine(s) for any school-aged children (i.e., pick up and drop off; activities, day care, etc.)&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Very predictable patterns. Both children attend Rye Country Day School. Drop-off: 7:45am by wife or nanny, same entrance. Pickup: 3:30pm. Son has soccer practice Tuesday/Thursday 4-6pm at Rye Recreation. Daughter has piano Wednesday 4pm at teacher&#039;s home studio. Both attend Sunday school 9am. Summer camp schedules are posted on family social media. Nanny handles most transportation in her personal vehicle.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 17,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Office Security&quot;: [
+        {
+          &quot;id&quot;: &quot;40e6a7b2-d5c1-449a-be18-132945f4c600&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;What, if any, concerns do you have about safety and security in your office building and the Executive area?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Several concerns. The building has lobby security but a disgruntled former employee (who made threats) was able to access my floor before being stopped. Visitor logs are inconsistent. The executive floor doesn&#039;t have separate access control. Contractors and cleaning staff have unsupervised access to my office area. Window to my office is visible from adjacent building with direct sightline.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 18,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;57a56573-4c05-4a3c-994d-542567a3d012&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Is your office locked at night? Desk?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No. My office door doesn&#039;t have a lock. The executive floor is theoretically badge-access but cleaning staff have unsupervised access. My desk drawers have simple locks but sensitive documents are often left out. Computer is password protected but often left logged in when I step out.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 19,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;1e2d8a37-f66c-44aa-9001-880fb0c64ce5&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you typically arrive before or after your EA?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;I arrive before my EA. I typically arrive at 7:40am and my EA arrives at 8:30am. For almost an hour each morning, I&#039;m alone on the executive floor (building security is in lobby only). Similarly, I often stay late after EA leaves. No one is screening visitors or monitoring my area during these times.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 20,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;cd9d5184-71d5-40ea-8f23-d8d884482e20&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;What kind of office access does the cleaning staff have to your office and area? Do you know if the cleaning staff is escorted by Security when in or around your office? Do you see Security staff in and around your office area?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;Cleaning staff has full access to my office and the entire executive floor. They are not escorted by security. They clean between 7-10pm when many executives are still working. I don&#039;t know if they&#039;ve been vetted. I rarely see security staff on my floor - they&#039;re primarily stationed in the lobby.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 21,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;9a40fdcf-e649-48d3-9cde-31a185936199&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;If you leave late at night or arrive very early in the morning, do you feel comfortable in and around the building (including the parking lots)?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No. The parking garage is minimally lit and I have to walk a considerable distance to reach the building entrance. There&#039;s no security escort service. When I leave late, the garage is nearly empty. I&#039;ve noticed unfamiliar vehicles parked near my space on multiple occasions. One time found a note on my windshield that made me uncomfortable.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 22,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;6e4cbeb6-4612-4463-ab61-db33267826b2&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you participate in emergency evacuation drills and know your primary and secondary exits?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;Rarely. I usually skip fire drills due to meetings. I know there&#039;s a stairwell near my office but I&#039;m not certain of the complete evacuation route. I don&#039;t know where the secondary exit leads. The assembly point is in a public plaza with no controlled access.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 23,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;ddf30a20-80c0-475b-9763-f8f189a8ed06&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you have a panic button at your desk?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No panic button. No duress system. My only option would be to call 911 on my cell phone. There&#039;s no direct line to building security from my desk. No intercom system, no emergency buzzer.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 24,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Mail &amp; Package Security&quot;: [
+        {
+          &quot;id&quot;: &quot;4c55dfe4-db93-4c83-8fa3-a3c15f6b087c&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you know what to do if you receive a letter, package that looks unusual, or if its contents look suspicious?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No training received. In April 2024, we received a suspicious package at home - no return address, unusual weight, hand-delivered. We weren&#039;t sure what to do. My wife opened it (shouldn&#039;t have) - it contained a threatening letter with photos of our children at school. We called police after the fact. At office, mail goes through mailroom but I don&#039;t know their screening protocols.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 25,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Ground Transportation&quot;: [
+        {
+          &quot;id&quot;: &quot;c599f91b-bf84-4998-b6ed-24c7cb6ebc13&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you utilize a driving service or security drivers? If so, under what circumstances?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No. I drive myself in my personal vehicle (Tesla Model S, license plate publicly visible in magazine photos). I use the same route to work every day. No security driver, no counter-surveillance training. I park in an assigned executive spot that could be easily observed. I have no evasive driving skills and the Tesla is not armored.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 26,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;fd4ef81d-f1a6-4fee-818d-a9ee319b7954&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you feel comfortable with your outside car service companies or service?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;When I use car services (rarely), I typically use Uber Black. No advance vetting of drivers, no pre-arranged secure services. I&#039;ve shared my home address with random Uber drivers. For business travel, I sometimes use corporate car service but they don&#039;t provide security-trained drivers.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 27,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;3d7c7289-e646-4e39-bca3-83e3a488b410&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you utilize car services when traveling internationally? Please describe.&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;Sometimes use hotel-arranged cars internationally but no security drivers. Have traveled to high-risk areas (parts of Latin America, Southeast Asia) using standard local transportation. No advance coordination with security firms, no secure vehicle provisions, no contingency plans. Often rely on local Uber equivalents.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 28,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Itinerary Management&quot;: [
+        {
+          &quot;id&quot;: &quot;921be0dd-2f51-4d32-9b7f-91a8a44c77c2&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Who has access to your daily calendar? Do you make your own appointments or does your EA? Please describe.&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Many people have access. My executive assistant manages my calendar and has full access. Calendar is synced to my phone which family members can sometimes see. My EA&#039;s assistant also has read access for scheduling. Meeting details including locations are visible. Some calendar items including dinner reservations sync to my wife&#039;s calendar. No one from security reviews my schedule.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 29,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ],
+      &quot;EP Interview: Travel Security&quot;: [
+        {
+          &quot;id&quot;: &quot;de422290-2f6c-4e1d-9354-13a6c090feff&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Do you make your own travel arrangements? Business and personal?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;Yes&quot;,
+          &quot;notes&quot;: &quot;Mix of EA and myself. My EA books business travel but I often book personal travel directly using my personal credit card. No security review of destinations. I&#039;ve booked hotels in high-risk countries without consulting anyone. My frequent flyer status and hotel preferences are publicly known from interviews. I sometimes post travel photos in real-time on social media.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 31,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;bec98d88-901d-4d14-926b-71ac716da4a3&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Who helps you with any needed security on trips?&quot;,
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;No one. I have no security support for travel. I travel internationally alone including to higher-risk destinations. No advance security assessments, no secure transportation arranged, no emergency extraction plans. For a recent trip to Brazil, I used regular taxis from the airport. No one from corporate security was informed of my travel.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 32,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;68411816-7cf8-4cbe-84c5-25b08aad0882&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;If security is provided, do you have good contact with the security team throughout the trip?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;N/A - No security team is ever provided. I travel completely without protection support. No one tracks my movements, no check-in protocols, no emergency contacts established for travel. If something happened, my family wouldn&#039;t know until I failed to arrive home or missed scheduled calls.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 33,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        },
+        {
+          &quot;id&quot;: &quot;477c3e12-2152-43db-8211-eab6c18b0c99&quot;,
+          &quot;templateId&quot;: &quot;executive-protection&quot;,
+          &quot;subcategory&quot;: null,
+          &quot;question&quot;: &quot;Are you pleased with the level and quality of security you have received while traveling?&quot;,
+          &quot;type&quot;: &quot;yes-no-text&quot;,
+          &quot;response&quot;: &quot;No&quot;,
+          &quot;notes&quot;: &quot;Very concerned about it. Given the active threats against me, I feel very exposed when traveling. I&#039;ve had concerning incidents including being followed from an airport, aggressive paparazzi in London, and finding someone had photographed my hotel room door (photo posted online). I need professional travel security but don&#039;t have it.&quot;,
+          &quot;evidence&quot;: [],
+          &quot;standard&quot;: null,
+          &quot;questionNumber&quot;: 34,
+          &quot;riskDirection&quot;: &quot;positive&quot;
+        }
+      ]
+    }
+  },
+  &quot;executiveInterviewResponses&quot;: [
+    {
+      &quot;id&quot;: &quot;c550a751-8560-47fa-a537-82782324b4c2&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;e9e8ce30-e909-4d99-a6a4-07484f504ad9&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Yes, I have received numerous threatening communications. Multiple death threats via email from a terminated CFO (Marcus Reynolds) who blamed me for his indictment. He has publicly vowed revenge and is active on dark web forums discussing me. Also received anonymous letters at home with disturbingly specific details about my family&#039;s daily schedule. Two instances of being followed by unknown vehicles (silver sedan, reported to police). Threatening voicemails on personal cell phone from blocked numbers. I screen calls through my EA but emails come directly to me.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.383Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.383Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;3f4218d0-fdc7-41dd-af72-5e8ef72123ed&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;7ef6d860-cdc4-4bd0-addf-14b372d6fc9c&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Sources: (1) Former CFO Marcus Reynolds - terminated for embezzlement, made public statements threatening \&quot;consequences.\&quot; (2) Obsessed individual who calls herself \&quot;Jennifer\&quot; - has sent over 200 letters, attempted physical contact at 3 public events. (3) Disgruntled investor group from failed acquisition - threatening class action and have made veiled threats. (4) Anonymous online persona tracking and posting my movements on social media. Internal: Several layoff-related complaints including one employee who stated I would \&quot;regret\&quot; the decision.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.442Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.442Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;c37d4754-831a-4440-a508-c0544217aecb&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;7032367e-87aa-4796-a260-82e393fb8c2b&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No formal training received. I have never been trained on threat response protocols or how to handle threatening communications. I typically try to de-escalate or end calls quickly, but I&#039;m not confident I&#039;m handling these correctly.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.481Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.481Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;78f49880-1dfc-4f1d-aea7-20a67b94dbdd&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;b0585ae7-f84a-436c-83d4-829a2fc4915f&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;I usually try to remain calm and end the call as quickly as possible. Sometimes I engage trying to understand what the person wants. I don&#039;t have a protocol for documenting these incidents or reporting them consistently. My EA keeps some notes but there&#039;s no formal logging system. Some threatening emails have been deleted rather than preserved for evidence.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.519Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.519Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;4fb79655-7efd-48aa-817d-af824c252cf5&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;4b90786f-d04a-44d1-ba26-9a58406cbf42&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No close protection. I currently have no personal security detail, no executive protection services, and no security driver. I travel alone to all appointments, drive myself to and from work daily, and attend public events without security escort. My wife has expressed serious concerns about this given the threats we&#039;ve received.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.558Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.558Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;3d383062-a4cd-4524-b7ec-38320c5ec916&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;9c184bb3-ac86-478c-9cdd-950109d4dc3c&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;N/A - No protection is currently provided at any time. I am completely unprotected during work hours, personal time, overnight, weekends, holidays, and vacations. Even during high-profile events or international travel, I have no security support.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.596Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.596Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;968b1424-6521-4322-a714-8147b3bd691c&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;ef46f833-3169-4ed9-b063-d00bd33f540a&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;Very concerned about the lack of protection. Given the active threats from the former CFO, the persistent stalker, and the online tracking, I am increasingly worried for both my safety and my family&#039;s safety. My wife has had panic attacks about security. I realize I need professional protection but haven&#039;t known where to start.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.635Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.635Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;d83e556a-b7cb-4e66-8f37-5aa70e5b0c6f&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;e48b174b-c2b2-431d-a87c-3469190a4155&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No, I don&#039;t notify anyone about public appearances. I regularly appear at industry conferences, shareholder meetings, media interviews, and charity events without informing any security personnel. My schedule for public events is often posted on the company website and shared on social media in advance.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.674Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.674Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;85e0383c-2bb1-41f1-8249-1c23b779a36a&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;bc28f2d8-3d9d-43ee-88cb-9a02da4358be&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Yes, absolutely. At 3 events in the past year, the obsessed individual \&quot;Jennifer\&quot; appeared and tried to approach me. At a charity gala, she got within arm&#039;s length before security intervened. At a recent shareholder meeting, there were protesters specifically targeting me with signs showing my home address. During a TV interview, someone called in a threat that required police response. I feel very exposed at all public events.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.712Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.712Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;4ecf40b9-3a6a-4c7a-9312-c4ad84ce1a09&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;b469aa65-8936-4482-a0f6-83d03e2daaa4&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Highly predictable. Every weekday: Leave home 7:15am, same route to office, arrive 7:40am, same parking spot P1-Executive. Monday/Wednesday/Friday: 6am workout at Equinox on 63rd Street, same time, same locker. Every Saturday: 9am tennis at Greenwich Country Club. Every Sunday: 11am brunch at The Smith, same table. These patterns have been consistent for over 3 years with minimal variation.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.749Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.749Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;c4fddec0-8bd6-410f-aba3-fc8ef1b98fcf&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;690aee5c-cf6f-4a52-8ca0-e6b88d02633a&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Yes, very regular patterns. Every Wednesday dinner at Nobu, 7:30pm, always the same corner table. Friday happy hour at Capital Grille with colleagues. Saturdays at Greenwich Country Club for golf/tennis. Sunday services at First Presbyterian, same pew. Monthly board dinners at The Yale Club, same private room. All staff at these locations know me by name.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.787Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.787Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;80b31acf-7d4a-4741-88d9-da873391d398&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;0fe254f3-8158-4817-abbf-1052ebcdac92&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;Minimal security. Primary residence: Basic ADT alarm system (door/window sensors only), Ring video doorbell, 2 outdoor cameras with poor coverage. No 24/7 monitoring, no panic buttons, no safe room. 4-foot decorative wrought iron fence that could be easily climbed. Gate code hasn&#039;t been changed in 2 years and was shared with contractors. No security personnel. Vacation home in Aspen: Even less security, just basic locks.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.825Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.825Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;358d9c50-aab6-4f20-b2bf-f690004c1397&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;651227a0-ab1a-4a87-9705-ca11799a1cc7&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No. I&#039;m not confident in our security setup. My wife doesn&#039;t know how to properly arm the system. Children (12 and 15) sometimes forget to set the alarm. We had a suspicious person photographed on our property line in February 2024 and a threatening package delivered in April. Ring camera captured a trespasser at 2am in June. We don&#039;t feel safe but don&#039;t know what to improve first.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.864Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.864Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;078b6ed9-ea73-4426-ae65-be5945586435&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;db1c1587-b2f3-420c-9158-d806d135c108&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Yes. Full-time housekeeper (5 years), part-time nanny (3 years), gardener (weekly), and pool service (bi-weekly). Only basic reference checks were done - no background investigations, no social media vetting, no credit checks. No NDAs or confidentiality agreements. All staff know our family schedule, security codes, children&#039;s school schedules, and travel plans. We haven&#039;t conducted any ongoing screening.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.902Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.902Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;ca000a73-e775-479e-9fb8-2253d9632bf0&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;12323a48-6a53-42b1-931a-2a9c41c481bd&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Yes. My wife received threatening DMs on Instagram referencing my business decisions - \&quot;Your husband will pay for what he did.\&quot; Both children (12 and 15) have been photographed at school by unknown individuals on at least 2 occasions - school security intervened but couldn&#039;t identify the photographers. My elderly mother was approached by someone claiming to be a reporter asking about my whereabouts and schedule. She gave information before realizing it was suspicious.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.940Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.940Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;5ac90335-63aa-4e0f-9d11-58664606177d&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;a45e7e56-140a-466e-afa2-a7f539be7962&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Yes. My wife has developed anxiety disorder partly due to the ongoing security concerns - she sometimes has panic attacks. Our 12-year-old has asthma and requires access to inhalers. My 82-year-old mother lives alone and has mobility issues - she would be unable to evacuate quickly in an emergency and doesn&#039;t understand the severity of our security situation.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:43.978Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:43.978Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;d47e51d6-850b-461a-bfad-7af8f11c1d6b&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;fb95f476-314c-4b00-a6e7-bc10ad2b2088&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Very predictable patterns. Both children attend Rye Country Day School. Drop-off: 7:45am by wife or nanny, same entrance. Pickup: 3:30pm. Son has soccer practice Tuesday/Thursday 4-6pm at Rye Recreation. Daughter has piano Wednesday 4pm at teacher&#039;s home studio. Both attend Sunday school 9am. Summer camp schedules are posted on family social media. Nanny handles most transportation in her personal vehicle.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.016Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.016Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;f37713f6-b2c4-494c-ab5a-fce7a1910569&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;c599f91b-bf84-4998-b6ed-24c7cb6ebc13&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No. I drive myself in my personal vehicle (Tesla Model S, license plate publicly visible in magazine photos). I use the same route to work every day. No security driver, no counter-surveillance training. I park in an assigned executive spot that could be easily observed. I have no evasive driving skills and the Tesla is not armored.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.054Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.054Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;f9870509-2352-432d-a6dd-6dc0a628e4a8&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;fd4ef81d-f1a6-4fee-818d-a9ee319b7954&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;When I use car services (rarely), I typically use Uber Black. No advance vetting of drivers, no pre-arranged secure services. I&#039;ve shared my home address with random Uber drivers. For business travel, I sometimes use corporate car service but they don&#039;t provide security-trained drivers.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.093Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.093Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;e2348e71-06b7-4526-b021-1a5ea1c7b739&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;3d7c7289-e646-4e39-bca3-83e3a488b410&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;Sometimes use hotel-arranged cars internationally but no security drivers. Have traveled to high-risk areas (parts of Latin America, Southeast Asia) using standard local transportation. No advance coordination with security firms, no secure vehicle provisions, no contingency plans. Often rely on local Uber equivalents.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.130Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.130Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;09a798d8-c3a2-4fc7-934d-07ce4b2b9ea5&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;921be0dd-2f51-4d32-9b7f-91a8a44c77c2&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Many people have access. My executive assistant manages my calendar and has full access. Calendar is synced to my phone which family members can sometimes see. My EA&#039;s assistant also has read access for scheduling. Meeting details including locations are visible. Some calendar items including dinner reservations sync to my wife&#039;s calendar. No one from security reviews my schedule.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.168Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.168Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;d085ab6b-6a71-40d9-8bba-83afd241c326&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;40e6a7b2-d5c1-449a-be18-132945f4c600&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Several concerns. The building has lobby security but a disgruntled former employee (who made threats) was able to access my floor before being stopped. Visitor logs are inconsistent. The executive floor doesn&#039;t have separate access control. Contractors and cleaning staff have unsupervised access to my office area. Window to my office is visible from adjacent building with direct sightline.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.252Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.252Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;b1de1434-b93b-4eb0-9412-f82b2747f78f&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;57a56573-4c05-4a3c-994d-542567a3d012&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No. My office door doesn&#039;t have a lock. The executive floor is theoretically badge-access but cleaning staff have unsupervised access. My desk drawers have simple locks but sensitive documents are often left out. Computer is password protected but often left logged in when I step out.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.290Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.290Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;fbe32fa8-ace8-4018-bf9d-eab1603cf700&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;1e2d8a37-f66c-44aa-9001-880fb0c64ce5&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;I arrive before my EA. I typically arrive at 7:40am and my EA arrives at 8:30am. For almost an hour each morning, I&#039;m alone on the executive floor (building security is in lobby only). Similarly, I often stay late after EA leaves. No one is screening visitors or monitoring my area during these times.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.328Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.328Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;707d97c4-5ec6-4e84-be3e-7888e0a8a08d&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;cd9d5184-71d5-40ea-8f23-d8d884482e20&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;Cleaning staff has full access to my office and the entire executive floor. They are not escorted by security. They clean between 7-10pm when many executives are still working. I don&#039;t know if they&#039;ve been vetted. I rarely see security staff on my floor - they&#039;re primarily stationed in the lobby.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.366Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.366Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;6db4ec74-89e0-496b-891e-6c06c66cedf2&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;9a40fdcf-e649-48d3-9cde-31a185936199&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No. The parking garage is minimally lit and I have to walk a considerable distance to reach the building entrance. There&#039;s no security escort service. When I leave late, the garage is nearly empty. I&#039;ve noticed unfamiliar vehicles parked near my space on multiple occasions. One time found a note on my windshield that made me uncomfortable.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.417Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.417Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;0fd8fb42-0e74-434e-b8f7-cdcaf4a4a7f5&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;6e4cbeb6-4612-4463-ab61-db33267826b2&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;Rarely. I usually skip fire drills due to meetings. I know there&#039;s a stairwell near my office but I&#039;m not certain of the complete evacuation route. I don&#039;t know where the secondary exit leads. The assembly point is in a public plaza with no controlled access.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.455Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.455Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;b811fa5c-0ed4-4661-bcab-b8124bd93334&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;ddf30a20-80c0-475b-9763-f8f189a8ed06&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No panic button. No duress system. My only option would be to call 911 on my cell phone. There&#039;s no direct line to building security from my desk. No intercom system, no emergency buzzer.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.493Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.493Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;a521c875-4b25-4797-89bf-39e6d62f3d54&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;de422290-2f6c-4e1d-9354-13a6c090feff&quot;,
+      &quot;yesNoResponse&quot;: true,
+      &quot;textResponse&quot;: &quot;Mix of EA and myself. My EA books business travel but I often book personal travel directly using my personal credit card. No security review of destinations. I&#039;ve booked hotels in high-risk countries without consulting anyone. My frequent flyer status and hotel preferences are publicly known from interviews. I sometimes post travel photos in real-time on social media.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.530Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.530Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;ee88d7be-13d3-433f-bc15-99569204f688&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;bec98d88-901d-4d14-926b-71ac716da4a3&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No one. I have no security support for travel. I travel internationally alone including to higher-risk destinations. No advance security assessments, no secure transportation arranged, no emergency extraction plans. For a recent trip to Brazil, I used regular taxis from the airport. No one from corporate security was informed of my travel.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.568Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.568Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;e1c361e2-fe91-4fd5-b5e6-3d6a6134d750&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;68411816-7cf8-4cbe-84c5-25b08aad0882&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;N/A - No security team is ever provided. I travel completely without protection support. No one tracks my movements, no check-in protocols, no emergency contacts established for travel. If something happened, my family wouldn&#039;t know until I failed to arrive home or missed scheduled calls.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.605Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.605Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;fa5ce09b-8b3a-4755-af1f-08ed4d29b44e&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;477c3e12-2152-43db-8211-eab6c18b0c99&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;Very concerned about it. Given the active threats against me, I feel very exposed when traveling. I&#039;ve had concerning incidents including being followed from an airport, aggressive paparazzi in London, and finding someone had photographed my hotel room door (photo posted online). I need professional travel security but don&#039;t have it.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.643Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.643Z&quot;
+    },
+    {
+      &quot;id&quot;: &quot;f7838d1c-b414-4f86-a9ee-8b8bc206bc2d&quot;,
+      &quot;assessmentId&quot;: &quot;197d44c9-6ac6-4a6d-987c-d8c93d5541c5&quot;,
+      &quot;questionId&quot;: &quot;4c55dfe4-db93-4c83-8fa3-a3c15f6b087c&quot;,
+      &quot;yesNoResponse&quot;: false,
+      &quot;textResponse&quot;: &quot;No training received. In April 2024, we received a suspicious package at home - no return address, unusual weight, hand-delivered. We weren&#039;t sure what to do. My wife opened it (shouldn&#039;t have) - it contained a threatening letter with photos of our children at school. We called police after the fact. At office, mail goes through mailroom but I don&#039;t know their screening protocols.&quot;,
+      &quot;createdAt&quot;: &quot;2025-12-11T02:07:44.681Z&quot;,
+      &quot;updatedAt&quot;: &quot;2025-12-11T02:07:44.681Z&quot;
+    }
+  ]
+}</pre>
+  </details>
+</body>
+</html>
