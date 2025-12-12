@@ -517,6 +517,107 @@ async function buildEPReportData(
   try {
     console.log(`[ReportDataAssembler] Building EP report data for assessment ${assessmentId}`);
     
+    // CRITICAL FIX: Use cached dashboard data if available
+    // The dashboard endpoint properly maps UUID question IDs to semantic keys,
+    // but this function was passing raw UUIDs which causes generateEPDashboard to fail.
+    // The cached data already has correct risk scores (e.g., 60/CRITICAL).
+    if (assessment.epDashboardCache) {
+      console.log(`[ReportDataAssembler] Using cached EP dashboard data`);
+      const cachedData = assessment.epDashboardCache as EPDashboardOutput;
+      
+      // Transform cached dashboard to report format
+      const threatAssessments: EPThreatAssessment[] = cachedData.threatMatrix.map(mapEPThreatScoreToAssessment);
+      
+      // Calculate component averages
+      const avgThreat = threatAssessments.length > 0 
+        ? threatAssessments.reduce((sum, t) => sum + t.threatLikelihood.score, 0) / threatAssessments.length 
+        : 0;
+      const avgVuln = threatAssessments.length > 0
+        ? threatAssessments.reduce((sum, t) => sum + t.vulnerability.score, 0) / threatAssessments.length
+        : 0;
+      const avgImpact = threatAssessments.length > 0
+        ? threatAssessments.reduce((sum, t) => sum + t.impact.score, 0) / threatAssessments.length
+        : 0;
+      const avgExposure = threatAssessments.length > 0
+        ? threatAssessments.reduce((sum, t) => sum + t.exposureFactor.score, 0) / threatAssessments.length
+        : 0;
+      
+      // Extract principal info from epProfile or cached data
+      const epProfile = (assessment.epProfile as Record<string, any>) || {};
+      const principalName = epProfile['ep_principal_name'] || 'Principal';
+      const principalTitle = epProfile['ep_principal_title'] || 'Executive';
+      const principalCompany = epProfile['ep_principal_company'] || '';
+      
+      const epReportData: EPReportData = {
+        principalName,
+        principalTitle,
+        principalCompany,
+        overallRiskScore: cachedData.overviewMetrics.overallRiskScore,
+        riskClassification: cachedData.overviewMetrics.riskClassification,
+        exposureFactor: cachedData.overviewMetrics.exposureFactor,
+        aiConfidence: cachedData.aiConfidence,
+        assessmentMode: cachedData.mode,
+        
+        componentSummaries: {
+          threat: {
+            overallScore: Math.round(avgThreat * 10) / 10,
+            narrative: generateComponentNarrative('threat', cachedData.threatMatrix)
+          },
+          vulnerability: {
+            overallScore: Math.round(avgVuln * 10) / 10,
+            narrative: generateComponentNarrative('vulnerability', cachedData.threatMatrix)
+          },
+          impact: {
+            overallScore: Math.round(avgImpact * 10) / 10,
+            narrative: generateComponentNarrative('impact', cachedData.threatMatrix)
+          },
+          exposure: {
+            overallScore: Math.round(avgExposure * 10) / 10,
+            narrative: generateComponentNarrative('exposure', cachedData.threatMatrix)
+          }
+        },
+        
+        threatAssessments,
+        
+        sectionAssessments: [],
+        
+        prioritizedControls: (cachedData.prioritizedControls || []).map(c => ({
+          controlId: c.controlId,
+          controlName: c.controlName,
+          category: c.category,
+          urgency: c.urgency,
+          addressesThreats: c.addressesThreats,
+          rationale: c.rationale,
+          estimatedCost: c.estimatedCost
+        })),
+        
+        topRiskSignals: (cachedData.topRiskSignals || []).map(s => ({
+          signal: s.signal,
+          severity: s.severity,
+          sourceQuestionId: s.sourceQuestionId,
+          affectedThreats: s.affectedThreats
+        })),
+        
+        dataGaps: (cachedData.completionGaps || []).map(g => ({
+          section: g.section,
+          missingQuestions: g.missingQuestions,
+          impactOnAssessment: g.impactOnAssessment
+        }))
+      };
+      
+      console.log(`[ReportDataAssembler] EP report data from cache:
+      - Threat Assessments: ${threatAssessments.length}
+      - Risk Score: ${epReportData.overallRiskScore}
+      - Classification: ${epReportData.riskClassification}
+      - AI Confidence: ${epReportData.aiConfidence}
+      - Prioritized Controls: ${epReportData.prioritizedControls.length}`);
+      
+      return epReportData;
+    }
+    
+    // Fallback: No cached data available - regenerate (may have issues with UUID mapping)
+    console.log(`[ReportDataAssembler] No cached dashboard data - regenerating (may have limited accuracy)`);
+    
     // Fetch interview responses
     const interviewResponsesList = await db.select()
       .from(executiveInterviewResponses)
