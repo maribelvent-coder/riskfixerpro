@@ -338,29 +338,18 @@ export default function ExecutiveDashboard() {
     enabled: !!id,
   });
 
-  const sectionAnalysisMutation = useMutation({
-    mutationFn: async () => {
+  const runSectionAnalysis = async () => {
+    try {
       setIsAnalyzingSections(true);
       const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {});
-      return response as unknown as FullSectionAnalysisResult;
-    },
-    onSuccess: (data) => {
-      setIsAnalyzingSections(false);
+      const data = response as unknown as FullSectionAnalysisResult;
       setSectionAnalysis(data);
-      toast({
-        title: 'Section Analysis Complete',
-        description: `Analyzed ${data.sections?.length || 0} physical security sections. Found ${data.criticalGapsCount || 0} critical gaps.`,
-      });
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
+      console.error('Section analysis error:', error);
+    } finally {
       setIsAnalyzingSections(false);
-      toast({
-        title: 'Section Analysis Failed',
-        description: error?.message || 'Failed to analyze sections',
-        variant: 'destructive',
-      });
-    },
-  });
+    }
+  };
 
   const analyzeMutation = useMutation({
     mutationFn: async (forceRefresh: boolean = false) => {
@@ -370,13 +359,16 @@ export default function ExecutiveDashboard() {
       });
       return response as unknown as EPDashboardData;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setIsAnalyzing(false);
       queryClient.invalidateQueries({ queryKey: ['/api/assessments', id, 'ep-dashboard'] });
       toast({
         title: 'Analysis Complete',
         description: `Generated ${data.threatMatrix?.length || 0} threat assessments. Risk Level: ${data.overviewMetrics?.riskClassification?.toUpperCase() || 'UNKNOWN'}`,
       });
+      
+      // Automatically run section analysis after main analysis
+      await runSectionAnalysis();
     },
     onError: (error: any) => {
       setIsAnalyzing(false);
@@ -860,36 +852,21 @@ export default function ExecutiveDashboard() {
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-base">Physical Security Section Analysis</CardTitle>
-                      {sectionAnalysis && (
+                      {isAnalyzingSections && (
+                        <Badge variant="outline" className="text-xs">
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Analyzing...
+                        </Badge>
+                      )}
+                      {sectionAnalysis && !isAnalyzingSections && (
                         <Badge variant="outline" className="text-xs">
                           AI Analyzed
                         </Badge>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      variant={sectionAnalysis ? "outline" : "default"}
-                      onClick={() => sectionAnalysisMutation.mutate()}
-                      disabled={isAnalyzingSections}
-                      data-testid="button-analyze-sections"
-                    >
-                      {isAnalyzingSections ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : sectionAnalysis ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Re-analyze
-                        </>
-                      ) : (
-                        <>
-                          <Search className="h-4 w-4 mr-2" />
-                          Run AI Analysis
-                        </>
-                      )}
-                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {!sectionAnalysis && !isAnalyzingSections && 'Click "Reassess" to analyze'}
+                    </span>
                   </div>
                   {sectionAnalysis && (
                     <div className="flex items-center gap-4 mt-3">

@@ -6153,11 +6153,8 @@ The facility should prioritize addressing critical risks immediately, particular
           // Load epProfile
           const epProfile = (assessment.epProfile as Record<string, any>) || {};
           
-          // Load assessment_questions responses
-          const assessmentQuestions = await db
-            .select()
-            .from(templateQuestions)
-            .where(eq(templateQuestions.assessmentId, assessment.id));
+          // Load assessment_questions responses using storage method
+          const assessmentQuestions = await storage.getAssessmentQuestions(id);
           
           // Build responses from both sources
           interviewResponses = { ...epProfile };
