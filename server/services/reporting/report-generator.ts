@@ -243,6 +243,70 @@ export async function generateReport(
     (dataPackage as any).keyFindings = (ep.topRiskSignals || []).map(s => s.signal);
     (dataPackage as any).topPriorities = (ep.prioritizedControls || []).slice(0, 3).map(c => c.controlName);
     
+    // Map EP data to interviewFindings format for vulnerability-reality section
+    // Use topRiskSignals and threat evidence as interview findings
+    const interviewFindingsFromEP: any[] = [];
+    
+    // Add findings from top risk signals
+    (ep.topRiskSignals || []).forEach(signal => {
+      interviewFindingsFromEP.push({
+        source: 'Principal',
+        role: 'Executive',
+        date: dataPackage.generatedAt,
+        findings: [{ finding: signal.signal }],
+        keyQuote: signal.signal
+      });
+    });
+    
+    // Add findings from threat vulnerability assessments
+    ep.threatAssessments.forEach(t => {
+      if (t.vulnerability?.controlGaps && t.vulnerability.controlGaps.length > 0) {
+        interviewFindingsFromEP.push({
+          source: 'Security Assessment',
+          role: 'Analyst',
+          date: dataPackage.generatedAt,
+          findings: t.vulnerability.controlGaps.map(gap => ({ finding: gap })),
+          keyQuote: t.vulnerability.reasoning || `Gaps identified in ${t.threatName} defenses`
+        });
+      }
+    });
+    
+    (dataPackage as any).interviewFindings = interviewFindingsFromEP;
+    
+    // Map EP vulnerability data to siteWalkFindings format
+    const siteWalkFindingsFromEP: any[] = [];
+    
+    ep.threatAssessments.forEach(t => {
+      // Extract control gaps as site walk findings
+      if (t.vulnerability?.controlGaps && t.vulnerability.controlGaps.length > 0) {
+        siteWalkFindingsFromEP.push({
+          location: 'Principal Environment',
+          date: dataPackage.generatedAt,
+          findings: t.vulnerability.controlGaps.map(gap => ({
+            finding: gap,
+            quote: t.vulnerability.reasoning
+          }))
+        });
+      }
+      
+      // Extract evidence trail as findings
+      if (t.evidenceTrail && t.evidenceTrail.length > 0) {
+        siteWalkFindingsFromEP.push({
+          location: t.threatName,
+          date: dataPackage.generatedAt,
+          findings: t.evidenceTrail.map(e => ({ finding: e }))
+        });
+      }
+    });
+    
+    (dataPackage as any).siteWalkFindings = siteWalkFindingsFromEP;
+    
+    // Add geographic context placeholders (would come from GeoIntel if available)
+    (dataPackage as any).workplaceCAP = dataPackage.geographicIntelligence?.capIndexData?.overallCrimeIndex || 'N/A';
+    (dataPackage as any).workplaceBE = 'N/A';
+    (dataPackage as any).residenceCAP = 'N/A';
+    (dataPackage as any).residenceVC = 'N/A';
+    
     // Add assessment metadata
     (dataPackage as any).assessmentDate = dataPackage.generatedAt;
     (dataPackage as any).consultantName = 'RiskFixer Security Consulting';
@@ -258,6 +322,8 @@ export async function generateReport(
     - vulnerabilityScore: ${(dataPackage as any).vulnerabilityScore}
     - impactScore: ${(dataPackage as any).impactScore}
     - overallRiskScore: ${(dataPackage as any).overallRiskScore}
+    - interviewFindings: ${(dataPackage as any).interviewFindings?.length || 0}
+    - siteWalkFindings: ${(dataPackage as any).siteWalkFindings?.length || 0}
     - threatDomains: ${(dataPackage as any).threatDomains?.length || 0}
     - principalName: ${(dataPackage as any).principalName}`);
   }
