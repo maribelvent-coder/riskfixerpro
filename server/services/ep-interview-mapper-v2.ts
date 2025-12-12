@@ -159,14 +159,29 @@ export interface EPMapperOutput {
 }
 
 const EP_SECTIONS = [
-  { id: 'public_profile', name: 'Public Profile Assessment', requiredQuestions: 6 },
-  { id: 'threat_history', name: 'Threat History', requiredQuestions: 6 },
-  { id: 'family_composition', name: 'Family Composition', requiredQuestions: 6 },
-  { id: 'daily_patterns', name: 'Daily Patterns & Travel', requiredQuestions: 6 },
-  { id: 'digital_footprint', name: 'Digital Footprint', requiredQuestions: 6 },
-  { id: 'residential_security', name: 'Residential Security', requiredQuestions: 6 },
-  { id: 'transportation_security', name: 'Transportation Security', requiredQuestions: 6 },
-  { id: 'current_measures', name: 'Current Security Measures', requiredQuestions: 6 },
+  { id: 'public_profile', name: 'Public Profile Assessment', requiredQuestions: 6, questionPrefix: 'ep_public' },
+  { id: 'threat_history', name: 'Threat History', requiredQuestions: 6, questionPrefix: 'ep_threat' },
+  { id: 'family_composition', name: 'Family Composition', requiredQuestions: 6, questionPrefix: 'ep_family' },
+  { id: 'daily_patterns', name: 'Daily Patterns & Travel', requiredQuestions: 6, questionPrefix: 'ep_daily' },
+  { id: 'digital_footprint', name: 'Digital Footprint', requiredQuestions: 6, questionPrefix: 'ep_digital' },
+  { id: 'residential_security', name: 'Residential Security', requiredQuestions: 6, questionPrefix: 'ep_residence' },
+  { id: 'transportation_security', name: 'Transportation Security', requiredQuestions: 6, questionPrefix: 'ep_transport' },
+  { id: 'current_measures', name: 'Current Security Measures', requiredQuestions: 6, questionPrefix: 'ep_current' },
+];
+
+const PHYSICAL_SECURITY_SECTIONS = [
+  { id: 'res_property', name: 'Property Profile', requiredQuestions: 7, questionIds: ['res_crime_score', 'res_incident_details', 'res_incident_history', 'res_neighborhood_type', 'res_police_response', 'res_property_type', 'res_visibility'] },
+  { id: 'res_perimeter', name: 'Perimeter Security', requiredQuestions: 9, questionIds: ['res_address_visible', 'res_boundary_defined', 'res_clear_zone', 'res_fence_condition', 'res_fence_type', 'res_gate_access_method', 'res_gate_type', 'res_perimeter_detection', 'res_warning_signs'] },
+  { id: 'res_access', name: 'Access Control (Doors)', requiredQuestions: 8, questionIds: ['res_deadbolt_throw', 'res_door_count', 'res_door_frame', 'res_door_glass_access', 'res_door_viewer', 'res_front_door_material', 'res_front_lock_type', 'res_strike_plate'] },
+  { id: 'res_alarms', name: 'Alarm Systems', requiredQuestions: 7, questionIds: ['res_alarm_backup', 'res_alarm_installed', 'res_alarm_sensors', 'res_alarm_tested', 'res_alarm_usage', 'res_panel_location', 'res_sensor_coverage'] },
+  { id: 'res_surveillance', name: 'Surveillance Systems', requiredQuestions: 6, questionIds: ['res_camera_coverage', 'res_camera_protected', 'res_cctv_installed', 'res_night_vision', 'res_remote_view', 'res_video_retention'] },
+  { id: 'res_lighting', name: 'Lighting Security', requiredQuestions: 6, questionIds: ['res_driveway_lighting', 'res_entry_lighting', 'res_lighting_type', 'res_lights_backup', 'res_lights_protected', 'res_perimeter_lighting'] },
+  { id: 'res_interior', name: 'Interior Security', requiredQuestions: 6, questionIds: ['res_bedroom_door', 'res_firearm_storage', 'res_safe', 'res_smart_home', 'res_smart_security', 'res_valuables_visible'] },
+  { id: 'res_windows', name: 'Windows & Glass', requiredQuestions: 5, questionIds: ['res_security_film', 'res_sliding_door', 'res_window_bars', 'res_window_lock_type', 'res_window_locks'] },
+  { id: 'res_landscaping', name: 'Landscaping & CPTED', requiredQuestions: 5, questionIds: ['res_climbing_aids', 'res_concealment_vegetation', 'res_defensive_landscaping', 'res_street_sightline', 'res_tree_access'] },
+  { id: 'res_vehicles', name: 'Vehicle Security', requiredQuestions: 6, questionIds: ['res_emergency_release', 'res_garage_interior_door', 'res_garage_opener', 'res_garage_type', 'res_garage_windows', 'res_vehicle_parking'] },
+  { id: 'res_saferoom', name: 'Safe Room & Emergency', requiredQuestions: 5, questionIds: ['res_emergency_plan', 'res_emergency_supplies', 'res_safe_room', 'res_safe_room_comms', 'res_smoke_co'] },
+  { id: 'res_monitoring', name: 'Monitoring & Response', requiredQuestions: 5, questionIds: ['res_duress_code', 'res_emergency_contacts', 'res_monitoring_level', 'res_perceived_security', 'res_security_training'] },
 ];
 
 const REQUIRED_QUESTION_IDS = [
@@ -328,6 +343,27 @@ const SIGNAL_MAPPINGS: {
     category: 'vulnerability',
     affectedThreats: ['kidnapping_abduction', 'physical_assault'],
   },
+];
+
+const PHYSICAL_SECURITY_SIGNAL_MAPPINGS: typeof SIGNAL_MAPPINGS = [
+  { questionId: 'res_alarm_installed', badAnswers: ['no', 'none'], signal: 'No alarm system installed', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion', 'stalking_surveillance'] },
+  { questionId: 'res_alarm_usage', badAnswers: ['never', 'rarely'], signal: 'Alarm system not regularly used', severity: 'indicator', category: 'vulnerability', affectedThreats: ['home_invasion'] },
+  { questionId: 'res_monitoring_level', badAnswers: ['none', 'self', 'self-monitored'], signal: 'No professional monitoring service', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion'] },
+  { questionId: 'res_cctv_installed', badAnswers: ['no', 'none'], signal: 'No surveillance cameras installed', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion', 'stalking_surveillance'] },
+  { questionId: 'res_fence_type', badAnswers: ['none', 'no fence'], signal: 'No perimeter fencing', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion', 'stalking_surveillance'] },
+  { questionId: 'res_gate_type', badAnswers: ['none', 'no gate'], signal: 'No access gate', severity: 'indicator', category: 'vulnerability', affectedThreats: ['home_invasion'] },
+  { questionId: 'res_perimeter_lighting', badAnswers: ['no', 'none', 'inadequate'], signal: 'Inadequate perimeter lighting', severity: 'indicator', category: 'vulnerability', affectedThreats: ['home_invasion', 'stalking_surveillance'] },
+  { questionId: 'res_front_door_material', badAnswers: ['hollow', 'glass', 'weak'], signal: 'Front door lacks reinforcement', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion'] },
+  { questionId: 'res_front_lock_type', badAnswers: ['basic', 'standard', 'single'], signal: 'Basic lock security on main entry', severity: 'indicator', category: 'vulnerability', affectedThreats: ['home_invasion'] },
+  { questionId: 'res_safe_room', badAnswers: ['no', 'none'], signal: 'No safe room or hardened shelter', severity: 'indicator', category: 'vulnerability', affectedThreats: ['home_invasion', 'kidnapping_abduction'] },
+  { questionId: 'res_emergency_plan', badAnswers: ['no', 'none'], signal: 'No emergency response plan', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion', 'kidnapping_abduction'] },
+  { questionId: 'res_crime_score', badAnswers: ['high', 'very high', 'elevated'], signal: 'Property in high-crime area', severity: 'critical_indicator', category: 'threat', affectedThreats: ['home_invasion', 'stalking_surveillance', 'physical_assault'] },
+  { questionId: 'res_incident_history', badAnswers: ['yes', 'multiple'], signal: 'Prior security incidents at residence', severity: 'critical_indicator', category: 'threat', affectedThreats: ['home_invasion', 'stalking_surveillance'] },
+  { questionId: 'res_visibility', badAnswers: ['high', 'very visible', 'exposed'], signal: 'Residence highly visible from public areas', severity: 'indicator', category: 'exposure', affectedThreats: ['stalking_surveillance', 'home_invasion'] },
+  { questionId: 'res_concealment_vegetation', badAnswers: ['yes', 'significant'], signal: 'Vegetation provides concealment for intruders', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion', 'stalking_surveillance'] },
+  { questionId: 'res_window_locks', badAnswers: ['no', 'none', 'broken'], signal: 'Windows lack adequate locks', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion'] },
+  { questionId: 'res_garage_interior_door', badAnswers: ['unlocked', 'weak', 'no door'], signal: 'Garage interior access unsecured', severity: 'concern', category: 'vulnerability', affectedThreats: ['home_invasion'] },
+  { questionId: 'res_security_training', badAnswers: ['no', 'none'], signal: 'Household lacks security awareness training', severity: 'indicator', category: 'vulnerability', affectedThreats: ['home_invasion', 'social_engineering'] },
 ];
 
 export function validateInterviewCompletion(responses: InterviewResponses): ValidationResult {
@@ -500,7 +536,9 @@ export function buildContextTags(responses: InterviewResponses): ContextTags {
 export function extractRiskSignals(responses: InterviewResponses): RiskSignal[] {
   const signals: RiskSignal[] = [];
   
-  for (const mapping of SIGNAL_MAPPINGS) {
+  const allMappings = [...SIGNAL_MAPPINGS, ...PHYSICAL_SECURITY_SIGNAL_MAPPINGS];
+  
+  for (const mapping of allMappings) {
     const rawAnswer = responses[mapping.questionId];
     const answerValue = getResponseValue(rawAnswer);
     if (answerValue && mapping.badAnswers.some(bad => 
@@ -520,14 +558,29 @@ export function extractRiskSignals(responses: InterviewResponses): RiskSignal[] 
   return signals;
 }
 
+function matchesSectionPrefix(key: string, prefixPattern: string): boolean {
+  const prefixes = prefixPattern.split('|');
+  return prefixes.some(prefix => key.startsWith(prefix));
+}
+
 export function buildSectionSummaries(responses: InterviewResponses, signals: RiskSignal[]): SectionSummary[] {
-  return EP_SECTIONS.map(section => {
-    const sectionQuestionKeys = Object.keys(responses).filter(
-      key => key.startsWith(`ep_${section.id}`) || key.includes(section.id)
-    );
+  const allSections = [...EP_SECTIONS, ...PHYSICAL_SECURITY_SECTIONS];
+  
+  return allSections.map(section => {
+    const sectionQuestionKeys = Object.keys(responses).filter(key => {
+      if ('questionIds' in section && section.questionIds) {
+        return section.questionIds.includes(key);
+      }
+      if ('questionPrefix' in section && section.questionPrefix) {
+        return matchesSectionPrefix(key, section.questionPrefix);
+      }
+      return key.startsWith(`ep_${section.id}`) || key.includes(section.id);
+    });
+    
     const answeredCount = sectionQuestionKeys.filter(
       key => responses[key] !== null && responses[key] !== undefined && responses[key] !== ''
     ).length;
+    
     const sectionSignals = signals.filter(sig => 
       sectionQuestionKeys.includes(sig.sourceQuestionId)
     );
