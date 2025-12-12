@@ -71,12 +71,12 @@ export async function generateAssessmentReport(
       const epData = reportDataPackage.epReportData;
       const validationErrors: string[] = [];
       
-      // 1. Validate threat domains exist with actual threat assessments
-      if (!epData.threatDomains || epData.threatDomains.length === 0) {
-        validationErrors.push('No threat domains generated');
+      // 1. Validate threat assessments exist (EPReportData uses threatAssessments, not threatDomains)
+      if (!epData.threatAssessments || epData.threatAssessments.length === 0) {
+        validationErrors.push('No threat assessments generated');
       } else {
-        const allThreats = epData.threatDomains.flatMap(d => d.threats || []);
-        const threatsWithData = allThreats.filter(t => t.riskScore && t.riskScore.normalized > 0);
+        // threatAssessments is already the threat array (EPThreatAssessment[])
+        const threatsWithData = epData.threatAssessments.filter(t => t.riskScore && t.riskScore.normalized > 0);
         
         if (threatsWithData.length === 0) {
           validationErrors.push('No threat risk scores calculated');
@@ -122,9 +122,9 @@ export async function generateAssessmentReport(
         }
       }
       
-      // 3. Validate principal profile exists
-      if (!epData.principalProfile || !epData.principalProfile.name) {
-        validationErrors.push('Principal profile not configured');
+      // 3. Validate principal name exists (EPReportData uses principalName, not principalProfile)
+      if (!epData.principalName) {
+        validationErrors.push('Principal name not configured');
       }
       
       if (validationErrors.length > 0) {
