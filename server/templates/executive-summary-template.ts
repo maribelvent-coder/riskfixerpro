@@ -437,7 +437,8 @@ function renderSection(section: GeneratedSection, pageBreak: boolean, dataSnapsh
     content = renderRiskScoreSection(dataSnapshot) + content;
   }
 
-  if (section.id === 'cover') {
+  // Skip cover (rendered separately) and about (hardcoded at bottom of template)
+  if (section.id === 'cover' || section.id === 'about') {
     return '';
   }
 
@@ -453,38 +454,50 @@ function renderSection(section: GeneratedSection, pageBreak: boolean, dataSnapsh
 
 function renderRiskScoreSection(dataSnapshot: any): string {
   const riskScores = dataSnapshot.riskScores || {};
-  const categoryBreakdown = riskScores.categoryBreakdown || [];
   
-  const threatCategory = categoryBreakdown.find((c: any) => c.category === 'threat') || { score: 0 };
-  const vulnCategory = categoryBreakdown.find((c: any) => c.category === 'vulnerability') || { score: 0 };
-  const impactCategory = categoryBreakdown.find((c: any) => c.category === 'impact') || { score: 0 };
+  // Get scores from flat fields (set by report-generator.ts for EP assessments)
+  // or fall back to categoryBreakdown for other assessment types
+  let threatScore = dataSnapshot.threatScore || 0;
+  let vulnerabilityScore = dataSnapshot.vulnerabilityScore || 0;
+  let impactScore = dataSnapshot.impactScore || 0;
   
-  const threatScore = threatCategory.score || 0;
-  const vulnerabilityScore = vulnCategory.score || 0;
-  const impactScore = impactCategory.score || 0;
+  // If flat fields are empty, try categoryBreakdown
+  if (!threatScore && !vulnerabilityScore && !impactScore) {
+    const categoryBreakdown = riskScores.categoryBreakdown || [];
+    const threatCategory = categoryBreakdown.find((c: any) => c.category === 'threat') || { score: 0 };
+    const vulnCategory = categoryBreakdown.find((c: any) => c.category === 'vulnerability') || { score: 0 };
+    const impactCategory = categoryBreakdown.find((c: any) => c.category === 'impact') || { score: 0 };
+    threatScore = threatCategory.score || 0;
+    vulnerabilityScore = vulnCategory.score || 0;
+    impactScore = impactCategory.score || 0;
+  }
+  
   const overallScore = riskScores.overallScore || 0;
   const riskLevel = getRiskLevelLabel(overallScore);
   const riskColor = getRiskLevelColor(riskLevel);
 
+  // Format scores with one decimal place for precision
+  const formatScore = (score: number) => typeof score === 'number' ? score.toFixed(1) : '0.0';
+  
   return `
     <div class="risk-score-box" style="border-left-color: ${riskColor};">
-      <div class="risk-score-number" style="color: ${riskColor};">${Math.round(overallScore)}</div>
+      <div class="risk-score-number" style="color: ${riskColor};">${Math.round(overallScore)}/125</div>
       <div class="risk-score-details">
         <div class="risk-score-label">Overall Risk Score</div>
-        <div class="risk-score-level">${riskLevel.toUpperCase()} RISK</div>
+        <div class="risk-score-level">${riskLevel.toUpperCase()}</div>
       </div>
     </div>
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-value">${Math.round(threatScore)}</div>
+        <div class="stat-value">${formatScore(threatScore)}</div>
         <div class="stat-label">Threat Score</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">${Math.round(vulnerabilityScore)}</div>
+        <div class="stat-value">${formatScore(vulnerabilityScore)}</div>
         <div class="stat-label">Vulnerability Score</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">${Math.round(impactScore)}</div>
+        <div class="stat-value">${formatScore(impactScore)}</div>
         <div class="stat-label">Impact Score</div>
       </div>
     </div>
