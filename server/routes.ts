@@ -6880,44 +6880,79 @@ The facility should prioritize addressing critical risks immediately, particular
         return res.status(403).json({ error: "Access denied" });
       }
 
-      // Fetch facility survey questions and extract responses
-      const surveyQuestions = await storage.getFacilitySurveyQuestions(
-        scenario.assessmentId,
-      );
-      const surveyResponses: Record<string, any> | null =
-        surveyQuestions && surveyQuestions.length > 0
-          ? surveyQuestions.reduce(
-              (acc, q) => {
-                // Production data may have questionId field (from template_questions.questionId like "dock_4")
-                // Fall back to template UUID, category, or record ID
-                const questionData = q as any; // Type assertion to access runtime fields
-                const key =
-                  questionData.questionId || // Primary: questionId from template ("dock_4", "perimeter_1")
-                  q.templateQuestionId || // Fallback 1: template UUID
-                  q.category || // Fallback 2: category name
-                  q.id; // Fallback 3: record UUID
+      // For Executive Protection, fetch interview responses with question text
+      // For other templates, use facility survey questions
+      let surveyResponses: Record<string, any> | null = null;
+      
+      if (assessment.templateId === 'executive-protection') {
+        // Fetch EP interview responses and ALL questions for human-readable format
+        const epResponses = await storage.getExecutiveInterviewResponses(scenario.assessmentId);
+        
+        // Always load questions even when no responses exist
+        const { db } = await import("./db");
+        const { executiveInterviewQuestions } = await import("@shared/schema");
+        const questions = await db.select().from(executiveInterviewQuestions);
+        
+        // Build human-readable survey data with ALL questions (answered + unanswered)
+        surveyResponses = {};
+        const responseMap = new Map((epResponses || []).map(r => [r.questionId, r]));
+        
+        // Iterate over ALL questions to include unanswered ones
+        for (const question of questions) {
+          const questionKey = `Q${question.questionNumber}: ${question.question}`;
+          const response = responseMap.get(question.id);
+          
+          if (response) {
+            // Build answer from both yes/no and detailed text response
+            let answer = '';
+            if (response.yesNoResponse !== null) {
+              answer = response.yesNoResponse ? 'Yes' : 'No';
+            }
+            if (response.textResponse) {
+              answer = answer ? `${answer} - ${response.textResponse}` : response.textResponse;
+            }
+            surveyResponses[questionKey] = answer || 'Not answered';
+          } else {
+            // Mark unanswered questions explicitly
+            surveyResponses[questionKey] = 'Not answered';
+          }
+        }
+      } else {
+        // Fetch facility survey questions for non-EP templates
+        const surveyQuestions = await storage.getFacilitySurveyQuestions(
+          scenario.assessmentId,
+        );
+        surveyResponses =
+          surveyQuestions && surveyQuestions.length > 0
+            ? surveyQuestions.reduce(
+                (acc, q) => {
+                  const questionData = q as any;
+                  const key =
+                    questionData.questionId ||
+                    q.templateQuestionId ||
+                    q.category ||
+                    q.id;
 
-                if (q.response && key) {
-                  // Extract value from response JSONB - handle both simple and complex formats
-                  let value = q.response;
-                  if (typeof q.response === "object" && q.response !== null) {
-                    // Try to extract nested value/text/answer/optionId fields from JSONB
-                    const responseObj = q.response as any;
-                    value =
-                      responseObj.value ||
-                      responseObj.text ||
-                      responseObj.answer ||
-                      responseObj.optionId ||
-                      responseObj.selected ||
-                      q.response; // Fallback to full object
+                  if (q.response && key) {
+                    let value = q.response;
+                    if (typeof q.response === "object" && q.response !== null) {
+                      const responseObj = q.response as any;
+                      value =
+                        responseObj.value ||
+                        responseObj.text ||
+                        responseObj.answer ||
+                        responseObj.optionId ||
+                        responseObj.selected ||
+                        q.response;
+                    }
+                    acc[key] = value;
                   }
-                  acc[key] = value;
-                }
-                return acc;
-              },
-              {} as Record<string, any>,
-            )
-          : null;
+                  return acc;
+                },
+                {} as Record<string, any>,
+              )
+            : null;
+      }
 
       // Generate AI narrative using template-aware factory
       const { generateRiskNarrative } = await import(
