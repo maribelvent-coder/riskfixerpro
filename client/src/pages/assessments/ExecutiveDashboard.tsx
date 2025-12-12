@@ -314,31 +314,61 @@ const formatCurrency = (amount: number | string | undefined) => {
 };
 
 const THREAT_SECTION_MAPPING: Record<string, string[]> = {
-  'home_invasion': ['res_perimeter', 'res_access', 'res_alarms', 'res_saferoom'],
+  'home_invasion': ['res_perimeter', 'res_access', 'res_alarms', 'res_saferoom', 'res_windows'],
   'residential_burglary': ['res_perimeter', 'res_access', 'res_alarms', 'res_windows', 'res_surveillance'],
-  'stalking': ['res_perimeter', 'res_surveillance', 'res_monitoring'],
-  'kidnapping': ['res_perimeter', 'res_saferoom', 'res_vehicles', 'res_monitoring'],
-  'doxxing': ['res_property', 'res_monitoring'],
-  'extortion': ['res_monitoring', 'res_saferoom'],
-  'ambush': ['res_perimeter', 'res_vehicles', 'res_surveillance'],
-  'workplace_violence': ['res_access', 'res_alarms', 'res_saferoom'],
-  'travel_incidents': ['res_vehicles'],
+  'stalking_surveillance': ['res_perimeter', 'res_surveillance', 'res_monitoring', 'res_landscaping'],
+  'stalking': ['res_perimeter', 'res_surveillance', 'res_monitoring', 'res_landscaping'],
+  'kidnapping_abduction': ['res_perimeter', 'res_saferoom', 'res_vehicles', 'res_monitoring', 'res_access'],
+  'kidnapping': ['res_perimeter', 'res_saferoom', 'res_vehicles', 'res_monitoring', 'res_access'],
+  'doxxing_privacy_breach': ['res_property', 'res_monitoring', 'res_interior'],
+  'doxxing': ['res_property', 'res_monitoring', 'res_interior'],
+  'extortion_blackmail': ['res_monitoring', 'res_saferoom', 'res_interior'],
+  'extortion': ['res_monitoring', 'res_saferoom', 'res_interior'],
+  'ambush_attack': ['res_perimeter', 'res_vehicles', 'res_surveillance', 'res_landscaping'],
+  'ambush': ['res_perimeter', 'res_vehicles', 'res_surveillance', 'res_landscaping'],
+  'workplace_violence': ['res_access', 'res_alarms', 'res_saferoom', 'res_monitoring'],
+  'travel_incident': ['res_vehicles'],
+  'cyber_targeting_social_engineering': ['res_interior', 'res_monitoring'],
   'cyber_targeting': ['res_interior', 'res_monitoring'],
-  'family_targeting': ['res_perimeter', 'res_access', 'res_saferoom', 'res_monitoring'],
-  'reputational_attack': ['res_monitoring'],
-  'protest_targeting': ['res_perimeter', 'res_surveillance', 'res_saferoom'],
+  'family_member_targeting': ['res_perimeter', 'res_access', 'res_saferoom', 'res_monitoring', 'res_alarms'],
+  'family_targeting': ['res_perimeter', 'res_access', 'res_saferoom', 'res_monitoring', 'res_alarms'],
+  'reputational_attack': ['res_monitoring', 'res_property'],
+  'protest_targeting': ['res_perimeter', 'res_surveillance', 'res_saferoom', 'res_access'],
+  'burglary': ['res_perimeter', 'res_access', 'res_alarms', 'res_windows', 'res_surveillance'],
+  'invasion': ['res_perimeter', 'res_access', 'res_alarms', 'res_saferoom', 'res_windows'],
+};
+
+const normalizeEpThreatId = (threatId: string): string => {
+  let normalized = threatId.toLowerCase();
+  if (normalized.startsWith('threat_')) {
+    normalized = normalized.substring(7);
+  }
+  const severitySuffixes = ['_critical', '_high', '_medium', '_low', '_elevated'];
+  for (const suffix of severitySuffixes) {
+    if (normalized.endsWith(suffix)) {
+      normalized = normalized.slice(0, -suffix.length);
+      break;
+    }
+  }
+  return normalized;
 };
 
 const getRelatedSections = (threatId: string, category: string): string[] => {
-  const threatLower = threatId.toLowerCase().replace(/[^a-z_]/g, '');
-  const categoryLower = category.toLowerCase().replace(/[^a-z_]/g, '');
+  const normalizedThreat = normalizeEpThreatId(threatId);
+  const categoryLower = category.toLowerCase();
+  
+  if (THREAT_SECTION_MAPPING[normalizedThreat]) {
+    return THREAT_SECTION_MAPPING[normalizedThreat];
+  }
   
   for (const [key, sections] of Object.entries(THREAT_SECTION_MAPPING)) {
-    if (threatLower.includes(key) || categoryLower.includes(key)) {
+    if (normalizedThreat.includes(key) || key.includes(normalizedThreat) || categoryLower.includes(key)) {
       return sections;
     }
   }
-  return ['res_perimeter', 'res_access', 'res_alarms'];
+  
+  console.warn(`[EP Dashboard] Unmapped threat ID: ${threatId} (normalized: ${normalizedThreat})`);
+  return ['res_perimeter', 'res_access', 'res_alarms', 'res_surveillance'];
 };
 
 type ThreatScenario = NonNullable<EPDashboardData['threatMatrix']>[number];
@@ -365,6 +395,27 @@ export default function ExecutiveDashboard() {
     queryKey: ['/api/assessments', id, 'ep-dashboard'],
     enabled: !!id,
   });
+
+  // Auto-trigger section analysis when switching to scenarios tab with dashboard data
+  useEffect(() => {
+    if (activeTab === 'scenarios' && dashboardData?.threatMatrix && dashboardData.threatMatrix.length > 0 && !sectionAnalysis && !isAnalyzingSections && id) {
+      const runAnalysis = async () => {
+        try {
+          setIsAnalyzingSections(true);
+          const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {});
+          const data = await response.json() as FullSectionAnalysisResult;
+          if (data && data.sections && Array.isArray(data.sections)) {
+            setSectionAnalysis(data);
+          }
+        } catch (error) {
+          console.error('Auto section analysis error:', error);
+        } finally {
+          setIsAnalyzingSections(false);
+        }
+      };
+      runAnalysis();
+    }
+  }, [activeTab, dashboardData?.threatMatrix, sectionAnalysis, isAnalyzingSections, id]);
 
   const runSectionAnalysis = async () => {
     try {
