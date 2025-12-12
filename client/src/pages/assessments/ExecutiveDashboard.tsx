@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -20,6 +21,7 @@ import {
   RefreshCw,
   ClipboardCheck,
   ChevronRight,
+  ChevronDown,
   Info,
   Activity,
   Briefcase,
@@ -28,7 +30,9 @@ import {
   XCircle,
   Clock,
   ExternalLink,
-  Eye
+  Eye,
+  Zap,
+  Search
 } from "lucide-react";
 
 interface EvidenceChainItem {
@@ -45,6 +49,37 @@ interface SectionAssessment {
   totalQuestions: number;
   keyFindings: string[];
   aiNarrative: string;
+}
+
+interface SectionFinding {
+  type: 'gap' | 'concern' | 'strength';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  finding: string;
+  questionId: string;
+  evidence: string;
+}
+
+interface EnhancedSectionAnalysis {
+  sectionId: string;
+  sectionName: string;
+  riskScore: number;
+  riskLevel: 'critical' | 'high' | 'medium' | 'low';
+  summary: string;
+  findings: SectionFinding[];
+  recommendations: string[];
+  answeredCount: number;
+  totalQuestions: number;
+  completionPercentage: number;
+  analyzedAt: string;
+}
+
+interface FullSectionAnalysisResult {
+  assessmentId: string;
+  analyzedAt: string;
+  sections: EnhancedSectionAnalysis[];
+  overallResidentialRisk: number;
+  criticalGapsCount: number;
+  highGapsCount: number;
 }
 
 interface EPDashboardData {
@@ -288,10 +323,43 @@ export default function ExecutiveDashboard() {
   const [selectedScenario, setSelectedScenario] = useState<ThreatScenario | null>(null);
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [sectionAnalysis, setSectionAnalysis] = useState<FullSectionAnalysisResult | null>(null);
+  const [isAnalyzingSections, setIsAnalyzingSections] = useState(false);
+
+  // Reset section analysis when assessment id changes to avoid showing stale data
+  useEffect(() => {
+    setSectionAnalysis(null);
+    setIsAnalyzingSections(false);
+    setSelectedScenario(null);
+  }, [id]);
 
   const { data: dashboardData, isLoading, refetch } = useQuery<EPDashboardData>({
     queryKey: ['/api/assessments', id, 'ep-dashboard'],
     enabled: !!id,
+  });
+
+  const sectionAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      setIsAnalyzingSections(true);
+      const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {});
+      return response as unknown as FullSectionAnalysisResult;
+    },
+    onSuccess: (data) => {
+      setIsAnalyzingSections(false);
+      setSectionAnalysis(data);
+      toast({
+        title: 'Section Analysis Complete',
+        description: `Analyzed ${data.sections?.length || 0} physical security sections. Found ${data.criticalGapsCount || 0} critical gaps.`,
+      });
+    },
+    onError: (error: any) => {
+      setIsAnalyzingSections(false);
+      toast({
+        title: 'Section Analysis Failed',
+        description: error?.message || 'Failed to analyze sections',
+        variant: 'destructive',
+      });
+    },
   });
 
   const analyzeMutation = useMutation({
@@ -786,25 +854,232 @@ export default function ExecutiveDashboard() {
           {/* Tab Content */}
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Section Assessments */}
-              <Card>
+              {/* Section Assessments - Enhanced with AI Analysis */}
+              <Card className="lg:col-span-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Section Assessments</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {(dashboardData?.sectionAssessments || []).map(section => (
-                    <div key={section.sectionId} className="bg-muted/50 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-sm">{section.sectionName}</span>
-                        <span className={`text-sm ${section.riskIndicators > 3 ? 'text-red-400' : section.riskIndicators > 2 ? 'text-yellow-400' : 'text-green-400'}`}>
-                          {section.riskIndicators}/{section.totalQuestions} risk indicators
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{section.aiNarrative}</p>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base">Physical Security Section Analysis</CardTitle>
+                      {sectionAnalysis && (
+                        <Badge variant="outline" className="text-xs">
+                          AI Analyzed
+                        </Badge>
+                      )}
                     </div>
-                  ))}
-                  {(!dashboardData?.sectionAssessments || dashboardData.sectionAssessments.length === 0) && (
-                    <p className="text-sm text-muted-foreground text-center py-4">No section assessments available</p>
+                    <Button
+                      size="sm"
+                      variant={sectionAnalysis ? "outline" : "default"}
+                      onClick={() => sectionAnalysisMutation.mutate()}
+                      disabled={isAnalyzingSections}
+                      data-testid="button-analyze-sections"
+                    >
+                      {isAnalyzingSections ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : sectionAnalysis ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Re-analyze
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4 mr-2" />
+                          Run AI Analysis
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {sectionAnalysis && (
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Overall Risk:</span>
+                        <Badge variant={sectionAnalysis.overallResidentialRisk >= 70 ? 'destructive' : sectionAnalysis.overallResidentialRisk >= 40 ? 'default' : 'secondary'}>
+                          {sectionAnalysis.overallResidentialRisk}/100
+                        </Badge>
+                      </div>
+                      {sectionAnalysis.criticalGapsCount > 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          {sectionAnalysis.criticalGapsCount} Critical Gaps
+                        </Badge>
+                      )}
+                      {sectionAnalysis.highGapsCount > 0 && (
+                        <Badge variant="default" className="text-xs bg-orange-500/20 text-orange-400 border-orange-500/30">
+                          {sectionAnalysis.highGapsCount} High Gaps
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {sectionAnalysis ? (
+                    <Accordion type="multiple" className="w-full">
+                      {sectionAnalysis.sections.map((section) => {
+                        const gapCount = section.findings.filter(f => f.type === 'gap').length;
+                        const concernCount = section.findings.filter(f => f.type === 'concern').length;
+                        const strengthCount = section.findings.filter(f => f.type === 'strength').length;
+                        const criticalFindings = section.findings.filter(f => f.severity === 'critical');
+                        const highFindings = section.findings.filter(f => f.severity === 'high');
+                        
+                        return (
+                          <AccordionItem key={section.sectionId} value={section.sectionId} className="border-b-0 mb-2">
+                            <AccordionTrigger 
+                              className="bg-muted/50 rounded-lg px-4 py-3 hover:bg-muted/70 hover:no-underline [&[data-state=open]]:rounded-b-none"
+                              data-testid={`accordion-section-${section.sectionId}`}
+                            >
+                              <div className="flex items-center justify-between w-full pr-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    section.riskLevel === 'critical' ? 'bg-red-500' :
+                                    section.riskLevel === 'high' ? 'bg-orange-500' :
+                                    section.riskLevel === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                                  }`} />
+                                  <span className="font-medium text-sm">{section.sectionName}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs text-muted-foreground">
+                                    {section.completionPercentage}% complete
+                                  </span>
+                                  <Badge 
+                                    variant={section.riskLevel === 'critical' ? 'destructive' : 
+                                             section.riskLevel === 'high' ? 'default' : 'secondary'}
+                                    className={`text-xs ${
+                                      section.riskLevel === 'high' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : ''
+                                    }`}
+                                  >
+                                    Risk: {section.riskScore}/10
+                                  </Badge>
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="bg-muted/30 rounded-b-lg px-4 pt-0 pb-4">
+                              <div className="space-y-4">
+                                {/* Summary */}
+                                <div className="pt-3">
+                                  <p className="text-sm text-muted-foreground">{section.summary}</p>
+                                </div>
+
+                                {/* Quick Stats */}
+                                <div className="flex items-center gap-4 text-xs">
+                                  {gapCount > 0 && (
+                                    <span className="flex items-center gap-1 text-red-400">
+                                      <XCircle className="w-3 h-3" /> {gapCount} gaps
+                                    </span>
+                                  )}
+                                  {concernCount > 0 && (
+                                    <span className="flex items-center gap-1 text-yellow-400">
+                                      <AlertTriangle className="w-3 h-3" /> {concernCount} concerns
+                                    </span>
+                                  )}
+                                  {strengthCount > 0 && (
+                                    <span className="flex items-center gap-1 text-green-400">
+                                      <CheckCircle2 className="w-3 h-3" /> {strengthCount} strengths
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Critical/High Findings */}
+                                {(criticalFindings.length > 0 || highFindings.length > 0) && (
+                                  <div className="space-y-2">
+                                    <h5 className="text-xs font-medium text-red-400 flex items-center gap-1">
+                                      <Zap className="w-3 h-3" /> Priority Findings
+                                    </h5>
+                                    <div className="space-y-2">
+                                      {[...criticalFindings, ...highFindings].slice(0, 5).map((finding, idx) => (
+                                        <div 
+                                          key={idx} 
+                                          className={`p-2 rounded text-xs border-l-2 ${
+                                            finding.severity === 'critical' 
+                                              ? 'bg-red-500/10 border-l-red-500' 
+                                              : 'bg-orange-500/10 border-l-orange-500'
+                                          }`}
+                                        >
+                                          <div className="flex items-start justify-between gap-2">
+                                            <span className="flex-1">{finding.finding}</span>
+                                            <Badge variant="outline" className="text-[10px] shrink-0">
+                                              {finding.severity}
+                                            </Badge>
+                                          </div>
+                                          {finding.evidence && (
+                                            <p className="text-muted-foreground mt-1 text-[10px]">
+                                              Evidence: {finding.evidence}
+                                            </p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Recommendations */}
+                                {section.recommendations.length > 0 && (
+                                  <div className="space-y-2">
+                                    <h5 className="text-xs font-medium text-blue-400 flex items-center gap-1">
+                                      <Target className="w-3 h-3" /> Recommendations
+                                    </h5>
+                                    <ul className="space-y-1">
+                                      {section.recommendations.map((rec, idx) => (
+                                        <li key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
+                                          <ChevronRight className="w-3 h-3 mt-0.5 shrink-0 text-blue-400" />
+                                          <span>{rec}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* All Findings (Collapsed) */}
+                                {section.findings.length > 0 && (
+                                  <details className="text-xs">
+                                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                      View all {section.findings.length} findings
+                                    </summary>
+                                    <div className="mt-2 space-y-1 pl-4">
+                                      {section.findings.map((finding, idx) => (
+                                        <div key={idx} className="flex items-start gap-2 py-1">
+                                          <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                                            finding.type === 'gap' ? 'bg-red-500' :
+                                            finding.type === 'concern' ? 'bg-yellow-500' : 'bg-green-500'
+                                          }`} />
+                                          <span className="text-muted-foreground">{finding.finding}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </details>
+                                )}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
+                    </Accordion>
+                  ) : (
+                    /* Fallback to basic section display if no AI analysis */
+                    <div className="space-y-3">
+                      {(dashboardData?.sectionAssessments || []).map(section => (
+                        <div key={section.sectionId} className="bg-muted/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm">{section.sectionName}</span>
+                            <span className={`text-sm ${section.riskIndicators > 3 ? 'text-red-400' : section.riskIndicators > 2 ? 'text-yellow-400' : 'text-green-400'}`}>
+                              {section.riskIndicators}/{section.totalQuestions} risk indicators
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{section.aiNarrative}</p>
+                        </div>
+                      ))}
+                      {(!dashboardData?.sectionAssessments || dashboardData.sectionAssessments.length === 0) && (
+                        <div className="text-center py-8">
+                          <Search className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                          <p className="text-sm text-muted-foreground mb-3">
+                            No section analysis available yet.
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Click "Run AI Analysis" to analyze physical security responses and identify gaps.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
