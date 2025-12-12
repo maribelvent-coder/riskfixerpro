@@ -6067,6 +6067,8 @@ The facility should prioritize addressing critical risks immediately, particular
         
         // Create mapping from (category, question_number) → semantic key
         // This bridges the gap between UUID-keyed DB data and semantic-keyed mapper expectations
+        // QUESTION_SEMANTIC_MAP: Maps (category, question_number) → semantic keys
+        // Category names MUST match the exact database values from executive_interview_questions table
         const QUESTION_SEMANTIC_MAP: Record<string, Record<number, string>> = {
           'Incident History & Threats': {
             1: 'ep_known_threats',
@@ -6083,11 +6085,13 @@ The facility should prioritize addressing critical risks immediately, particular
             8: 'ep_public_speaking',
             9: 'ep_prior_incidents',
           },
-          'Routine & Patterns': {
+          // Fixed: Database uses 'Routines & Predictability' not 'Routine & Patterns'
+          'Routines & Predictability': {
             10: 'ep_daily_routine_predictability',
             11: 'ep_regular_patterns',
           },
-          'Residential Security': {
+          // Fixed: Database uses 'Residences' not 'Residential Security'
+          'Residences': {
             12: 'ep_residence_security_level',
             13: 'ep_family_security_training',
             14: 'ep_domestic_staff',
@@ -6096,6 +6100,43 @@ The facility should prioritize addressing critical risks immediately, particular
             15: 'ep_family_public_exposure',
             16: 'ep_minor_children',
             17: 'ep_children_schedule',
+          },
+          // Add remaining categories for complete 43-question coverage
+          'Office Security': {
+            18: 'ep_office_concerns',
+            19: 'ep_office_locked',
+            20: 'ep_arrival_patterns',
+            21: 'ep_confidential_documents',
+            22: 'ep_public_access',
+            23: 'ep_access_control',
+          },
+          'Transportation': {
+            24: 'ep_vehicle_type',
+            25: 'ep_vehicle_security',
+            26: 'ep_parking_location',
+            27: 'ep_commute_routine',
+            28: 'ep_driver_service',
+            29: 'ep_alternate_routes',
+          },
+          'Travel': {
+            30: 'ep_travel_frequency',
+            31: 'ep_travel_security_concerns',
+            32: 'ep_hotel_security',
+            33: 'ep_ground_transportation',
+            34: 'ep_travel_advance_work',
+          },
+          'Digital Footprint': {
+            35: 'ep_social_media',
+            36: 'ep_online_presence',
+            37: 'ep_data_broker_exposure',
+            38: 'ep_email_security',
+          },
+          'Emergency Preparedness': {
+            39: 'ep_emergency_contacts',
+            40: 'ep_evacuation_plans',
+            41: 'ep_safe_room',
+            42: 'ep_medical_info',
+            43: 'ep_duress_codes',
           },
         };
         
