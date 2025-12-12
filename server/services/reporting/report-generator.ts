@@ -187,6 +187,81 @@ export async function generateReport(
   const dataPackage = await assembleReportData(assessmentId);
   console.log(`[ReportGenerator] Data package assembled successfully`);
 
+  // EP Field Mapping: Translate epReportData fields to template-expected field names
+  // The recipe expects flat fields like 'threatScore', 'principalProfile', 'threatDomains'
+  // but epReportData has nested structures like componentSummaries.threat.overallScore
+  if (dataPackage.epReportData) {
+    const ep = dataPackage.epReportData;
+    
+    // Map component scores to flat fields expected by mathematical-reality section
+    (dataPackage as any).threatScore = ep.componentSummaries?.threat?.overallScore || 0;
+    (dataPackage as any).vulnerabilityScore = ep.componentSummaries?.vulnerability?.overallScore || 0;
+    (dataPackage as any).impactScore = ep.componentSummaries?.impact?.overallScore || 0;
+    (dataPackage as any).exposureScore = ep.componentSummaries?.exposure?.overallScore || 0;
+    (dataPackage as any).overallRiskScore = ep.overallRiskScore;
+    (dataPackage as any).riskLevel = ep.riskClassification;
+    
+    // Map threatAssessments to threatDomains format expected by risk-landscape section
+    (dataPackage as any).threatDomains = ep.threatAssessments.map(t => ({
+      id: t.threatId,
+      name: t.threatName,
+      category: t.category,
+      number: ep.threatAssessments.indexOf(t) + 1,
+      findings: t.scenarioDescription || t.threatLikelihood?.reasoning || '',
+      riskScore: t.riskScore?.normalized || 0,
+      priority: t.riskScore?.classification || 'medium',
+      likelihood: t.threatLikelihood?.score || 0,
+      vulnerability: t.vulnerability?.score || 0,
+      impact: t.impact?.score || 0
+    }));
+    
+    // Construct principalProfile object from EP fields
+    (dataPackage as any).principalProfile = {
+      name: ep.principalName || 'Principal',
+      title: ep.principalTitle || 'Executive',
+      company: ep.principalCompany || '',
+      exposureFactor: ep.exposureFactor,
+      riskClassification: ep.riskClassification
+    };
+    
+    // Also set principalName at top level for cover section
+    (dataPackage as any).principalName = ep.principalName || 'Principal';
+    (dataPackage as any).principalTitle = ep.principalTitle || 'Executive';
+    
+    // Map prioritized controls to recommendations format
+    (dataPackage as any).prioritizedRecommendations = (ep.prioritizedControls || []).map(c => ({
+      id: c.controlId,
+      name: c.controlName,
+      category: c.category,
+      urgency: c.urgency,
+      rationale: c.rationale,
+      estimatedCost: c.estimatedCost,
+      addressesThreats: c.addressesThreats
+    }));
+    
+    // Map top risk signals to key findings
+    (dataPackage as any).keyFindings = (ep.topRiskSignals || []).map(s => s.signal);
+    (dataPackage as any).topPriorities = (ep.prioritizedControls || []).slice(0, 3).map(c => c.controlName);
+    
+    // Add assessment metadata
+    (dataPackage as any).assessmentDate = dataPackage.generatedAt;
+    (dataPackage as any).consultantName = 'RiskFixer Security Consulting';
+    (dataPackage as any).methodology = 'ASIS International Security Risk Assessment Standard (ASIS SRA-2024)';
+    (dataPackage as any).dataSources = [
+      { type: 'Interview', description: 'Executive protection questionnaire', date: dataPackage.generatedAt },
+      { type: 'AI Analysis', description: 'T×V×I×E risk calculation engine', date: dataPackage.generatedAt }
+    ];
+    (dataPackage as any).siteWalkDates = dataPackage.generatedAt;
+    
+    console.log(`[ReportGenerator] EP field mapping applied:
+    - threatScore: ${(dataPackage as any).threatScore}
+    - vulnerabilityScore: ${(dataPackage as any).vulnerabilityScore}
+    - impactScore: ${(dataPackage as any).impactScore}
+    - overallRiskScore: ${(dataPackage as any).overallRiskScore}
+    - threatDomains: ${(dataPackage as any).threatDomains?.length || 0}
+    - principalName: ${(dataPackage as any).principalName}`);
+  }
+
   const generationLog: GenerationLogEntry[] = [];
   const generatedSections: GeneratedSection[] = [];
   let totalTokensUsed = 0;
