@@ -341,8 +341,16 @@ export default function ExecutiveDashboard() {
   const runSectionAnalysis = async () => {
     try {
       setIsAnalyzingSections(true);
-      const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {});
-      const data = response as unknown as FullSectionAnalysisResult;
+      const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {}) as any;
+      // Extract the section analysis data from the response (which includes success: true)
+      const data: FullSectionAnalysisResult = {
+        assessmentId: response.assessmentId || id || '',
+        analyzedAt: response.analyzedAt || new Date().toISOString(),
+        sections: response.sections || [],
+        overallResidentialRisk: response.overallResidentialRisk || 0,
+        criticalGapsCount: response.criticalGapsCount || 0,
+        highGapsCount: response.highGapsCount || 0,
+      };
       setSectionAnalysis(data);
     } catch (error: any) {
       console.error('Section analysis error:', error);
