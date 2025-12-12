@@ -46,6 +46,15 @@ export async function generateExecutiveProtectionRiskNarrative(
   surveyResponses: Record<string, any> | null = null
 ): Promise<string> {
   
+  console.log(`🔍 EP-NARRATIVE: Received surveyResponses: ${surveyResponses ? Object.keys(surveyResponses).length + ' keys' : 'NULL'}`);
+  if (surveyResponses) {
+    const answeredKeys = Object.entries(surveyResponses)
+      .filter(([_, v]) => v !== 'Not answered')
+      .slice(0, 3)
+      .map(([k, v]) => `${k.substring(0, 50)}... => ${String(v).substring(0, 100)}...`);
+    console.log(`🔍 EP-NARRATIVE: Sample answered data: ${JSON.stringify(answeredKeys)}`);
+  }
+  
   try {
     const client = getOpenAIClient();
     
@@ -54,6 +63,7 @@ export async function generateExecutiveProtectionRiskNarrative(
     
     // Extract relevant survey findings to provide context-specific details
     const surveyFindings = extractRelevantFindings(scenario.scenario, surveyResponses);
+    console.log(`🔍 EP-NARRATIVE: Extracted ${surveyFindings.length} survey findings for AI prompt`);
     
     // Build context-rich prompt with survey findings
     const prompt = constructNarrativePrompt(scenario, assessment, executiveProfile, surveyFindings);

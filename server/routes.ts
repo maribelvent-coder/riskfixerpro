@@ -6887,6 +6887,7 @@ The facility should prioritize addressing critical risks immediately, particular
       if (assessment.templateId === 'executive-protection') {
         // Fetch EP interview responses and ALL questions for human-readable format
         const epResponses = await storage.getExecutiveInterviewResponses(scenario.assessmentId);
+        console.log(`🔍 EP NARRATIVE DEBUG: Found ${epResponses?.length || 0} interview responses for assessment ${scenario.assessmentId}`);
         
         // Always load questions even when no responses exist
         const { db } = await import("./db");
@@ -6917,6 +6918,11 @@ The facility should prioritize addressing critical risks immediately, particular
             surveyResponses[questionKey] = 'Not answered';
           }
         }
+        
+        // Log the final surveyResponses to verify data is being passed
+        const answeredCount = Object.values(surveyResponses).filter(v => v !== 'Not answered').length;
+        console.log(`🔍 EP NARRATIVE DEBUG: Built surveyResponses with ${Object.keys(surveyResponses).length} questions, ${answeredCount} answered`);
+        console.log(`🔍 EP NARRATIVE DEBUG: Sample keys: ${Object.keys(surveyResponses).slice(0, 3).join(', ')}`);
       } else {
         // Fetch facility survey questions for non-EP templates
         const surveyQuestions = await storage.getFacilitySurveyQuestions(
