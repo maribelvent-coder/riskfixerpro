@@ -7,7 +7,7 @@ import {
   addPageNumbers,
   PDF_CONFIG,
 } from './pdfService';
-import type { Assessment, FacilitySurveyQuestion } from '@shared/schema';
+import type { Assessment, FacilitySurveyQuestion, ExecutiveInterviewQuestion, ExecutiveInterviewResponse } from '@shared/schema';
 
 const { SPACING, FONT_SIZES, COLORS } = PDF_CONFIG;
 
@@ -15,20 +15,26 @@ export async function generateSurveyFindingsPDF(assessmentId: string): Promise<v
   try {
     console.log(`Starting Survey Findings PDF generation for assessment ${assessmentId}`);
 
-    const [assessmentRes, facilitySurveyRes] = await Promise.all([
+    const [assessmentRes, facilitySurveyRes, execQuestionsRes, execResponsesRes] = await Promise.all([
       fetch(`/api/assessments/${assessmentId}`),
       fetch(`/api/assessments/${assessmentId}/facility-survey-questions`),
+      fetch(`/api/assessments/${assessmentId}/executive-interview/questions`),
+      fetch(`/api/assessments/${assessmentId}/executive-interview/responses`),
     ]);
 
-    if (!assessmentRes.ok || !facilitySurveyRes.ok) {
+    if (!assessmentRes.ok) {
       throw new Error('Failed to fetch assessment data');
     }
 
     const assessment: Assessment = await assessmentRes.json();
-    const facilityQuestions: FacilitySurveyQuestion[] = await facilitySurveyRes.json();
+    const facilityQuestions: FacilitySurveyQuestion[] = facilitySurveyRes.ok ? await facilitySurveyRes.json() : [];
+    const execQuestions: ExecutiveInterviewQuestion[] = execQuestionsRes.ok ? await execQuestionsRes.json() : [];
+    const execResponses: ExecutiveInterviewResponse[] = execResponsesRes.ok ? await execResponsesRes.json() : [];
 
     console.log('Data fetched successfully:', {
       facilityQuestions: facilityQuestions.length,
+      execQuestions: execQuestions.length,
+      execResponses: execResponses.length,
     });
 
     const doc = createPDF();
@@ -52,16 +58,117 @@ export async function generateSurveyFindingsPDF(assessmentId: string): Promise<v
     yPos = checkPageBreak(doc, yPos, 40);
     yPos = addSection(doc, 'Executive Summary', yPos);
     
-    const answeredQuestions = facilityQuestions.filter(q => q.response || q.notes);
-    const totalQuestions = facilityQuestions.length;
-    const completionRate = totalQuestions > 0 ? Math.round((answeredQuestions.length / totalQuestions) * 100) : 0;
+    // Create response lookup map for executive interview
+    const responseMap = new Map(execResponses.map(r => [r.questionId, r]));
+    const answeredExecQuestions = execResponses.filter(r => r.yesNoResponse !== null || r.textResponse);
+    const answeredFacilityQuestions = facilityQuestions.filter(q => q.response || q.notes);
+    
+    const totalFacilityQuestions = facilityQuestions.length;
+    const totalExecQuestions = execQuestions.length;
+    const facilityCompletionRate = totalFacilityQuestions > 0 ? Math.round((answeredFacilityQuestions.length / totalFacilityQuestions) * 100) : 0;
+    const execCompletionRate = totalExecQuestions > 0 ? Math.round((answeredExecQuestions.length / totalExecQuestions) * 100) : 0;
 
     addText(doc, `This report presents findings from a comprehensive physical security assessment conducted in accordance with ASIS and ANSI standards.`, SPACING.margin, yPos, { maxWidth: 170 });
     yPos += SPACING.lineHeight * 2;
     
-    addText(doc, `Assessment Completion: ${completionRate}% (${answeredQuestions.length} of ${totalQuestions} questions answered)`, SPACING.margin, yPos);
-    yPos += SPACING.sectionGap * 2;
+    if (totalExecQuestions > 0) {
+      addText(doc, `Executive Interview: ${execCompletionRate}% complete (${answeredExecQuestions.length} of ${totalExecQuestions} questions answered)`, SPACING.margin, yPos);
+      yPos += SPACING.lineHeight;
+    }
+    if (totalFacilityQuestions > 0) {
+      addText(doc, `Physical Security Review: ${facilityCompletionRate}% complete (${answeredFacilityQuestions.length} of ${totalFacilityQuestions} questions answered)`, SPACING.margin, yPos);
+      yPos += SPACING.lineHeight;
+    }
+    yPos += SPACING.sectionGap;
 
+    // ========================================
+    // SECTION 1: EXECUTIVE INTERVIEW FINDINGS
+    // ========================================
+    if (execQuestions.length > 0) {
+      yPos = checkPageBreak(doc, yPos, 40);
+      yPos = addSection(doc, 'Executive Interview Findings', yPos);
+
+      // Group executive questions by category
+      const execBySection = execQuestions.reduce((acc, question) => {
+        const section = question.category || 'General';
+        if (!acc[section]) {
+          acc[section] = [];
+        }
+        acc[section].push(question);
+        return acc;
+      }, {} as Record<string, ExecutiveInterviewQuestion[]>);
+
+      for (const [section, questions] of Object.entries(execBySection)) {
+        yPos = checkPageBreak(doc, yPos, 50);
+        
+        // Section Header
+        doc.setFontSize(FONT_SIZES.heading);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.primary);
+        addText(doc, section.toUpperCase(), SPACING.margin, yPos);
+        yPos += SPACING.lineHeight + 2;
+        
+        // Draw separator line
+        doc.setDrawColor(...COLORS.border);
+        doc.setLineWidth(0.5);
+        doc.line(SPACING.margin, yPos, 190, yPos);
+        yPos += SPACING.smallGap;
+
+        // Sort questions by order
+        const sortedQuestions = questions.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+
+        for (const question of sortedQuestions) {
+          yPos = checkPageBreak(doc, yPos, 35);
+          const response = responseMap.get(question.id);
+
+          // Question text
+          doc.setFontSize(FONT_SIZES.body);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...COLORS.text);
+          const questionLines = doc.splitTextToSize(`Q: ${question.question}`, 160);
+          questionLines.forEach((line: string) => {
+            addText(doc, line, SPACING.margin + 10, yPos);
+            yPos += SPACING.lineHeight;
+          });
+
+          // Response
+          if (response) {
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...COLORS.textLight);
+            let responseText = 'Response: ';
+            
+            if (response.yesNoResponse !== null) {
+              responseText += response.yesNoResponse ? 'Yes' : 'No';
+            }
+            if (response.textResponse) {
+              if (response.yesNoResponse !== null) {
+                responseText += ' - ';
+              }
+              responseText += response.textResponse;
+            }
+            
+            const responseLines = doc.splitTextToSize(responseText, 160);
+            responseLines.forEach((line: string) => {
+              addText(doc, line, SPACING.margin + 10, yPos);
+              yPos += SPACING.lineHeight;
+            });
+          } else {
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(...COLORS.muted);
+            addText(doc, 'Response: Not answered', SPACING.margin + 10, yPos);
+            yPos += SPACING.lineHeight;
+          }
+
+          yPos += SPACING.smallGap;
+        }
+
+        yPos += SPACING.sectionGap;
+      }
+    }
+
+    // ========================================
+    // SECTION 2: PHYSICAL SECURITY REVIEW
+    // ========================================
     // Group questions by category
     const questionsByCategory = facilityQuestions.reduce((acc, question) => {
       const category = question.category || 'Uncategorized';
@@ -73,8 +180,10 @@ export async function generateSurveyFindingsPDF(assessmentId: string): Promise<v
     }, {} as Record<string, FacilitySurveyQuestion[]>);
 
     // Survey Findings by Category
-    yPos = checkPageBreak(doc, yPos, 40);
-    yPos = addSection(doc, 'Assessment Findings by Category', yPos);
+    if (facilityQuestions.length > 0) {
+      yPos = checkPageBreak(doc, yPos, 40);
+      yPos = addSection(doc, 'Physical Security Review Findings', yPos);
+    }
 
     for (const [category, questions] of Object.entries(questionsByCategory)) {
       yPos = checkPageBreak(doc, yPos, 50);
