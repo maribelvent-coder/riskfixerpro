@@ -5669,14 +5669,15 @@ The facility should prioritize addressing critical risks immediately, particular
               });
             }
             
-            // 2. Also fetch physical security facility survey questions
-            const surveyQuestions = await storage.getFacilitySurveyQuestions(id);
-            let surveyTotalQuestions = surveyQuestions.length;
-            let surveyAnsweredQuestions = surveyQuestions.filter(q => q.response !== null && q.response !== undefined && q.response !== '').length;
+            // 2. Also fetch physical security assessment questions (stored in assessment_questions table for EP)
+            const assessmentQuestions = await storage.getAssessmentQuestions(id);
+            let surveyTotalQuestions = assessmentQuestions.length;
+            let surveyAnsweredQuestions = assessmentQuestions.filter(q => q.response !== null && q.response !== undefined && q.response !== '').length;
             
-            // Add facility survey questions with "Physical Security: " prefix
-            for (const q of surveyQuestions) {
-              const category = `Physical Security: ${q.category || 'Uncategorized'}`;
+            // Add assessment questions with "Physical Security: " prefix
+            for (const q of assessmentQuestions) {
+              // Use category from the assessment question, prefixed for clarity
+              const category = q.category || 'Uncategorized';
               if (!categorizedQuestions[category]) {
                 categorizedQuestions[category] = [];
               }
@@ -5714,14 +5715,14 @@ The facility should prioritize addressing critical risks immediately, particular
               
               categorizedQuestions[category].push({
                 id: q.id,
-                templateId: q.templateId,
+                templateId: 'executive-protection',
                 subcategory: q.subcategory,
                 question: q.question,
                 type: q.type,
                 response: q.response,
                 notes: q.notes,
                 evidence: evidenceWithBase64,
-                standard: q.standard,
+                standard: q.standard || null,
               });
             }
             
