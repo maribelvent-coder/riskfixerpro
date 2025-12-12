@@ -313,6 +313,34 @@ const formatCurrency = (amount: number | string | undefined) => {
   return `$${amount.toLocaleString()}`;
 };
 
+const THREAT_SECTION_MAPPING: Record<string, string[]> = {
+  'home_invasion': ['res_perimeter', 'res_access', 'res_alarms', 'res_saferoom'],
+  'residential_burglary': ['res_perimeter', 'res_access', 'res_alarms', 'res_windows', 'res_surveillance'],
+  'stalking': ['res_perimeter', 'res_surveillance', 'res_monitoring'],
+  'kidnapping': ['res_perimeter', 'res_saferoom', 'res_vehicles', 'res_monitoring'],
+  'doxxing': ['res_property', 'res_monitoring'],
+  'extortion': ['res_monitoring', 'res_saferoom'],
+  'ambush': ['res_perimeter', 'res_vehicles', 'res_surveillance'],
+  'workplace_violence': ['res_access', 'res_alarms', 'res_saferoom'],
+  'travel_incidents': ['res_vehicles'],
+  'cyber_targeting': ['res_interior', 'res_monitoring'],
+  'family_targeting': ['res_perimeter', 'res_access', 'res_saferoom', 'res_monitoring'],
+  'reputational_attack': ['res_monitoring'],
+  'protest_targeting': ['res_perimeter', 'res_surveillance', 'res_saferoom'],
+};
+
+const getRelatedSections = (threatId: string, category: string): string[] => {
+  const threatLower = threatId.toLowerCase().replace(/[^a-z_]/g, '');
+  const categoryLower = category.toLowerCase().replace(/[^a-z_]/g, '');
+  
+  for (const [key, sections] of Object.entries(THREAT_SECTION_MAPPING)) {
+    if (threatLower.includes(key) || categoryLower.includes(key)) {
+      return sections;
+    }
+  }
+  return ['res_perimeter', 'res_access', 'res_alarms'];
+};
+
 type ThreatScenario = NonNullable<EPDashboardData['threatMatrix']>[number];
 
 export default function ExecutiveDashboard() {
@@ -341,17 +369,14 @@ export default function ExecutiveDashboard() {
   const runSectionAnalysis = async () => {
     try {
       setIsAnalyzingSections(true);
-      const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {}) as any;
-      // Extract the section analysis data from the response (which includes success: true)
-      const data: FullSectionAnalysisResult = {
-        assessmentId: response.assessmentId || id || '',
-        analyzedAt: response.analyzedAt || new Date().toISOString(),
-        sections: response.sections || [],
-        overallResidentialRisk: response.overallResidentialRisk || 0,
-        criticalGapsCount: response.criticalGapsCount || 0,
-        highGapsCount: response.highGapsCount || 0,
-      };
-      setSectionAnalysis(data);
+      const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {});
+      const data = await response.json() as FullSectionAnalysisResult;
+      
+      if (data && data.sections && Array.isArray(data.sections)) {
+        setSectionAnalysis(data);
+      } else {
+        console.error('[Section Analysis] Invalid response structure:', data);
+      }
     } catch (error: any) {
       console.error('Section analysis error:', error);
     } finally {
@@ -365,7 +390,7 @@ export default function ExecutiveDashboard() {
       const response = await apiRequest('POST', `/api/assessments/${id}/ep-dashboard`, {
         forceRefresh,
       });
-      return response as unknown as EPDashboardData;
+      return await response.json() as EPDashboardData;
     },
     onSuccess: async (data) => {
       setIsAnalyzing(false);
@@ -1321,6 +1346,71 @@ export default function ExecutiveDashboard() {
                             <span className="text-xs font-medium">Confidence: {selectedScenario.confidence}</span>
                           </div>
                           <p className="text-xs text-muted-foreground">{selectedScenario.confidenceReasoning}</p>
+                        </div>
+                      )}
+
+                      {/* Related Security Sections */}
+                      {sectionAnalysis && sectionAnalysis.sections.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                            <Search className="h-4 w-4 text-blue-400" />
+                            Related Security Assessments
+                          </h4>
+                          <div className="space-y-2">
+                            {(() => {
+                              const relatedSectionIds = getRelatedSections(selectedScenario.threatId, selectedScenario.category);
+                              const relatedSections = sectionAnalysis.sections.filter(s => 
+                                relatedSectionIds.includes(s.sectionId)
+                              );
+                              
+                              if (relatedSections.length === 0) {
+                                return (
+                                  <p className="text-xs text-muted-foreground">
+                                    No related section assessments available. Click "Reassess" to generate section analysis.
+                                  </p>
+                                );
+                              }
+                              
+                              return relatedSections.map(section => {
+                                const criticalFindings = section.findings.filter(f => f.type === 'gap' && (f.severity === 'critical' || f.severity === 'high'));
+                                return (
+                                  <div 
+                                    key={section.sectionId}
+                                    className="p-3 bg-muted/30 rounded-lg border-l-4"
+                                    style={{ borderColor: section.riskLevel === 'critical' ? 'rgb(239 68 68)' : section.riskLevel === 'high' ? 'rgb(249 115 22)' : section.riskLevel === 'medium' ? 'rgb(234 179 8)' : 'rgb(34 197 94)' }}
+                                    data-testid={`related-section-${section.sectionId}`}
+                                  >
+                                    <div className="flex items-start justify-between mb-1">
+                                      <span className="font-medium text-sm">{section.sectionName}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground">Risk: {section.riskScore}/10</span>
+                                        <StatusBadge level={section.riskLevel} />
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mb-2">{section.summary}</p>
+                                    {criticalFindings.length > 0 && (
+                                      <div className="mt-2 pt-2 border-t border-muted">
+                                        <p className="text-xs font-medium text-orange-400 mb-1">Key Gaps ({criticalFindings.length}):</p>
+                                        <ul className="space-y-1">
+                                          {criticalFindings.slice(0, 3).map((finding, idx) => (
+                                            <li key={idx} className="text-xs text-muted-foreground flex items-start gap-1">
+                                              <AlertTriangle className="h-3 w-3 text-orange-400 mt-0.5 shrink-0" />
+                                              {finding.finding}
+                                            </li>
+                                          ))}
+                                          {criticalFindings.length > 3 && (
+                                            <li className="text-xs text-muted-foreground italic">
+                                              +{criticalFindings.length - 3} more findings
+                                            </li>
+                                          )}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
                         </div>
                       )}
                     </CardContent>
