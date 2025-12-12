@@ -68,9 +68,19 @@ export async function generateExecutiveProtectionRiskNarrative(
 
 Your primary goal is **Life Safety and Risk Mitigation**. Financials are secondary context only.
 
+**CRITICAL ANTI-HALLUCINATION RULES - YOU MUST FOLLOW THESE:**
+1. ONLY use names, locations, times, companies, and details that appear EXACTLY in the provided survey/interview data
+2. NEVER invent or fabricate company names, lawsuit details, employee counts, transaction values, or any other specifics
+3. NEVER create fictional threat actor names - use ONLY names explicitly mentioned in survey responses
+4. If specific data is not provided, say "not documented" or "information not available" - do NOT fabricate
+5. Quote or closely paraphrase actual survey responses when describing incidents or vulnerabilities
+6. Use the EXACT names from survey data (e.g., if survey says "Marcus Reynolds", write "Marcus Reynolds" - NOT "Marcus Chen")
+7. Include specific details verbatim from survey: times (e.g., "7:15am"), locations (e.g., "Equinox 63rd St"), names as written
+8. When describing threats or incidents, reference ONLY what the survey data explicitly states happened
+
 Your writing style is:
 - Professional and authoritative
-- Data-driven with specific threat intelligence
+- Data-driven using ONLY the provided survey data - no invented details
 - Focused on personal safety, family security, and operational risk mitigation
 - Security gaps and protective measures come first
 - Resource implications are mentioned briefly, only after security analysis
@@ -83,7 +93,7 @@ Your writing style is:
           content: prompt
         }
       ],
-      temperature: 0.7,
+      temperature: 0.3,
       max_tokens: 600
     });
     
@@ -199,82 +209,45 @@ Briefly mention what resources are required to implement these protections. Fram
 - Write in third person
 - Act as a Protection Specialist, not a CFO
 - Lead with danger, not dollars
-- Use specific data from the assessment
+- Use ONLY specific data from the provided survey/interview findings - DO NOT invent any details
 - Avoid generic security platitudes
-- Focus on THIS executive's specific context
+- Focus on THIS executive's specific context using ONLY the data provided
 - Be concise but authoritative
 - Do NOT use bullet points or lists
-- Write in flowing paragraph format`;
+- Write in flowing paragraph format
+
+**REMINDER: Do NOT fabricate any names, companies, locations, or incidents. Use ONLY the exact information provided in the Interview/Survey Findings section above. If no specific data is provided for a detail, acknowledge its absence rather than inventing content.**`;
 }
 
 /**
- * Extract relevant survey findings for a specific scenario type
- * This helps provide context-specific vulnerability details
+ * Extract ALL survey findings to provide complete context
+ * IMPORTANT: Include ALL data to prevent AI from fabricating missing details
  */
 function extractRelevantFindings(
-  scenarioName: string | null,
+  _scenarioName: string | null,
   surveyResponses: Record<string, any> | null
 ): string[] {
   
-  if (!surveyResponses || !scenarioName) return [];
+  if (!surveyResponses) return [];
   
   const findings: string[] = [];
   
-  const lowerScenarioName = scenarioName.toLowerCase();
-  
-  // Map scenario types to relevant survey questions
-  if (lowerScenarioName.includes('kidnapping') || lowerScenarioName.includes('abduction')) {
-    // Kidnapping prevention findings
-    if (surveyResponses.travel_routes) {
-      findings.push(`Travel route predictability: ${surveyResponses.travel_routes}`);
-    }
-    if (surveyResponses.protective_detail) {
-      findings.push(`Protective detail presence: ${surveyResponses.protective_detail}`);
-    }
-    if (surveyResponses.advance_work) {
-      findings.push(`Advance security work: ${surveyResponses.advance_work}`);
-    }
-    if (surveyResponses.family_awareness) {
-      findings.push(`Family security awareness: ${surveyResponses.family_awareness}`);
-    }
-  } else if (lowerScenarioName.includes('stalking') || lowerScenarioName.includes('harassment')) {
-    // Stalking mitigation findings
-    if (surveyResponses.residence_security) {
-      findings.push(`Residence security measures: ${surveyResponses.residence_security}`);
-    }
-    if (surveyResponses.social_media_exposure) {
-      findings.push(`Social media exposure: ${surveyResponses.social_media_exposure}`);
-    }
-    if (surveyResponses.routine_variance) {
-      findings.push(`Daily routine variance: ${surveyResponses.routine_variance}`);
-    }
-    if (surveyResponses.threat_reporting) {
-      findings.push(`Threat reporting procedures: ${surveyResponses.threat_reporting}`);
-    }
-  } else if (lowerScenarioName.includes('exposure') || lowerScenarioName.includes('osint') || lowerScenarioName.includes('doxxing')) {
-    // Digital exposure findings
-    if (surveyResponses.digital_footprint) {
-      findings.push(`Digital footprint assessment: ${surveyResponses.digital_footprint}`);
-    }
-    if (surveyResponses.privacy_settings) {
-      findings.push(`Privacy settings compliance: ${surveyResponses.privacy_settings}`);
-    }
-    if (surveyResponses.family_exposure) {
-      findings.push(`Family information exposure: ${surveyResponses.family_exposure}`);
-    }
-    if (surveyResponses.address_privacy) {
-      findings.push(`Residence address privacy: ${surveyResponses.address_privacy}`);
-    }
-  } else if (lowerScenarioName.includes('travel') || lowerScenarioName.includes('international')) {
-    // Travel security findings
-    if (surveyResponses.itinerary_security) {
-      findings.push(`Itinerary information security: ${surveyResponses.itinerary_security}`);
-    }
-    if (surveyResponses.hotel_security) {
-      findings.push(`Hotel security standards: ${surveyResponses.hotel_security}`);
-    }
-    if (surveyResponses.local_intelligence) {
-      findings.push(`Destination intelligence gathering: ${surveyResponses.local_intelligence}`);
+  // Include ALL survey responses to prevent hallucination
+  // The AI needs complete data to avoid fabricating missing information
+  for (const [key, value] of Object.entries(surveyResponses)) {
+    if (value !== null && value !== undefined && value !== '') {
+      // Format the key for readability (convert snake_case to Title Case)
+      const formattedKey = key
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      
+      // Handle different value types
+      if (typeof value === 'object') {
+        findings.push(`${formattedKey}: ${JSON.stringify(value)}`);
+      } else {
+        findings.push(`${formattedKey}: ${value}`);
+      }
     }
   }
   
