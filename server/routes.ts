@@ -100,6 +100,13 @@ import {
   type EPMapperOutput,
 } from "./services/ep-interview-mapper-v2";
 
+// EP Section Analysis - AI-powered section risk assessment
+import {
+  analyzeAllSections,
+  analyzeSingleSection,
+  type FullSectionAnalysis,
+} from "./services/ai/ep-section-analysis";
+
 // Retail Controls & ROI Calculator Imports
 import {
   generateControlRecommendations as generateRetailControlRecommendations,
@@ -6116,6 +6123,75 @@ The facility should prioritize addressing critical risks immediately, particular
       } catch (error) {
         console.error("Error validating EP interview:", error);
         res.status(500).json({ error: "Failed to validate interview" });
+      }
+    },
+  );
+
+  // NEW: AI-powered Section Analysis endpoint
+  // Analyzes each physical security section using GPT-4o to generate:
+  // - Risk score (1-10) per section
+  // - Plain-language findings and gap descriptions
+  // - Evidence-based vulnerability assessment
+  // This provides the "what we found" that connects to scenario "how it can hurt you"
+  app.post(
+    "/api/assessments/:id/ep-interview/section-analysis",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        // Get interview responses from request body or load from assessment
+        let interviewResponses = req.body.interviewResponses;
+        
+        if (!interviewResponses || Object.keys(interviewResponses).length === 0) {
+          // Try to load from assessment's epProfile and assessment_questions
+          const assessment = await storage.getAssessment(id);
+          if (!assessment) {
+            return res.status(404).json({ error: "Assessment not found" });
+          }
+          
+          // Load epProfile
+          const epProfile = (assessment.epProfile as Record<string, any>) || {};
+          
+          // Load assessment_questions responses
+          const assessmentQuestions = await db
+            .select()
+            .from(templateQuestions)
+            .where(eq(templateQuestions.assessmentId, assessment.id));
+          
+          // Build responses from both sources
+          interviewResponses = { ...epProfile };
+          for (const q of assessmentQuestions) {
+            if (q.questionId && q.response !== null && q.response !== undefined) {
+              interviewResponses[q.questionId] = q.response;
+            }
+          }
+        }
+        
+        if (!interviewResponses || Object.keys(interviewResponses).length === 0) {
+          return res.status(400).json({ 
+            error: "No interview responses found",
+            message: "Complete some interview questions before running section analysis"
+          });
+        }
+        
+        console.log(`[Section-Analysis] Analyzing ${Object.keys(interviewResponses).length} responses for assessment ${id}`);
+        
+        // Run AI analysis on all sections
+        const analysis: FullSectionAnalysis = await analyzeAllSections(id, interviewResponses);
+        
+        console.log(`[Section-Analysis] Complete. Analyzed ${analysis.sections.length} sections. Critical gaps: ${analysis.criticalGapsCount}, High gaps: ${analysis.highGapsCount}`);
+        
+        res.json({
+          success: true,
+          ...analysis,
+        });
+      } catch (error) {
+        console.error("Error in section analysis:", error);
+        res.status(500).json({ 
+          error: "Failed to analyze sections",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
       }
     },
   );
