@@ -567,17 +567,21 @@ async function buildEPReportData(
     const avgImpact = threatAssessments.reduce((sum, t) => sum + t.impact.score, 0) / threatAssessments.length;
     const avgExposure = threatAssessments.reduce((sum, t) => sum + t.exposureFactor.score, 0) / threatAssessments.length;
     
-    // Extract principal name from interview responses
+    // Extract principal info from interview responses
     const principalName = mergedResponses['ep_principal_name'] || 
                           mapperOutput.interviewData.responses?.ep_principal_name ||
                           'Principal';
     const principalTitle = mergedResponses['ep_principal_title'] || 
                            mapperOutput.interviewData.responses?.ep_principal_title ||
                            'Executive';
+    const principalCompany = mergedResponses['ep_principal_company'] || 
+                             mapperOutput.interviewData.responses?.ep_principal_company ||
+                             '';
     
     const epReportData: EPReportData = {
       principalName,
       principalTitle,
+      principalCompany,
       overallRiskScore: dashboardOutput.overviewMetrics.overallRiskScore,
       riskClassification: dashboardOutput.overviewMetrics.riskClassification,
       exposureFactor: dashboardOutput.overviewMetrics.exposureFactor,
@@ -818,7 +822,7 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
         id: assessmentId,
         name: epReportData.principalName,
         title: epReportData.principalTitle || 'Executive',
-        organization: '',
+        organization: epReportData.principalCompany || '',
         publicExposure: 'medium',
         travelFrequency: 'moderate',
         mediaProfile: 'limited',

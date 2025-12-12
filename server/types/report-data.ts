@@ -336,6 +336,7 @@ export interface EPReportData {
   // Principal identification (from interview responses)
   principalName?: string;
   principalTitle?: string;
+  principalCompany?: string;
   
   // Overall assessment metrics
   overallRiskScore: number;

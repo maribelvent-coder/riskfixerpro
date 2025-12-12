@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Shield, Eye, Activity, Smartphone, Save, AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { User, Shield, Eye, Activity, Smartphone, Save, AlertTriangle, CheckCircle, Info, Briefcase, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -122,6 +123,11 @@ export default function PrincipalProfileForm({ assessmentId, onComplete }: Princ
     setHasChanges(true);
   };
 
+  const handleTextInput = (questionId: string, value: string) => {
+    setResponses(prev => ({ ...prev, [questionId]: value }));
+    setHasChanges(true);
+  };
+
   const handleSave = () => {
     saveMutation.mutate(responses);
   };
@@ -195,6 +201,90 @@ export default function PrincipalProfileForm({ assessmentId, onComplete }: Princ
           Higher exposure levels increase the Exposure (E) multiplier in risk scoring.
         </AlertDescription>
       </Alert>
+
+      {/* Principal Information Section */}
+      <Card data-testid="card-principal-information">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5 text-primary" />
+                Principal Information
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Basic identification information for the principal being assessed. This will appear in the final report.
+              </CardDescription>
+            </div>
+            <Badge variant={
+              (responses['ep_principal_name'] && responses['ep_principal_company'] && responses['ep_principal_title']) 
+                ? "default" : "secondary"
+            }>
+              {[responses['ep_principal_name'], responses['ep_principal_company'], responses['ep_principal_title']].filter(Boolean).length}/3
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {responses['ep_principal_name'] ? (
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                )}
+                <Label htmlFor="ep_principal_name" className="text-sm font-medium">
+                  Principal Name
+                </Label>
+              </div>
+              <Input
+                id="ep_principal_name"
+                placeholder="e.g., John Smith"
+                value={(responses['ep_principal_name'] as string) || ''}
+                onChange={(e) => handleTextInput('ep_principal_name', e.target.value)}
+                data-testid="input-principal-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {responses['ep_principal_company'] ? (
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                )}
+                <Label htmlFor="ep_principal_company" className="text-sm font-medium">
+                  Company / Organization
+                </Label>
+              </div>
+              <Input
+                id="ep_principal_company"
+                placeholder="e.g., Acme Corporation"
+                value={(responses['ep_principal_company'] as string) || ''}
+                onChange={(e) => handleTextInput('ep_principal_company', e.target.value)}
+                data-testid="input-principal-company"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {responses['ep_principal_title'] ? (
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                )}
+                <Label htmlFor="ep_principal_title" className="text-sm font-medium">
+                  Position / Title
+                </Label>
+              </div>
+              <Input
+                id="ep_principal_title"
+                placeholder="e.g., Chief Executive Officer"
+                value={(responses['ep_principal_title'] as string) || ''}
+                onChange={(e) => handleTextInput('ep_principal_title', e.target.value)}
+                data-testid="input-principal-title"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Question Categories */}
       {Object.entries(questionsByCategory).map(([category, categoryQuestions]) => {
