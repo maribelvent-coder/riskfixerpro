@@ -1080,12 +1080,15 @@ export default function ExecutiveDashboard() {
                                       <Target className="w-3 h-3" /> Recommendations
                                     </h5>
                                     <ul className="space-y-1">
-                                      {section.recommendations.map((rec, idx) => (
-                                        <li key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
-                                          <ChevronRight className="w-3 h-3 mt-0.5 shrink-0 text-blue-400" />
-                                          <span>{rec}</span>
-                                        </li>
-                                      ))}
+                                      {section.recommendations.map((rec, idx) => {
+                                        const recText = typeof rec === 'string' ? rec : (rec as any)?.recommendation || JSON.stringify(rec);
+                                        return (
+                                          <li key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
+                                            <ChevronRight className="w-3 h-3 mt-0.5 shrink-0 text-blue-400" />
+                                            <span>{recText}</span>
+                                          </li>
+                                        );
+                                      })}
                                     </ul>
                                   </div>
                                 )}
