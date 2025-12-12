@@ -283,6 +283,7 @@ export default function ExecutiveDashboard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<ThreatScenario | null>(null);
   const [showReportMenu, setShowReportMenu] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const { data: dashboardData, isLoading, refetch } = useQuery<EPDashboardData>({
     queryKey: ['/api/assessments', id, 'ep-dashboard'],
@@ -317,6 +318,60 @@ export default function ExecutiveDashboard() {
 
   const handleRunAnalysis = () => analyzeMutation.mutate(false);
   const handleForceRefresh = () => analyzeMutation.mutate(true);
+
+  const handleGenerateReport = async (reportType: 'executive-summary' | 'full-assessment' | 'gap-analysis') => {
+    if (!id) return;
+    
+    setIsGeneratingReport(true);
+    setShowReportMenu(false);
+    
+    toast({
+      title: 'Generating Report',
+      description: 'This may take 30-60 seconds...',
+    });
+    
+    try {
+      const response = await fetch(`/api/assessments/${id}/reports/generate-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          recipeId: 'executive-summary-ep-v1',
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ep-assessment-${id.substring(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: 'Report Generated',
+        description: 'Your PDF report has been downloaded.',
+      });
+    } catch (error: any) {
+      console.error('Report generation error:', error);
+      toast({
+        title: 'Report Generation Failed',
+        description: error?.message || 'Failed to generate report. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -399,18 +454,27 @@ export default function ExecutiveDashboard() {
                 variant="default"
                 size="sm"
                 onClick={() => setShowReportMenu(!showReportMenu)}
+                disabled={isGeneratingReport}
                 data-testid="button-generate-report"
               >
-                <FileText className="h-4 w-4 mr-2" />
-                Generate Report
+                {isGeneratingReport ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                {isGeneratingReport ? 'Generating...' : 'Generate Report'}
                 <ChevronRight className={`h-4 w-4 ml-1 transition-transform ${showReportMenu ? 'rotate-90' : ''}`} />
               </Button>
-              {showReportMenu && (
+              {showReportMenu && !isGeneratingReport && (
                 <Card className="absolute right-0 mt-2 w-72 z-50 shadow-xl">
                   <CardContent className="p-2">
                     <div className="text-xs text-muted-foreground px-2 py-1">Select Report Type</div>
                     <Separator className="my-1" />
-                    <button className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3">
+                    <button 
+                      className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3"
+                      onClick={() => handleGenerateReport('executive-summary')}
+                      data-testid="button-report-executive-summary"
+                    >
                       <div className="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center shrink-0">
                         <FileText className="w-4 h-4 text-blue-400" />
                       </div>
@@ -419,22 +483,32 @@ export default function ExecutiveDashboard() {
                         <div className="text-muted-foreground text-xs">3-4 pages for C-Suite</div>
                       </div>
                     </button>
-                    <button className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3">
+                    <button 
+                      className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3 opacity-50 cursor-not-allowed"
+                      disabled
+                      title="Coming soon"
+                      data-testid="button-report-full-assessment"
+                    >
                       <div className="w-8 h-8 rounded bg-purple-500/20 flex items-center justify-center shrink-0">
                         <Briefcase className="w-4 h-4 text-purple-400" />
                       </div>
                       <div>
                         <div className="font-medium text-sm">Full Assessment Report</div>
-                        <div className="text-muted-foreground text-xs">15-20 pages with T×V×I×E</div>
+                        <div className="text-muted-foreground text-xs">Coming soon</div>
                       </div>
                     </button>
-                    <button className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3">
+                    <button 
+                      className="w-full px-3 py-2 text-left hover:bg-muted rounded flex items-start gap-3 opacity-50 cursor-not-allowed"
+                      disabled
+                      title="Coming soon"
+                      data-testid="button-report-gap-analysis"
+                    >
                       <div className="w-8 h-8 rounded bg-green-500/20 flex items-center justify-center shrink-0">
                         <Scale className="w-4 h-4 text-green-400" />
                       </div>
                       <div>
                         <div className="font-medium text-sm">Technical Gap Analysis</div>
-                        <div className="text-muted-foreground text-xs">Specs, costs, timelines</div>
+                        <div className="text-muted-foreground text-xs">Coming soon</div>
                       </div>
                     </button>
                   </CardContent>
