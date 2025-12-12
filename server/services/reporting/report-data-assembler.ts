@@ -567,7 +567,17 @@ async function buildEPReportData(
     const avgImpact = threatAssessments.reduce((sum, t) => sum + t.impact.score, 0) / threatAssessments.length;
     const avgExposure = threatAssessments.reduce((sum, t) => sum + t.exposureFactor.score, 0) / threatAssessments.length;
     
+    // Extract principal name from interview responses
+    const principalName = mergedResponses['ep_principal_name'] || 
+                          mapperOutput.interviewData.responses?.ep_principal_name ||
+                          'Principal';
+    const principalTitle = mergedResponses['ep_principal_title'] || 
+                           mapperOutput.interviewData.responses?.ep_principal_title ||
+                           'Executive';
+    
     const epReportData: EPReportData = {
+      principalName,
+      principalTitle,
       overallRiskScore: dashboardOutput.overviewMetrics.overallRiskScore,
       riskClassification: dashboardOutput.overviewMetrics.riskClassification,
       exposureFactor: dashboardOutput.overviewMetrics.exposureFactor,
@@ -719,8 +729,8 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
 
   const threatDomains = mapToThreatDomains(scenariosList, controlsList);
   const siteWalkFindings = buildSiteWalkFindings(controlsList);
-  const recommendations = buildRecommendations(controlsList, treatmentPlansList);
-  const riskScores = calculateOverallRiskScore(scenariosList);
+  let recommendations = buildRecommendations(controlsList, treatmentPlansList);
+  let riskScores = calculateOverallRiskScore(scenariosList);
 
   const mappedInterviewFindings: InterviewFindingType[] = interviewFindingsList.map(f => ({
     id: f.id,
@@ -798,6 +808,62 @@ export async function assembleReportData(assessmentId: string): Promise<ReportDa
   let epReportData: EPReportData | undefined;
   if (assessmentType === 'executive-protection') {
     epReportData = await buildEPReportData(assessmentId, assessment);
+  }
+
+  // For EP assessments, populate principal from epReportData and override riskScores
+  if (epReportData) {
+    // Populate principal from EP interview data
+    if (epReportData.principalName) {
+      principal = {
+        id: assessmentId,
+        name: epReportData.principalName,
+        title: epReportData.principalTitle || 'Executive',
+        organization: '',
+        publicExposure: 'medium',
+        travelFrequency: 'moderate',
+        mediaProfile: 'limited',
+        politicalExposure: 'none',
+        wealthIndicators: 'affluent',
+        familyConsiderations: [],
+        knownThreats: [],
+        currentSecurityMeasures: []
+      };
+    }
+    
+    // Override riskScores with EP data (normalize riskClassification to lowercase)
+    riskScores = {
+      overallScore: epReportData.overallRiskScore,
+      normalizedScore: epReportData.overallRiskScore,
+      riskLevel: epReportData.riskClassification.toLowerCase() as 'critical' | 'high' | 'medium' | 'low',
+      categoryBreakdown: [
+        { category: 'Threat', score: epReportData.componentSummaries.threat.overallScore * 10, weight: 0.25 },
+        { category: 'Vulnerability', score: epReportData.componentSummaries.vulnerability.overallScore * 10, weight: 0.25 },
+        { category: 'Impact', score: epReportData.componentSummaries.impact.overallScore * 10, weight: 0.25 },
+        { category: 'Exposure', score: epReportData.componentSummaries.exposure.overallScore * 10, weight: 0.25 }
+      ],
+      controlEffectiveness: 50,
+      residualRisk: epReportData.overallRiskScore * 0.7
+    };
+    
+    // Merge EP prioritized controls into recommendations (guard against undefined)
+    const epRecommendations: Recommendation[] = (epReportData.prioritizedControls || []).map((c, idx) => ({
+      id: c.controlId || `ep-control-${idx}`,
+      title: c.controlName,
+      description: c.rationale,
+      priority: c.urgency === 'immediate' ? 'immediate' as const : 
+                c.urgency === 'short_term' ? 'short-term' as const : 'medium-term' as const,
+      category: c.category,
+      estimatedCost: c.estimatedCost || 'TBD',
+      estimatedTimeframe: c.urgency === 'immediate' ? '0-30 days' : 
+                          c.urgency === 'short_term' ? '30-60 days' : '60-90 days',
+      linkedThreatDomains: c.addressesThreats,
+      linkedFindings: [],
+      expectedImpact: `Addresses ${c.addressesThreats.length} threat(s)`,
+      implementationComplexity: 'medium'
+    }));
+    
+    // Prepend EP recommendations to existing recommendations
+    recommendations = [...epRecommendations, ...recommendations];
   }
 
   const reportData: ReportDataPackage = {

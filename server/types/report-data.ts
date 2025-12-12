@@ -333,6 +333,10 @@ export interface EPThreatAssessment {
 }
 
 export interface EPReportData {
+  // Principal identification (from interview responses)
+  principalName?: string;
+  principalTitle?: string;
+  
   // Overall assessment metrics
   overallRiskScore: number;
   riskClassification: 'critical' | 'high' | 'medium' | 'low';
