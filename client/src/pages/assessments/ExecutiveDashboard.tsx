@@ -52,6 +52,10 @@ interface EPDashboardData {
   interviewCompletion: number;
   answeredQuestions: number;
   totalQuestions: number;
+  epInterviewAnswered?: number;
+  epInterviewTotal?: number;
+  physicalSecurityAnswered?: number;
+  physicalSecurityTotal?: number;
   
   overviewMetrics?: {
     overallRiskScore: number;
@@ -385,6 +389,10 @@ export default function ExecutiveDashboard() {
   const interviewCompletion = dashboardData?.interviewCompletion || 0;
   const answeredQuestions = dashboardData?.answeredQuestions || 0;
   const totalQuestions = dashboardData?.totalQuestions || 43;
+  const epInterviewAnswered = dashboardData?.epInterviewAnswered || 0;
+  const epInterviewTotal = dashboardData?.epInterviewTotal || 43;
+  const physicalSecurityAnswered = dashboardData?.physicalSecurityAnswered || 0;
+  const physicalSecurityTotal = dashboardData?.physicalSecurityTotal || 0;
 
   const controlStatus = dashboardData?.controlStatus || [];
   const totalControls = controlStatus.reduce((sum, c) => sum + c.total, 0);
@@ -526,10 +534,15 @@ export default function ExecutiveDashboard() {
             <div className="flex items-center gap-3">
               <ClipboardCheck className={`h-5 w-5 ${interviewCompletion < 50 ? 'text-orange-500' : interviewCompletion < 100 ? 'text-yellow-500' : 'text-green-500'}`} />
               <div>
-                <p className="font-medium">Interview Progress: {interviewCompletion}%</p>
+                <p className="font-medium">Survey Progress: {interviewCompletion}%</p>
                 <p className="text-sm text-muted-foreground">
                   {answeredQuestions} of {totalQuestions} questions answered
                 </p>
+                {physicalSecurityTotal > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    EP Interview: {epInterviewAnswered}/{epInterviewTotal} | Physical Security: {physicalSecurityAnswered}/{physicalSecurityTotal}
+                  </p>
+                )}
               </div>
             </div>
             <Progress value={interviewCompletion} className="w-32 h-2" />

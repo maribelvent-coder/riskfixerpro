@@ -6133,21 +6133,41 @@ The facility should prioritize addressing critical risks immediately, particular
           return res.status(404).json({ error: 'Assessment not found' });
         }
         
-        // Load interview responses to calculate completion
-        const dbResponses = await storage.getExecutiveInterviewResponses(id);
-        const totalQuestions = 43;
-        const answeredCount = dbResponses.length;
-        const interviewCompletion = Math.round((answeredCount / totalQuestions) * 100);
+        // Load BOTH EP Interview responses AND Physical Security questions
+        const epInterviewResponses = await storage.getExecutiveInterviewResponses(id);
+        const physicalSecurityQuestions = await storage.getAssessmentQuestions(id);
+        
+        // Count answered questions from both sources
+        const epInterviewAnswered = epInterviewResponses.length;
+        const physicalSecurityAnswered = physicalSecurityQuestions.filter(
+          q => q.response !== null && q.response !== undefined && q.response !== ''
+        ).length;
+        
+        // EP Interview has 43 questions, Physical Security varies by template
+        const epInterviewTotal = 43;
+        const physicalSecurityTotal = physicalSecurityQuestions.length || 0;
+        
+        // Combined totals for overall completion
+        const totalQuestions = epInterviewTotal + physicalSecurityTotal;
+        const answeredCount = epInterviewAnswered + physicalSecurityAnswered;
+        const interviewCompletion = totalQuestions > 0 
+          ? Math.round((answeredCount / totalQuestions) * 100) 
+          : 0;
         
         // Return cached dashboard data if available
+        // Note: Spread cache FIRST, then override with fresh computed values
         if (assessment.epDashboardCache) {
           return res.json({
+            ...(assessment.epDashboardCache as object),
             cached: true,
             interviewHash: assessment.epInterviewHash,
             interviewCompletion,
             answeredQuestions: answeredCount,
             totalQuestions,
-            ...(assessment.epDashboardCache as object),
+            epInterviewAnswered,
+            epInterviewTotal,
+            physicalSecurityAnswered,
+            physicalSecurityTotal,
           });
         }
         
@@ -6158,6 +6178,10 @@ The facility should prioritize addressing critical risks immediately, particular
           interviewCompletion,
           answeredQuestions: answeredCount,
           totalQuestions,
+          epInterviewAnswered,
+          epInterviewTotal,
+          physicalSecurityAnswered,
+          physicalSecurityTotal,
         });
       } catch (error) {
         console.error("Error fetching EP dashboard cache:", error);
@@ -6295,33 +6319,49 @@ The facility should prioritize addressing critical risks immediately, particular
           // Always also store by UUID for direct access
           interviewResponses[r.questionId] = responseObj;
         }
-        // Also include survey question responses
+        // Also include survey question responses (Physical Security questions)
         for (const q of surveyQuestions) {
           if (q.response !== null && q.response !== undefined) {
             interviewResponses[q.questionId] = q.response;
           }
         }
         
+        // Count answered questions from both sources
+        const epInterviewAnswered = dbResponses.length;
+        const physicalSecurityAnswered = surveyQuestions.filter(
+          q => q.response !== null && q.response !== undefined && q.response !== ''
+        ).length;
+        
         console.log(`[EP-Dashboard] Mapped ${Object.keys(uuidToSemanticKey).length} questions to semantic keys`);
+        console.log(`[EP-Dashboard] EP Interview: ${epInterviewAnswered}/43, Physical Security: ${physicalSecurityAnswered}/${surveyQuestions.length}`);
         console.log(`[EP-Dashboard] Semantic keys present:`, Object.keys(interviewResponses).filter(k => k.startsWith('ep_')));
         
-        // Calculate interview completion percentage
-        const totalQuestions = 43; // EP Interview has 43 questions
-        const answeredCount = dbResponses.length;
-        const interviewCompletion = Math.round((answeredCount / totalQuestions) * 100);
+        // Calculate combined interview completion percentage
+        const epInterviewTotal = 43;
+        const physicalSecurityTotal = surveyQuestions.length || 0;
+        const totalQuestions = epInterviewTotal + physicalSecurityTotal;
+        const answeredCount = epInterviewAnswered + physicalSecurityAnswered;
+        const interviewCompletion = totalQuestions > 0 
+          ? Math.round((answeredCount / totalQuestions) * 100) 
+          : 0;
         
         // Generate hash of interview responses for cache validation
         const interviewHash = JSON.stringify(Object.keys(interviewResponses).sort().map(k => [k, interviewResponses[k]]));
         const hashKey = Buffer.from(interviewHash).toString('base64').slice(0, 32);
         
         // Check cache if not forcing refresh
+        // Note: Spread cache FIRST, then override with fresh computed values
         if (!forceRefresh && assessment.epDashboardCache && assessment.epInterviewHash === hashKey) {
           return res.json({
+            ...(assessment.epDashboardCache as object),
             cached: true,
             interviewCompletion,
             answeredQuestions: answeredCount,
             totalQuestions,
-            ...(assessment.epDashboardCache as object),
+            epInterviewAnswered,
+            epInterviewTotal,
+            physicalSecurityAnswered,
+            physicalSecurityTotal,
           });
         }
         
@@ -6333,6 +6373,10 @@ The facility should prioritize addressing critical risks immediately, particular
             interviewCompletion,
             answeredQuestions: answeredCount,
             totalQuestions,
+            epInterviewAnswered,
+            epInterviewTotal,
+            physicalSecurityAnswered,
+            physicalSecurityTotal,
           });
         }
         
@@ -6361,6 +6405,10 @@ The facility should prioritize addressing critical risks immediately, particular
           interviewCompletion,
           answeredQuestions: answeredCount,
           totalQuestions,
+          epInterviewAnswered,
+          epInterviewTotal,
+          physicalSecurityAnswered,
+          physicalSecurityTotal,
           ...dashboardData 
         });
       } catch (error) {
