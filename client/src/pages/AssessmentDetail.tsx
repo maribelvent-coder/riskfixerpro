@@ -41,6 +41,7 @@ import type { Site } from "@shared/schema";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Assessment, RiskScenario } from "@shared/schema";
 import { generateComprehensiveReport } from "@/lib/comprehensiveReportGenerator";
@@ -225,6 +226,8 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
   const hasInitializedTab = useRef(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin ?? false;
   
   // Helper to get survey type label from templateId
   const getSurveyTypeLabel = (templateId?: string) => {
@@ -886,7 +889,9 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       <Tabs value={activeTab || ''} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4 w-full min-w-0">
         <div className="w-full min-w-0 horizontal-scroll-container pb-1">
           <TabsList className="inline-flex gap-1 p-1 w-max bg-muted/50">
-            {workflowConfig.tabs.map((tab) => {
+            {workflowConfig.tabs
+              .filter((tab) => tab.id !== "reports" || isAdmin)
+              .map((tab) => {
               const Icon = tab.icon;
               return (
                 <TabsTrigger 
