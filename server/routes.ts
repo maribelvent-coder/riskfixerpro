@@ -6179,6 +6179,14 @@ The facility should prioritize addressing critical risks immediately, particular
         
         console.log(`[Section-Analysis] Complete. Analyzed ${analysis.sections.length} sections. Critical gaps: ${analysis.criticalGapsCount}, High gaps: ${analysis.highGapsCount}`);
         
+        // Cache the analysis results in the database for persistence
+        await storage.updateAssessment(id, {
+          cachedSectionAnalysis: analysis,
+          sectionAnalysisUpdatedAt: new Date(),
+        });
+        
+        console.log(`[Section-Analysis] Cached results to database for assessment ${id}`);
+        
         res.json({
           success: true,
           ...analysis,
@@ -6187,6 +6195,45 @@ The facility should prioritize addressing critical risks immediately, particular
         console.error("Error in section analysis:", error);
         res.status(500).json({ 
           error: "Failed to analyze sections",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    },
+  );
+  
+  // GET endpoint to retrieve cached section analysis (no AI call)
+  app.get(
+    "/api/assessments/:id/ep-interview/section-analysis",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const assessment = await storage.getAssessment(id);
+        
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+        
+        // Return cached analysis if available
+        if (assessment.cachedSectionAnalysis) {
+          console.log(`[Section-Analysis] Returning cached analysis for assessment ${id}`);
+          res.json({
+            success: true,
+            cached: true,
+            cachedAt: assessment.sectionAnalysisUpdatedAt,
+            ...(assessment.cachedSectionAnalysis as object),
+          });
+        } else {
+          res.json({
+            success: false,
+            cached: false,
+            message: "No cached analysis available. Run section analysis first.",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching cached section analysis:", error);
+        res.status(500).json({ 
+          error: "Failed to fetch cached section analysis",
           details: error instanceof Error ? error.message : "Unknown error"
         });
       }
