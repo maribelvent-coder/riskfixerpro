@@ -384,38 +384,40 @@ export default function ExecutiveDashboard() {
   const [sectionAnalysis, setSectionAnalysis] = useState<FullSectionAnalysisResult | null>(null);
   const [isAnalyzingSections, setIsAnalyzingSections] = useState(false);
 
-  // Reset section analysis when assessment id changes to avoid showing stale data
+  // Reset section analysis when assessment id changes and load cached analysis
   useEffect(() => {
     setSectionAnalysis(null);
     setIsAnalyzingSections(false);
     setSelectedScenario(null);
+    
+    // Load cached section analysis from database (GET request - no AI call)
+    if (id) {
+      const loadCachedAnalysis = async () => {
+        try {
+          const response = await fetch(`/api/assessments/${id}/ep-interview/section-analysis`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+          if (response.ok) {
+            const data = await response.json() as FullSectionAnalysisResult & { cached?: boolean; success?: boolean };
+            if (data.success && data.cached && data.sections && Array.isArray(data.sections)) {
+              console.log('[EP Dashboard] Loaded cached section analysis');
+              setSectionAnalysis(data);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading cached section analysis:', error);
+        }
+      };
+      loadCachedAnalysis();
+    }
   }, [id]);
 
   const { data: dashboardData, isLoading, refetch } = useQuery<EPDashboardData>({
     queryKey: ['/api/assessments', id, 'ep-dashboard'],
     enabled: !!id,
   });
-
-  // Auto-trigger section analysis when switching to scenarios tab with dashboard data
-  useEffect(() => {
-    if (activeTab === 'scenarios' && dashboardData?.threatMatrix && dashboardData.threatMatrix.length > 0 && !sectionAnalysis && !isAnalyzingSections && id) {
-      const runAnalysis = async () => {
-        try {
-          setIsAnalyzingSections(true);
-          const response = await apiRequest('POST', `/api/assessments/${id}/ep-interview/section-analysis`, {});
-          const data = await response.json() as FullSectionAnalysisResult;
-          if (data && data.sections && Array.isArray(data.sections)) {
-            setSectionAnalysis(data);
-          }
-        } catch (error) {
-          console.error('Auto section analysis error:', error);
-        } finally {
-          setIsAnalyzingSections(false);
-        }
-      };
-      runAnalysis();
-    }
-  }, [activeTab, dashboardData?.threatMatrix, sectionAnalysis, isAnalyzingSections, id]);
 
   const runSectionAnalysis = async () => {
     try {
