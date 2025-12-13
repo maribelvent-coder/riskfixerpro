@@ -152,6 +152,8 @@ export const assessments = pgTable("assessments", {
   epProfile: jsonb("ep_profile"), // EP principal exposure profile responses (ep_ prefixed questions)
   epDashboardCache: jsonb("ep_dashboard_cache"), // Cached EP AI dashboard results with interview hash for staleness check
   epInterviewHash: text("ep_interview_hash"), // Hash of interview responses to detect changes
+  cachedSectionAnalysis: jsonb("cached_section_analysis"), // Cached AI section analysis results
+  sectionAnalysisUpdatedAt: timestamp("section_analysis_updated_at"), // When section analysis was last run
 });
 
 export const templateQuestions = pgTable("template_questions", {
