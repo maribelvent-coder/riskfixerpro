@@ -37,12 +37,13 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Basic",
     price: {
-      monthly: 29,
-      annual: 290, // 2 months free
+      monthly: 0,
+      annual: 0,
     },
+    comingSoon: true,
     cta: {
-      text: "Get Started",
-      action: "/signup",
+      text: "Coming Soon",
+      action: "#",
     },
     features: {
       assessments: "Up to 5",
@@ -60,13 +61,13 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Pro",
     price: {
-      monthly: 79,
-      annual: 790, // 2 months free
+      monthly: 0,
+      annual: 0,
     },
-    popular: true,
+    comingSoon: true,
     cta: {
-      text: "Start 14-Day Trial",
-      action: "/signup",
+      text: "Coming Soon",
+      action: "#",
     },
     features: {
       assessments: "Up to 50",
@@ -89,8 +90,8 @@ const pricingTiers: PricingTier[] = [
     },
     comingSoon: true,
     cta: {
-      text: "Book a Demo",
-      action: "/contact",
+      text: "Coming Soon",
+      action: "#",
     },
     features: {
       assessments: "Unlimited",

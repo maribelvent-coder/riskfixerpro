@@ -24,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Shield, ArrowLeft, AlertCircle } from "lucide-react";
+import { Shield, ArrowLeft, AlertCircle, Clock } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -97,6 +97,20 @@ export default function Login() {
           <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           Back to Home
         </button>
+        
+        {/* Coming Soon Banner */}
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4" data-testid="banner-coming-soon">
+          <div className="flex items-start gap-3">
+            <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Coming Soon for New Users</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                We're not accepting new registrations at this time. If you already have an account, please log in below.
+              </p>
+            </div>
+          </div>
+        </div>
+        
         <Card className="w-full">
         <CardHeader className="space-y-1 p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-2">
@@ -178,16 +192,6 @@ export default function Login() {
               </Button>
             </form>
           </Form>
-          <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <button
-              onClick={() => setLocation("/signup")}
-              className="text-xs sm:text-sm text-primary hover:underline"
-              data-testid="link-signup"
-            >
-              Sign up
-            </button>
-          </div>
         </CardContent>
       </Card>
       </div>
