@@ -8613,13 +8613,22 @@ The facility should prioritize addressing critical risks immediately, particular
           }
         }
 
-        const objectStorageService = new ObjectStorageService();
-        const evidencePath = await objectStorageService.uploadEvidence(
-          file.buffer,
-          file.originalname,
+        // Store photo in database as base64 (reliable fallback when object storage is unavailable)
+        const base64Data = file.buffer.toString('base64');
+        const mimeType = file.mimetype || 'image/jpeg';
+
+        const evidenceBlob = await storage.createEvidenceBlob({
           assessmentId,
           questionId,
-        );
+          questionType: questionType as 'facility' | 'assessment',
+          filename: file.originalname,
+          mimeType,
+          data: base64Data,
+          fileSize: file.buffer.length,
+        });
+
+        // Use database ID as evidence path
+        const evidencePath = `/api/evidence/${evidenceBlob.id}`;
 
         if (questionType === "facility") {
           await storage.appendFacilityQuestionEvidence(questionId, evidencePath);
@@ -8638,6 +8647,27 @@ The facility should prioritize addressing critical risks immediately, particular
       }
     },
   );
+
+  // Serve evidence images from database
+  app.get("/api/evidence/:id", async (req, res) => {
+    try {
+      const blob = await storage.getEvidenceBlob(req.params.id);
+      if (!blob) {
+        return res.status(404).json({ error: "Evidence not found" });
+      }
+
+      const buffer = Buffer.from(blob.data, 'base64');
+      res.set({
+        'Content-Type': blob.mimeType,
+        'Content-Length': buffer.length.toString(),
+        'Cache-Control': 'private, max-age=3600',
+      });
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("Error fetching evidence:", error);
+      res.status(500).json({ error: "Failed to fetch evidence" });
+    }
+  });
 
   app.delete(
     "/api/assessments/:id/evidence",
@@ -8690,8 +8720,19 @@ The facility should prioritize addressing critical risks immediately, particular
           });
         }
 
-        const objectStorageService = new ObjectStorageService();
-        await objectStorageService.deleteEvidence(evidencePath);
+        // Delete from database if it's a database-stored evidence path
+        if (evidencePath.startsWith('/api/evidence/')) {
+          const blobId = evidencePath.replace('/api/evidence/', '');
+          await storage.deleteEvidenceBlob(blobId);
+        } else {
+          // Legacy: try object storage for old paths
+          try {
+            const objectStorageService = new ObjectStorageService();
+            await objectStorageService.deleteEvidence(evidencePath);
+          } catch (e) {
+            console.warn("Could not delete from object storage:", e);
+          }
+        }
 
         res.json({ success: true });
       } catch (error) {

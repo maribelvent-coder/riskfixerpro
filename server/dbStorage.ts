@@ -787,6 +787,35 @@ export class DbStorage implements IStorage {
     return results[0] || null;
   }
 
+  // Evidence Blob methods (database-backed photo storage)
+  async createEvidenceBlob(blob: schema.InsertEvidenceBlob): Promise<schema.EvidenceBlob> {
+    const results = await db.insert(schema.evidenceBlobs).values(blob).returning();
+    return results[0];
+  }
+
+  async getEvidenceBlob(id: string): Promise<schema.EvidenceBlob | undefined> {
+    const results = await db.select().from(schema.evidenceBlobs).where(eq(schema.evidenceBlobs.id, id));
+    return results[0];
+  }
+
+  async getEvidenceBlobsByQuestion(assessmentId: string, questionId: string): Promise<schema.EvidenceBlob[]> {
+    return await db.select().from(schema.evidenceBlobs)
+      .where(and(
+        eq(schema.evidenceBlobs.assessmentId, assessmentId),
+        eq(schema.evidenceBlobs.questionId, questionId)
+      ));
+  }
+
+  async getEvidenceBlobsByAssessment(assessmentId: string): Promise<schema.EvidenceBlob[]> {
+    return await db.select().from(schema.evidenceBlobs)
+      .where(eq(schema.evidenceBlobs.assessmentId, assessmentId));
+  }
+
+  async deleteEvidenceBlob(id: string): Promise<boolean> {
+    const results = await db.delete(schema.evidenceBlobs).where(eq(schema.evidenceBlobs.id, id)).returning();
+    return results.length > 0;
+  }
+
   // Threat Identification methods
   async getIdentifiedThreats(assessmentId: string): Promise<IdentifiedThreat[]> {
     return await db.select().from(schema.identifiedThreats)

@@ -221,6 +221,27 @@ export const assessmentQuestions = pgTable("assessment_questions", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Evidence blobs table for storing photo evidence in database
+// Used as fallback when object storage is unavailable
+export const evidenceBlobs = pgTable("evidence_blobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => assessments.id, { onDelete: 'cascade' }),
+  questionId: varchar("question_id").notNull(),
+  questionType: text("question_type").notNull(), // 'facility' or 'assessment'
+  filename: text("filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  data: text("data").notNull(), // Base64 encoded image data
+  fileSize: integer("file_size"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertEvidenceBlobSchema = createInsertSchema(evidenceBlobs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEvidenceBlob = z.infer<typeof insertEvidenceBlobSchema>;
+export type EvidenceBlob = typeof evidenceBlobs.$inferSelect;
+
 export const executiveInterviewQuestions = pgTable("executive_interview_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   questionNumber: integer("question_number").notNull().unique(),
