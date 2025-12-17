@@ -27,61 +27,25 @@ export function EvidenceUploader({
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      // Step 1: Get presigned upload URL from server
-      const urlRes = await apiRequest(
-        "POST",
-        `/api/assessments/${assessmentId}/evidence/upload-url`,
-        {
-          questionId,
-          questionType,
-          filename: file.name,
-        }
-      );
-      const urlResponse = await urlRes.json() as { uploadURL: string; evidencePath: string; method: string };
+      // Use direct server upload with FormData (more reliable than presigned URLs)
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('questionId', questionId);
+      formData.append('questionType', questionType);
 
-      // Step 2: Upload file directly to presigned URL
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        xhr.upload.addEventListener("progress", (e) => {
-          if (e.lengthComputable) {
-            const progress = Math.round((e.loaded / e.total) * 100);
-            setUploadProgress(progress);
-          }
-        });
-
-        xhr.addEventListener("load", () => {
-          setUploadProgress(null);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
-        });
-
-        xhr.addEventListener("error", () => {
-          setUploadProgress(null);
-          reject(new Error("Network error during upload"));
-        });
-
-        xhr.open("PUT", urlResponse.uploadURL);
-        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-        xhr.send(file);
+      const response = await fetch(`/api/assessments/${assessmentId}/evidence/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
       });
 
-      // Step 3: Register the upload with the server
-      await apiRequest(
-        "POST",
-        `/api/assessments/${assessmentId}/evidence/register`,
-        {
-          questionId,
-          questionType,
-          evidencePath: urlResponse.evidencePath,
-          filename: file.name,
-        }
-      );
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(error.error || error.message || 'Upload failed');
+      }
 
-      return { success: true, evidencePath: urlResponse.evidencePath };
+      const result = await response.json();
+      return { success: true, evidencePath: result.evidencePath };
     },
     onSuccess: () => {
       toast({
