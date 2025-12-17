@@ -27,12 +27,20 @@ export function EvidenceUploader({
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("questionId", questionId);
-      formData.append("questionType", questionType);
+      // Step 1: Get presigned upload URL from server
+      const urlRes = await apiRequest(
+        "POST",
+        `/api/assessments/${assessmentId}/evidence/upload-url`,
+        {
+          questionId,
+          questionType,
+          filename: file.name,
+        }
+      );
+      const urlResponse = await urlRes.json() as { uploadURL: string; evidencePath: string; method: string };
 
-      const result = await new Promise<{ success: boolean; evidencePath: string; filename: string }>((resolve, reject) => {
+      // Step 2: Upload file directly to presigned URL
+      await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
         xhr.upload.addEventListener("progress", (e) => {
@@ -45,19 +53,9 @@ export function EvidenceUploader({
         xhr.addEventListener("load", () => {
           setUploadProgress(null);
           if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch {
-              reject(new Error("Invalid server response"));
-            }
+            resolve();
           } else {
-            try {
-              const error = JSON.parse(xhr.responseText);
-              reject(new Error(error.error || "Upload failed"));
-            } catch {
-              reject(new Error("Upload failed"));
-            }
+            reject(new Error(`Upload failed with status ${xhr.status}`));
           }
         });
 
@@ -66,12 +64,24 @@ export function EvidenceUploader({
           reject(new Error("Network error during upload"));
         });
 
-        xhr.open("POST", `/api/assessments/${assessmentId}/evidence/upload`);
-        xhr.withCredentials = true;
-        xhr.send(formData);
+        xhr.open("PUT", urlResponse.uploadURL);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.send(file);
       });
 
-      return result;
+      // Step 3: Register the upload with the server
+      await apiRequest(
+        "POST",
+        `/api/assessments/${assessmentId}/evidence/register`,
+        {
+          questionId,
+          questionType,
+          evidencePath: urlResponse.evidencePath,
+          filename: file.name,
+        }
+      );
+
+      return { success: true, evidencePath: urlResponse.evidencePath };
     },
     onSuccess: () => {
       toast({
