@@ -497,9 +497,74 @@ export async function renderReportHTML(data: ReportData): Promise<string> {
 
   <!-- Template-Specific Financial Impact Section -->
   ${renderTemplateMetrics(assessment.templateId, templateMetrics)}
+  
+  <!-- Photo Evidence Section -->
+  ${renderPhotoEvidenceSection(photos)}
   </div><!-- /.page-container -->
 </body>
 </html>
+  `;
+}
+
+/**
+ * Render photo evidence section showing images captured during assessment
+ */
+function renderPhotoEvidenceSection(photos: any[]): string {
+  if (!photos || photos.length === 0) {
+    return '';
+  }
+  
+  // Group photos by category
+  const photosByCategory: Record<string, any[]> = {};
+  for (const photo of photos) {
+    const category = photo.category || 'General';
+    if (!photosByCategory[category]) {
+      photosByCategory[category] = [];
+    }
+    photosByCategory[category].push(photo);
+  }
+  
+  const categories = Object.keys(photosByCategory).sort();
+  
+  return `
+  <div class="section">
+    <h2 class="section-title">Photo Evidence Documentation</h2>
+    <p style="margin-bottom: 30px; font-size: 10pt; color: #64748b;">
+      Visual documentation captured during the physical security assessment, organized by assessment category.
+    </p>
+    
+    ${categories.map(category => `
+      <div style="margin-bottom: 40px;">
+        <h3 style="color: #1e40af; font-size: 14pt; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;">
+          ${category}
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+          ${photosByCategory[category].map((photo, idx) => `
+            <div style="background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+              <img 
+                src="${photo.imageDataUrl}" 
+                alt="Evidence ${idx + 1}" 
+                style="width: 100%; height: 200px; object-fit: cover;"
+              />
+              <div style="padding: 12px;">
+                <p style="font-size: 9pt; color: #475569; line-height: 1.5; margin: 0;">
+                  ${photo.question ? photo.question.substring(0, 100) + (photo.question.length > 100 ? '...' : '') : 'Evidence photo'}
+                </p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+    
+    <div style="margin-top: 30px; padding: 15px; background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px;">
+      <p style="font-size: 9pt; color: #166534; line-height: 1.5; margin: 0;">
+        <strong>Documentation Note:</strong> ${photos.length} photo(s) collected during site walk and facility survey. 
+        These images serve as visual evidence supporting the assessment findings and recommendations.
+      </p>
+    </div>
+  </div>
   `;
 }
 

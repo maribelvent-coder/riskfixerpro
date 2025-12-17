@@ -7,8 +7,9 @@
 
 import puppeteer from 'puppeteer';
 import { db } from '../../db';
-import { assessments, riskScenarios } from '@shared/schema';
+import { assessments, riskScenarios, facilitySurveyQuestions, assessmentQuestions } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { ObjectStorageService } from '../../objectStorage';
 import { renderReportHTML } from '../../templates/master-report';
 import { renderExecutiveSummaryHTML } from '../../templates/executive-summary-template';
 import { renderEPReportHTML } from '../../templates/ep-report-template';
@@ -61,7 +62,7 @@ export async function generateAssessmentReport(
       console.log('📋 Using MacQuarrie EP report template...');
       
       // Assemble full EP report data package
-      const reportDataPackage = await assembleReportData(assessmentId, userId);
+      const reportDataPackage = await assembleReportData(assessmentId);
       
       if (!reportDataPackage.epReportData) {
         throw new Error('Executive Protection report data could not be assembled. Please ensure the principal profile and interview questionnaire are complete before generating the report.');
@@ -149,7 +150,10 @@ export async function generateAssessmentReport(
         .where(eq(riskScenarios.assessmentId, assessmentId))
         .orderBy(desc(riskScenarios.inherentRisk));
       
-      const photos: any[] = [];
+      // Fetch photo evidence from survey questions
+      const photos = await fetchSurveyPhotoEvidence(assessmentId);
+      console.log(`📷 Found ${photos.length} photo evidence items`);
+      
       const executiveSummary = assessment.executiveSummary || await fetchExecutiveSummary(assessmentId);
       const templateMetrics = calculateTemplateMetrics(assessment, risks);
       
@@ -395,4 +399,114 @@ async function convertHTMLToPDFBuffer(htmlContent: string): Promise<Buffer> {
   } finally {
     await browser.close();
   }
+}
+
+/**
+ * Fetch photo evidence from survey questions and convert to base64 data URLs
+ */
+interface PhotoEvidence {
+  questionId: string;
+  question: string;
+  category: string;
+  imageDataUrl: string;
+}
+
+async function fetchSurveyPhotoEvidence(assessmentId: string): Promise<PhotoEvidence[]> {
+  const photos: PhotoEvidence[] = [];
+  const objectStorageService = new ObjectStorageService();
+  
+  try {
+    // Fetch facility survey questions with evidence
+    const facilityQuestions = await db
+      .select()
+      .from(facilitySurveyQuestions)
+      .where(eq(facilitySurveyQuestions.assessmentId, assessmentId));
+    
+    // Fetch assessment questions with evidence  
+    const assessQuestions = await db
+      .select()
+      .from(assessmentQuestions)
+      .where(eq(assessmentQuestions.assessmentId, assessmentId));
+    
+    // Process facility survey questions
+    for (const q of facilityQuestions) {
+      if (q.evidence && Array.isArray(q.evidence) && q.evidence.length > 0) {
+        for (const evidencePath of q.evidence) {
+          if (evidencePath && typeof evidencePath === 'string') {
+            try {
+              const file = await objectStorageService.getEvidenceFile(evidencePath);
+              const [metadata] = await file.getMetadata();
+              const contentType = metadata.contentType || 'image/jpeg';
+              
+              const chunks: Buffer[] = [];
+              const stream = file.createReadStream();
+              
+              await new Promise<void>((resolve, reject) => {
+                stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                stream.on('end', () => resolve());
+                stream.on('error', reject);
+              });
+              
+              const buffer = Buffer.concat(chunks);
+              const base64 = buffer.toString('base64');
+              const dataUrl = `data:${contentType};base64,${base64}`;
+              
+              photos.push({
+                questionId: q.id,
+                question: q.question,
+                category: q.category,
+                imageDataUrl: dataUrl
+              });
+            } catch (error) {
+              console.error(`Failed to load evidence image ${evidencePath}:`, error);
+            }
+          }
+        }
+      }
+    }
+    
+    // Process assessment questions
+    for (const q of assessQuestions) {
+      if (q.evidence && Array.isArray(q.evidence) && q.evidence.length > 0) {
+        for (const evidencePath of q.evidence) {
+          if (evidencePath && typeof evidencePath === 'string') {
+            try {
+              const file = await objectStorageService.getEvidenceFile(evidencePath);
+              const [metadata] = await file.getMetadata();
+              const contentType = metadata.contentType || 'image/jpeg';
+              
+              const chunks: Buffer[] = [];
+              const stream = file.createReadStream();
+              
+              await new Promise<void>((resolve, reject) => {
+                stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                stream.on('end', () => resolve());
+                stream.on('error', reject);
+              });
+              
+              const buffer = Buffer.concat(chunks);
+              const base64 = buffer.toString('base64');
+              const dataUrl = `data:${contentType};base64,${base64}`;
+              
+              photos.push({
+                questionId: q.id,
+                question: q.question,
+                category: q.category,
+                imageDataUrl: dataUrl
+              });
+            } catch (error) {
+              console.error(`Failed to load evidence image ${evidencePath}:`, error);
+            }
+          }
+        }
+      }
+    }
+    
+    console.log(`[PhotoEvidence] Processed ${photos.length} photos from ${facilityQuestions.length + assessQuestions.length} questions`);
+    
+  } catch (error) {
+    console.error('[PhotoEvidence] Error fetching survey photo evidence:', error);
+  }
+  
+  return photos;
 }

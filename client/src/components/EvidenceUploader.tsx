@@ -167,74 +167,45 @@ export function EvidenceUploader({
     );
   }
 
-  const handleTakePhoto = () => {
+  const handleAddPhoto = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.setAttribute('capture', 'environment');
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleUploadPhoto = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.removeAttribute('capture');
       fileInputRef.current.click();
     }
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          style={{ display: 'none' }}
-          data-testid={`input-file-${questionId}`}
-        />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+        data-testid={`input-file-${questionId}`}
+      />
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleTakePhoto}
-          disabled={uploadMutation.isPending || uploadProgress !== null}
-          data-testid={`button-camera-${questionId}`}
-        >
-          {uploadMutation.isPending || uploadProgress !== null ? (
-            <>
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              {uploadProgress !== null ? `${uploadProgress}%` : "Uploading..."}
-            </>
-          ) : (
-            <>
-              <Camera className="h-3 w-3 mr-1" />
-              Take Photo
-            </>
-          )}
-        </Button>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleUploadPhoto}
-          disabled={uploadMutation.isPending || uploadProgress !== null}
-          data-testid={`button-upload-${questionId}`}
-        >
-          {uploadMutation.isPending || uploadProgress !== null ? (
-            <>
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              {uploadProgress !== null ? `${uploadProgress}%` : "Uploading..."}
-            </>
-          ) : (
-            <>
-              <Upload className="h-3 w-3 mr-1" />
-              Upload Photo
-            </>
-          )}
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleAddPhoto}
+        disabled={uploadMutation.isPending || uploadProgress !== null}
+        className="w-full sm:w-auto"
+        data-testid={`button-add-photo-${questionId}`}
+      >
+        {uploadMutation.isPending || uploadProgress !== null ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            {uploadProgress !== null ? `Uploading ${uploadProgress}%` : "Uploading..."}
+          </>
+        ) : (
+          <>
+            <Camera className="h-4 w-4 mr-2" />
+            Add Photo
+          </>
+        )}
+      </Button>
 
       {evidence.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 max-w-2xl">
