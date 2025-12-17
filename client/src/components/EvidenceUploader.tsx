@@ -137,13 +137,18 @@ export function EvidenceUploader({
     }
   };
 
+  // Detect if we're on a mobile device for camera capture
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    typeof navigator !== 'undefined' ? navigator.userAgent : ''
+  );
+
   return (
     <div className="space-y-3">
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
+        {...(isMobile ? { capture: "environment" } : {})}
         onChange={handleFileSelect}
         style={{ display: 'none' }}
         data-testid={`input-file-${questionId}`}
