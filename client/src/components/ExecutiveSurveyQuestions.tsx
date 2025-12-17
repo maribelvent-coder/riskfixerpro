@@ -600,7 +600,7 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
                               questionId={question.id}
                               questionType="facility"
                               evidence={question.evidence || []}
-                              onUpdate={() => queryClient.refetchQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] })}
+                              onUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] })}
                             />
                           </div>
                         </div>

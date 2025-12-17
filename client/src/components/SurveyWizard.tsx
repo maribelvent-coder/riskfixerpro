@@ -908,7 +908,7 @@ export function SurveyWizard({
                       questionType="facility"
                       evidence={question.evidence || []}
                       onUpdate={() => {
-                        queryClient.refetchQueries({
+                        queryClient.invalidateQueries({
                           queryKey: ["/api/assessments", assessmentId, "facility-survey"],
                         });
                       }}
