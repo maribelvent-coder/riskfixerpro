@@ -41,32 +41,52 @@ export function ReportsTab({
   
   const generateMutation = useMutation({
     mutationFn: async () => {
-      // Map report type to recipeId expected by backend
-      const recipeIdMap: Record<ReportType, string> = {
-        'executive_summary': 'executive-summary-v1',
-        'full_assessment': 'full-assessment-v1',
-        'gap_analysis': 'gap-analysis-v1',
-      };
-      const recipeId = recipeIdMap[selectedType] || 'full-assessment-v1';
-      
-      const res = await fetch(`/api/assessments/${assessmentId}/reports/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipeId,
-          options,
-        }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || error.error || 'Failed to generate report');
+      // For full assessment and gap analysis, use direct PDF generation
+      // For executive summary, use the recipe-based endpoint
+      if (selectedType === 'executive_summary') {
+        const res = await fetch(`/api/assessments/${assessmentId}/reports/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            recipeId: 'executive-summary-ep-v1',
+            options,
+          }),
+        });
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || error.error || 'Failed to generate report');
+        }
+        return res.json();
+      } else {
+        // Use direct PDF generation for full assessment and gap analysis
+        const res = await fetch(`/api/assessments/${assessmentId}/generate-report`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ options }),
+        });
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Failed to generate report' }));
+          throw new Error(error.message || error.error || error.details || 'Failed to generate report');
+        }
+        // This endpoint returns a PDF blob directly
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `security-assessment-${assessmentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        return { success: true, downloadTriggered: true };
       }
-      return res.json();
     },
     onSuccess: (data) => {
       toast({
         title: 'Report Generated',
-        description: 'Your report is ready for download.',
+        description: data.downloadTriggered ? 'Your PDF is downloading.' : 'Your report is ready for download.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, 'reports'] });
       
