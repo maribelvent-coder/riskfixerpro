@@ -41,17 +41,25 @@ export function ReportsTab({
   
   const generateMutation = useMutation({
     mutationFn: async () => {
+      // Map report type to recipeId expected by backend
+      const recipeIdMap: Record<ReportType, string> = {
+        'executive_summary': 'executive-summary-v1',
+        'full_assessment': 'full-assessment-v1',
+        'gap_analysis': 'gap-analysis-v1',
+      };
+      const recipeId = recipeIdMap[selectedType] || 'full-assessment-v1';
+      
       const res = await fetch(`/api/assessments/${assessmentId}/reports/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reportType: selectedType,
+          recipeId,
           options,
         }),
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Failed to generate report');
+        throw new Error(error.message || error.error || 'Failed to generate report');
       }
       return res.json();
     },
