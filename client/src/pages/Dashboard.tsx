@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RiskScoreCard } from "@/components/RiskScoreCard";
 import { AssessmentCard } from "@/components/AssessmentCard";
 import { Plus, Search, Filter, TrendingUp, Users, Building2, Clock, AlertCircle } from "lucide-react";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { dashboardApi } from "@/lib/api";
@@ -207,20 +208,8 @@ export default function Dashboard() {
         </div>
 
         {assessmentsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center justify-center py-12">
+            <LoadingSpinner size="xl" message="Loading assessments..." />
           </div>
         ) : filteredAssessments.length === 0 ? (
           <Card>

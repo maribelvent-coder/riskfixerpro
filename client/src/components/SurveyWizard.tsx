@@ -36,6 +36,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { EvidenceUploader } from "./EvidenceUploader";
+import { LoadingSpinner } from "./LoadingSpinner";
 import {
   Collapsible,
   CollapsibleContent,
@@ -951,12 +952,7 @@ export function SurveyWizard({
   if (questionsLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground animate-pulse" />
-          <p className="text-sm text-muted-foreground">
-            Loading survey questions...
-          </p>
-        </div>
+        <LoadingSpinner size="xl" message="Loading survey questions..." />
       </div>
     );
   }
