@@ -11,7 +11,7 @@ interface EvidenceUploaderProps {
   questionId: string;
   questionType: "facility" | "assessment";
   evidence: string[];
-  onUpdate: () => void;
+  onUpdate: (newEvidencePath?: string) => void;
 }
 
 export function EvidenceUploader({
@@ -47,12 +47,12 @@ export function EvidenceUploader({
       const result = await response.json();
       return { success: true, evidencePath: result.evidencePath };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
         description: "Photo uploaded successfully",
       });
-      onUpdate();
+      onUpdate(data.evidencePath);
     },
     onError: (error: Error) => {
       toast({

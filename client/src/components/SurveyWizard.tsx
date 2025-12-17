@@ -907,7 +907,16 @@ export function SurveyWizard({
                       questionId={question.dbId || ""}
                       questionType="facility"
                       evidence={question.evidence || []}
-                      onUpdate={() => {
+                      onUpdate={(newEvidencePath) => {
+                        // Update local state immediately for instant feedback
+                        if (newEvidencePath) {
+                          setQuestions(prev => prev.map(q => 
+                            q.templateId === question.templateId 
+                              ? { ...q, evidence: [...(q.evidence || []), newEvidencePath] }
+                              : q
+                          ));
+                        }
+                        // Also refetch to sync with server
                         queryClient.invalidateQueries({
                           queryKey: ["/api/assessments", assessmentId, "facility-survey"],
                         });

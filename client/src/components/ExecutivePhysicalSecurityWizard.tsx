@@ -602,7 +602,21 @@ export default function ExecutivePhysicalSecurityWizard({
                       questionId={q.id}
                       questionType="assessment"
                       evidence={response.evidence || []}
-                      onUpdate={() => {
+                      onUpdate={(newEvidencePath) => {
+                        // Update local state immediately for instant feedback
+                        if (newEvidencePath) {
+                          setLocalResponses(prev => {
+                            const current = prev[q.id] || {};
+                            return {
+                              ...prev,
+                              [q.id]: {
+                                ...current,
+                                evidence: [...(current.evidence || []), newEvidencePath]
+                              }
+                            };
+                          });
+                        }
+                        // Also refetch to sync with server
                         queryClient.invalidateQueries({ queryKey: questionQueryKey });
                       }}
                     />
