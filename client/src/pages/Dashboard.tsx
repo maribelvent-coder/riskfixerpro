@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,16 @@ import { getTierLimits, getUpgradeMessage, type AccountTier } from "@shared/tier
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [minLoadComplete, setMinLoadComplete] = useState(false);
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+
+  // 3-second minimum loading time for purposeful UX
+  useEffect(() => {
+    const timer = setTimeout(() => setMinLoadComplete(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch dashboard statistics
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -30,6 +37,9 @@ export default function Dashboard() {
   const { data: assessments = [], isLoading: assessmentsLoading } = useQuery({
     queryKey: ["/api/assessments"],
   });
+
+  // Show loading spinner until both data is loaded AND minimum time has passed
+  const isInitialLoading = !minLoadComplete || statsLoading || assessmentsLoading;
 
   // Check tier limitations
   const tier = (user?.accountTier || "free") as AccountTier;
@@ -53,6 +63,15 @@ export default function Dashboard() {
       year: "numeric"
     });
   };
+
+  // Show full-page loading spinner during initial load
+  if (isInitialLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <LoadingSpinner size="xl" message="Loading dashboard..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
