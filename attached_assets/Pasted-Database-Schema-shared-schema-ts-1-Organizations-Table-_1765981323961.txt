@@ -1,0 +1,89 @@
+Database Schema (shared/schema.ts)
+1. Organizations Table
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  accountTier: text("account_tier").notNull().default("basic"),
+  ownerId: varchar("owner_id").notNull(),  // References user who created it
+  maxMembers: integer("max_members").notNull().default(2),
+  maxSites: integer("max_sites").notNull().default(2),
+  maxAssessments: integer("max_assessments").notNull().default(5),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+2. Users Table
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  email: text("email").unique(),
+  password: text("password").notNull(),
+  accountTier: text("account_tier").notNull().default("free"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  organizationRole: text("organization_role").default("member"),  // "owner" | "admin" | "member"
+  isAdmin: boolean("is_admin").notNull().default(false),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+3. Sites Table
+export const sites = pgTable("sites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),  // Creator
+  organizationId: varchar("organization_id").references(() => organizations.id),  // Optional - nullable for free tier
+  name: text("name").notNull(),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  // ... other fields
+});
+
+4. Organization Invitations (for team members)
+export const organizationInvitations = pgTable("organization_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("member"),
+  invitedBy: varchar("invited_by").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  acceptedAt: timestamp("accepted_at"),
+});
+
+Registration Flow (server/routes.ts)
+When a new user registers:
+
+// 1. Create the user
+const user = await storage.createUser({
+  username: validatedData.username,
+  email: validatedData.email || null,
+  password: hashedPassword,
+});
+// 2. Auto-create personal organization for the user
+const organization = await storage.createOrganization({
+  name: `${validatedData.username}'s Workspace`,
+  ownerId: user.id,
+  accountTier: 'free',
+  maxMembers: 1,      // Free tier: solo workspace
+  maxSites: 3,        // Free tier limits
+  maxAssessments: 5,  // Free tier limits
+});
+// 3. Link user to organization as owner
+await storage.addUserToOrganization(user.id, organization.id, 'owner');
+
+Relationships Summary
+Organization (1) ←──owns──── User (owner via ownerId)
+     │
+     └───────► User (many) via organizationId + organizationRole
+     │
+     └───────► Site (many) via organizationId
+     │
+     └───────► OrganizationInvitation (many)
+User (1) ───────► Site (many) via userId (creator tracking)
+
+Key Design Decisions
+Every user gets a personal organization - Created automatically at registration
+Sites belong to both user AND organization - userId tracks creator, organizationId enables team access
+Organization role hierarchy: owner > admin > member
+Free tier: Organization with maxMembers: 1 (solo workspace)
+Team invitations: Token-based with expiration, invited users join existing org instead of creating their own
