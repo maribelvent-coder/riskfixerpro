@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { openaiService } from "./openai-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
+import sharp from "sharp";
 import { db } from "./db";
 import { assessments, riskScenarios, sites, templateQuestions, users, executiveInterviewQuestions } from "@shared/schema";
 import { TenantStorage } from "./tenant-storage";
@@ -5701,20 +5702,35 @@ The facility should prioritize addressing critical risks immediately, particular
                         const blobId = evidencePath.replace('/api/evidence/', '');
                         const blob = await storage.getEvidenceBlob(blobId);
                         if (blob && blob.data) {
-                          // blob.data is already base64 encoded in storage
-                          const base64Data = typeof blob.data === 'string' 
+                          let base64Data = typeof blob.data === 'string' 
                             ? blob.data 
                             : Buffer.from(blob.data).toString('base64');
-                          const dataUrl = `data:${blob.mimeType};base64,${base64Data}`;
+                          let mimeType = blob.mimeType;
+                          
+                          // Compress legacy uncompressed images on-the-fly
+                          if (!blob.isCompressed) {
+                            try {
+                              const originalBuffer = Buffer.from(base64Data, 'base64');
+                              const compressed = await sharp(originalBuffer)
+                                .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                                .webp({ quality: 75 })
+                                .toBuffer();
+                              base64Data = compressed.toString('base64');
+                              mimeType = 'image/webp';
+                            } catch (compErr) {
+                              console.error('Export compression failed, using original:', compErr);
+                            }
+                          }
+                          
+                          const dataUrl = `data:${mimeType};base64,${base64Data}`;
                           evidenceWithBase64.push(dataUrl);
                         } else {
                           evidenceWithBase64.push(evidencePath);
                         }
                       } else if (evidencePath.startsWith('/evidence/')) {
-                        // Legacy: fetch from object storage
+                        // Legacy: fetch from object storage and compress
                         const file = await objectStorageService.getEvidenceFile(evidencePath);
                         const [metadata] = await file.getMetadata();
-                        const contentType = metadata.contentType || 'image/jpeg';
                         
                         const chunks: Buffer[] = [];
                         const stream = file.createReadStream();
@@ -5726,9 +5742,23 @@ The facility should prioritize addressing critical risks immediately, particular
                         });
                         
                         const buffer = Buffer.concat(chunks);
-                        const base64 = buffer.toString('base64');
-                        const dataUrl = `data:${contentType};base64,${base64}`;
-                        evidenceWithBase64.push(dataUrl);
+                        
+                        // Compress legacy object storage images
+                        try {
+                          const compressed = await sharp(buffer)
+                            .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                            .webp({ quality: 75 })
+                            .toBuffer();
+                          const base64 = compressed.toString('base64');
+                          const dataUrl = `data:image/webp;base64,${base64}`;
+                          evidenceWithBase64.push(dataUrl);
+                        } catch (compErr) {
+                          // Fallback to original if compression fails
+                          const contentType = metadata.contentType || 'image/jpeg';
+                          const base64 = buffer.toString('base64');
+                          const dataUrl = `data:${contentType};base64,${base64}`;
+                          evidenceWithBase64.push(dataUrl);
+                        }
                       } else {
                         // Unknown format, keep as-is
                         evidenceWithBase64.push(evidencePath);
@@ -5785,22 +5815,36 @@ The facility should prioritize addressing critical risks immediately, particular
                       const blobId = evidencePath.replace('/api/evidence/', '');
                       const blob = await storage.getEvidenceBlob(blobId);
                       if (blob && blob.data) {
-                        // blob.data is already base64 encoded in storage
-                        const base64Data = typeof blob.data === 'string' 
+                        let base64Data = typeof blob.data === 'string' 
                           ? blob.data 
                           : Buffer.from(blob.data).toString('base64');
-                        const dataUrl = `data:${blob.mimeType};base64,${base64Data}`;
+                        let mimeType = blob.mimeType;
+                        
+                        // Compress legacy uncompressed images on-the-fly
+                        if (!blob.isCompressed) {
+                          try {
+                            const originalBuffer = Buffer.from(base64Data, 'base64');
+                            const compressed = await sharp(originalBuffer)
+                              .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                              .webp({ quality: 75 })
+                              .toBuffer();
+                            base64Data = compressed.toString('base64');
+                            mimeType = 'image/webp';
+                          } catch (compErr) {
+                            console.error('Export compression failed, using original:', compErr);
+                          }
+                        }
+                        
+                        const dataUrl = `data:${mimeType};base64,${base64Data}`;
                         evidenceWithBase64.push(dataUrl);
                       } else {
                         evidenceWithBase64.push(evidencePath);
                       }
                     } else if (evidencePath.startsWith('/evidence/')) {
-                      // Legacy: fetch from object storage
+                      // Legacy: fetch from object storage and compress
                       const file = await objectStorageService.getEvidenceFile(evidencePath);
                       const [metadata] = await file.getMetadata();
-                      const contentType = metadata.contentType || 'image/jpeg';
                       
-                      // Download file content as buffer
                       const chunks: Buffer[] = [];
                       const stream = file.createReadStream();
                       
@@ -5811,16 +5855,29 @@ The facility should prioritize addressing critical risks immediately, particular
                       });
                       
                       const buffer = Buffer.concat(chunks);
-                      const base64 = buffer.toString('base64');
-                      const dataUrl = `data:${contentType};base64,${base64}`;
-                      evidenceWithBase64.push(dataUrl);
+                      
+                      // Compress legacy object storage images
+                      try {
+                        const compressed = await sharp(buffer)
+                          .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                          .webp({ quality: 75 })
+                          .toBuffer();
+                        const base64 = compressed.toString('base64');
+                        const dataUrl = `data:image/webp;base64,${base64}`;
+                        evidenceWithBase64.push(dataUrl);
+                      } catch (compErr) {
+                        // Fallback to original if compression fails
+                        const contentType = metadata.contentType || 'image/jpeg';
+                        const base64 = buffer.toString('base64');
+                        const dataUrl = `data:${contentType};base64,${base64}`;
+                        evidenceWithBase64.push(dataUrl);
+                      }
                     } else {
                       // Unknown format, keep as-is
                       evidenceWithBase64.push(evidencePath);
                     }
                   } catch (error) {
                     console.error(`Failed to load image ${evidencePath}:`, error);
-                    // Keep original path as fallback
                     evidenceWithBase64.push(evidencePath);
                   }
                 }
@@ -8655,18 +8712,80 @@ The facility should prioritize addressing critical risks immediately, particular
           }
         }
 
-        // Store photo in database as base64 (reliable fallback when object storage is unavailable)
-        const base64Data = file.buffer.toString('base64');
-        const mimeType = file.mimetype || 'image/jpeg';
+        // Compress and store photo in database
+        const originalSize = file.buffer.length;
+        const originalMimeType = file.mimetype || 'image/jpeg';
+        
+        let processedBuffer: Buffer;
+        let processedMimeType: string;
+        let width: number | undefined;
+        let height: number | undefined;
+        let isCompressed = false;
+        
+        try {
+          // Get image metadata first
+          const metadata = await sharp(file.buffer).metadata();
+          const maxDimension = 1600;
+          
+          // Determine if we need to resize
+          const needsResize = (metadata.width && metadata.width > maxDimension) || 
+                             (metadata.height && metadata.height > maxDimension);
+          
+          // Check if image has transparency (requires PNG/WebP with alpha)
+          const hasAlpha = metadata.hasAlpha;
+          
+          // Build sharp pipeline
+          let pipeline = sharp(file.buffer);
+          
+          // Resize if needed (maintain aspect ratio)
+          if (needsResize) {
+            pipeline = pipeline.resize(maxDimension, maxDimension, {
+              fit: 'inside',
+              withoutEnlargement: true,
+            });
+          }
+          
+          // Convert to WebP for best compression (or keep format if WebP not suitable)
+          if (hasAlpha) {
+            // Use WebP with alpha support
+            pipeline = pipeline.webp({ quality: 75, alphaQuality: 80 });
+            processedMimeType = 'image/webp';
+          } else {
+            // Use WebP for non-alpha images
+            pipeline = pipeline.webp({ quality: 75 });
+            processedMimeType = 'image/webp';
+          }
+          
+          // Process the image
+          const result = await pipeline.toBuffer({ resolveWithObject: true });
+          processedBuffer = result.data;
+          width = result.info.width;
+          height = result.info.height;
+          isCompressed = true;
+          
+          console.log(`Image compressed: ${originalSize} -> ${processedBuffer.length} bytes (${Math.round((1 - processedBuffer.length / originalSize) * 100)}% reduction)`);
+        } catch (compressionError) {
+          // If compression fails, use original file
+          console.error('Image compression failed, using original:', compressionError);
+          processedBuffer = file.buffer;
+          processedMimeType = originalMimeType;
+          isCompressed = false;
+        }
+        
+        const base64Data = processedBuffer.toString('base64');
 
         const evidenceBlob = await storage.createEvidenceBlob({
           assessmentId,
           questionId,
           questionType: questionType as 'facility' | 'assessment',
           filename: file.originalname,
-          mimeType,
+          mimeType: processedMimeType,
           data: base64Data,
-          fileSize: file.buffer.length,
+          fileSize: processedBuffer.length,
+          originalSize,
+          isCompressed,
+          width,
+          height,
         });
 
         // Use database ID as evidence path
