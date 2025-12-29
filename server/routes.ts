@@ -5695,23 +5695,44 @@ The facility should prioritize addressing critical risks immediately, particular
                 for (const evidencePath of q.evidence) {
                   if (evidencePath && typeof evidencePath === 'string') {
                     try {
-                      const file = await objectStorageService.getEvidenceFile(evidencePath);
-                      const [metadata] = await file.getMetadata();
-                      const contentType = metadata.contentType || 'image/jpeg';
-                      
-                      const chunks: Buffer[] = [];
-                      const stream = file.createReadStream();
-                      
-                      await new Promise<void>((resolve, reject) => {
-                        stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-                        stream.on('end', () => resolve());
-                        stream.on('error', reject);
-                      });
-                      
-                      const buffer = Buffer.concat(chunks);
-                      const base64 = buffer.toString('base64');
-                      const dataUrl = `data:${contentType};base64,${base64}`;
-                      evidenceWithBase64.push(dataUrl);
+                      // Check if evidence is stored in database (new format) or object storage (legacy)
+                      if (evidencePath.startsWith('/api/evidence/')) {
+                        // Fetch from database
+                        const blobId = evidencePath.replace('/api/evidence/', '');
+                        const blob = await storage.getEvidenceBlob(blobId);
+                        if (blob && blob.data) {
+                          // blob.data is already base64 encoded in storage
+                          const base64Data = typeof blob.data === 'string' 
+                            ? blob.data 
+                            : Buffer.from(blob.data).toString('base64');
+                          const dataUrl = `data:${blob.mimeType};base64,${base64Data}`;
+                          evidenceWithBase64.push(dataUrl);
+                        } else {
+                          evidenceWithBase64.push(evidencePath);
+                        }
+                      } else if (evidencePath.startsWith('/evidence/')) {
+                        // Legacy: fetch from object storage
+                        const file = await objectStorageService.getEvidenceFile(evidencePath);
+                        const [metadata] = await file.getMetadata();
+                        const contentType = metadata.contentType || 'image/jpeg';
+                        
+                        const chunks: Buffer[] = [];
+                        const stream = file.createReadStream();
+                        
+                        await new Promise<void>((resolve, reject) => {
+                          stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                          stream.on('end', () => resolve());
+                          stream.on('error', reject);
+                        });
+                        
+                        const buffer = Buffer.concat(chunks);
+                        const base64 = buffer.toString('base64');
+                        const dataUrl = `data:${contentType};base64,${base64}`;
+                        evidenceWithBase64.push(dataUrl);
+                      } else {
+                        // Unknown format, keep as-is
+                        evidenceWithBase64.push(evidencePath);
+                      }
                     } catch (error) {
                       console.error(`Failed to load image ${evidencePath}:`, error);
                       evidenceWithBase64.push(evidencePath);
@@ -5758,24 +5779,45 @@ The facility should prioritize addressing critical risks immediately, particular
               for (const evidencePath of q.evidence) {
                 if (evidencePath && typeof evidencePath === 'string') {
                   try {
-                    const file = await objectStorageService.getEvidenceFile(evidencePath);
-                    const [metadata] = await file.getMetadata();
-                    const contentType = metadata.contentType || 'image/jpeg';
-                    
-                    // Download file content as buffer
-                    const chunks: Buffer[] = [];
-                    const stream = file.createReadStream();
-                    
-                    await new Promise<void>((resolve, reject) => {
-                      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-                      stream.on('end', () => resolve());
-                      stream.on('error', reject);
-                    });
-                    
-                    const buffer = Buffer.concat(chunks);
-                    const base64 = buffer.toString('base64');
-                    const dataUrl = `data:${contentType};base64,${base64}`;
-                    evidenceWithBase64.push(dataUrl);
+                    // Check if evidence is stored in database (new format) or object storage (legacy)
+                    if (evidencePath.startsWith('/api/evidence/')) {
+                      // Fetch from database
+                      const blobId = evidencePath.replace('/api/evidence/', '');
+                      const blob = await storage.getEvidenceBlob(blobId);
+                      if (blob && blob.data) {
+                        // blob.data is already base64 encoded in storage
+                        const base64Data = typeof blob.data === 'string' 
+                          ? blob.data 
+                          : Buffer.from(blob.data).toString('base64');
+                        const dataUrl = `data:${blob.mimeType};base64,${base64Data}`;
+                        evidenceWithBase64.push(dataUrl);
+                      } else {
+                        evidenceWithBase64.push(evidencePath);
+                      }
+                    } else if (evidencePath.startsWith('/evidence/')) {
+                      // Legacy: fetch from object storage
+                      const file = await objectStorageService.getEvidenceFile(evidencePath);
+                      const [metadata] = await file.getMetadata();
+                      const contentType = metadata.contentType || 'image/jpeg';
+                      
+                      // Download file content as buffer
+                      const chunks: Buffer[] = [];
+                      const stream = file.createReadStream();
+                      
+                      await new Promise<void>((resolve, reject) => {
+                        stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                        stream.on('end', () => resolve());
+                        stream.on('error', reject);
+                      });
+                      
+                      const buffer = Buffer.concat(chunks);
+                      const base64 = buffer.toString('base64');
+                      const dataUrl = `data:${contentType};base64,${base64}`;
+                      evidenceWithBase64.push(dataUrl);
+                    } else {
+                      // Unknown format, keep as-is
+                      evidenceWithBase64.push(evidencePath);
+                    }
                   } catch (error) {
                     console.error(`Failed to load image ${evidencePath}:`, error);
                     // Keep original path as fallback
