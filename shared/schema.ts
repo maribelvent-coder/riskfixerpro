@@ -232,6 +232,10 @@ export const evidenceBlobs = pgTable("evidence_blobs", {
   mimeType: text("mime_type").notNull(),
   data: text("data").notNull(), // Base64 encoded image data
   fileSize: integer("file_size"),
+  originalSize: integer("original_size"), // Original file size before compression
+  isCompressed: boolean("is_compressed").default(false),
+  width: integer("width"), // Image width in pixels
+  height: integer("height"), // Image height in pixels
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
