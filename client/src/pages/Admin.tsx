@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2, Link, Copy, Check, Image, Download, ExternalLink, Archive } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2, Link, Copy, Check, Image, Download, ExternalLink, Archive, X } from "lucide-react";
 
 type User = {
   id: string;
@@ -139,6 +139,37 @@ export default function Admin() {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const [showDeletePhotoDialog, setShowDeletePhotoDialog] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ id: string; filename: string } | null>(null);
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: async (photoId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/evidence/${photoId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Photo deleted",
+        description: "The photo has been removed from the database.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/evidence"] });
+      setShowDeletePhotoDialog(false);
+      setSelectedPhoto(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete photo",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeletePhoto = (photo: { id: string; filename: string }) => {
+    setSelectedPhoto(photo);
+    setShowDeletePhotoDialog(true);
   };
 
   const generateResetLinkMutation = useMutation({
@@ -959,15 +990,28 @@ export default function Admin() {
                               <div className="truncate">{photo.filename}</div>
                               <div className="text-gray-300">{formatFileSize(photo.fileSize)}</div>
                             </div>
-                            <a
-                              href={`/api/evidence/${photo.id}`}
-                              download={photo.filename}
-                              className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => e.stopPropagation()}
-                              data-testid={`download-${photo.id}`}
-                            >
-                              <Download className="h-3 w-3" />
-                            </a>
+                            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <a
+                                href={`/api/evidence/${photo.id}`}
+                                download={photo.filename}
+                                className="bg-black/50 text-white p-1 rounded"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`download-${photo.id}`}
+                              >
+                                <Download className="h-3 w-3" />
+                              </a>
+                              <button
+                                className="bg-destructive/80 text-white p-1 rounded"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleDeletePhoto({ id: photo.id, filename: photo.filename });
+                                }}
+                                data-testid={`delete-photo-${photo.id}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1558,6 +1602,45 @@ export default function Admin() {
               data-testid="button-confirm-user-org"
             >
               {updateUserOrgMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Photo Confirmation Dialog */}
+      <Dialog open={showDeletePhotoDialog} onOpenChange={setShowDeletePhotoDialog}>
+        <DialogContent data-testid="dialog-delete-photo">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Photo
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete this photo?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="text-sm">
+              <strong>Filename:</strong> {selectedPhoto?.filename}
+            </div>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+              <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                This action cannot be undone
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowDeletePhotoDialog(false); setSelectedPhoto(null); }} data-testid="button-cancel-delete-photo">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => selectedPhoto && deletePhotoMutation.mutate(selectedPhoto.id)}
+              disabled={deletePhotoMutation.isPending}
+              data-testid="button-confirm-delete-photo"
+            >
+              {deletePhotoMutation.isPending ? "Deleting..." : "Delete Photo"}
             </Button>
           </DialogFooter>
         </DialogContent>

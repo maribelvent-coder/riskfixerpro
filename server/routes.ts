@@ -2164,6 +2164,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a photo from evidence (admin only)
+  app.delete("/api/admin/evidence/:photoId", verifyAdminAccess, async (req, res) => {
+    try {
+      const { photoId } = req.params;
+      
+      const deleted = await storage.deleteEvidenceBlob(photoId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Photo not found" });
+      }
+      
+      res.json({ success: true, message: "Photo deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting evidence photo:", error);
+      res.status(500).json({ error: "Failed to delete photo" });
+    }
+  });
+
   // Template routes
   app.get("/api/templates", async (req, res) => {
     try {
