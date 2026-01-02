@@ -2116,6 +2116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download all photos for an assessment as a zip file (admin only)
+  // Photos are compressed to WebP format (1600px max, quality 75) for smaller file sizes
   app.get("/api/admin/evidence/:assessmentId/download", verifyAdminAccess, async (req, res) => {
     try {
       const { assessmentId } = req.params;
@@ -2126,10 +2127,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Assessment not found" });
       }
       
-      // Get all evidence blobs for this assessment
-      const evidenceBlobs = await storage.getEvidenceBlobsByAssessment(assessmentId);
+      // Get just the metadata (id, filename) for this specific assessment - lightweight query
+      const photoIds = await storage.getEvidenceBlobsMetadataByAssessment(assessmentId);
       
-      if (evidenceBlobs.length === 0) {
+      if (photoIds.length === 0) {
         return res.status(404).json({ error: "No photos found for this assessment" });
       }
       
@@ -2148,10 +2149,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const archive = archiver('zip', { zlib: { level: 5 } });
       archive.pipe(res);
       
-      // Add each photo to the archive
-      for (const blob of evidenceBlobs) {
-        if (blob.data) {
-          archive.append(blob.data, { name: blob.filename });
+      // Fetch and compress each photo individually to avoid database response size limit
+      for (const photo of photoIds) {
+        try {
+          const blob = await storage.getEvidenceBlob(photo.id);
+          if (blob && blob.data) {
+            // Compress the image using sharp (same settings as report generation)
+            const compressedBuffer = await sharp(blob.data)
+              .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 75 })
+              .toBuffer();
+            
+            // Change extension to .webp
+            const webpFilename = photo.filename.replace(/\.[^/.]+$/, '.webp');
+            archive.append(compressedBuffer, { name: webpFilename });
+          }
+        } catch (photoError) {
+          console.error(`Error processing photo ${photo.id}:`, photoError);
+          // Continue with other photos even if one fails
         }
       }
       

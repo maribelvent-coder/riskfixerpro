@@ -816,6 +816,20 @@ export class DbStorage implements IStorage {
     return results.length > 0;
   }
 
+  // Get just metadata (id, filename) for a specific assessment - lightweight query for zip downloads
+  async getEvidenceBlobsMetadataByAssessment(assessmentId: string): Promise<Array<{
+    id: string;
+    filename: string;
+  }>> {
+    const results = await db.select({
+      id: schema.evidenceBlobs.id,
+      filename: schema.evidenceBlobs.filename,
+    }).from(schema.evidenceBlobs)
+      .where(eq(schema.evidenceBlobs.assessmentId, assessmentId))
+      .orderBy(schema.evidenceBlobs.createdAt);
+    return results;
+  }
+
   async getAllEvidenceBlobsMetadata(): Promise<Array<{
     id: string;
     assessmentId: string;
