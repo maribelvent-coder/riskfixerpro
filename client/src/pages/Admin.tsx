@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2, Link, Copy, Check, Image, Download, ExternalLink } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2, Link, Copy, Check, Image, Download, ExternalLink, Archive } from "lucide-react";
 
 type User = {
   id: string;
@@ -904,19 +904,34 @@ export default function Admin() {
                         {assessment.surveyParadigm}
                       </Badge>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(`/assessments/${assessment.assessmentId}`, '_blank');
-                      }}
-                      data-testid={`link-assessment-${assessment.assessmentId}`}
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      View Assessment
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `/api/admin/evidence/${assessment.assessmentId}/download`;
+                        }}
+                        data-testid={`download-all-${assessment.assessmentId}`}
+                      >
+                        <Archive className="h-3 w-3 mr-1" />
+                        Download All
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/assessments/${assessment.assessmentId}`, '_blank');
+                        }}
+                        data-testid={`link-assessment-${assessment.assessmentId}`}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                    </div>
                   </div>
                   {expandedAssessments.has(assessment.assessmentId) && (
                     <div className="p-3 border-t">

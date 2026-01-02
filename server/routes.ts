@@ -2115,6 +2115,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download all photos for an assessment as a zip file (admin only)
+  app.get("/api/admin/evidence/:assessmentId/download", verifyAdminAccess, async (req, res) => {
+    try {
+      const { assessmentId } = req.params;
+      
+      // Get the assessment to get its title for the filename
+      const assessment = await storage.getAssessment(assessmentId);
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+      
+      // Get all evidence blobs for this assessment
+      const evidenceBlobs = await storage.getEvidenceBlobsByAssessment(assessmentId);
+      
+      if (evidenceBlobs.length === 0) {
+        return res.status(404).json({ error: "No photos found for this assessment" });
+      }
+      
+      // Create a safe filename from the assessment title
+      const safeTitle = (assessment.title || 'assessment')
+        .replace(/[^a-zA-Z0-9\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 50);
+      const zipFilename = `${safeTitle}_photos.zip`;
+      
+      // Set headers for zip download
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+      
+      // Create archive and pipe to response
+      const archive = archiver('zip', { zlib: { level: 5 } });
+      archive.pipe(res);
+      
+      // Add each photo to the archive
+      for (const blob of evidenceBlobs) {
+        if (blob.data) {
+          archive.append(blob.data, { name: blob.filename });
+        }
+      }
+      
+      await archive.finalize();
+    } catch (error) {
+      console.error("Error creating evidence zip:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to create zip file" });
+      }
+    }
+  });
+
   // Template routes
   app.get("/api/templates", async (req, res) => {
     try {
