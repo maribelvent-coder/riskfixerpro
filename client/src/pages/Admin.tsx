@@ -116,7 +116,7 @@ export default function Admin() {
     queryKey: ["/api/admin/sites"],
   });
 
-  const { data: evidenceGallery, isLoading: evidenceLoading } = useQuery<AssessmentEvidence[]>({
+  const { data: evidenceGallery, isLoading: evidenceLoading, isError: evidenceError } = useQuery<AssessmentEvidence[]>({
     queryKey: ["/api/admin/evidence"],
   });
 
@@ -873,6 +873,11 @@ export default function Admin() {
           {evidenceLoading ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               Loading photo evidence...
+            </div>
+          ) : evidenceError ? (
+            <div className="text-center py-8 text-destructive text-sm">
+              <AlertTriangle className="h-5 w-5 mx-auto mb-2" />
+              Failed to load photo evidence. Please try again later.
             </div>
           ) : !evidenceGallery || evidenceGallery.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
