@@ -2154,8 +2154,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const blob = await storage.getEvidenceBlob(photo.id);
           if (blob && blob.data) {
+            // Convert to Buffer if data is stored as base64 string
+            let imageBuffer = Buffer.isBuffer(blob.data) 
+              ? blob.data 
+              : Buffer.from(blob.data as any, 'base64');
+            
             // Compress the image using sharp (same settings as report generation)
-            const compressedBuffer = await sharp(blob.data)
+            const compressedBuffer = await sharp(imageBuffer)
               .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
               .webp({ quality: 75 })
               .toBuffer();
