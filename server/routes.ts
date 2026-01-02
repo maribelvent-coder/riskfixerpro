@@ -5,6 +5,7 @@ import { openaiService } from "./openai-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
 import sharp from "sharp";
+import archiver from "archiver";
 import { db } from "./db";
 import { assessments, riskScenarios, sites, templateQuestions, users, executiveInterviewQuestions } from "@shared/schema";
 import { TenantStorage } from "./tenant-storage";
@@ -5928,6 +5929,186 @@ The facility should prioritize addressing critical risks immediately, particular
       } catch (error) {
         console.error("Error exporting survey data:", error);
         res.status(500).json({ error: "Failed to export survey data" });
+      }
+    },
+  );
+
+  // Images Export - download all assessment photos as a ZIP file
+  app.get(
+    "/api/assessments/:id/images-export",
+    verifyAssessmentOwnership,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        const assessment = await storage.getAssessment(id);
+        if (!assessment) {
+          return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        const objectStorageService = new ObjectStorageService();
+        const images: { name: string; data: Buffer; mimeType: string }[] = [];
+
+        // For Executive Protection, get interview responses
+        if (assessment.templateId === 'executive-protection') {
+          const epQuestions = await storage.getAllExecutiveInterviewQuestions();
+          const epResponses = await storage.getExecutiveInterviewResponses(id);
+          const responseMap = new Map<string, any>();
+          for (const resp of epResponses) {
+            responseMap.set(resp.questionId, resp);
+          }
+          
+          for (const q of epQuestions) {
+            const response = responseMap.get(q.id);
+            if (response?.evidence && Array.isArray(response.evidence)) {
+              for (const evidencePath of response.evidence) {
+                if (evidencePath && typeof evidencePath === 'string') {
+                  try {
+                    if (evidencePath.startsWith('/api/evidence/')) {
+                      const blobId = evidencePath.replace('/api/evidence/', '');
+                      const blob = await storage.getEvidenceBlob(blobId);
+                      if (blob && blob.data) {
+                        let imageBuffer = Buffer.isBuffer(blob.data) 
+                          ? blob.data 
+                          : Buffer.from(blob.data as any, 'base64');
+                        
+                        // Compress if not already compressed
+                        if (!blob.isCompressed) {
+                          try {
+                            imageBuffer = await sharp(imageBuffer)
+                              .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                              .webp({ quality: 75 })
+                              .toBuffer();
+                          } catch (e) { /* use original */ }
+                        }
+                        
+                        const ext = blob.isCompressed || blob.mimeType === 'image/webp' ? 'webp' : 
+                                   blob.mimeType?.split('/')[1] || 'jpg';
+                        images.push({
+                          name: `ep-interview/${q.category?.replace(/[^a-zA-Z0-9]/g, '_') || 'misc'}/${blob.originalFilename || `image_${blobId}.${ext}`}`,
+                          data: imageBuffer,
+                          mimeType: blob.mimeType || 'image/webp'
+                        });
+                      }
+                    } else {
+                      // Legacy object storage
+                      const storagePath = evidencePath.replace(/^\/evidence\//, '');
+                      const imageData = await objectStorageService.downloadFile(storagePath);
+                      if (imageData) {
+                        let imageBuffer = imageData;
+                        try {
+                          imageBuffer = await sharp(imageData)
+                            .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                            .webp({ quality: 75 })
+                            .toBuffer();
+                        } catch (e) { /* use original */ }
+                        
+                        const filename = storagePath.split('/').pop() || 'image.jpg';
+                        images.push({
+                          name: `ep-interview/${q.category?.replace(/[^a-zA-Z0-9]/g, '_') || 'misc'}/${filename.replace(/\.[^.]+$/, '.webp')}`,
+                          data: imageBuffer,
+                          mimeType: 'image/webp'
+                        });
+                      }
+                    }
+                  } catch (e) {
+                    console.error("Error fetching EP image:", e);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Get assessment questions (works for all template types)
+        const assessmentQuestions = await storage.getAssessmentQuestions(id);
+        for (const q of assessmentQuestions) {
+          if (q.evidence && Array.isArray(q.evidence)) {
+            for (const evidencePath of q.evidence) {
+              if (evidencePath && typeof evidencePath === 'string') {
+                try {
+                  if (evidencePath.startsWith('/api/evidence/')) {
+                    const blobId = evidencePath.replace('/api/evidence/', '');
+                    const blob = await storage.getEvidenceBlob(blobId);
+                    if (blob && blob.data) {
+                      let imageBuffer = Buffer.isBuffer(blob.data) 
+                        ? blob.data 
+                        : Buffer.from(blob.data as any, 'base64');
+                      
+                      if (!blob.isCompressed) {
+                        try {
+                          imageBuffer = await sharp(imageBuffer)
+                            .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                            .webp({ quality: 75 })
+                            .toBuffer();
+                        } catch (e) { /* use original */ }
+                      }
+                      
+                      const ext = blob.isCompressed || blob.mimeType === 'image/webp' ? 'webp' : 
+                                 blob.mimeType?.split('/')[1] || 'jpg';
+                      images.push({
+                        name: `survey/${q.category?.replace(/[^a-zA-Z0-9]/g, '_') || 'misc'}/${blob.originalFilename || `image_${blobId}.${ext}`}`,
+                        data: imageBuffer,
+                        mimeType: blob.mimeType || 'image/webp'
+                      });
+                    }
+                  } else {
+                    const storagePath = evidencePath.replace(/^\/evidence\//, '');
+                    const imageData = await objectStorageService.downloadFile(storagePath);
+                    if (imageData) {
+                      let imageBuffer = imageData;
+                      try {
+                        imageBuffer = await sharp(imageData)
+                          .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+                          .webp({ quality: 75 })
+                          .toBuffer();
+                      } catch (e) { /* use original */ }
+                      
+                      const filename = storagePath.split('/').pop() || 'image.jpg';
+                      images.push({
+                        name: `survey/${q.category?.replace(/[^a-zA-Z0-9]/g, '_') || 'misc'}/${filename.replace(/\.[^.]+$/, '.webp')}`,
+                        data: imageBuffer,
+                        mimeType: 'image/webp'
+                      });
+                    }
+                  }
+                } catch (e) {
+                  console.error("Error fetching survey image:", e);
+                }
+              }
+            }
+          }
+        }
+
+        if (images.length === 0) {
+          return res.status(404).json({ error: "No images found in this assessment" });
+        }
+
+        // Create ZIP archive
+        const sanitizedName = (assessment.name || 'assessment').replace(/[^a-zA-Z0-9-_]/g, '_');
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${sanitizedName}_images.zip"`);
+
+        const archive = archiver('zip', { zlib: { level: 5 } });
+        archive.on('error', (err) => {
+          console.error("Archive error:", err);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Failed to create archive" });
+          }
+        });
+
+        archive.pipe(res);
+
+        for (const img of images) {
+          archive.append(img.data, { name: img.name });
+        }
+
+        await archive.finalize();
+      } catch (error) {
+        console.error("Error exporting images:", error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Failed to export images" });
+        }
       }
     },
   );

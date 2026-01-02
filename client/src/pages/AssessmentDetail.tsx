@@ -31,7 +31,7 @@ import ManufacturingDashboard from "@/pages/assessments/ManufacturingDashboard";
 import DatacenterDashboard from "@/pages/assessments/DatacenterDashboard";
 import OfficeDashboard from "@/pages/assessments/OfficeDashboard";
 import ExecutiveDashboard from "@/pages/assessments/ExecutiveDashboard";
-import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database, UserCheck, Pencil, Eye } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Building, Building2, Shield, FileText, CheckCircle, MessageSquare, Trash2, FileDown, ChevronDown, Warehouse, ShoppingBag, Factory, Server, Database, UserCheck, Pencil, Eye, Image } from "lucide-react";
 import PrincipalProfileForm from "@/components/PrincipalProfileForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -403,6 +403,46 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
       toast({
         title: "Export Failed",
         description: "Failed to export survey data. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Export images as ZIP mutation
+  const exportImagesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('GET', `/api/assessments/${assessmentId}/images-export`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to export images');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const contentDisposition = response.headers.get('content-disposition');
+      const fileName = contentDisposition?.match(/filename="(.+)"/)?.[1] || 'assessment_images.zip';
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      return { fileName };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Images Exported",
+        description: "Your assessment photos have been downloaded as a ZIP file.",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Error exporting images:", error);
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to export images. Please try again.",
         variant: "destructive",
       });
     },
@@ -865,6 +905,14 @@ export default function AssessmentDetail({ assessmentId = "demo-001" }: Assessme
                   >
                     <Database className="h-4 w-4 mr-2" />
                     Export Survey Data
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => exportImagesMutation.mutate()}
+                    disabled={exportImagesMutation.isPending}
+                    data-testid="menu-item-export-images"
+                  >
+                    <Image className="h-4 w-4 mr-2" />
+                    Export Images (ZIP)
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
