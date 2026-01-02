@@ -2067,6 +2067,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Photo Gallery - Get all evidence photos grouped by assessment
+  app.get("/api/admin/evidence", verifyAdminAccess, async (req, res) => {
+    try {
+      const allEvidence = await storage.getAllEvidenceBlobsMetadata();
+      
+      // Get all assessment titles for display
+      const assessmentIds = [...new Set(allEvidence.map(e => e.assessmentId))];
+      const assessmentDetails: Record<string, { title: string; surveyParadigm: string }> = {};
+      
+      for (const assessmentId of assessmentIds) {
+        const assessment = await storage.getAssessment(assessmentId);
+        if (assessment) {
+          assessmentDetails[assessmentId] = {
+            title: assessment.title || 'Untitled Assessment',
+            surveyParadigm: assessment.surveyParadigm || 'facility'
+          };
+        }
+      }
+      
+      // Group evidence by assessment
+      const grouped = allEvidence.reduce((acc, evidence) => {
+        if (!acc[evidence.assessmentId]) {
+          acc[evidence.assessmentId] = {
+            assessmentId: evidence.assessmentId,
+            assessmentTitle: assessmentDetails[evidence.assessmentId]?.title || 'Unknown Assessment',
+            surveyParadigm: assessmentDetails[evidence.assessmentId]?.surveyParadigm || 'facility',
+            photos: []
+          };
+        }
+        acc[evidence.assessmentId].photos.push({
+          id: evidence.id,
+          filename: evidence.filename,
+          mimeType: evidence.mimeType,
+          fileSize: evidence.fileSize,
+          questionId: evidence.questionId,
+          questionType: evidence.questionType,
+          createdAt: evidence.createdAt
+        });
+        return acc;
+      }, {} as Record<string, any>);
+      
+      res.json(Object.values(grouped));
+    } catch (error) {
+      console.error("Error fetching admin evidence:", error);
+      res.status(500).json({ error: "Failed to fetch evidence gallery" });
+    }
+  });
+
   // Template routes
   app.get("/api/templates", async (req, res) => {
     try {

@@ -816,6 +816,30 @@ export class DbStorage implements IStorage {
     return results.length > 0;
   }
 
+  async getAllEvidenceBlobsMetadata(): Promise<Array<{
+    id: string;
+    assessmentId: string;
+    questionId: string;
+    questionType: string;
+    filename: string;
+    mimeType: string;
+    fileSize: number | null;
+    createdAt: Date | null;
+  }>> {
+    const results = await db.select({
+      id: schema.evidenceBlobs.id,
+      assessmentId: schema.evidenceBlobs.assessmentId,
+      questionId: schema.evidenceBlobs.questionId,
+      questionType: schema.evidenceBlobs.questionType,
+      filename: schema.evidenceBlobs.filename,
+      mimeType: schema.evidenceBlobs.mimeType,
+      fileSize: schema.evidenceBlobs.fileSize,
+      createdAt: schema.evidenceBlobs.createdAt,
+    }).from(schema.evidenceBlobs)
+      .orderBy(schema.evidenceBlobs.createdAt);
+    return results;
+  }
+
   // Threat Identification methods
   async getIdentifiedThreats(assessmentId: string): Promise<IdentifiedThreat[]> {
     return await db.select().from(schema.identifiedThreats)

@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2, Link, Copy, Check } from "lucide-react";
+import { Shield, Key, UserCog, Database, AlertTriangle, Building2, Edit, Trash2, Link, Copy, Check, Image, Download, ExternalLink } from "lucide-react";
 
 type User = {
   id: string;
@@ -66,6 +66,23 @@ type Site = {
   createdAt: string;
 };
 
+type EvidencePhoto = {
+  id: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number | null;
+  questionId: string;
+  questionType: string;
+  createdAt: string;
+};
+
+type AssessmentEvidence = {
+  assessmentId: string;
+  assessmentTitle: string;
+  surveyParadigm: string;
+  photos: EvidencePhoto[];
+};
+
 export default function Admin() {
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -98,6 +115,31 @@ export default function Admin() {
   const { data: allSites, isLoading: sitesLoading } = useQuery<Site[]>({
     queryKey: ["/api/admin/sites"],
   });
+
+  const { data: evidenceGallery, isLoading: evidenceLoading } = useQuery<AssessmentEvidence[]>({
+    queryKey: ["/api/admin/evidence"],
+  });
+
+  const [expandedAssessments, setExpandedAssessments] = useState<Set<string>>(new Set());
+
+  const toggleAssessmentExpand = (assessmentId: string) => {
+    setExpandedAssessments(prev => {
+      const next = new Set(prev);
+      if (next.has(assessmentId)) {
+        next.delete(assessmentId);
+      } else {
+        next.add(assessmentId);
+      }
+      return next;
+    });
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return 'Unknown';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   const generateResetLinkMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -813,6 +855,108 @@ export default function Admin() {
               {seedProductionMutation.isPending ? "Seeding..." : "Seed Production Database"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Photo Gallery Section */}
+      <Card className="mt-4 sm:mt-6 lg:mt-8 p-3 sm:p-6">
+        <CardHeader className="p-0 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2">
+            <Image className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <CardTitle className="text-base sm:text-lg">Photo Evidence Gallery</CardTitle>
+          </div>
+          <CardDescription className="text-xs sm:text-sm">
+            View all uploaded photo evidence across all assessments
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {evidenceLoading ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              Loading photo evidence...
+            </div>
+          ) : !evidenceGallery || evidenceGallery.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No photo evidence found in the database.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Total: {evidenceGallery.reduce((sum, a) => sum + a.photos.length, 0)} photos across {evidenceGallery.length} assessments
+              </div>
+              {evidenceGallery.map((assessment) => (
+                <div key={assessment.assessmentId} className="border rounded-lg overflow-hidden">
+                  <div 
+                    className="flex items-center justify-between p-3 bg-muted/50 cursor-pointer hover-elevate"
+                    onClick={() => toggleAssessmentExpand(assessment.assessmentId)}
+                    data-testid={`toggle-assessment-${assessment.assessmentId}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {assessment.photos.length} photos
+                      </Badge>
+                      <span className="font-medium text-sm">{assessment.assessmentTitle}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {assessment.surveyParadigm}
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`/assessments/${assessment.assessmentId}`, '_blank');
+                      }}
+                      data-testid={`link-assessment-${assessment.assessmentId}`}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      View Assessment
+                    </Button>
+                  </div>
+                  {expandedAssessments.has(assessment.assessmentId) && (
+                    <div className="p-3 border-t">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {assessment.photos.map((photo) => (
+                          <div 
+                            key={photo.id} 
+                            className="group relative border rounded-lg overflow-hidden bg-muted/30"
+                          >
+                            <a 
+                              href={`/api/evidence/${photo.id}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="block aspect-square"
+                              data-testid={`photo-${photo.id}`}
+                            >
+                              <img 
+                                src={`/api/evidence/${photo.id}`} 
+                                alt={photo.filename}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </a>
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-1.5 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="truncate">{photo.filename}</div>
+                              <div className="text-gray-300">{formatFileSize(photo.fileSize)}</div>
+                            </div>
+                            <a
+                              href={`/api/evidence/${photo.id}`}
+                              download={photo.filename}
+                              className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
+                              data-testid={`download-${photo.id}`}
+                            >
+                              <Download className="h-3 w-3" />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
