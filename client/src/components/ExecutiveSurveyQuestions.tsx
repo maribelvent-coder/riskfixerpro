@@ -111,17 +111,19 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
   };
 
   // Fetch assessment to determine paradigm
-  const { data: assessment } = useQuery<AssessmentWithQuestions>({
+  const { data: assessment, isLoading: isAssessmentLoading } = useQuery<AssessmentWithQuestions>({
     queryKey: ['/api/assessments', assessmentId],
   });
 
   const paradigm = assessment?.surveyParadigm || 'facility';
+  
+  // Derive questionType and queryKey suffix based on paradigm
+  const questionType = paradigm === 'executive' ? 'assessment' : 'facility';
+  const questionsKeySuffix = paradigm === 'executive' ? 'assessment-questions' : 'facility-survey-questions';
 
   // Fetch questions based on paradigm
   const { data: questions, isLoading } = useQuery<SurveyQuestion[]>({
-    queryKey: paradigm === 'executive' 
-      ? ['/api/assessments', assessmentId, 'assessment-questions']
-      : ['/api/assessments', assessmentId, 'facility-survey-questions'],
+    queryKey: ['/api/assessments', assessmentId, questionsKeySuffix],
     enabled: !!assessment,
   });
 
@@ -414,7 +416,8 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
     }
   };
 
-  if (isLoading) {
+  // Guard: Don't render until we know the assessment paradigm
+  if (isAssessmentLoading || !assessment || isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
@@ -598,10 +601,10 @@ export default function ExecutiveSurveyQuestions({ assessmentId, sectionCategory
                             <EvidenceUploader
                               assessmentId={assessmentId}
                               questionId={question.id}
-                              questionType="facility"
+                              questionType={questionType}
                               evidence={question.evidence || []}
                               onUpdate={() => {
-                              queryClient.invalidateQueries({ queryKey: ["/api/assessments", assessmentId, "facility-survey"] });
+                              queryClient.invalidateQueries({ queryKey: ['/api/assessments', assessmentId, questionsKeySuffix] });
                             }}
                             />
                           </div>
